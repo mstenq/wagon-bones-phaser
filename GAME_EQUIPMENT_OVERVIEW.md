@@ -133,7 +133,7 @@ Mirror Lake - $10 - copies ability of item to the right
 Echo Chamber - $10 - copies the ability of the leftmost item
 
 ## Phase 8
-Mile Marker - $8 - gains +6 miles each time a 1 pip is scored
+5 Mile Marker - $8 - gains +5 miles each time a 5 pip is scored
 Trail Backpack - $7 - +2 re-rolls per day, -1 dice when rolling
 Loaded Dice - $4 - doubles all listed probabilities
 Matchmaker - $8 - x2 mult if hand contains a pair
