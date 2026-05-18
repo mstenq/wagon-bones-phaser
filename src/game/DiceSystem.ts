@@ -7,6 +7,7 @@ import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
 import { getScoredRetriggerCount, processEquipmentOnLuckyTrigger, processEquipmentOnDiamondDestroyed } from './EquipmentEffects';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
+import { resolveCopyTarget } from './Constants';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -240,10 +241,19 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   const firstDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[0].id : null;
   const lastDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[handResult.scoringDice.length - 1].id : null;
   for (const die of handResult.scoringDice) {
+    // Calculate how many times this die triggers:
     // red_bullet sticker: trigger this die twice
     let triggers = die.sticker === 'red_bullet' ? 2 : 1;
     // PIP_RETRIGGER: One-Eyed Jack — extra trigger for matching pip
-    for (const equip of equipment) {
+    const maxCopyDepth = equipment.length;
+    for (let ei = 0; ei < equipment.length; ei++) {
+      let equip = equipment[ei];
+      // Resolve copy items
+      if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+        const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
+        if (!resolved) continue;
+        equip = resolved;
+      }
       if (equip.def.effectType === 'PIP_RETRIGGER' && die.value === (equip.def.effectParams.pip as number)) {
         triggers++;
       }
@@ -493,7 +503,15 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
   // SOLO_FIRST_DAY_ENHANCE: Lucky Find — if 1 die scored alone on day 1, enhance it
   if (scoreContext && scoreContext.currentDay === 1 && handResult.scoringDice.length === 1) {
-    for (const equip of equipment) {
+    const maxCopyDepthSolo = equipment.length;
+    for (let ei = 0; ei < equipment.length; ei++) {
+      let equip = equipment[ei];
+      // Resolve copy items
+      if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+        const resolved = resolveCopyTarget(equipment, ei, maxCopyDepthSolo);
+        if (!resolved) continue;
+        equip = resolved;
+      }
       if (equip.def.effectType === 'SOLO_FIRST_DAY_ENHANCE') {
         const target = handResult.scoringDice[0];
         if (target.enhancement === null) {

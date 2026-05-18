@@ -1,6 +1,6 @@
 import './setup';
 import { describe, test, expect } from 'bun:test';
-import { generateShopStock } from '../ItemsSystem';
+import { generateShopStock, getAllEquipment } from '../ItemsSystem';
 import { getRandomSupplyDef, getRandomTrailGuideDef, getRandomFrontierDef } from '../ConsumablesSystem';
 
 describe('Shop stock exclusion', () => {
@@ -89,8 +89,7 @@ describe('Shop stock exclusion', () => {
 
   test('generateShopStock falls back to horseshoe when all items excluded', () => {
     // Get all equipment IDs and exclude them all
-    const allStock = generateShopStock(100);
-    const allIds = [...new Set(allStock.map((s) => s.id))];
+    const allIds = getAllEquipment().map((e) => e.id);
     // Exclude everything
     const result = generateShopStock(3, allIds);
     expect(result.length).toBe(3);

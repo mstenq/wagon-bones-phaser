@@ -5,6 +5,7 @@ import { Die, HandType, HandResult, HandDefinition, HandUpgradeInfo, ScoreResult
 import { EquipmentInstance } from './ItemsSystem';
 import { getPlayerState } from './PlayerState';
 import { getRandomSupplyDef } from './ConsumablesSystem';
+import { resolveCopyTarget } from './Constants';
 import handsData from '../data/hands.json';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
@@ -35,13 +36,33 @@ export function applyEquipmentEffects(
   let bonusMiles = 0;
   let bonusMult = 0;
 
+  // Max copy resolution depth = number of equipped items (prevents infinite loops)
+  const maxCopyDepth = equipment.length;
+
   for (let i = 0; i < equipment.length; i++) {
-    const equip = equipment[i];
+    const originalEquip = equipment[i];
+    let equip = originalEquip;
+
+    // Resolve copy items (Mirror Lake / Echo Chamber)
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
+      if (!resolved) {
+        console.log(`  [equip] ${equip.def.name}: nothing to copy`);
+        // Still apply own aura below
+        equip = { ...originalEquip, def: { ...originalEquip.def, effectType: 'NONE' } } as EquipmentInstance;
+      } else {
+        console.log(`  [equip] ${equip.def.name}: copying ${resolved.def.name}`);
+        // Use the resolved equipment's def but keep the original's position for anim events
+        equip = resolved;
+      }
+    }
+
     const { effectType, effectParams } = equip.def;
     const p = effectParams as Record<string, unknown>;
 
     switch (effectType) {
       case 'ADD_MULT':
+      case 'NEGATE_WAGON_DAMAGE':
         bonusMult += p.value as number;
         animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: p.value as number });
         console.log(`  [equip] ${equip.def.name}: ADD_MULT +${p.value} (bonusMult: ${bonusMult})`);
@@ -331,18 +352,18 @@ export function applyEquipmentEffects(
       }
     }
 
-    // Apply item aura bonuses
-    if (equip.def.aura) {
-      switch (equip.def.aura.id) {
+    // Apply item aura bonuses (always from the ORIGINAL item, not the copied target)
+    if (originalEquip.def.aura) {
+      switch (originalEquip.def.aura.id) {
         case 'fire':
           bonusMult += 10;
           animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: 10 });
-          console.log(`  [equip] ${equip.def.name} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
+          console.log(`  [equip] ${originalEquip.def.name} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
           break;
         case 'icy':
           bonusMiles += 50;
           animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: 50 });
-          console.log(`  [equip] ${equip.def.name} ICY aura: +50 miles (bonusMiles: ${bonusMiles})`);
+          console.log(`  [equip] ${originalEquip.def.name} ICY aura: +50 miles (bonusMiles: ${bonusMiles})`);
           break;
       }
     }
@@ -366,7 +387,15 @@ export function applyEquipmentEffects(
 
   // Apply equipment xMult effects (multiplicative, after additives + auras)
   for (let i = 0; i < equipment.length; i++) {
-    const equip = equipment[i];
+    let equip = equipment[i];
+
+    // Resolve copy items (Mirror Lake / Echo Chamber) for xMult pass
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
+      if (!resolved) continue;
+      equip = resolved;
+    }
+
     const { effectType } = equip.def;
 
     switch (effectType) {
@@ -643,8 +672,18 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
   let trailGuidesForHand = 0;
   const animEvents: ScoreAnimEvent[] = [];
 
-  // Count retriggers from Double Down equipment
-  const doubleDownCount = equipment.filter((e) => e.def.effectType === 'HELD_RETRIGGER').length;
+  // Count retriggers from Double Down equipment (resolving copy items)
+  const maxCopyDepthHeld = equipment.length;
+  let doubleDownCount = 0;
+  for (let i = 0; i < equipment.length; i++) {
+    let equip = equipment[i];
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, i, maxCopyDepthHeld);
+      if (!resolved) continue;
+      equip = resolved;
+    }
+    if (equip.def.effectType === 'HELD_RETRIGGER') doubleDownCount++;
+  }
 
   // Find the lowest held die value for Bottom Dollar
   const lowestValue = heldDice.length > 0 ? Math.min(...heldDice.map((d) => d.value)) : 0;
@@ -992,11 +1031,23 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
   let loseAllRerolls = false;
   let burnBarrelMoney = 0;
   let burnBarrelTriggered = false;
+  const maxCopyDepth = equipment.length;
   for (let i = 0; i < equipment.length; i++) {
     // Skip items already destroyed by a previous item this round
     if (pendingAnimatedDestroy.has(i) || destroyedIndices.includes(i)) continue;
 
-    const equip = equipment[i];
+    const originalEquip = equipment[i];
+    let equip = originalEquip;
+    let isCopy = false;
+
+    // Resolve copy items (Mirror Lake / Echo Chamber)
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
+      if (!resolved) continue;
+      equip = resolved;
+      isCopy = true;
+    }
+
     switch (equip.def.effectType) {
       case 'ROUND_START_ADD_STONE': {
         // Quarry Stone: add a stone die
@@ -1011,6 +1062,8 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
       }
       case 'ROUND_START_XMULT_DESTROY': {
         // Haunted Totem: gains xMult every round (except boss rounds), destroys random other equipment
+        // Copy items get the xMult benefit during scoring but don't trigger the destruction
+        if (isCopy) break;
         if (!isBossRound) {
           equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
           // Pick a random OTHER equipment to destroy (not self, not already destroyed)
@@ -1058,6 +1111,8 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
       }
       case 'ROUND_START_DESTROY_RIGHT': {
         // Funeral Pyre: destroy equipment to the right and gain double sell value as mult
+        // Copy items get the +mult benefit during scoring but don't trigger destruction
+        if (isCopy) break;
         const rightIdx = i + 1;
         if (rightIdx < equipment.length && !destroyedIndices.includes(rightIdx) && !pendingAnimatedDestroy.has(rightIdx)) {
           const rightEquip = equipment[rightIdx];
@@ -1118,7 +1173,15 @@ export function processEquipmentOnDayEnd(equipment: EquipmentInstance[]): void {
 /** Check if any equipment has active scored-dice retrigger effect. */
 export function getScoredRetriggerCount(equipment: EquipmentInstance[], context?: { currentDay: number; maxDays: number }): number {
   let count = 0;
-  for (const equip of equipment) {
+  const maxCopyDepth = equipment.length;
+  for (let i = 0; i < equipment.length; i++) {
+    let equip = equipment[i];
+    // Resolve copy items
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
+      if (!resolved) continue;
+      equip = resolved;
+    }
     if (equip.def.effectType === 'SCORED_RETRIGGER_TIMED' && (equip.state.daysRemaining ?? 0) > 0) {
       count++;
     }

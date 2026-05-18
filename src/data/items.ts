@@ -40,6 +40,7 @@ export interface HintSegment {
 import type { GameState } from '../game/GameState';
 import type { PlayerState } from '../game/PlayerState';
 import { HandType } from '../game/types';
+import { COPY_INCOMPATIBLE_EFFECTS, resolveCopyTarget } from '../game/Constants';
 
 /** Raw item definition shape (matches the old JSON + hintDisplay) */
 export interface ItemDef {
@@ -393,17 +394,18 @@ const items: ItemDef[] = [
   },
 
   // ─── Held-in-Hand Items ───
-  {
-    id: 'double_down',
-    name: 'Double Down',
-    cardTemplate: "white-text-black-outline",
-    cost: 5,
-    rarity: 'uncommon',
-    description: 'Retrigger all held-in-hand abilities',
-    effectType: 'HELD_RETRIGGER',
-    effectParams: { value: 1 },
-    hintDisplay: () => [[text('Retrigger'), condition('held dice')]],
-  },
+  // Deprecated in favor of silver_bullets item
+  // {
+  //   id: 'double_down',
+  //   name: 'Double Down',
+  //   cardTemplate: "white-text-black-outline",
+  //   cost: 5,
+  //   rarity: 'uncommon',
+  //   description: 'Retrigger all held-in-hand abilities',
+  //   effectType: 'HELD_RETRIGGER',
+  //   effectParams: { value: 1 },
+  //   hintDisplay: () => [[text('Retrigger'), condition('held dice')]],
+  // },
   {
     id: 'bottom_dollar',
     name: 'Bottom Dollar',
@@ -729,7 +731,7 @@ const items: ItemDef[] = [
     cost: 5,
     rarity: 'uncommon',
     description: 'Negates one wagon-damage trail event, then destroys itself. +4 mult.',
-    effectType: 'ADD_MULT',
+    effectType: 'NEGATE_WAGON_DAMAGE',
     effectParams: { value: 4 },
     hintDisplay: () => [[mult('+4'), text(' mult')], [text('Negates wagon damage')]],
   },
@@ -1421,7 +1423,7 @@ const items: ItemDef[] = [
   {
     id: 'moonshine',
     name: 'Moonshine',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-noborder',
     cost: 6,
     rarity: 'uncommon',
     description: 'Retrigger all enhanced dice. Enhanced dice have 1 in 6 chance of being destroyed, diamond dice 1 in 3.',
@@ -1472,7 +1474,7 @@ const items: ItemDef[] = [
   {
     id: 'last_laugh',
     name: 'Last Laugh',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-noborder',
     cost: 5,
     rarity: 'uncommon',
     description: 'Retrigger last played die 1 additional time',
@@ -1505,7 +1507,7 @@ const items: ItemDef[] = [
   {
     id: 'wood_axe',
     name: 'Wood Axe',
-    cardTemplate: 'white-text-black-outline',
+    cardTemplate: 'black-text',
     cost: 7,
     rarity: 'uncommon',
     description: 'Played wooden dice give +50 miles when scored',
@@ -1516,7 +1518,7 @@ const items: ItemDef[] = [
   {
     id: 'iron_spurs',
     name: 'Iron Spurs',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-black-outline',
     cost: 7,
     rarity: 'uncommon',
     description: 'Played iron dice give +7 mult when scored',
@@ -1527,7 +1529,7 @@ const items: ItemDef[] = [
   {
     id: 'diamond_coffin',
     name: 'Diamond Coffin',
-    cardTemplate: 'white-text-black-outline',
+    cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
     description: 'Item gains x0.75 mult for every diamond die that is destroyed',
@@ -1544,7 +1546,7 @@ const items: ItemDef[] = [
   {
     id: 'counterfeit_goods',
     name: 'Counterfeit Goods',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
     description: 'Allows items/trail guides/supplies/frontier encounter cards to appear multiple times in the shop and packs',
@@ -1564,9 +1566,47 @@ const items: ItemDef[] = [
     hintDisplay: (game) => {
       if (game && game.state.selectedForScore?.length > 0) {
         const types = new Set(game.state.selectedForScore.filter((d) => d.enhancement !== null).map((d) => d.enhancement));
-        if (types.size >= 2) return [[mult(`x${types.size + 1 - 1}`), active(`${types.size} types`)]];
+        if (types.size >= 2) return [[mult(`x${types.size}`), active(`${types.size} types`)]];
       }
-      return [[mult('x2-5'), condition('diverse enhancements')]];
+      return [[mult('x1')], [condition('per enhancement')]];
+    },
+  },
+  {
+    id: 'mirror_lake',
+    name: 'Mirror Lake',
+    cardTemplate: 'white-text-black-outline',
+    cost: 10,
+    rarity: 'rare',
+    description: 'Copies the ability of the item to the right',
+    effectType: 'COPY_RIGHT',
+    effectParams: {},
+    hintDisplay: (_game, player) => {
+      const idx = player.equipment.findIndex((e) => e.def.id === 'mirror_lake');
+      if (idx >= 0) {
+        const resolved = resolveCopyTarget(player.equipment, idx, player.equipment.length);
+        if (resolved) return [[text('Copying')], [active(resolved.def.name)]];
+        if (idx < player.equipment.length - 1) return [[inactive('Incompatible')]];
+      }
+      return [[inactive('Nothing to copy')]];
+    },
+  },
+  {
+    id: 'echo_chamber',
+    name: 'Echo Chamber',
+    cardTemplate: undefined,
+    cost: 10,
+    rarity: 'rare',
+    description: 'Copies the ability of the leftmost item',
+    effectType: 'COPY_LEFTMOST',
+    effectParams: {},
+    hintDisplay: (_game, player) => {
+      const idx = player.equipment.findIndex((e) => e.def.id === 'echo_chamber');
+      if (idx > 0) {
+        const resolved = resolveCopyTarget(player.equipment, idx, player.equipment.length);
+        if (resolved) return [[text('Copying')], [active(resolved.def.name)]];
+        return [[inactive('Incompatible')]];
+      }
+      return [[inactive('Nothing to copy')]];
     },
   },
 ];

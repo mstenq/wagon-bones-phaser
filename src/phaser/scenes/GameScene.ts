@@ -426,6 +426,8 @@ export class GameScene extends Scene {
           if (lockIcon) lockIcon.setVisible(true);
           this.sound.play('sfx_highlight1', { volume: 0.3 });
         }
+        // Keep selectedForScore in sync with locked dice so equipment hints can read it
+        this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
         this.updateRollButtons();
       });
     }
@@ -763,6 +765,11 @@ export class GameScene extends Scene {
     } else {
       this.sidebar.clearHandDisplay();
       this.sidebar.updateData({ milesBase: 0, mult: 0 });
+    }
+
+    // Refresh equipment hints so items reading selectedForScore update live
+    if (this.equipBar) {
+      this.equipBar.updateHints(this.gameState, getPlayerState());
     }
   }
 

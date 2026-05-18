@@ -14,7 +14,7 @@ import {
   createEmptyModifiers,
 } from '../TrailEventsSystem';
 import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
-import { GAMEPLAY } from '../Constants';
+import { GAMEPLAY, TRAIL_EVENT } from '../Constants';
 
 beforeEach(() => {
   resetDieIds();
@@ -428,36 +428,36 @@ describe('Effect application', () => {
     expect(standardCount).toBe(2);
   });
 
-  test('LOSE_RANDOM_DICE deducts $10 when only standard dice exist', () => {
+  test('LOSE_RANDOM_DICE deducts $3 per missing die when only standard dice exist', () => {
     const player = resetPlayerState();
     // All standard dice
     player.dice = [die({}), die({}), die({})];
     player.economy.setBalance(25);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_DICE', count: 2 }, player, mods);
-    // No enhanced dice to remove — lose $10 instead
+    // No enhanced dice to remove — lose $3 per missing die instead
     expect(player.dice.length).toBe(3);
-    expect(player.economy.balance).toBe(15);
+    expect(player.economy.balance).toBe(25 - (2 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE)); // $3 per missing die penalty
   });
 
-  test('LOSE_RANDOM_DICE $10 penalty can go negative', () => {
+  test('LOSE_RANDOM_DICE $3 penalty can go negative', () => {
     const player = resetPlayerState();
     player.dice = [die({})];
     player.economy.setBalance(3);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_DICE', count: 1 }, player, mods);
     expect(player.dice.length).toBe(1);
-    expect(player.economy.balance).toBe(-7);
+    expect(player.economy.balance).toBe(0);
   });
 
-  test('LOSE_RANDOM_DICE deducts $10 when pool empty', () => {
+  test('LOSE_RANDOM_DICE deducts $3 per missing die when pool empty', () => {
     const player = resetPlayerState();
     player.dice = [];
     player.economy.setBalance(20);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_DICE', count: 5 }, player, mods);
     expect(player.dice.length).toBe(0);
-    expect(player.economy.balance).toBe(10);
+    expect(player.economy.balance).toBe(20 - (5 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE)); // $3 per missing die penalty
   });
 
   test('LOSE_RANDOM_EQUIPMENT removes equipment', () => {
@@ -896,7 +896,7 @@ describe('Edge cases', () => {
     expect(player.dice.length).toBe(0);
   });
 
-  test('player with only standard dice loses $10 from LOSE_RANDOM_DICE', () => {
+  test(`player with only standard dice loses ${TRAIL_EVENT.AMOUNT_PER_MISSING_DIE} per missing die from LOSE_RANDOM_DICE`, () => {
     const player = resetPlayerState();
     // Default pouch is all standard dice
     const initialCount = player.dice.length;
@@ -904,35 +904,35 @@ describe('Edge cases', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_DICE', count: 3 }, player, mods);
     expect(player.dice.length).toBe(initialCount);
-    expect(player.economy.balance).toBe(40);
+    expect(player.economy.balance).toBe(50 - (3 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE));
   });
 
-  test('player with no equipment loses $10 from LOSE_RANDOM_EQUIPMENT', () => {
+  test(`player with no equipment loses ${TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP} per missing equipment from LOSE_RANDOM_EQUIPMENT`, () => {
     const player = resetPlayerState();
     player.equipment = [];
     player.economy.setBalance(15);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 3 }, player, mods);
     expect(player.equipment.length).toBe(0);
-    expect(player.economy.balance).toBe(5);
+    expect(player.economy.balance).toBe(15 - (3 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP));
   });
 
-  test('LOSE_RANDOM_EQUIPMENT $10 penalty can go negative', () => {
+  test(`LOSE_RANDOM_EQUIPMENT ${TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP} penalty can go negative`, () => {
     const player = resetPlayerState();
     player.equipment = [];
     player.economy.setBalance(2);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
-    expect(player.economy.balance).toBe(-8);
+    expect(player.economy.balance).toBe(2 - (1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP));
   });
 
-  test('LOSE_EQUIPMENT_CHOICE deducts $10 when no equipment', () => {
+  test(`LOSE_EQUIPMENT_CHOICE deducts ${TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP} per missing equipment`, () => {
     const player = resetPlayerState();
     player.equipment = [];
     player.economy.setBalance(30);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, player, mods);
-    expect(player.economy.balance).toBe(20);
+    expect(player.economy.balance).toBe(30 - (1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP));
   });
 
   test('player with no consumables handles LOSE_ALL_SUPPLY_CARDS gracefully', () => {

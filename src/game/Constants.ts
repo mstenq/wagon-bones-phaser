@@ -163,7 +163,7 @@ export const UI = {
   BTN_FONT_SIZE: '18px',
 
   // Cards
-  CARD_W: 132,
+  CARD_W: 133,
   CARD_H: 200,
   CARD_RADIUS: 10,
   CARD_SHADOW_OFFSET: 4,
@@ -228,3 +228,77 @@ export const ANIM = {
   CARD_DRAG_SETTLE_DURATION: 500, // ms to settle back after drop
   CARD_DRAG_LIFT_Y: -6, // Y offset while dragging (card lifts up)
 };
+
+
+export const TRAIL_EVENT = {
+  AMOUNT_PER_MISSING_DIE: 3, // $ lost per missing die for LOSE_RANDOM_DICE
+  AMOUNT_PER_MISSING_EQUIP: 4, // $ lost per missing equipment for LOSE_RANDOM_EQUIPMENT
+}
+
+// ─── Copy Equipment Incompatibility ───
+/** Effect types that cannot be copied by Mirror Lake / Echo Chamber */
+export const COPY_INCOMPATIBLE_EFFECTS = new Set([
+  'FREE_SHOP_REROLL',        // Coupon Book
+  'PREVENT_DEATH',           // Guardian Totem, Saint Elmo's Shield
+  'BANK_NOTE',               // Bank Note
+  'MODIFY_REROLLS',          // Spare Holster, Express Train
+  'END_ROUND_MONEY',         // Payday
+  'END_ROUND_MONEY_PER_REROLL', // Rainy Day Fund
+  'ROUND_START_SELL_VALUE',  // Antique Revolver, Raffle Ticket (not implemented)
+  'LOADED_DICE',             // Loaded Dice
+  'END_ROUND_MONEY_SCALING', // Railroad Bonds
+  'TRAIL_ALMANAC_MONEY',     // Trail Almanac
+  'ALLOW_DUPLICATES',        // Counterfeit Goods
+  'HELLFIRE_ROUND',          // Hellfire Round
+  'OPEN_PALM',               // Open Palm
+  'SAVINGS_ACCOUNT',         // Savings Account (not implemented)
+  'EXPLORER_GUILD',          // Explorer's Guild (not implemented)
+  'PHANTOM_WAGON',           // Phantom Wagon (not implemented)
+  'PACK_SADDLE',             // Pack Saddle (not implemented)
+  'COFFEE',                  // Coffee (not implemented)
+  'FLOUR_SACK',              // Flour Sack (not implemented)
+  'NEGATE_WAGON_DAMAGE',     // Spare Wagon Parts
+  'COPY_RIGHT',              // Mirror Lake (prevent self-reference)
+  'COPY_LEFTMOST',           // Echo Chamber (prevent self-reference)
+]);
+
+/**
+ * Resolve the effective equipment that a copy item should emulate.
+ * Returns the resolved item, or null if nothing valid to copy.
+ * Uses a visited set to prevent infinite loops between Mirror Lake and Echo Chamber.
+ */
+export function resolveCopyTarget<T extends { def: { effectType: string } }>(
+  equipment: T[],
+  sourceIndex: number,
+  maxDepth: number,
+  visited: Set<number> = new Set(),
+): T | null {
+  if (maxDepth <= 0) return null;
+  visited.add(sourceIndex);
+
+  const equip = equipment[sourceIndex];
+  let targetIndex: number | null = null;
+
+  if (equip.def.effectType === 'COPY_RIGHT') {
+    targetIndex = sourceIndex + 1;
+  } else if (equip.def.effectType === 'COPY_LEFTMOST') {
+    if (sourceIndex === 0) return null;
+    targetIndex = 0;
+  } else {
+    if (COPY_INCOMPATIBLE_EFFECTS.has(equip.def.effectType)) return null;
+    return equip;
+  }
+
+  if (targetIndex === null || targetIndex < 0 || targetIndex >= equipment.length) return null;
+  if (visited.has(targetIndex)) return null;
+
+  const target = equipment[targetIndex];
+
+  if (target.def.effectType === 'COPY_RIGHT' || target.def.effectType === 'COPY_LEFTMOST') {
+    return resolveCopyTarget(equipment, targetIndex, maxDepth - 1, visited);
+  }
+
+  if (COPY_INCOMPATIBLE_EFFECTS.has(target.def.effectType)) return null;
+
+  return target;
+}

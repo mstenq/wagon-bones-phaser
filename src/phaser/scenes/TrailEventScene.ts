@@ -6,7 +6,7 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
-import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
 import { createLayout } from '../ui/SceneLayout';
@@ -611,7 +611,8 @@ export class TrailEventScene extends Scene {
       case 'LOSE_RANDOM_DICE': {
         const available = enhancedDiceBeforeCount ?? 0;
         if (available === 0 && !negated) {
-          text = 'No enhanced dice to sacrifice. Lost $10 instead.';
+          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE; // $3 per missing die as penalty
+          text = `No enhanced dice to sacrifice. Lost $${lostAmount} instead.`;
           color = TEXT_COLORS.ERROR_RED;
         } else {
           const lost = Math.min(effect.count ?? 0, available);
@@ -675,7 +676,8 @@ export class TrailEventScene extends Scene {
         break;
       case 'LOSE_EQUIPMENT_CHOICE':
         if ((equipmentBeforeCount ?? 0) === 0 && !negated) {
-          text = 'No equipment to sacrifice. Lost $10 instead.';
+          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
+          text = `No equipment to sacrifice. Lost $${lostAmount} instead.`;
           color = TEXT_COLORS.ERROR_RED;
         } else {
           text = 'Must choose equipment to lose';
@@ -683,7 +685,8 @@ export class TrailEventScene extends Scene {
         break;
       case 'LOSE_RANDOM_EQUIPMENT':
         if ((equipmentBeforeCount ?? 0) === 0 && !negated) {
-          text = 'No equipment to sacrifice. Lost $10 instead.';
+          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
+          text = `No equipment to sacrifice. Lost $${lostAmount} instead.`;
           color = TEXT_COLORS.ERROR_RED;
         } else {
           text = 'Lost a random equipment!';

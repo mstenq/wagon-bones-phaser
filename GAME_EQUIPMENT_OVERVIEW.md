@@ -36,7 +36,7 @@ Dynamite - $5 - +15 mult - 1 in 6 change to be destroyed at end of round
 Even Odds - $4 - +4 when an even pip is scored
 Odd Fellow - $4 - +31 miles when an odd pip is scored
 Extra Saddlebag - $4 - refresh your spent dice for free 1 time a round
-Spare Holster - $4 - +1 re-roll per leg
+Spare Holster - $4 - +1 re-roll per round
 Payday - $6 - Earn $4 at end of round. Jesse Rawlins (Outlaw) earns $12
 
 
@@ -130,6 +130,9 @@ Rainbow Trail - $5 - x2 if 2 different enhanced dice (wood/bone/lucky/steel/gold
 
 ## Phase 7
 Mirror Lake - $10 - copies ability of item to the right
+Echo Chamber - $10 - copies the ability of the leftmost item
+
+## Phase 8
 Mile Marker - $8 - gains +6 miles each time a 1 pip is scored
 Trail Backpack - $7 - +2 re-rolls per day, -1 dice when rolling
 Loaded Dice - $4 - doubles all listed probabilities
@@ -140,13 +143,16 @@ Five Finger Fillet - $8 - x5 mult if hand contains a five of a kind
 Prairie Wind - $8 - x3 mult if hand contains a 5 straight
 Express Train - $7 - +250 miles, -2 re-rolls
 Phantom Wagon - $8 - after 2 rounds, sell this card to duplicate a random item (removes ghost/haunted aura)
-Echo Chamber - $10 - copies the ability of the leftmost item
 Trail Almanac - $6 - $1 at the end of round for every type of trail guide discovered
 Blessed Herd - $7 - x3 mult if you have at least 16 enhanced dice in collection
 Supply Drop - $6 - create a random supply card at start of round
 Explorer’s Guild - $8 - all trail guides and trail guide packs are free in the shop
+Graverobber - $7 - gains x0.1 mult per scored enhanced dice, removes dice enhancement.
+Pack Saddle - $4 - +1 hand size
+Coffee - $6 - +2 hand size, -1 day per round
+Flour Sack - $6 - +5 hand size, reduces by 1 each round
 
-## Phase 8
+## Phase 9
 Oil Baron - $7 - +2 mult for every $5 you have
 Trailblazer - $8 - earns x0.2 mult per consecutive hand played without playing your most played hand
 Golden Spike - $7 - all scored dice have a 1 in 4 chance to turn into a gold dice
@@ -156,6 +162,8 @@ Raffle Ticket - $6 - at the end of each round add $1 of sell value to each piece
 Ghost Town - $6 - +10 mult for each dice below the collections starting size
 Savings Account - $5 - earn an extra $1 of interest for every $5 you have at end of round. Henry Pritchard (Accountant) earns an additional $1 for every $5.
 
+
+## Legendaries
 the following legendary items must be obtained from pandora's box frontier encounter cards
 Book of the Dead - $? - Gains x1 mult for each destroyed enhanced dice
 The Devil’s Hand - $? - Played 6's give x2 mult when scored

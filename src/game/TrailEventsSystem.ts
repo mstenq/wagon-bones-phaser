@@ -13,6 +13,7 @@ import {
   createConsumableInstance,
 } from './ConsumablesSystem';
 import { generateShopStock } from './ItemsSystem';
+import { TRAIL_EVENT } from './Constants';
 
 // ─── Types ───
 
@@ -354,8 +355,8 @@ export function applyEffect(
         (d) => d.enhancement !== null || d.sticker !== null || d.aura !== null,
       );
       if (enhancedDice.length === 0) {
-        // Fallback: lose $10 instead (can go negative)
-        player.economy.setBalance(player.economy.balance - 10);
+        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE; // $3 per missing die as penalty
+        player.economy.setBalance(player.economy.balance - lostAmount);
         break;
       }
       const count = Math.min(effect.count ?? 0, enhancedDice.length);
@@ -373,8 +374,9 @@ export function applyEffect(
 
     case 'LOSE_RANDOM_EQUIPMENT': {
       if (player.equipment.length === 0) {
-        // Fallback: lose $10 instead (can go negative)
-        player.economy.setBalance(player.economy.balance - 10);
+        // Fallback: lose $4 per missing equipment (can go negative)
+        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP;
+        player.economy.setBalance(player.economy.balance - lostAmount);
         break;
       }
       const count = Math.min(effect.count ?? 0, player.equipment.length);
@@ -390,7 +392,8 @@ export function applyEffect(
       // Deferred to UI — the scene will prompt the player to choose.
       // If no equipment, fallback $10 penalty applied here.
       if (player.equipment.length === 0) {
-        player.economy.setBalance(player.economy.balance - 10);
+          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
+        player.economy.setBalance(player.economy.balance - lostAmount);
       }
       break;
     }

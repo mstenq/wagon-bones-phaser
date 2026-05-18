@@ -5,17 +5,17 @@ import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
 
-// ─── HELD_RETRIGGER: Double Down ───
+// ─── HELD_RETRIGGER: Silver Bullets ───
 
-describe('HELD_RETRIGGER: Double Down', () => {
+describe('HELD_RETRIGGER: Silver Bullets', () => {
   test('retriggers steel held-in-hand dice', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       heldDice: [die({ value: 3, enhancement: 'steel' })],
-      equipment: [item('double_down')],
+      equipment: [item('silver_bullets')],
     });
     // PAIR: baseMult=1
-    // Steel held triggers 2 times (base + 1 retrigger from double_down)
+    // Steel held triggers 2 times (base + 1 retrigger from silver_bullets)
     // xMult = 1.5 * 1.5 = 2.25
     // heldMult = (1 + 0) * 2.25 = 2.25
     expect(result.mult).toBe(2.25);
@@ -25,16 +25,16 @@ describe('HELD_RETRIGGER: Double Down', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       heldDice: [die({ value: 11 })],
-      equipment: [item('double_down'), item('eleventh_crossing')],
+      equipment: [item('silver_bullets'), item('eleventh_crossing')],
     });
     // PAIR: baseMult=1
     // Held die with value 11: eleventh_crossing triggers +11 per trigger
-    // 2 triggers (base + double_down) → +22 bonusMult
+    // 2 triggers (base + silver_bullets) → +22 bonusMult
     // heldMult = (1 + 22) * 1 = 23
     expect(result.mult).toBe(23);
   });
 
-  test('without double_down, steel triggers once', () => {
+  test('without silver_bullets, steel triggers once', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       heldDice: [die({ value: 3, enhancement: 'steel' })],
@@ -125,11 +125,11 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
     expect(result.mult).toBe(1);
   });
 
-  test('retriggers with double_down', () => {
+  test('retriggers with silver_bullets', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       heldDice: [die({ value: 1 })],
-      equipment: [item('ace_in_the_hole'), item('double_down')],
+      equipment: [item('ace_in_the_hole'), item('silver_bullets')],
     });
     // 2 triggers per die: xMult = 1.5 * 1.5 = 2.25
     expect(result.mult).toBe(2.25);

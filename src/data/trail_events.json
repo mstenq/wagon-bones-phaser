@@ -1273,12 +1273,12 @@
     "choices": [
       {
         "id": "lose_dice",
-        "label": "Struggle through (-3 dice)",
+        "label": "Struggle through (-1 die)",
         "outcomes": [
           {
             "probability": 1.0,
             "effects": [
-              { "type": "LOSE_RANDOM_DICE", "count": 3 }
+              { "type": "LOSE_RANDOM_DICE", "count": 1 }
             ]
           }
         ]
@@ -2013,7 +2013,7 @@
     "name": "Abandoned Mine",
     "description": "A dark mine shaft beckons from the hillside.",
     "category": "positive",
-    "weight": 2,
+    "weight": 3,
     "demonHunterOnly": false,
     "choices": [
       {
@@ -2089,7 +2089,7 @@
     "name": "Crystal Cave",
     "description": "Crystals glitter in a cave mouth just off the trail.",
     "category": "positive",
-    "weight": 1,
+    "weight": 2,
     "demonHunterOnly": false,
     "choices": [
       {
@@ -2122,7 +2122,7 @@
     "name": "Old Prospector's Cache",
     "description": "A dying prospector presses a pouch into your hands.",
     "category": "positive",
-    "weight": 1,
+    "weight": 2,
     "demonHunterOnly": false,
     "choices": [
       {

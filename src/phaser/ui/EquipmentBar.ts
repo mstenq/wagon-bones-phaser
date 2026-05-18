@@ -19,6 +19,7 @@ export class EquipmentBar extends CardBar {
   protected readonly preferredSpacing = UI.EQUIP_CARD_SPACING;
   protected readonly barPadding = 20;
   private devIcons: Phaser.GameObjects.Text[] = [];
+  private lastGame: GameState | null = null;
 
   constructor(scene: Scene, x: number, y: number, width: number, height: number) {
     super(scene, x, y, width, height);
@@ -27,6 +28,7 @@ export class EquipmentBar extends CardBar {
 
   /** Update all card hints with current game context */
   updateHints(game: GameState | null, player: PlayerState): void {
+    this.lastGame = game;
     for (const card of this.cards) {
       card.updateHints(game, player);
     }
@@ -134,6 +136,7 @@ export class EquipmentBar extends CardBar {
 
   protected onReorder(fromIndex: number, toIndex: number): void {
     getPlayerState().reorderEquipment(fromIndex, toIndex);
+    this.updateHints(this.lastGame, getPlayerState());
   }
 
   protected onSellComplete(index: number): void {
