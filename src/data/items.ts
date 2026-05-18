@@ -40,7 +40,7 @@ export interface HintSegment {
 import type { GameState } from '../game/GameState';
 import type { PlayerState } from '../game/PlayerState';
 import { HandType } from '../game/types';
-import { COPY_INCOMPATIBLE_EFFECTS, resolveCopyTarget } from '../game/Constants';
+import { COPY_INCOMPATIBLE_EFFECTS, getLoadedDiceMultiplier, resolveCopyTarget } from '../game/Constants';
 
 /** Raw item definition shape (matches the old JSON + hintDisplay) */
 export interface ItemDef {
@@ -65,6 +65,13 @@ const condition = (text: string): HintSegment => ({ text, style: 'condition' });
 const active = (text: string): HintSegment => ({ text, style: 'active' });
 const money = (text: string): HintSegment => ({ text, style: 'money' });
 const text = (t: string): HintSegment => ({ text: t, style: 'text' });
+
+/** Format odds display accounting for Loaded Dice multiplier */
+const oddsDisplay = (chance: [number, number], player: PlayerState): HintSegment => {
+  const ldm = getLoadedDiceMultiplier(player.equipment);
+  const effectiveNum = chance[0] * ldm;
+  return odds(`${effectiveNum} in ${chance[1]}`);
+};
 
 // ─── Hand type display names ───
 const HAND_NAMES: Record<HandType, string> = {
@@ -357,7 +364,7 @@ const items: ItemDef[] = [
     description: '+15 mult. 1 in 6 chance to be destroyed at end of round.',
     effectType: 'ADD_MULT_RISKY',
     effectParams: { value: 15, destroyChance: [1, 6] },
-    hintDisplay: () => [[mult('+15'), odds('1 in 6')]],
+    hintDisplay: (_game, player) => [[mult('+15'), oddsDisplay([1, 6], player)]],
   },
   {
     id: 'extra_saddlebag',
@@ -448,11 +455,11 @@ const items: ItemDef[] = [
     description: 'Each enhanced die held in hand has a 1 in 2 chance to give $1',
     effectType: 'HELD_ENHANCED_MONEY',
     effectParams: { chance: [1, 2], value: 1 },
-    hintDisplay: (game) => {
+    hintDisplay: (game, player) => {
       const held = game?.state.rolledDice?.filter((d) => !game.state.selectedForScore.some((s) => s.id === d.id)) ?? [];
       const enhanced = held.filter((d) => d.enhancement !== null).length;
-      if (enhanced > 0) return [[money(`$1`), odds('1 in 2'), condition(`${enhanced} enhanced`)]];
-      return [[money('$1'), odds('1 in 2'), condition('enhanced held')]];
+      if (enhanced > 0) return [[money(`$1`), oddsDisplay([1, 2], player), condition(`${enhanced} enhanced`)]];
+      return [[money('$1'), oddsDisplay([1, 2], player), condition('enhanced held')]];
     },
   },
   {
@@ -880,7 +887,7 @@ const items: ItemDef[] = [
     description: '1 in 4 chance to get a supply card when a 1 is scored',
     effectType: 'PIP_SUPPLY_CHANCE',
     effectParams: { pip: 1, chance: [1, 4] },
-    hintDisplay: () => [[odds('1 in 4'), condition('supply per 1')]],
+    hintDisplay: (_game, player) => [[oddsDisplay([1, 4], player), condition('supply per 1')]],
   },
   {
     id: 'coupon_book',
@@ -968,7 +975,7 @@ const items: ItemDef[] = [
     description: '1 in 2 chance to give $2 when an enhanced die scores',
     effectType: 'ENHANCED_SCORE_MONEY',
     effectParams: { chance: [1, 2], value: 2 },
-    hintDisplay: () => [[money('$2'), odds('1 in 2'), condition('enhanced scored')]],
+    hintDisplay: (_game, player) => [[money('$2'), oddsDisplay([1, 2], player), condition('enhanced scored')]],
   },
 
   // ─── Phase 4 Items ───
@@ -1014,7 +1021,7 @@ const items: ItemDef[] = [
     description: '1 in 4 chance to upgrade trail knowledge of hand type played',
     effectType: 'HAND_UPGRADE_CHANCE',
     effectParams: { chance: [1, 4] },
-    hintDisplay: () => [[odds('1 in 4'), condition('upgrade hand')]],
+    hintDisplay: (_game, player) => [[oddsDisplay([1, 4], player), condition('upgrade hand')]],
   },
   {
     id: 'guide_lantern',
@@ -1144,7 +1151,7 @@ const items: ItemDef[] = [
     description: 'x3 mult. 1 in 1000 chance of being destroyed at end of round.',
     effectType: 'XMULT_RISKY',
     effectParams: { value: 3, destroyChance: [1, 1000] },
-    hintDisplay: () => [[mult('x3')], [odds('1 in 1000'), text('self-destruct')]],
+    hintDisplay: (_game, player) => [[mult('x3')], [oddsDisplay([1, 1000], player), text('self-destruct')]],
   },
   {
     id: 'repeat_offender',
@@ -1279,7 +1286,7 @@ const items: ItemDef[] = [
     description: '1 in 2 chance to gain a supply card when opening a booster pack',
     effectType: 'PACK_OPEN_SUPPLY_CHANCE',
     effectParams: { chance: [1, 2] },
-    hintDisplay: () => [[odds('1 in 2'), text('supply'), condition('on pack open')]],
+    hintDisplay: (_game, player) => [[oddsDisplay([1, 2], player), text('supply'), condition('on pack open')]],
   },
   {
     id: 'campfire_stories',
@@ -1429,7 +1436,7 @@ const items: ItemDef[] = [
     description: 'Retrigger all enhanced dice. Enhanced dice have 1 in 6 chance of being destroyed, diamond dice 1 in 3.',
     effectType: 'ENHANCED_RETRIGGER',
     effectParams: { destroyChance: [1, 6], diamondDestroyChance: [1, 3] },
-    hintDisplay: () => [[text('Retrigger'), condition('enhanced dice')], [odds('1 in 6'), text('destroy')]],
+    hintDisplay: (_game, player) => [[text('Retrigger'), condition('enhanced dice')], [oddsDisplay([1, 6], player), text('destroy')]],
   },
   {
     id: 'burn_barrel',
@@ -1502,7 +1509,7 @@ const items: ItemDef[] = [
     description: 'Played bone dice have 1 in 2 chance to give x1.5 mult',
     effectType: 'BONE_DICE_XMULT_CHANCE',
     effectParams: { chance: [1, 2], value: 1.5 },
-    hintDisplay: () => [[mult('x1.5'), odds('1 in 2'), condition('per bone')]],
+    hintDisplay: (_game, player) => [[mult('x1.5'), oddsDisplay([1, 2], player), condition('per bone')]],
   },
   {
     id: 'wood_axe',
@@ -1570,6 +1577,17 @@ const items: ItemDef[] = [
       }
       return [[mult('x1')], [condition('per enhancement')]];
     },
+  },
+  {
+    id: 'loaded_dice',
+    name: 'Loaded Dice',
+    cardTemplate: 'white-text',
+    cost: 4,
+    rarity: 'uncommon',
+    description: 'Doubles all listed probabilities',
+    effectType: 'LOADED_DICE',
+    effectParams: {},
+    hintDisplay: () => [[odds('x2'), text('all listed odds')]],
   },
   {
     id: 'mirror_lake',

@@ -5,7 +5,7 @@ import { Die, HandType, HandResult, HandDefinition, HandUpgradeInfo, ScoreResult
 import { EquipmentInstance } from './ItemsSystem';
 import { getPlayerState } from './PlayerState';
 import { getRandomSupplyDef } from './ConsumablesSystem';
-import { resolveCopyTarget } from './Constants';
+import { resolveCopyTarget, checkLoadedChance } from './Constants';
 import handsData from '../data/hands.json';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
@@ -633,15 +633,13 @@ export function processEndOfRound(equipment: EquipmentInstance[]): {
     }
 
     if (effectType === 'ADD_MULT_RISKY') {
-      const [num, den] = p.destroyChance as [number, number];
-      if (Math.random() < num / den) {
+      if (checkLoadedChance(p.destroyChance as [number, number], equipment)) {
         destroyedIndices.push(i);
       }
     }
 
     if (effectType === 'XMULT_RISKY') {
-      const [num, den] = p.destroyChance as [number, number];
-      if (Math.random() < num / den) {
+      if (checkLoadedChance(p.destroyChance as [number, number], equipment)) {
         destroyedIndices.push(i);
       }
     }
@@ -875,8 +873,7 @@ export function processEquipmentAfterHandScored(equipment: EquipmentInstance[], 
       }
       case 'HAND_UPGRADE_CHANCE': {
         // Surveyor's Transit: chance to upgrade hand knowledge
-        const [num, den] = equip.def.effectParams.chance as [number, number];
-        if (Math.random() < num / den) {
+        if (checkLoadedChance(equip.def.effectParams.chance as [number, number], equipment)) {
           const player = getPlayerState();
           const stats = player.getHandStats(handType);
           const handDef = HAND_TABLE.find((h) => h.type === handType)!;
@@ -1254,8 +1251,7 @@ export function processEquipmentOnPackSkipped(equipment: EquipmentInstance[]): v
 export function processEquipmentOnPackOpened(equipment: EquipmentInstance[]): boolean {
   for (const equip of equipment) {
     if (equip.def.effectType === 'PACK_OPEN_SUPPLY_CHANCE') {
-      const [num, den] = equip.def.effectParams.chance as [number, number];
-      if (Math.random() < num / den) {
+      if (checkLoadedChance(equip.def.effectParams.chance as [number, number], equipment)) {
         return true;
       }
     }

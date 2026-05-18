@@ -7,7 +7,7 @@ import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
 import { getScoredRetriggerCount, processEquipmentOnLuckyTrigger, processEquipmentOnDiamondDestroyed } from './EquipmentEffects';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
-import { resolveCopyTarget } from './Constants';
+import { resolveCopyTarget, checkLoadedChance } from './Constants';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -305,13 +305,13 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} DIAMOND: x2 mult (xMult: ${xMult})`);
           break;
         case 'lucky': {
-          if (Math.random() < 1 / 5) {
+          if (checkLoadedChance([1, 5], equipment)) {
             bonusMult += 20;
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
             processEquipmentOnLuckyTrigger(equipment);
           }
-          if (Math.random() < 1 / 15) {
+          if (checkLoadedChance([1, 15], equipment)) {
             player.economy.earn(20);
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit $20!`);
@@ -420,8 +420,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
             break;
           case 'PIP_SUPPLY_CHANCE': {
             if (die.value === (p.pip as number)) {
-              const [num, den] = p.chance as [number, number];
-              if (Math.random() < num / den) {
+              if (checkLoadedChance(p.chance as [number, number], equipment)) {
                 const supplyDef = getRandomSupplyDef();
                 player.consumables.push(createConsumableInstance(supplyDef));
                 animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'supply', value: 0, dieId: die.id });
@@ -432,8 +431,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           }
           case 'ENHANCED_SCORE_MONEY': {
             if (die.enhancement !== null) {
-              const [num, den] = p.chance as [number, number];
-              if (Math.random() < num / den) {
+              if (checkLoadedChance(p.chance as [number, number], equipment)) {
                 player.economy.earn(p.value as number);
                 animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
                 console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value}`);
@@ -461,8 +459,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           case 'BONE_DICE_XMULT_CHANCE': {
             // Bone Charm: bone dice have chance to give xMult
             if (die.enhancement === 'bone') {
-              const [num, den] = p.chance as [number, number];
-              if (Math.random() < num / den) {
+              if (checkLoadedChance(p.chance as [number, number], equipment)) {
                 xMult *= p.value as number;
                 animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
                 console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value}`);
@@ -565,14 +562,14 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
     if (equip.def.effectType !== 'ENHANCED_RETRIGGER') continue;
 
     const p = equip.def.effectParams as Record<string, unknown>;
-    const [num, den] = p.destroyChance as [number, number];
-    const [dNum, dDen] = p.diamondDestroyChance as [number, number];
 
     for (const scoredDie of handResult.scoringDice) {
       if (scoredDie.enhancement === null) continue;
 
-      const chance = scoredDie.enhancement === 'diamond' ? dNum / dDen : num / den;
-      if (Math.random() >= chance) continue;
+      const chanceTuple = scoredDie.enhancement === 'diamond'
+        ? p.diamondDestroyChance as [number, number]
+        : p.destroyChance as [number, number];
+      if (!checkLoadedChance(chanceTuple, equipment)) continue;
 
       const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
       if (idx < 0) continue;

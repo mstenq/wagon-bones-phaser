@@ -133,9 +133,11 @@ Mirror Lake - $10 - copies ability of item to the right
 Echo Chamber - $10 - copies the ability of the leftmost item
 
 ## Phase 8
+Loaded Dice - $4 - doubles all listed probabilities
+
+## Phase 9
 5 Mile Marker - $8 - gains +5 miles each time a 5 pip is scored
 Trail Backpack - $7 - +2 re-rolls per day, -1 dice when rolling
-Loaded Dice - $4 - doubles all listed probabilities
 Matchmaker - $8 - x2 mult if hand contains a pair
 Choir Bell - $8 - x3 mult if hand contains a three of a kind
 Posse Wagon - $8 - x4 mult if hand contains a four of a kind
@@ -152,7 +154,7 @@ Pack Saddle - $4 - +1 hand size
 Coffee - $6 - +2 hand size, -1 day per round
 Flour Sack - $6 - +5 hand size, reduces by 1 each round
 
-## Phase 9
+## Phase 10
 Oil Baron - $7 - +2 mult for every $5 you have
 Trailblazer - $8 - earns x0.2 mult per consecutive hand played without playing your most played hand
 Golden Spike - $7 - all scored dice have a 1 in 4 chance to turn into a gold dice

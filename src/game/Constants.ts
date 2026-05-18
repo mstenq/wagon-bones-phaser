@@ -263,6 +263,30 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
 ]);
 
 /**
+ * Count how many Loaded Dice are equipped and return the probability multiplier.
+ * Each Loaded Dice doubles all listed probabilities, so 2 copies = 4x multiplier.
+ * Returns 2^n where n = number of Loaded Dice equipped.
+ */
+export function getLoadedDiceMultiplier(equipment: { def: { effectType: string } }[]): number {
+  let count = 0;
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'LOADED_DICE') count++;
+  }
+  return count > 0 ? Math.pow(2, count) : 1;
+}
+
+/**
+ * Roll a probability check with Loaded Dice support.
+ * Takes a [numerator, denominator] chance tuple and the equipment array.
+ * Returns true if the check succeeds.
+ */
+export function checkLoadedChance(chance: [number, number], equipment: { def: { effectType: string } }[]): boolean {
+  const [num, den] = chance;
+  const ldm = getLoadedDiceMultiplier(equipment);
+  return Math.random() < (num * ldm) / den;
+}
+
+/**
  * Resolve the effective equipment that a copy item should emulate.
  * Returns the resolved item, or null if nothing valid to copy.
  * Uses a visited set to prevent infinite loops between Mirror Lake and Echo Chamber.

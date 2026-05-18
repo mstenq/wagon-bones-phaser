@@ -9,6 +9,7 @@ import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition } from './types';
 import handsData from '../data/hands.json';
+import { checkLoadedChance } from './Constants';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -363,7 +364,22 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
       return { success: false, failReason: 'No space!' };
     }
     case 'bless': {
-      // 1 in 4 chance to bless equipment with aura — stub for now
+      // 1 in 4 chance to bless a random unblessed equipment with an aura (weighted)
+      const unblessed = player.equipment.filter((e) => !e.def.aura);
+      if (unblessed.length === 0) return { success: false, failReason: 'All equipment already has auras!' };
+      if (!checkLoadedChance([1, 4], player.equipment)) return { success: true };
+      const blessableAuras = (['fire', 'icy', 'holy'] as const).map((id) => getItemAuraById(id)!);
+      const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
+      const target = unblessed[Math.floor(Math.random() * unblessed.length)];
+      const roll = Math.random() * totalWeight;
+      let cumulative = 0;
+      for (const aura of blessableAuras) {
+        cumulative += aura.chance;
+        if (roll < cumulative) {
+          target.def = { ...target.def, aura: { ...aura } };
+          break;
+        }
+      }
       return { success: true };
     }
     case 'priests_blessing': {

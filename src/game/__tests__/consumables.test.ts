@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, die } from './testHelpers';
+import { resetDieIds, setupGame, die, item } from './testHelpers';
 import { resetPlayerState } from '../PlayerState';
 import {
   createSupplyConsumableDef,
@@ -347,5 +347,53 @@ describe('Mirage CLONE effect', () => {
     const right = player.dice.find((d) => d.id === rightDie.id)!;
     expect(right.enhancement).toBe('gold');
     expect(right.aura).toBe('holy');
+  });
+});
+
+// ─── Bless Aura Weighting ───
+
+import itemAurasData from '../../data/item_auras.json';
+
+describe('Bless supply card aura weighting', () => {
+  test('bless applies weighted aura distribution matching item_auras.json', () => {
+    const blessableIds = ['fire', 'icy', 'holy'] as const;
+    const blessableAuras = blessableIds.map((id) => itemAurasData.find((a) => a.id === id)!);
+    const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
+    const expectedRates = Object.fromEntries(blessableAuras.map((a) => [a.id, a.chance / totalWeight]));
+
+    const counts: Record<string, number> = { fire: 0, icy: 0, holy: 0 };
+    const runs = 10000;
+
+    for (let i = 0; i < runs; i++) {
+      const { player } = setupGame({
+        equipment: [item('horseshoe'), item('loaded_dice'), item('loaded_dice')],
+        money: 10,
+      });
+
+      const blessDef = getSupplyDefById('bless');
+      if (!blessDef) throw new Error('bless not found');
+      const consumed = createConsumableInstance(blessDef);
+      executeConsumableEffect(consumed, player);
+
+      const aura = player.equipment[0].def.aura;
+      if (aura) {
+        counts[aura.id]++;
+      }
+    }
+
+    const total = counts.fire + counts.icy + counts.holy;
+    const tolerance = 0.07; // ±7% tolerance for RNG
+
+    for (const id of blessableIds) {
+      const actualRate = counts[id] / total;
+      expect(actualRate).toBeGreaterThan(expectedRates[id] - tolerance);
+      expect(actualRate).toBeLessThan(expectedRates[id] + tolerance);
+    }
+
+    // Verify ordering matches weight ordering (highest weight = most common)
+    const sorted = [...blessableAuras].sort((a, b) => b.chance - a.chance);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      expect(counts[sorted[i].id]).toBeGreaterThan(counts[sorted[i + 1].id]);
+    }
   });
 });
