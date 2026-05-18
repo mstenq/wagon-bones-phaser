@@ -234,6 +234,33 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   const player = getPlayerState();
   const animEvents: ScoreAnimEvent[] = [];
 
+  // ─── Pre-scoring pass: Graverobber strips enhancements before dice score ───
+  const maxCopyDepthGrave = equipment.length;
+  for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+    let equip = equipment[eIdx];
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, eIdx, maxCopyDepthGrave);
+      if (!resolved) continue;
+      equip = resolved;
+    }
+    if (equip.def.effectType !== 'GRAVEROBBER_XMULT') continue;
+    const p = equip.def.effectParams as Record<string, unknown>;
+    for (const die of handResult.scoringDice) {
+      if (die.enhancement !== null) {
+        equip.state.xMult = (equip.state.xMult ?? 1) + (p.value as number);
+        // Emit strip event on die (visual: turn white) then xMult popup on equip card
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'strip', value: 0, dieId: die.id });
+        animEvents.push({ target: { kind: 'equip', equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
+        console.log(`  [scoreHand] Graverobber: stripped ${die.enhancement} from die ${die.id}, xMult now ${equip.state.xMult}`);
+        // Strip from the scored die (rolled copy)
+        die.enhancement = null;
+        // Strip from the actual pouch die
+        const pouchDie = player.dice.find((d) => d.id === die.id);
+        if (pouchDie) pouchDie.enhancement = null;
+      }
+    }
+  }
+
   console.log('  [scoreHand] Step 3: Per-die scoring');
   // Step 3: Per-die scoring (left to right)
   // Calculate global retrigger count (War Drums, Last Stand) once
@@ -491,6 +518,18 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
               equip.state.miles = (equip.state.miles ?? 0) + (p.value as number);
               console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: gained +${p.value} miles (now ${equip.state.miles})`);
             }
+            break;
+          }
+          case 'PIP_SCORED_MILES_GAIN': {
+            // 5 Mile Marker: gains permanent miles when matching pip scored (only first trigger)
+            if (t === 0 && die.value === (p.pip as number)) {
+              equip.state.miles = (equip.state.miles ?? 0) + (p.value as number);
+              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: gained +${p.value} miles (now ${equip.state.miles})`);
+            }
+            break;
+          }
+          case 'GRAVEROBBER_XMULT': {
+            // Graverobber: handled in pre-scoring pass (enhancements already stripped)
             break;
           }
         }

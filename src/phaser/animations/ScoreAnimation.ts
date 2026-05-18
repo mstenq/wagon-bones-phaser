@@ -327,6 +327,28 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     function animateEvent(evt: (typeof events)[0], stepIdx: number): void {
       const { target, popupType, value } = evt;
 
+      // Special: strip enhancement from die (Graverobber)
+      if (popupType === 'strip') {
+        if (target.kind === 'die' || target.kind === 'both') {
+          const sprite = dieSpriteMap.get(target.dieId);
+          if (sprite) {
+            // Flash white then redraw as standard die
+            scene.tweens.add({
+              targets: sprite,
+              alpha: 0.3,
+              duration: 80,
+              yoyo: true,
+              ease: 'Sine.easeInOut',
+              onComplete: () => {
+                sprite.setDieData({ ...sprite.dieData, enhancement: null });
+              },
+            });
+          }
+        }
+        scene.sound.play('sfx_chips1', { volume: 0.2, detune: -200 });
+        return;
+      }
+
       // Show popup on die if target involves a die
       if (target.kind === 'die' || target.kind === 'both') {
         const sprite = dieSpriteMap.get(target.dieId);

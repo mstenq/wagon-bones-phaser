@@ -294,6 +294,9 @@ export function applyEquipmentEffects(
       case 'ROUNDS_SKIPPED_XMULT':
       case 'DIAMOND_DESTROYED_XMULT':
       case 'RAINBOW_TRAIL_XMULT':
+      case 'HAND_CONTAINS_XMULT':
+      case 'ENHANCED_DICE_COUNT_XMULT':
+      case 'GRAVEROBBER_XMULT':
         // These are xMult effects, handled in the xMult pass below
         break;
 
@@ -343,6 +346,24 @@ export function applyEquipmentEffects(
 
       case 'ENHANCEMENT_SCORED_MILES': {
         // Covered Wagon: accumulated miles apply during scoring
+        const val = equip.state.miles ?? 0;
+        if (val > 0) {
+          bonusMiles += val;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
+        }
+        break;
+      }
+
+      case 'EXPRESS_TRAIN': {
+        // Express Train: flat +miles bonus (reroll penalty handled in getConfigModifiers)
+        const val = p.miles as number;
+        bonusMiles += val;
+        animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: val });
+        break;
+      }
+
+      case 'PIP_SCORED_MILES_GAIN': {
+        // 5 Mile Marker: accumulated miles from pip scoring
         const val = equip.state.miles ?? 0;
         if (val > 0) {
           bonusMiles += val;
@@ -563,6 +584,40 @@ export function applyEquipmentEffects(
         }
         break;
       }
+      case 'HAND_CONTAINS_XMULT': {
+        // Matchmaker, Choir Bell, Posse Wagon, Five Finger Fillet, Prairie Wind
+        const requiredHand = (equip.def.effectParams as Record<string, unknown>).handType as string;
+        const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
+        if (context.handType && handTypeMatches(context.handResult.type, requiredHand)) {
+          finalMult *= xVal;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          console.log(`  [equip] ${equip.def.name}: x${xVal} (hand contains ${requiredHand}) (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'ENHANCED_DICE_COUNT_XMULT': {
+        // Blessed Herd: x3 if 16+ enhanced dice in collection
+        const threshold = (equip.def.effectParams as Record<string, unknown>).threshold as number;
+        const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
+        const allDice = context.allDice ?? [];
+        const enhCount = allDice.filter((d) => d.enhancement !== null).length;
+        if (enhCount >= threshold) {
+          finalMult *= xVal;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xVal });
+          console.log(`  [equip] ${equip.def.name}: x${xVal} (${enhCount} enhanced dice >= ${threshold}) (finalMult: ${finalMult})`);
+        }
+        break;
+      }
+      case 'GRAVEROBBER_XMULT': {
+        // Graverobber: accumulated xMult from stripping enhanced dice
+        const xm = equip.state.xMult ?? 1;
+        if (xm > 1) {
+          finalMult *= xm;
+          animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: xm });
+          console.log(`  [equip] ${equip.def.name}: x${xm} (finalMult: ${finalMult})`);
+        }
+        break;
+      }
     }
   }
 
@@ -585,10 +640,14 @@ export function applyEquipmentEffects(
  */
 export function getConfigModifiers(equipment: EquipmentInstance[]): {
   rerollsBonus: number;
+  rollSizeBonus: number;
   freeShopRerolls: number;
+  daysPenalty: number;
 } {
   let rerollsBonus = 0;
+  let rollSizeBonus = 0;
   let freeShopRerolls = 0;
+  let daysPenalty = 0;
 
   for (const equip of equipment) {
     const { effectType, effectParams } = equip.def;
@@ -600,9 +659,26 @@ export function getConfigModifiers(equipment: EquipmentInstance[]): {
     if (effectType === 'FREE_SHOP_REROLL') {
       freeShopRerolls += p.value as number;
     }
+    if (effectType === 'TRAIL_BACKPACK') {
+      rerollsBonus += p.rerollsBonus as number;
+      rollSizeBonus -= p.rollSizePenalty as number;
+    }
+    if (effectType === 'EXPRESS_TRAIN') {
+      rerollsBonus -= p.rerollsPenalty as number;
+    }
+    if (effectType === 'PACK_SADDLE') {
+      rollSizeBonus += p.value as number;
+    }
+    if (effectType === 'COFFEE') {
+      rollSizeBonus += p.handSizeBonus as number;
+      daysPenalty += p.daysPenalty as number;
+    }
+    if (effectType === 'FLOUR_SACK') {
+      rollSizeBonus += equip.state.handSizeBonus ?? 0;
+    }
   }
 
-  return { rerollsBonus, freeShopRerolls };
+  return { rerollsBonus, rollSizeBonus, freeShopRerolls, daysPenalty };
 }
 
 /**
@@ -1017,7 +1093,7 @@ export interface AnimatedDestruction {
 /** Called at the start of each round. Updates/removes decaying equipment.
  *  Returns indices of equipment to remove. Equipment is processed left-to-right;
  *  if one item destroys another that hasn't triggered yet, the destroyed item is skipped. */
-export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isBossRound: boolean = false): { destroyedIndices: number[]; animatedDestructions: AnimatedDestruction[]; equipmentToCreate: number; equipmentCreateRarity: string; stoneDiceToAdd: number; daysBonus: number; loseAllRerolls: boolean; burnBarrelMoney: number; burnBarrelTriggered: boolean } {
+export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isBossRound: boolean = false): { destroyedIndices: number[]; animatedDestructions: AnimatedDestruction[]; equipmentToCreate: number; equipmentCreateRarity: string; stoneDiceToAdd: number; daysBonus: number; loseAllRerolls: boolean; burnBarrelMoney: number; burnBarrelTriggered: boolean; supplyCardsToAdd: number } {
   const destroyedIndices: number[] = [];
   const animatedDestructions: AnimatedDestruction[] = [];
   const pendingAnimatedDestroy = new Set<number>(); // indices pending animated destruction
@@ -1028,6 +1104,7 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
   let loseAllRerolls = false;
   let burnBarrelMoney = 0;
   let burnBarrelTriggered = false;
+  let supplyCardsToAdd = 0;
   const maxCopyDepth = equipment.length;
   for (let i = 0; i < equipment.length; i++) {
     // Skip items already destroyed by a previous item this round
@@ -1147,9 +1224,25 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
           // don't decrement here, decrement per day in processEquipmentOnDayEnd
         }
         break;
+      case 'PHANTOM_WAGON':
+        // Phantom Wagon: track rounds held
+        if (!isCopy) {
+          equip.state.roundsHeld = (equip.state.roundsHeld ?? 0) + 1;
+        }
+        break;
+      case 'FLOUR_SACK':
+        // Flour Sack: reduce hand size bonus by 1 each round (min 0)
+        if (!isCopy) {
+          equip.state.handSizeBonus = Math.max(0, (equip.state.handSizeBonus ?? 0) - (equip.def.effectParams.decayPerRound as number));
+        }
+        break;
+      case 'ROUND_START_SUPPLY':
+        // Supply Drop: create a random supply card
+        supplyCardsToAdd++;
+        break;
     }
   }
-  return { destroyedIndices, animatedDestructions, equipmentToCreate, equipmentCreateRarity, stoneDiceToAdd, daysBonus, loseAllRerolls, burnBarrelMoney, burnBarrelTriggered };
+  return { destroyedIndices, animatedDestructions, equipmentToCreate, equipmentCreateRarity, stoneDiceToAdd, daysBonus, loseAllRerolls, burnBarrelMoney, burnBarrelTriggered, supplyCardsToAdd };
 }
 
 /** Called at the end of each day. Updates War Drums counter and Trail Tax. */

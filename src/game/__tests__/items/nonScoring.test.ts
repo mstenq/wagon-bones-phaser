@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, itemWithState, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, item, itemWithState, itemWithAura, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
 import {
   processEndOfRound,
   getConfigModifiers,
@@ -14,6 +14,7 @@ import {
   processEquipmentOnReroll,
   processEquipmentOnPackOpened,
   processEquipmentOnBossDefeat,
+  processEquipmentOnRoundStart,
 } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
@@ -594,5 +595,283 @@ describe('ALLOW_DUPLICATES: Counterfeit Goods', () => {
     const inst = item('counterfeit_goods');
     expect(inst.def.cost).toBe(5);
     expect(inst.def.rarity).toBe('uncommon');
+  });
+});
+
+// ─── TRAIL_BACKPACK ───
+
+describe('TRAIL_BACKPACK: Trail Backpack', () => {
+  test('adds +2 rerolls and -1 roll size via config modifier', () => {
+    const equip = [item('trail_backpack')];
+    const mods = getConfigModifiers(equip);
+    expect(mods.rerollsBonus).toBe(2);
+    expect(mods.rollSizeBonus).toBe(-1);
+  });
+
+  test('reflected in game config after startRound', () => {
+    const { game } = setupGame({
+      equipment: [item('trail_backpack')],
+    });
+    game.startRound();
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS + 2);
+    expect(game.config.rollSize).toBe(GAMEPLAY.ROLL_SIZE - 1);
+  });
+});
+
+// ─── EXPRESS_TRAIN ───
+
+describe('EXPRESS_TRAIN: Express Train', () => {
+  test('adds +250 miles and -2 rerolls', () => {
+    const mods = getConfigModifiers([item('express_train')]);
+    expect(mods.rerollsBonus).toBe(-2);
+  });
+
+  test('adds miles bonus to score', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('express_train')],
+    });
+    // PAIR base miles + 250 express train bonus
+    expect(result.miles).toBeGreaterThanOrEqual(250);
+  });
+
+  test('reflected in game config after startRound', () => {
+    const { game } = setupGame({
+      equipment: [item('express_train')],
+    });
+    game.startRound();
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 2);
+  });
+});
+
+// ─── PHANTOM_WAGON ───
+
+describe('PHANTOM_WAGON: Phantom Wagon', () => {
+  test('has correct effect type and initial state', () => {
+    const inst = item('phantom_wagon');
+    expect(inst.def.effectType).toBe('PHANTOM_WAGON');
+    expect(inst.state.roundsHeld).toBe(0);
+  });
+
+  test('increments roundsHeld on processEquipmentOnRoundStart', () => {
+    const inst = item('phantom_wagon');
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.roundsHeld).toBe(1);
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.roundsHeld).toBe(2);
+  });
+
+  test('selling before 2 rounds does not duplicate', () => {
+    const horseshoe = item('horseshoe');
+    const phantom = item('phantom_wagon');
+    phantom.state.roundsHeld = 1; // not ready yet
+    const { player } = setupGame({ equipment: [horseshoe, phantom] });
+    player.equipment = [horseshoe, phantom];
+
+    const balanceBefore = player.economy.balance;
+    player.sellEquipment(1); // sell phantom
+    expect(player.equipment.length).toBe(1); // only horseshoe remains
+    expect(player.equipment[0].def.id).toBe('horseshoe');
+    expect(player.economy.balance).toBe(balanceBefore + phantom.sellValue);
+  });
+
+  test('selling after 2 rounds duplicates a random item', () => {
+    const horseshoe = item('horseshoe');
+    const phantom = item('phantom_wagon');
+    phantom.state.roundsHeld = 2; // ready!
+    const { player } = setupGame({ equipment: [horseshoe, phantom] });
+    player.equipment = [horseshoe, phantom];
+
+    player.sellEquipment(1); // sell phantom
+    // Should have horseshoe + duplicated horseshoe
+    expect(player.equipment.length).toBe(2);
+    expect(player.equipment[0].def.id).toBe('horseshoe');
+    expect(player.equipment[1].def.id).toBe('horseshoe');
+  });
+
+  test('removes ghost aura when duplicating', () => {
+    const ghostItem = itemWithAura('horseshoe', 'ghost');
+    const phantom = item('phantom_wagon');
+    phantom.state.roundsHeld = 2;
+    const { player } = setupGame({ equipment: [ghostItem, phantom] });
+    player.equipment = [ghostItem, phantom];
+
+    player.sellEquipment(1); // sell phantom
+    // The duplicate should have ghost aura removed
+    const duplicate = player.equipment[1];
+    expect(duplicate.def.id).toBe('horseshoe');
+    expect(duplicate.def.aura).toBeUndefined();
+  });
+
+  test('preserves non-ghost aura when duplicating', () => {
+    const fireItem = itemWithAura('horseshoe', 'fire');
+    const phantom = item('phantom_wagon');
+    phantom.state.roundsHeld = 2;
+    const { player } = setupGame({ equipment: [fireItem, phantom] });
+    player.equipment = [fireItem, phantom];
+
+    player.sellEquipment(1); // sell phantom
+    const duplicate = player.equipment[1];
+    expect(duplicate.def.id).toBe('horseshoe');
+    expect(duplicate.def.aura?.id).toBe('fire');
+  });
+});
+
+// ─── TRAIL_ALMANAC_MONEY ───
+
+describe('TRAIL_ALMANAC_MONEY: Trail Almanac', () => {
+  test('has correct effect type', () => {
+    const inst = item('trail_almanac');
+    expect(inst.def.effectType).toBe('TRAIL_ALMANAC_MONEY');
+  });
+
+  test('earns $1 per trail guide type discovered', () => {
+    const { player } = setupGame({ equipment: [item('trail_almanac')] });
+    // Upgrade 3 different hand types (simulate discovering trail guides)
+    player.upgradeHandLevel(HandType.PAIR);
+    player.upgradeHandLevel(HandType.THREE_OF_A_KIND);
+    player.upgradeHandLevel(HandType.FIVE_STRAIGHT);
+
+    const payout = player.calculatePayout(0, 0);
+    // $1 per discovered type = $3 from trail almanac
+    expect(payout.equipmentMoney).toBe(3);
+  });
+
+  test('earns $0 when no trail guides discovered', () => {
+    const { player } = setupGame({ equipment: [item('trail_almanac')] });
+    const payout = player.calculatePayout(0, 0);
+    expect(payout.equipmentMoney).toBe(0);
+  });
+});
+
+// ─── ROUND_START_SUPPLY: Supply Drop ───
+
+describe('ROUND_START_SUPPLY: Supply Drop', () => {
+  test('creates a supply card at start of round', () => {
+    const { game, player } = setupGame({
+      equipment: [item('supply_drop')],
+    });
+    const consumablesBefore = player.consumables.length;
+    game.startRound();
+    expect(player.consumables.length).toBe(consumablesBefore + 1);
+  });
+});
+
+// ─── EXPLORER_GUILD ───
+
+describe('EXPLORER_GUILD: Explorer\'s Guild', () => {
+  test('has correct effect type', () => {
+    const inst = item('explorers_guild');
+    expect(inst.def.effectType).toBe('EXPLORER_GUILD');
+  });
+
+  test('is copy-incompatible', () => {
+    const { COPY_INCOMPATIBLE_EFFECTS } = require('../../Constants');
+    expect(COPY_INCOMPATIBLE_EFFECTS.has('EXPLORER_GUILD')).toBe(true);
+  });
+
+  test('trailGuidesFree returns true when equipped', () => {
+    const { player } = setupGame({ equipment: [item('explorers_guild')] });
+    expect(player.trailGuidesFree).toBe(true);
+  });
+
+  test('trailGuidesFree returns false when not equipped', () => {
+    const { player } = setupGame({ equipment: [item('horseshoe')] });
+    expect(player.trailGuidesFree).toBe(false);
+  });
+
+  test('trailGuidesFree returns false with no equipment', () => {
+    const { player } = setupGame({ equipment: [] });
+    expect(player.trailGuidesFree).toBe(false);
+  });
+});
+
+// ─── PACK_SADDLE ───
+
+describe('PACK_SADDLE: Pack Saddle', () => {
+  test('adds +1 roll size via config modifier', () => {
+    const mods = getConfigModifiers([item('pack_saddle')]);
+    expect(mods.rollSizeBonus).toBe(1);
+  });
+
+  test('reflected in game config after startRound', () => {
+    const { game } = setupGame({
+      equipment: [item('pack_saddle')],
+    });
+    game.startRound();
+    expect(game.config.rollSize).toBe(GAMEPLAY.ROLL_SIZE + 1);
+  });
+
+  test('is copy-incompatible', () => {
+    const { COPY_INCOMPATIBLE_EFFECTS } = require('../../Constants');
+    expect(COPY_INCOMPATIBLE_EFFECTS.has('PACK_SADDLE')).toBe(true);
+  });
+});
+
+// ─── COFFEE ───
+
+describe('COFFEE: Coffee', () => {
+  test('adds +2 roll size and -1 day via config modifier', () => {
+    const mods = getConfigModifiers([item('coffee')]);
+    expect(mods.rollSizeBonus).toBe(2);
+    expect(mods.daysPenalty).toBe(1);
+  });
+
+  test('reflected in game config after startRound', () => {
+    const { game } = setupGame({
+      equipment: [item('coffee')],
+    });
+    game.startRound();
+    expect(game.config.rollSize).toBe(GAMEPLAY.ROLL_SIZE + 2);
+    expect(game.config.maxDays).toBe(GAMEPLAY.MAX_DAYS - 1);
+  });
+
+  test('is copy-incompatible', () => {
+    const { COPY_INCOMPATIBLE_EFFECTS } = require('../../Constants');
+    expect(COPY_INCOMPATIBLE_EFFECTS.has('COFFEE')).toBe(true);
+  });
+});
+
+// ─── FLOUR_SACK ───
+
+describe('FLOUR_SACK: Flour Sack', () => {
+  test('starts with +5 hand size bonus', () => {
+    const inst = item('flour_sack');
+    expect(inst.state.handSizeBonus).toBe(5);
+  });
+
+  test('provides roll size bonus from state', () => {
+    const mods = getConfigModifiers([item('flour_sack')]);
+    expect(mods.rollSizeBonus).toBe(5);
+  });
+
+  test('decays by 1 each round on processEquipmentOnRoundStart', () => {
+    const inst = item('flour_sack');
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.handSizeBonus).toBe(4);
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.handSizeBonus).toBe(3);
+  });
+
+  test('does not go below 0', () => {
+    const inst = itemWithState('flour_sack', { handSizeBonus: 1 });
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.handSizeBonus).toBe(0);
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.handSizeBonus).toBe(0);
+  });
+
+  test('reflected in game config after startRound', () => {
+    const { game } = setupGame({
+      equipment: [item('flour_sack')],
+    });
+    game.startRound();
+    // Config is computed BEFORE round-start decay, so uses full 5 bonus
+    expect(game.config.rollSize).toBe(GAMEPLAY.ROLL_SIZE + 5);
+  });
+
+  test('is copy-incompatible', () => {
+    const { COPY_INCOMPATIBLE_EFFECTS } = require('../../Constants');
+    expect(COPY_INCOMPATIBLE_EFFECTS.has('FLOUR_SACK')).toBe(true);
   });
 });

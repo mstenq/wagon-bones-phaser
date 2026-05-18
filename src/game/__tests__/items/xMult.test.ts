@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
 import {
   processEquipmentOnLuckyTrigger,
   processEquipmentOnSell,
@@ -592,5 +592,262 @@ describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
     });
     // PAIR: baseMult=1, no bonus
     expect(result.mult).toBe(1);
+  });
+});
+
+// ─── HAND_CONTAINS_XMULT: Hitched Pair ───
+
+describe('HAND_CONTAINS_XMULT: Hitched Pair (pair, x2)', () => {
+  test('activates on pair', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(6, 2),
+      equipment: [item('hitched_pair')],
+    });
+    // PAIR: baseMult=1, x2 = 2
+    expect(result.mult).toBe(2);
+  });
+
+  test('activates on full house (contains pair)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [...diceWithValue(3, 3), ...diceWithValue(7, 2)],
+      equipment: [item('hitched_pair')],
+    });
+    // FULL_HOUSE: baseMult=4, x2 = 8
+    expect(result.mult).toBe(8);
+  });
+
+  test('does not activate on straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([4, 5, 6, 7]),
+      equipment: [item('hitched_pair')],
+    });
+    // FOUR_STRAIGHT: baseMult=3, no pair → no xMult
+    expect(result.mult).toBe(3);
+  });
+});
+
+// ─── HAND_CONTAINS_XMULT: Hat Trick ───
+
+describe('HAND_CONTAINS_XMULT: Hat Trick (3oak, x3)', () => {
+  test('activates on three of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 3),
+      equipment: [item('hat_trick')],
+    });
+    // THREE_OF_A_KIND: baseMult=3, x3 = 9
+    expect(result.mult).toBe(9);
+  });
+
+  test('activates on four of a kind (contains 3oak)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 4),
+      equipment: [item('hat_trick')],
+    });
+    // FOUR_OF_A_KIND: baseMult=5, x3 = 15
+    expect(result.mult).toBe(15);
+  });
+
+  test('does not activate on pair', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 2),
+      equipment: [item('hat_trick')],
+    });
+    // PAIR: baseMult=1, no 3oak → no xMult
+    expect(result.mult).toBe(1);
+  });
+});
+
+// ─── HAND_CONTAINS_XMULT: Posse Wagon ───
+
+describe('HAND_CONTAINS_XMULT: Posse Wagon (4oak, x4)', () => {
+  test('activates on four of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 4),
+      equipment: [item('posse_wagon')],
+    });
+    // FOUR_OF_A_KIND: baseMult=5, x4 = 20
+    expect(result.mult).toBe(20);
+  });
+
+  test('does not activate on three of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 3),
+      equipment: [item('posse_wagon')],
+    });
+    // THREE_OF_A_KIND: baseMult=3, no 4oak → no xMult
+    expect(result.mult).toBe(3);
+  });
+});
+
+// ─── HAND_CONTAINS_XMULT: Five Finger Fillet ───
+
+describe('HAND_CONTAINS_XMULT: Five Finger Fillet (5oak, x5)', () => {
+  test('activates on five of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 5),
+      equipment: [item('five_finger_fillet')],
+    });
+    // FIVE_OF_A_KIND: baseMult=6, x5 = 30
+    expect(result.mult).toBe(30);
+  });
+
+  test('does not activate on four of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 4),
+      equipment: [item('five_finger_fillet')],
+    });
+    // FOUR_OF_A_KIND: baseMult=5, no 5oak → no xMult
+    expect(result.mult).toBe(5);
+  });
+});
+
+// ─── HAND_CONTAINS_XMULT: Snake River ───
+
+describe('HAND_CONTAINS_XMULT: Snake River (5 straight, x3)', () => {
+  test('activates on 5 straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6, 7]),
+      equipment: [item('snake_river')],
+    });
+    // FIVE_STRAIGHT: baseMult=6, x3 = 18
+    expect(result.mult).toBe(18);
+  });
+
+  test('does not activate on 4 straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([4, 5, 6, 7]),
+      equipment: [item('snake_river')],
+    });
+    // FOUR_STRAIGHT: baseMult=3, no 5 straight → no xMult
+    expect(result.mult).toBe(3);
+  });
+});
+
+// ─── ENHANCED_DICE_COUNT_XMULT: Blessed Herd ───
+
+describe('ENHANCED_DICE_COUNT_XMULT: Blessed Herd', () => {
+  test('activates x3 when 16+ enhanced dice in collection', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const enhancedDice = Array.from({ length: 16 }, (_, i) =>
+      die({ value: i % 12 + 1, enhancement: 'wooden' }),
+    );
+
+    const { game } = setupGame({
+      equipment: [item('blessed_herd')],
+      dice: [...scoredDice, ...enhancedDice, ...diceWithValue(1, 10)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    // PAIR: baseMult=1, x3 from blessed herd
+    expect(result.mult).toBe(3);
+  });
+
+  test('does not activate when fewer than 16 enhanced dice', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const enhancedDice = Array.from({ length: 10 }, (_, i) =>
+      die({ value: i % 12 + 1, enhancement: 'wooden' }),
+    );
+
+    const { game } = setupGame({
+      equipment: [item('blessed_herd')],
+      dice: [...scoredDice, ...enhancedDice, ...diceWithValue(1, 20)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    // PAIR: baseMult=1, no x3 (only 10 enhanced)
+    expect(result.mult).toBe(1);
+  });
+});
+
+// ─── GRAVEROBBER_XMULT: Graverobber ───
+
+describe('GRAVEROBBER_XMULT: Graverobber', () => {
+  test('gains xMult per enhanced dice scored and removes enhancement', () => {
+    const woodenDie = die({ value: 5, enhancement: 'wooden' });
+    const steelDie = die({ value: 5, enhancement: 'steel' });
+    const inst = item('graverobber');
+
+    const { result, player } = calculateTestScore({
+      scoredDice: [woodenDie, steelDie],
+      equipment: [inst],
+    });
+
+    // Should have gained x0.1 per enhanced die = 1 + 0.2 = 1.2
+    expect(inst.state.xMult).toBeCloseTo(1.2, 5);
+    // Enhancements should be removed from scored dice
+    expect(woodenDie.enhancement).toBeNull();
+    expect(steelDie.enhancement).toBeNull();
+    // Enhancements should also be removed from pouch dice
+    const pouchWooden = player.dice.find((d) => d.id === woodenDie.id)!;
+    const pouchSteel = player.dice.find((d) => d.id === steelDie.id)!;
+    expect(pouchWooden.enhancement).toBeNull();
+    expect(pouchSteel.enhancement).toBeNull();
+  });
+
+  test('strips enhancement BEFORE scoring so bone mult is not applied', () => {
+    const boneDie = die({ value: 5, enhancement: 'bone' });
+    const inst = item('graverobber');
+
+    const { result } = calculateTestScore({
+      scoredDice: [boneDie, die({ value: 5 })],
+      equipment: [inst],
+    });
+
+    // PAIR: baseMult=1, bone would add +4 mult but graverobber strips it first
+    // Graverobber gains x0.1 for the bone die → xMult = 1.1
+    // Final mult: baseMult(1) * xMult(1.1) = 1.1 (no +4 from bone)
+    expect(result.mult).toBeCloseTo(1.1, 5);
+    expect(inst.state.xMult).toBeCloseTo(1.1, 5);
+  });
+
+  test('strips enhancement BEFORE scoring so wooden miles are not applied', () => {
+    const woodenDie = die({ value: 5, enhancement: 'wooden' });
+    const plainDie = die({ value: 5 });
+    const inst = item('graverobber');
+
+    const { result } = calculateTestScore({
+      scoredDice: [woodenDie, plainDie],
+      equipment: [inst],
+    });
+
+    // PAIR base miles = 10, die values = 5 + 5 = 10, total value = 20
+    // Wooden would add +10 miles but graverobber strips it first
+    // Graverobber gains x0.1 → xMult = 1.1
+    // Final miles = 20 * (1 * 1.1) = 22 (no +10 from wooden, but xMult applies)
+    // Without graverobber, wooden would give: (10 + 10 + 10) * 1 = 30
+    expect(result.miles).toBeCloseTo(22, 5);
+  });
+
+  test('does not gain xMult from non-enhanced dice', () => {
+    const inst = item('graverobber');
+    calculateTestScore({
+      scoredDice: diceWithValue(5, 2), // plain dice
+      equipment: [inst],
+    });
+    expect(inst.state.xMult).toBe(1);
+  });
+
+  test('accumulated xMult applies to scoring', () => {
+    const inst = itemWithState('graverobber', { xMult: 2.0 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // PAIR: baseMult=1, x2.0 from graverobber
+    expect(result.mult).toBeCloseTo(2.0, 5);
   });
 });

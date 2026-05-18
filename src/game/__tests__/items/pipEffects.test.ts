@@ -7,6 +7,7 @@ import {
   item,
   itemWithState,
   calculateTestScore,
+  setupGame,
   resetDieIds,
 } from '../testHelpers';
 import { processEquipmentOnRoundStart } from '../../EquipmentEffects';
@@ -317,5 +318,47 @@ describe('BONE_DICE_XMULT_CHANCE: Bone Charm', () => {
     // The mult should only include base (1) — no x1.5
     // wooden gives +10 miles but no mult
     expect(result.mult).toBe(1);
+  });
+});
+
+// ─── PIP_SCORED_MILES_GAIN: 5 Mile Marker ───
+
+describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
+  test('has correct effect type and params', () => {
+    const inst = item('five_mile_marker');
+    expect(inst.def.effectType).toBe('PIP_SCORED_MILES_GAIN');
+    expect(inst.def.effectParams.pip).toBe(5);
+    expect(inst.def.effectParams.value).toBe(5);
+    expect(inst.state.miles).toBe(0);
+  });
+
+  test('gains miles when 5 pip is scored', () => {
+    const inst = item('five_mile_marker');
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2), // pair of 5s
+      equipment: [inst],
+    });
+    // After scoring two 5s, the item should have gained +10 miles (5 per 5 scored)
+    expect(inst.state.miles).toBe(10);
+  });
+
+  test('does not gain miles for non-5 pips', () => {
+    const inst = item('five_mile_marker');
+    calculateTestScore({
+      scoredDice: diceWithValue(4, 2),
+      equipment: [inst],
+    });
+    expect(inst.state.miles).toBe(0);
+  });
+
+  test('accumulated miles apply as bonus', () => {
+    const inst = itemWithState('five_mile_marker', { miles: 50 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    // 50 existing + 10 gained this hand = 60 miles bonus from equipment
+    // The miles reported includes 60 bonus in addition to base hand miles
+    expect(result.miles).toBeGreaterThan(60);
   });
 });

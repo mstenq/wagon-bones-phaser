@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import '../setup';
-import { calculateTestScore, diceWithValue, item, itemWithState, resetDieIds } from '../testHelpers';
-import { processEndOfRound, processEquipmentOnHandPlayed, processEquipmentOnReroll, getScoredRetriggerCount, processEquipmentOnRoundStart } from '../../EquipmentEffects';
+import { calculateTestScore, diceWithValue, item, itemWithState, setupGame, resetDieIds } from '../testHelpers';
+import { processEndOfRound, processEquipmentOnHandPlayed, processEquipmentOnReroll, getScoredRetriggerCount, processEquipmentOnRoundStart, getConfigModifiers } from '../../EquipmentEffects';
 import { HandType } from '../../types';
+import { GAMEPLAY } from '../../Constants';
 
 beforeEach(() => resetDieIds());
 
@@ -394,5 +395,73 @@ describe('Copy item first-day effects', () => {
     // Only original 2 dice, no copies made (not solo)
     const copies = player.dice.filter((d) => d.value === 7);
     expect(copies.length).toBe(2);
+  });
+});
+
+// ─── EXPRESS_TRAIN copy behavior ───
+
+describe('Mirror Lake copies EXPRESS_TRAIN', () => {
+  test('copies +250 miles scoring bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('express_train')],
+    });
+    // PAIR base miles + 250 (mirror copies express) + 250 (express itself) = base + 500
+    const { result: baseResult } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [],
+    });
+    expect(result.miles).toBe(baseResult.miles + 500);
+  });
+
+  test('does not apply -2 reroll penalty from copy', () => {
+    const equipment = [item('mirror_lake'), item('express_train')];
+    const mods = getConfigModifiers(equipment);
+    // Only the real EXPRESS_TRAIN applies -2 rerolls, not the copy
+    expect(mods.rerollsBonus).toBe(-2);
+  });
+
+  test('reflected in game config: only one -2 reroll penalty', () => {
+    const { game } = setupGame({
+      equipment: [item('mirror_lake'), item('express_train')],
+    });
+    game.startRound();
+    // Only the original express train applies -2 rerolls
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 2);
+  });
+});
+
+// ─── ROUND_START_SUPPLY copy behavior ───
+
+describe('Mirror Lake copies ROUND_START_SUPPLY', () => {
+  test('copy triggers supply card creation at round start', () => {
+    const { game, player } = setupGame({
+      equipment: [item('mirror_lake'), item('supply_drop')],
+    });
+    const consumablesBefore = player.consumables.length;
+    game.startRound();
+    // Both mirror lake (copying supply_drop) and supply_drop itself should add a card
+    expect(player.consumables.length).toBe(consumablesBefore + 2);
+  });
+
+  test('does not exceed consumable slot limit', () => {
+    const { game, player } = setupGame({
+      equipment: [item('mirror_lake'), item('supply_drop')],
+    });
+    // Fill consumable slots
+    player.maxConsumableSlots = 2;
+    const { getRandomSupplyDef } = require('../../ConsumablesSystem');
+    player.addConsumable(getRandomSupplyDef());
+    player.addConsumable(getRandomSupplyDef());
+    const consumablesBefore = player.consumables.length;
+    game.startRound();
+    // Already full, can't add more
+    expect(player.consumables.length).toBe(consumablesBefore);
+  });
+
+  test('processEquipmentOnRoundStart returns correct supplyCardsToAdd count', () => {
+    const equipment = [item('mirror_lake'), item('supply_drop')];
+    const result = processEquipmentOnRoundStart(equipment);
+    expect(result.supplyCardsToAdd).toBe(2);
   });
 });

@@ -71,7 +71,7 @@ Equipment is defined in `src/data/items.ts` with an `effectType` string and `eff
 1. Add definition to `src/data/items.ts`
 2. Add effect handling in the appropriate function in `EquipmentEffects.ts`
 3. Push `animEvents` for visual feedback
-4. Add test in `src/game/__tests__/items/`
+4. Add test to the **correct existing test file** in `src/game/__tests__/items/` based on effect category (see Testing section below — never create per-phase test files)
 
 ### Hint Display System
 
@@ -99,6 +99,32 @@ Colors, fonts, sizing, gameplay values — all in `Constants.ts`. Import from th
 - Test helpers: `src/game/__tests__/testHelpers.ts` — provides `setupGame()`, `calculateTestScore()`, `item()`, `die()`, etc.
 - Setup file: `src/game/__tests__/setup.ts` (suppresses console.log)
 - Pattern: Test game logic only (pure functions), not Phaser rendering
+
+### Test File Organization (CRITICAL)
+
+**Tests are organized by EFFECT CATEGORY, NOT by phase/release.** Never create a new test file for a batch of items (e.g. `phase9.test.ts`). Always append new tests to the correct existing file based on the item's `effectType`.
+
+| File | Effect Categories |
+|------|-------------------|
+| `xMult.test.ts` | xMult effects: `DICE_COUNT_XMULT`, `REROLL_COUNT_XMULT`, `HAND_LEVEL_XMULT`, `SPENT_DICE_XMULT`, `ENHANCED_DICE_XMULT`, `HAND_CONTAINS_XMULT`, `ENHANCED_DICE_COUNT_XMULT`, `GRAVEROBBER_XMULT`, etc. |
+| `nonScoring.test.ts` | Config modifiers (`TRAIL_BACKPACK`, `EXPRESS_TRAIN`, `PACK_SADDLE`, `COFFEE`, `FLOUR_SACK`), end-of-round money (`TRAIL_ALMANAC_MONEY`, `BANK_ACCOUNT`), round-start effects (`PHANTOM_WAGON`, `ROUND_START_SUPPLY`), day-end effects, reroll effects, misc non-scoring mechanics |
+| `pipEffects.test.ts` | Per-pip scoring effects: `PIP_BONUS_MILES`, `PIP_SCORED_MILES_GAIN`, etc. |
+| `statefulMult.test.ts` | Stateful additive mult accumulators |
+| `handEffects.test.ts` | `HAND_MULT` (additive hand-type bonuses) |
+| `conditionalEffects.test.ts` | Conditional additive mult |
+| `parityEffects.test.ts` | Even/odd parity effects |
+| `heldInHand.test.ts` | Held-in-hand dice effects |
+| `copyEquipment.test.ts` | Mirror Lake / Echo Chamber copy tests |
+| `loadedDice.test.ts` | Loaded Dice interaction tests |
+| `addMult.test.ts` | Simple `ADD_MULT` tests |
+| `legStart.test.ts` | Leg start effects |
+| `stickerEffects.test.ts` | Dice sticker effects |
+
+**When adding tests for a new item:**
+1. Identify the item's `effectType` from its definition in `src/data/items.ts`
+2. Find the matching test file from the table above
+3. Append the new `describe()` block at the END of that file
+4. **NEVER create a new test file** unless adding a genuinely new effect category
 
 ## Game Design Documentation
 

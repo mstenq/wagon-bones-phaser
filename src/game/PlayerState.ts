@@ -225,6 +225,11 @@ export class PlayerState {
     processEquipmentOnDiceAdded(this.equipment);
   }
 
+  /** Explorer's Guild: trail guides and trail guide packs are free in the shop */
+  get trailGuidesFree(): boolean {
+    return this.equipment.some((e) => e.def.effectType === 'EXPLORER_GUILD');
+  }
+
   get shopRerollCost(): number {
     // Coupon Book: free rerolls before paid ones
     const freeRerolls = getConfigModifiers(this.equipment).freeShopRerolls;
@@ -281,6 +286,34 @@ export class PlayerState {
     if (index < 0 || index >= this.equipment.length) return false;
     const item = this.equipment[index];
     this.economy.earn(item.sellValue);
+
+    // Phantom Wagon: if sold after enough rounds, duplicate a random item
+    if (item.def.effectType === 'PHANTOM_WAGON') {
+      const roundsNeeded = (item.def.effectParams.roundsNeeded as number) ?? 2;
+      if ((item.state.roundsHeld ?? 0) >= roundsNeeded) {
+        // Find other equipment to duplicate (exclude self)
+        const others = this.equipment.filter((_, idx) => idx !== index);
+        if (others.length > 0) {
+          const source = others[Math.floor(Math.random() * others.length)];
+          // Duplicate the item, removing ghost aura if present
+          const duplicated: EquipmentInstance = {
+            def: source.def.aura?.id === 'ghost'
+              ? { ...source.def, aura: undefined }
+              : { ...source.def },
+            sellValue: source.sellValue,
+            state: { ...source.state },
+          };
+          // Add the duplicate after splicing the phantom wagon
+          this.equipment.splice(index, 1);
+          if (this.usedEquipmentSlots < this.maxEquipmentSlots || duplicated.def.aura?.id === 'ghost') {
+            this.equipment.push(duplicated);
+          }
+          processEquipmentOnSell(this.equipment);
+          return true;
+        }
+      }
+    }
+
     this.equipment.splice(index, 1);
     // Update stateful equipment on sell (Snake Oil Ledger)
     processEquipmentOnSell(this.equipment);
@@ -419,6 +452,13 @@ export class PlayerState {
         const perBoss = (equip.def.effectParams.perBoss as number) ?? 2;
         const bossesDefeated = (equip.state.bossesDefeated as number) ?? 0;
         equipmentMoney += base + perBoss * bossesDefeated;
+      }
+      if (equip.def.effectType === 'TRAIL_ALMANAC_MONEY') {
+        let discoveredCount = 0;
+        for (const [, stats] of this.handStats) {
+          if (stats.level > 1) discoveredCount++;
+        }
+        equipmentMoney += ((equip.def.effectParams.value as number) ?? 1) * discoveredCount;
       }
     }
 

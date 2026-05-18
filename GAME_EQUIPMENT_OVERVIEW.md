@@ -127,6 +127,7 @@ Iron Spurs - $7 - played iron dice give +7 mult when scored
 Diamond Coffin - $6 - item gains x0.75 mult for every diamond dice that is destroyed
 Counterfeit Goods - $5 - allows for items/trail guides/supplies/frontier encounter cards to appear multiple times in the shop and packs
 Rainbow Trail - $5 - x2 if 2 different enhanced dice (wood/bone/lucky/steel/gold/diamond) score, x3 if 3 different, x4 if 4, x5 if 5 different score
+The Eleventh Crossing - $5 - Each 11 held in hand gives +11 mult
 
 ## Phase 7
 Mirror Lake - $10 - copies ability of item to the right
@@ -138,13 +139,13 @@ Loaded Dice - $4 - doubles all listed probabilities
 ## Phase 9
 5 Mile Marker - $8 - gains +5 miles each time a 5 pip is scored
 Trail Backpack - $7 - +2 re-rolls per day, -1 dice when rolling
-Matchmaker - $8 - x2 mult if hand contains a pair
-Choir Bell - $8 - x3 mult if hand contains a three of a kind
+Hitched Pair - $8 - x2 mult if hand contains a pair
+Hat Trick - $8 - x3 mult if hand contains a three of a kind
 Posse Wagon - $8 - x4 mult if hand contains a four of a kind
 Five Finger Fillet - $8 - x5 mult if hand contains a five of a kind
 Prairie Wind - $8 - x3 mult if hand contains a 5 straight
 Express Train - $7 - +250 miles, -2 re-rolls
-Phantom Wagon - $8 - after 2 rounds, sell this card to duplicate a random item (removes ghost/haunted aura)
+Phantom Wagon - $8 - after 2 rounds, sell this card to duplicate a random item (removes ghost aura)
 Trail Almanac - $6 - $1 at the end of round for every type of trail guide discovered
 Blessed Herd - $7 - x3 mult if you have at least 16 enhanced dice in collection
 Supply Drop - $6 - create a random supply card at start of round
@@ -163,7 +164,8 @@ Double Barrel - $5 - first played 2 pip dice gives x2 mult when scored
 Raffle Ticket - $6 - at the end of each round add $1 of sell value to each piece of equipment
 Ghost Town - $6 - +10 mult for each dice below the collections starting size
 Savings Account - $5 - earn an extra $1 of interest for every $5 you have at end of round. Henry Pritchard (Accountant) earns an additional $1 for every $5.
-
+Six Feet Under - $5 - item gains 66 miles for every dice that is destroyed
+Eight Second Ride - $7 - Each consecutive scored 8 gains +0.5 xMult over the previous (x1,x1.5,x2,x2.5, x3...)
 
 ## Legendaries
 the following legendary items must be obtained from pandora's box frontier encounter cards

@@ -241,7 +241,7 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'FREE_SHOP_REROLL',        // Coupon Book
   'PREVENT_DEATH',           // Guardian Totem, Saint Elmo's Shield
   'BANK_NOTE',               // Bank Note
-  'MODIFY_REROLLS',          // Spare Holster, Express Train
+  'MODIFY_REROLLS',          // Spare Holster
   'END_ROUND_MONEY',         // Payday
   'END_ROUND_MONEY_PER_REROLL', // Rainy Day Fund
   'ROUND_START_SELL_VALUE',  // Antique Revolver, Raffle Ticket (not implemented)
@@ -252,14 +252,15 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'HELLFIRE_ROUND',          // Hellfire Round
   'OPEN_PALM',               // Open Palm
   'SAVINGS_ACCOUNT',         // Savings Account (not implemented)
-  'EXPLORER_GUILD',          // Explorer's Guild (not implemented)
-  'PHANTOM_WAGON',           // Phantom Wagon (not implemented)
-  'PACK_SADDLE',             // Pack Saddle (not implemented)
-  'COFFEE',                  // Coffee (not implemented)
-  'FLOUR_SACK',              // Flour Sack (not implemented)
+  'EXPLORER_GUILD',          // Explorer's Guild
+  'PHANTOM_WAGON',           // Phantom Wagon
+  'PACK_SADDLE',             // Pack Saddle
+  'COFFEE',                  // Coffee
+  'FLOUR_SACK',              // Flour Sack
   'NEGATE_WAGON_DAMAGE',     // Spare Wagon Parts
   'COPY_RIGHT',              // Mirror Lake (prevent self-reference)
   'COPY_LEFTMOST',           // Echo Chamber (prevent self-reference)
+  'TRAIL_BACKPACK',          // Trail Backpack
 ]);
 
 /**

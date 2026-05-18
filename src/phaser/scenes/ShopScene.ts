@@ -229,9 +229,13 @@ export class ShopScene extends Scene {
         shopItem.type === 'consumable' ? getConsumableTexturePrefix(shopItem.def.category) : undefined;
       // Apply shop discount to displayed cost
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
-      const displayDef = shopDiscount > 0
-        ? { ...itemDef, cost: Math.max(1, Math.floor(itemDef.cost * (1 - shopDiscount))) }
-        : itemDef;
+      // Explorer's Guild: trail guides are free
+      const isTrailGuideFree = shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
+      const displayDef = isTrailGuideFree
+        ? { ...itemDef, cost: 0 }
+        : shopDiscount > 0
+          ? { ...itemDef, cost: Math.max(1, Math.floor(itemDef.cost * (1 - shopDiscount))) }
+          : itemDef;
       const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, displayDef, {
         mode: 'shop',
         showCost: true,
@@ -376,7 +380,9 @@ export class ShopScene extends Scene {
       const packInst = this.packs[i];
       const packCard = new BoosterPackCard(this, packX0 + i * CARD_SPACING, cardCY2, packInst);
       packCard.setDepth(10);
-      const discountedPackCost = this.getDiscountedCost(packInst.def.cost);
+      // Explorer's Guild: trail guide packs are free
+      const isTrailGuidePack = packInst.def.category === 'trail_guide' && player.trailGuidesFree;
+      const discountedPackCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packInst.def.cost);
       if (discountedPackCost !== packInst.def.cost) {
         packCard.setCostDisplay(discountedPackCost);
       }
@@ -410,7 +416,9 @@ export class ShopScene extends Scene {
   private onBuyPack(card: BoosterPackCard, pack: PackInstance): void {
     if (card.sold) return;
     const player = getPlayerState();
-    const cost = this.getDiscountedCost(pack.def.cost);
+    // Explorer's Guild: trail guide packs are free
+    const isTrailGuidePack = pack.def.category === 'trail_guide' && player.trailGuidesFree;
+    const cost = isTrailGuidePack ? 0 : this.getDiscountedCost(pack.def.cost);
     if (player.economy.balance < cost) {
       this.showCardPopup(card, "Can't afford!");
       return;
@@ -510,7 +518,8 @@ export class ShopScene extends Scene {
   private onBuyConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
     const player = getPlayerState();
-    const cost = this.getDiscountedCost(def.cost);
+    // Explorer's Guild: trail guides are free
+    const cost = (def.category === 'trail_guide' && player.trailGuidesFree) ? 0 : this.getDiscountedCost(def.cost);
     if (player.economy.balance < cost) {
       this.showCardPopup(card, "Can't afford!");
       return;
@@ -548,7 +557,8 @@ export class ShopScene extends Scene {
   private onBuyAndUseConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
     const player = getPlayerState();
-    const cost = this.getDiscountedCost(def.cost);
+    // Explorer's Guild: trail guides are free
+    const cost = (def.category === 'trail_guide' && player.trailGuidesFree) ? 0 : this.getDiscountedCost(def.cost);
     if (player.economy.balance < cost) {
       this.showCardPopup(card, "Can't afford!");
       return;
@@ -814,7 +824,9 @@ export class ShopScene extends Scene {
       if (card.sold) continue;
       const shopItem = this.stockItems[i];
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
-      const cost = this.getDiscountedCost(itemDef.cost);
+      // Explorer's Guild: trail guides are free
+      const isTrailGuideFree = shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
+      const cost = isTrailGuideFree ? 0 : this.getDiscountedCost(itemDef.cost);
       if (shopItem.type === 'equipment') {
         const canAffordEquip = player.economy.balance >= cost &&
           (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
@@ -826,7 +838,10 @@ export class ShopScene extends Scene {
 
     for (const packCard of this.packCards) {
       if (!packCard.sold) {
-        packCard.setAffordable(player.economy.balance >= this.getDiscountedCost(packCard.pack.def.cost));
+        // Explorer's Guild: trail guide packs are free
+        const isTrailGuidePack = packCard.pack.def.category === 'trail_guide' && player.trailGuidesFree;
+        const packCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packCard.pack.def.cost);
+        packCard.setAffordable(player.economy.balance >= packCost);
       }
     }
 

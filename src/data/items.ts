@@ -1627,6 +1627,250 @@ const items: ItemDef[] = [
       return [[inactive('Nothing to copy')]];
     },
   },
+
+  // ─── Phase 9 Items ───
+  {
+    id: 'five_mile_marker',
+    name: '5 Mile Marker',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'uncommon',
+    description: 'Gains +5 miles each time a 5 pip is scored',
+    effectType: 'PIP_SCORED_MILES_GAIN',
+    effectParams: { pip: 5, value: 5 },
+    initialState: { miles: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'five_mile_marker');
+      const m = equip?.state.miles ?? 0;
+      if (m > 0) return [[miles(`+${m}`), condition('5s scored')]];
+      return [[miles('+5'), condition('per 5 scored')]];
+    },
+  },
+  {
+    id: 'trail_backpack',
+    name: 'Trail Backpack',
+    cardTemplate: 'black-text-white-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    description: '+2 re-rolls per day, -1 dice when rolling',
+    effectType: 'TRAIL_BACKPACK',
+    effectParams: { rerollsBonus: 2, rollSizePenalty: 1 },
+    hintDisplay: () => [[active('+2 rerolls')], [condition('-1 roll size')]],
+  },
+  {
+    id: 'hitched_pair',
+    name: 'Hitched Pair',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'uncommon',
+    description: 'x2 mult if hand contains a pair',
+    effectType: 'HAND_CONTAINS_XMULT',
+    effectParams: { handType: HandType.PAIR, value: 2 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.PAIR))
+        return [[mult('x2'), condition(HAND_NAMES.PAIR)], [active('Active!')]];
+      return [[mult('x2'), condition(HAND_NAMES.PAIR)]];
+    },
+  },
+  {
+    id: 'hat_trick',
+    name: 'Hat Trick',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'uncommon',
+    description: 'x3 mult if hand contains a three of a kind',
+    effectType: 'HAND_CONTAINS_XMULT',
+    effectParams: { handType: HandType.THREE_OF_A_KIND, value: 3 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.THREE_OF_A_KIND))
+        return [[mult('x3'), condition(HAND_NAMES.THREE_OF_A_KIND)], [active('Active!')]];
+      return [[mult('x3'), condition(HAND_NAMES.THREE_OF_A_KIND)]];
+    },
+  },
+  {
+    id: 'posse_wagon',
+    name: 'Posse Wagon',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'uncommon',
+    description: 'x4 mult if hand contains a four of a kind',
+    effectType: 'HAND_CONTAINS_XMULT',
+    effectParams: { handType: HandType.FOUR_OF_A_KIND, value: 4 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.FOUR_OF_A_KIND))
+        return [[mult('x4'), condition(HAND_NAMES.FOUR_OF_A_KIND)], [active('Active!')]];
+      return [[mult('x4'), condition(HAND_NAMES.FOUR_OF_A_KIND)]];
+    },
+  },
+  {
+    id: 'five_finger_fillet',
+    name: 'Five Finger Fillet',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'uncommon',
+    description: 'x5 mult if hand contains a five of a kind',
+    effectType: 'HAND_CONTAINS_XMULT',
+    effectParams: { handType: HandType.FIVE_OF_A_KIND, value: 5 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.FIVE_OF_A_KIND))
+        return [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND)], [active('Active!')]];
+      return [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND)]];
+    },
+  },
+  {
+    id: 'snake_river',
+    name: 'Snake River',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'uncommon',
+    description: 'x3 mult if hand contains a 5 straight',
+    effectType: 'HAND_CONTAINS_XMULT',
+    effectParams: { handType: HandType.FIVE_STRAIGHT, value: 3 },
+    hintDisplay: (game) => {
+      if (game && handContains(game.state.currentHandType, HandType.FIVE_STRAIGHT))
+        return [[mult('x3'), condition(HAND_NAMES.FIVE_STRAIGHT)], [active('Active!')]];
+      return [[mult('x3'), condition(HAND_NAMES.FIVE_STRAIGHT)]];
+    },
+  },
+  {
+    id: 'express_train',
+    name: 'Express Train',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    description: '+250 miles, -2 re-rolls',
+    effectType: 'EXPRESS_TRAIN',
+    effectParams: { miles: 250, rerollsPenalty: 2 },
+    hintDisplay: () => [[miles('+250')], [condition('-2 rerolls')]],
+  },
+  {
+    id: 'phantom_wagon',
+    name: 'Phantom Wagon',
+    cardTemplate: 'white-text',
+    cost: 8,
+    rarity: 'rare',
+    description: 'After 2 rounds, sell this card to duplicate a random item (removes ghost aura)',
+    effectType: 'PHANTOM_WAGON',
+    effectParams: { roundsNeeded: 2 },
+    initialState: { roundsHeld: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'phantom_wagon');
+      const held = equip?.state.roundsHeld ?? 0;
+      const needed = 2;
+      if (held >= needed) return [[active('Ready to sell!')], [text('Duplicates random item')]];
+      return [[condition(`${held}/${needed} rounds`)], [text('Sell to duplicate')]];
+    },
+  },
+  {
+    id: 'trail_almanac',
+    name: 'Trail Almanac',
+    cardTemplate: 'black-text-white-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '$1 at end of round for every type of trail guide discovered',
+    effectType: 'TRAIL_ALMANAC_MONEY',
+    effectParams: { value: 1 },
+    hintDisplay: (_game, player) => {
+      let discoveredCount = 0;
+      for (const [, stats] of player.handStats) {
+        if (stats.level > 1) discoveredCount++;
+      }
+      return [[money(`+$${discoveredCount}`), condition('trail guides')]];
+    },
+  },
+  {
+    id: 'blessed_herd',
+    name: 'Blessed Herd',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'x3 mult if you have at least 16 enhanced dice in collection',
+    effectType: 'ENHANCED_DICE_COUNT_XMULT',
+    effectParams: { threshold: 16, value: 3 },
+    hintDisplay: (_game, player) => {
+      const enhCount = player.dice.filter((d) => d.enhancement !== null).length;
+      if (enhCount >= 16) return [[mult('x3')], [active(`${enhCount} enhanced`)]];
+      return [[mult('x3'), condition(`${enhCount}/16 enhanced`)]];
+    },
+  },
+  {
+    id: 'supply_drop',
+    name: 'Supply Drop',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Create a random supply card at start of round',
+    effectType: 'ROUND_START_SUPPLY',
+    effectParams: {},
+    hintDisplay: () => [[active('Supply at round start')]],
+  },
+  {
+    id: 'explorers_guild',
+    name: "Explorer's Guild",
+    cardTemplate: 'white-text',
+    cost: 8,
+    rarity: 'rare',
+    description: 'All trail guides and trail guide packs are free in the shop',
+    effectType: 'EXPLORER_GUILD',
+    effectParams: {},
+    hintDisplay: () => [[active('Trail guides free')]],
+  },
+  {
+    id: 'graverobber',
+    name: 'Graverobber',
+    cardTemplate: 'white-text',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'Gains x0.1 mult per scored enhanced dice, removes dice enhancement',
+    effectType: 'GRAVEROBBER_XMULT',
+    effectParams: { value: 0.1 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'graverobber');
+      const xm = equip?.state.xMult ?? 1;
+      if (xm > 1) return [[mult(`x${xm.toFixed(1)}`)]];
+      return [[mult('x0.1'), condition('per enhanced scored')]];
+    },
+  },
+  {
+    id: 'pack_saddle',
+    name: 'Pack Saddle',
+    cardTemplate: 'white-text-black-outline',
+    cost: 4,
+    rarity: 'common',
+    description: '+1 hand size',
+    effectType: 'PACK_SADDLE',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[active('+1 hand size')]],
+  },
+  {
+    id: 'coffee',
+    name: 'Coffee',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '+2 hand size, -1 day per round',
+    effectType: 'COFFEE',
+    effectParams: { handSizeBonus: 2, daysPenalty: 1 },
+    hintDisplay: () => [[active('+2 hand size')], [condition('-1 day')]],
+  },
+  {
+    id: 'flour_sack',
+    name: 'Flour Sack',
+    cardTemplate: 'white-text',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '+5 hand size, reduces by 1 each round',
+    effectType: 'FLOUR_SACK',
+    effectParams: { decayPerRound: 1 },
+    initialState: { handSizeBonus: 5 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'flour_sack');
+      const bonus = equip?.state.handSizeBonus ?? 5;
+      if (bonus > 0) return [[active(`+${bonus} hand size`)]];
+      return [[inactive('Empty')]];
+    },
+  },
 ];
 
 export default items;

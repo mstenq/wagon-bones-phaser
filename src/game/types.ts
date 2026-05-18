@@ -72,7 +72,7 @@ export type ScoreAnimTarget =
   | { kind: 'equip'; equipIndex: number }
   | { kind: 'both'; dieId: string; equipIndex: number };
 
-export type ScoreAnimPopupType = 'miles' | 'mult' | 'xmult' | 'money' | 'supply';
+export type ScoreAnimPopupType = 'miles' | 'mult' | 'xmult' | 'money' | 'supply' | 'strip';
 
 export interface ScoreAnimEvent {
   /** Target to animate (die, equip card, or both) */

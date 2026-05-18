@@ -30,7 +30,7 @@ import {
   findDeathPrevention,
   getDayModifiers,
 } from './EquipmentEffects';
-import { getRandomTrailGuideDef } from './ConsumablesSystem';
+import { getRandomTrailGuideDef, getRandomSupplyDef } from './ConsumablesSystem';
 import { createEmptyModifiers } from './TrailEventsSystem';
 import { generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
 
@@ -96,8 +96,8 @@ export class GameState {
     this.config = {
       ...this.config,
       maxRerolls: player.effectiveRerolls + mods.rerollsBonus,
-      maxDays: player.effectiveDays,
-      rollSize: player.handSize - trailMods.handSizePenalty,
+      maxDays: Math.max(1, player.effectiveDays - mods.daysPenalty),
+      rollSize: Math.max(1, player.handSize + mods.rollSizeBonus - trailMods.handSizePenalty),
     };
 
     // Apply trail event: target miles multiplier (score multiplier means harder target)
@@ -175,6 +175,12 @@ export class GameState {
         player.addDie(newDie);
         player.pendingNewDiceIds.push(newDie.id);
       }
+    }
+
+    // Supply Drop (and copies): create random supply cards at start of round
+    for (let i = 0; i < roundStartEffects.supplyCardsToAdd; i++) {
+      const supplyDef = getRandomSupplyDef();
+      player.addConsumable(supplyDef);
     }
 
     this.state = this.createInitialState();
