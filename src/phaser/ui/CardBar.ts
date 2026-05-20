@@ -82,6 +82,11 @@ export abstract class CardBar extends GameObjects.Container {
   protected abstract onReorder(fromIndex: number, toIndex: number): void;
   protected abstract onSellComplete(index: number): void;
 
+  /** Subclasses may disable drag-reorder (e.g. Land Slide hidden equipment) */
+  protected isDragReorderEnabled(): boolean {
+    return true;
+  }
+
   // ─── Public API ───
 
   getCards(): ItemCard[] {
@@ -415,6 +420,7 @@ export abstract class CardBar extends GameObjects.Container {
       const idx = this.cards.indexOf(card);
       if (idx === -1) return;
       if (this.activeTabCard) return;
+      if (!this.isDragReorderEnabled()) return;
 
       this.draggingCard = card;
       this.dragStartIndex = idx;

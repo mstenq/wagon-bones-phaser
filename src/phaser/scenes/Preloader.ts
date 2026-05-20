@@ -6,6 +6,7 @@ import allFrontierEncounters from '../../data/frontier_encounters.json';
 import packsData from '../../data/packs.json';
 import permitsData from '../../data/permits.json';
 import professionsData from '../../data/professions.json';
+import bossesData from '../../data/bosses.json';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 import stickerData from '../../data/pip_enhancements.json';
 
@@ -72,6 +73,11 @@ export class Preloader extends Scene {
     // Load profession images
     for (const prof of professionsData) {
       this.load.image(`prof_${prof.id}`, `assets/professions/${prof.id}.png`);
+    }
+
+    // Load boss images (square portraits in /public/assets/bosses)
+    for (const boss of bossesData) {
+      this.load.image(`boss_${boss.id}`, `assets/bosses/${boss.id}.png`);
     }
 
     // Load sound effects

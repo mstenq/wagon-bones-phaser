@@ -2,6 +2,11 @@
 // Helpers for the developer profession's item-swap functionality.
 
 import { getPlayerState } from './PlayerState';
+import { GAMEPLAY } from './Constants';
+import { createEmptyModifiers } from './TrailEventsSystem';
+import { resetBossRoundState } from './BossEffectsSystem';
+import bossesData from '../data/bosses.json';
+import type { BossDef } from './types';
 import { getAllEquipment, EquipmentDef, ItemAura } from './ItemsSystem';
 import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableDef } from './ConsumablesSystem';
 import { getPermitById, PermitDef } from './PermitsSystem';
@@ -80,4 +85,25 @@ export function devLookupPermit(id: string): PermitDef | null {
 /** Get all available item auras (for the equipment aura swap dropdown) */
 export function devGetAllAuras(): ItemAura[] {
   return itemAurasData as ItemAura[];
+}
+
+/** All boss definitions (for dev boss picker) */
+export function devGetAllBosses(): BossDef[] {
+  return bossesData as BossDef[];
+}
+
+/** Configure player state and start a boss round with a specific boss */
+export function devStartBossRound(bossId: string): BossDef | null {
+  const boss = devGetAllBosses().find((b) => b.id === bossId);
+  if (!boss) return null;
+
+  const player = getPlayerState();
+  player.round = GAMEPLAY.ROUNDS_PER_LEG;
+  player.setBossForCurrentLeg(boss);
+  player.bossEffectDisabled = false;
+  player.trailEventModifiers = createEmptyModifiers();
+  player.skipNextShop = false;
+  resetBossRoundState();
+
+  return boss;
 }

@@ -14,6 +14,7 @@ import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
 import bossesData from '../data/bosses.json';
+import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
 
 export interface ProfessionSpecialEquipment {
   name: string;
@@ -76,6 +77,7 @@ export class PlayerState {
   trailGuidesUsed: number = 0; // count of trail guides consumed this journey (for Guide Lantern)
   startingDiceCount: number = DEFAULT_STARTING_DICE; // collection size at run start (for Ghost Town)
   bossEffectDisabled: boolean = false; // Sheriff's Badge: disables boss effect for current round when sold
+  bossRoundState: BossRoundState = { ...EMPTY_BOSS_ROUND_STATE };
   pendingNewDiceIds: string[] = []; // dice IDs pending animation (Quarry Stone, Mystery Crate, etc.)
   pendingAnimatedDestructions: { sourceIdx: number; victimIdx: number }[] = []; // equipment destructions pending animation (Funeral Pyre, Haunted Totem, etc.)
   pendingJunkDealerCount: number = 0; // number of equipment cards just created by Junk Dealer (for animation)
@@ -434,15 +436,38 @@ export class PlayerState {
     this.consumables.splice(toIndex, 0, item);
   }
 
-  /** Randomly assign one boss from the pool to each leg */
+  /** Randomly assign one eligible boss per leg (respects minimumLeg, no repeats in legs 1–8) */
   private assignBosses(): void {
-    const pool = [...(bossesData as BossDef[])];
-    // Shuffle and pick LEGS bosses
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
+    this.bossAssignments = [];
+    const allBosses = bossesData as BossDef[];
+    const usedInFirstEight = new Set<string>();
+
+    for (let leg = 1; leg <= GAMEPLAY.LEGS; leg++) {
+      let eligible = allBosses.filter((b) => (b.minimumLeg ?? 1) <= leg);
+
+      // Legs 1–8: each boss appears at most once; leg 9+ may repeat
+      if (leg <= 8) {
+        const unused = eligible.filter((b) => !usedInFirstEight.has(b.id));
+        if (unused.length > 0) eligible = unused;
+        else {
+          // Pool exhausted (more than 8 legs with few bosses) — allow repeats
+          usedInFirstEight.clear();
+        }
+      }
+
+      if (eligible.length === 0) {
+        this.bossAssignments.push(allBosses[0]);
+        continue;
+      }
+      const pick = eligible[Math.floor(Math.random() * eligible.length)];
+      if (leg <= 8) usedInFirstEight.add(pick.id);
+      this.bossAssignments.push(pick);
     }
-    this.bossAssignments = pool.slice(0, GAMEPLAY.LEGS);
+  }
+
+  /** Test helper: force boss for current leg */
+  setBossForCurrentLeg(boss: BossDef): void {
+    this.bossAssignments[this.leg - 1] = boss;
   }
 
   /** Get the boss for the current leg (only active on round 3) */

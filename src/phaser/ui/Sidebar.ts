@@ -7,7 +7,9 @@ import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
 import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
+import type { BossDef } from '../../game/types';
 import { Button } from './Button';
+import { isDevMode } from '../../game/DevMode';
 
 export interface SidebarData {
   /** Title shown at top: "SHOP", "The Inspector", etc. */
@@ -36,6 +38,8 @@ export interface SidebarData {
   handName?: string;
   /** Hand level */
   handLevel?: number;
+  /** Active boss (boss round) — shows portrait + effect description */
+  boss?: BossDef | null;
 }
 
 export class Sidebar extends GameObjects.Container {
@@ -58,16 +62,24 @@ export class Sidebar extends GameObjects.Container {
   private targetText: GameObjects.Text;
 
   private journeyInfoBtn: Button;
+  private testBossBtn: Button | null = null;
   private optionsBtn: Button;
 
+  private mainContentContainer: GameObjects.Container;
   private professionContainer: GameObjects.Container;
+  private bossPanelHeight: number = 0;
+  private bossContainer: GameObjects.Container;
+  private contentStartY: number = 0;
+  private bossDescText: GameObjects.Text | null = null;
   private profTooltip: GameObjects.Container | null = null;
 
   private onJourneyInfo: (() => void) | null = null;
+  private onDevBossTest: (() => void) | null = null;
   private onOptions: (() => void) | null = null;
 
-  /** Y coordinate of the hand display area (for upgrade animation positioning) */
+  /** Y coordinate of the hand display area in sidebar space (for upgrade animation positioning) */
   private handDisplayY: number = 0;
+  private handDisplayLocalY: number = 0;
 
   constructor(scene: Scene, width: number, height: number) {
     super(scene, 0, 0);
@@ -118,15 +130,58 @@ export class Sidebar extends GameObjects.Container {
     this.add(this.titleText);
     y += 52;
 
+    this.contentStartY = y;
+
+    // ─── Boss Display (hidden until boss round; sits above shifting content) ───
+    const bossImgSize = 72;
+    const bossH = 100;
+    this.bossPanelHeight = bossH + UI.SIDEBAR_SECTION_GAP;
+
+    this.bossContainer = scene.add.container(0, this.contentStartY);
+    this.bossContainer.setVisible(false);
+    this.add(this.bossContainer);
+
+    const bossBg = scene.add.graphics();
+    bossBg.fillStyle(0x3a1a1a, 1);
+    bossBg.fillRoundedRect(pad, 0, w - pad * 2, bossH, 6);
+    bossBg.lineStyle(1, 0x8a3333, 0.9);
+    bossBg.strokeRoundedRect(pad, 0, w - pad * 2, bossH, 6);
+    this.bossContainer.add(bossBg);
+
+    const bossImgPlaceholder = scene.add.rectangle(
+      pad + 8 + bossImgSize / 2,
+      bossH / 2,
+      bossImgSize,
+      bossImgSize,
+      0x2a1515,
+    );
+    this.bossContainer.add(bossImgPlaceholder);
+    this.bossContainer.setData('bossImgPlaceholder', bossImgPlaceholder);
+
+    this.bossDescText = scene.add.text(pad + 16 + bossImgSize, 10, '', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '11px',
+      color: TEXT_COLORS.SECONDARY,
+      wordWrap: { width: w - pad * 2 - bossImgSize - 24 },
+      lineSpacing: 2,
+    });
+    this.bossContainer.add(this.bossDescText);
+
+    // Everything below boss panel shifts down when boss is visible
+    this.mainContentContainer = scene.add.container(0, this.contentStartY);
+    this.add(this.mainContentContainer);
+
+    y = 0;
+
     // ─── Profession Display ───
     const player = getPlayerState();
     const profImgSize = 120;
     const profH = 130;
     this.professionContainer = scene.add.container(0, 0);
-    this.add(this.professionContainer);
+    this.mainContentContainer.add(this.professionContainer);
 
     if (player.profession) {
-      const profY = y; // capture for tooltip closure
+      const profY = 0;
 
       const profBg = scene.add.graphics();
       profBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
@@ -230,7 +285,7 @@ export class Sidebar extends GameObjects.Container {
       hitZone.setInteractive(new Phaser.Geom.Rectangle(pad, y, w - pad * 2, profH), Phaser.Geom.Rectangle.Contains);
 
       hitZone.on('pointerover', () => {
-        this.showProfTooltip(scene, w, profY + profH + 4, player.profession!);
+        this.showProfTooltip(scene, w, this.getMainContentBaseY() + profH + 4, player.profession!);
       });
       hitZone.on('pointerout', () => {
         this.hideProfTooltip();
@@ -245,7 +300,7 @@ export class Sidebar extends GameObjects.Container {
       moneyBg.fillRoundedRect(pad, y, w - pad * 2, moneyH, 6);
       moneyBg.lineStyle(1, 0x2a6a2a, 0.8);
       moneyBg.strokeRoundedRect(pad, y, w - pad * 2, moneyH, 6);
-      this.add(moneyBg);
+      this.mainContentContainer.add(moneyBg);
 
       this.moneyText = scene.add
         .text(cx, y + moneyH / 2, '$10', {
@@ -254,7 +309,7 @@ export class Sidebar extends GameObjects.Container {
           color: TEXT_COLORS.MONEY,
         })
         .setOrigin(0.5);
-      this.add(this.moneyText);
+      this.mainContentContainer.add(this.moneyText);
       y += moneyH + UI.SIDEBAR_SECTION_GAP;
 
       const legH = 52;
@@ -263,14 +318,14 @@ export class Sidebar extends GameObjects.Container {
       legBg.fillRoundedRect(pad, y, w - pad * 2, legH, 6);
       legBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
       legBg.strokeRoundedRect(pad, y, w - pad * 2, legH, 6);
-      this.add(legBg);
+      this.mainContentContainer.add(legBg);
 
       this.legText = scene.add.text(pad + 8, y + 26, '1 / 8', {
         fontFamily: FONTS.HEADING,
         fontSize: '16px',
         color: TEXT_COLORS.PRIMARY,
       });
-      this.add(this.legText);
+      this.mainContentContainer.add(this.legText);
 
       this.targetText = scene.add
         .text(w - pad - 8, y + 26, '300 mi', {
@@ -279,7 +334,7 @@ export class Sidebar extends GameObjects.Container {
           color: TEXT_COLORS.SCORE_GREEN,
         })
         .setOrigin(1, 0);
-      this.add(this.targetText);
+      this.mainContentContainer.add(this.targetText);
       y += legH + UI.SIDEBAR_SECTION_GAP;
     }
 
@@ -290,7 +345,7 @@ export class Sidebar extends GameObjects.Container {
     scoreBg.fillRoundedRect(pad, y, w - pad * 2, scoreSectionH, 6);
     scoreBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
     scoreBg.strokeRoundedRect(pad, y, w - pad * 2, scoreSectionH, 6);
-    this.add(scoreBg);
+    this.mainContentContainer.add(scoreBg);
 
     const scoreLabel = scene.add
       .text(pad + 8, y + scoreSectionH / 2, 'Round\nscore', {
@@ -300,7 +355,7 @@ export class Sidebar extends GameObjects.Container {
         lineSpacing: -2,
       })
       .setOrigin(0, 0.5);
-    this.add(scoreLabel);
+    this.mainContentContainer.add(scoreLabel);
 
     this.roundScoreText = scene.add
       .text(w - pad - 8, y + scoreSectionH / 2, '0', {
@@ -309,12 +364,12 @@ export class Sidebar extends GameObjects.Container {
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(1, 0.5);
-    this.add(this.roundScoreText);
+    this.mainContentContainer.add(this.roundScoreText);
     y += scoreSectionH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Hand Name / Level Display (above miles/mult) ───
     const handDisplayH = 32;
-    this.handDisplayY = y;
+    this.handDisplayLocalY = y;
     this.handNameText = scene.add
       .text(cx, y + handDisplayH / 2, '', {
         fontFamily: FONTS.HEADING,
@@ -324,7 +379,7 @@ export class Sidebar extends GameObjects.Container {
       })
       .setOrigin(0.5)
       .setVisible(false);
-    this.add(this.handNameText);
+    this.mainContentContainer.add(this.handNameText);
 
     this.handLevelText = scene.add
       .text(cx, y + handDisplayH / 2 + 1, '', {
@@ -335,7 +390,7 @@ export class Sidebar extends GameObjects.Container {
       })
       .setOrigin(0.5, -0.5)
       .setVisible(false);
-    this.add(this.handLevelText);
+    this.mainContentContainer.add(this.handLevelText);
     y += handDisplayH;
 
     // ─── Miles/Mult Display (Balatro chips×mult style) ───
@@ -345,7 +400,7 @@ export class Sidebar extends GameObjects.Container {
     scoreDisplayBg.fillRoundedRect(pad, y, w - pad * 2, scoreDisplayH, 6);
     scoreDisplayBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
     scoreDisplayBg.strokeRoundedRect(pad, y, w - pad * 2, scoreDisplayH, 6);
-    this.add(scoreDisplayBg);
+    this.mainContentContainer.add(scoreDisplayBg);
 
     // Miles base (blue pill)
     const pillW = (w - pad * 2 - 36) / 2;
@@ -355,7 +410,7 @@ export class Sidebar extends GameObjects.Container {
     this.milesBaseBg = scene.add.graphics();
     this.milesBaseBg.fillStyle(COLORS.MILES_BG, 1);
     this.milesBaseBg.fillRoundedRect(pad + 6, pillY, pillW, pillH, 4);
-    this.add(this.milesBaseBg);
+    this.mainContentContainer.add(this.milesBaseBg);
 
     this.milesBaseText = scene.add
       .text(pad + 6 + pillW / 2, pillY + pillH / 2, '0', {
@@ -364,7 +419,7 @@ export class Sidebar extends GameObjects.Container {
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0.5);
-    this.add(this.milesBaseText);
+    this.mainContentContainer.add(this.milesBaseText);
 
     // "×" separator
     const xText = scene.add
@@ -374,13 +429,13 @@ export class Sidebar extends GameObjects.Container {
         color: TEXT_COLORS.SECONDARY,
       })
       .setOrigin(0.5);
-    this.add(xText);
+    this.mainContentContainer.add(xText);
 
     // Mult (red pill)
     this.multBg = scene.add.graphics();
     this.multBg.fillStyle(COLORS.MULT_BG, 1);
     this.multBg.fillRoundedRect(w - pad - 6 - pillW, pillY, pillW, pillH, 4);
-    this.add(this.multBg);
+    this.mainContentContainer.add(this.multBg);
 
     this.multText = scene.add
       .text(w - pad - 6 - pillW / 2, pillY + pillH / 2, '0', {
@@ -389,7 +444,7 @@ export class Sidebar extends GameObjects.Container {
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0.5);
-    this.add(this.multText);
+    this.mainContentContainer.add(this.multText);
     y += scoreDisplayH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Days / Re-rolls Row ───
@@ -402,7 +457,7 @@ export class Sidebar extends GameObjects.Container {
     daysBg.fillRoundedRect(pad, y, halfW, rowH, 6);
     daysBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
     daysBg.strokeRoundedRect(pad, y, halfW, rowH, 6);
-    this.add(daysBg);
+    this.mainContentContainer.add(daysBg);
 
     const daysLabel = scene.add
       .text(pad + halfW / 2, y + 12, 'Travel Days', {
@@ -411,7 +466,7 @@ export class Sidebar extends GameObjects.Container {
         color: TEXT_COLORS.MUTED,
       })
       .setOrigin(0.5);
-    this.add(daysLabel);
+    this.mainContentContainer.add(daysLabel);
 
     this.daysText = scene.add
       .text(pad + halfW / 2, y + 34, '4', {
@@ -420,7 +475,7 @@ export class Sidebar extends GameObjects.Container {
         color: '#66aaff',
       })
       .setOrigin(0.5);
-    this.add(this.daysText);
+    this.mainContentContainer.add(this.daysText);
 
     // Re-rolls
     const rerollX = pad + halfW + UI.SIDEBAR_SECTION_GAP;
@@ -429,7 +484,7 @@ export class Sidebar extends GameObjects.Container {
     rerollBg.fillRoundedRect(rerollX, y, halfW, rowH, 6);
     rerollBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
     rerollBg.strokeRoundedRect(rerollX, y, halfW, rowH, 6);
-    this.add(rerollBg);
+    this.mainContentContainer.add(rerollBg);
 
     const rerollLabel = scene.add
       .text(rerollX + halfW / 2, y + 12, 'Re-rolls', {
@@ -438,7 +493,7 @@ export class Sidebar extends GameObjects.Container {
         color: TEXT_COLORS.MUTED,
       })
       .setOrigin(0.5);
-    this.add(rerollLabel);
+    this.mainContentContainer.add(rerollLabel);
 
     this.rerollsText = scene.add
       .text(rerollX + halfW / 2, y + 34, '3', {
@@ -447,7 +502,7 @@ export class Sidebar extends GameObjects.Container {
         color: '#ff6666',
       })
       .setOrigin(0.5);
-    this.add(this.rerollsText);
+    this.mainContentContainer.add(this.rerollsText);
     y += rowH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Journey Info Button ───
@@ -455,16 +510,38 @@ export class Sidebar extends GameObjects.Container {
     this.journeyInfoBtn.onClick(() => {
       if (this.onJourneyInfo) this.onJourneyInfo();
     });
-    this.add(this.journeyInfoBtn);
+    this.mainContentContainer.add(this.journeyInfoBtn);
     y += 46;
+
+    if (isDevMode()) {
+      this.testBossBtn = new Button(scene, cx, y + 20, 'Test Boss', w - pad * 2 - 8, 34);
+      this.testBossBtn.onClick(() => {
+        if (this.onDevBossTest) this.onDevBossTest();
+      });
+      this.mainContentContainer.add(this.testBossBtn);
+      y += 46;
+    }
 
     // ─── Options Button ───
     this.optionsBtn = new Button(scene, cx, y + 20, 'Options', w - pad * 2 - 8, 34);
     this.optionsBtn.onClick(() => {
       if (this.onOptions) this.onOptions();
     });
-    this.add(this.optionsBtn);
+    this.mainContentContainer.add(this.optionsBtn);
     y += 46;
+
+    this.syncMainContentOffset(false);
+  }
+
+  /** Sidebar-space Y where main content block starts (includes boss offset). */
+  private getMainContentBaseY(): number {
+    return this.mainContentContainer.y;
+  }
+
+  private syncMainContentOffset(bossVisible: boolean): void {
+    const offset = bossVisible ? this.bossPanelHeight : 0;
+    this.mainContentContainer.setY(this.contentStartY + offset);
+    this.handDisplayY = this.getMainContentBaseY() + this.handDisplayLocalY;
   }
 
   // ─── Public API ───
@@ -507,9 +584,46 @@ export class Sidebar extends GameObjects.Container {
       this.targetText.setText(`${formatScore(data.targetMiles)} mi`);
     }
 
+    if (data.boss !== undefined) {
+      this.updateBossPanel(data.boss);
+    }
+
     // Always refresh money from player state
     const player = getPlayerState();
     this.moneyText.setText(`$${player.economy.balance}`);
+  }
+
+  private updateBossPanel(boss: BossDef | null | undefined): void {
+    if (!boss) {
+      this.bossContainer.setVisible(false);
+      this.syncMainContentOffset(false);
+      return;
+    }
+    this.bossContainer.setVisible(true);
+    this.syncMainContentOffset(true);
+    if (this.bossDescText) {
+      this.bossDescText.setText(boss.description);
+    }
+
+    const pad = UI.SIDEBAR_PADDING;
+    const bossImgSize = 72;
+    const bossH = 100;
+    const imgKey = `boss_${boss.id}`;
+
+    // Remove previous boss image if any
+    const prevImg = this.bossContainer.getData('bossImg') as GameObjects.Image | undefined;
+    if (prevImg) prevImg.destroy();
+
+    if (this.scene.textures.exists(imgKey)) {
+      const profImg = this.scene.add.image(pad + 8 + bossImgSize / 2, bossH / 2, imgKey);
+      const tex = profImg.texture.getSourceImage();
+      const imgScale = bossImgSize / Math.max(tex.width, tex.height);
+      profImg.setScale(imgScale);
+      this.bossContainer.add(profImg);
+      this.bossContainer.setData('bossImg', profImg);
+      const placeholder = this.bossContainer.getData('bossImgPlaceholder') as GameObjects.Rectangle;
+      placeholder?.setVisible(false);
+    }
   }
 
   refreshMoney(): void {
@@ -519,6 +633,10 @@ export class Sidebar extends GameObjects.Container {
 
   setJourneyInfoCallback(cb: () => void): void {
     this.onJourneyInfo = cb;
+  }
+
+  setDevBossTestCallback(cb: () => void): void {
+    this.onDevBossTest = cb;
   }
 
   setOptionsCallback(cb: () => void): void {

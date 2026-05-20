@@ -13,6 +13,15 @@ import type { GameState } from '../../game/GameState';
 import type { PlayerState } from '../../game/PlayerState';
 import { isDevMode, devGetAllAuras } from '../../game/DevMode';
 import { getItemAuraById } from '../../game/ItemsSystem';
+import {
+  getBossEquipmentDisplayOrder,
+  isBossEquipmentHidden,
+  isBossEquipmentHintsHidden,
+  isEquipmentDisabledByBoss,
+  remapEquipmentDisplayOrderAfterRemove,
+  remapEquipmentDisplayOrderAfterReorder,
+  syncEquipmentDisplayOrder,
+} from '../../game/BossEffectsSystem';
 
 export class EquipmentBar extends CardBar {
   protected readonly cardScale = UI.EQUIP_CARD_SCALE;
@@ -29,12 +38,30 @@ export class EquipmentBar extends CardBar {
   /** Update all card hints with current game context */
   updateHints(game: GameState | null, player: PlayerState): void {
     this.lastGame = game;
+    const hintsHidden = isBossEquipmentHintsHidden();
+    const faceHidden = isBossEquipmentHidden();
     for (const card of this.cards) {
-      card.updateHints(game, player);
+      const equipIndex = card.getData('equipIndex') as number;
+      card.setSuppressHints(hintsHidden);
+      card.setSuppressTooltip(hintsHidden);
+      card.setFaceDown(faceHidden);
+      card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
+      if (!hintsHidden) card.updateHints(game, player);
     }
   }
 
+  /** Find the card showing a specific equipment array index (respects Land Slide shuffle) */
+  getCardByEquipIndex(equipIndex: number): ItemCard | null {
+    return this.cards.find((c) => (c.getData('equipIndex') as number) === equipIndex) ?? null;
+  }
+
+  protected isDragReorderEnabled(): boolean {
+    return !isBossEquipmentHidden();
+  }
+
   refresh(): void {
+    syncEquipmentDisplayOrder();
+
     // Remove old dev icons
     for (const icon of this.devIcons) icon.destroy();
     this.devIcons = [];
@@ -112,34 +139,56 @@ export class EquipmentBar extends CardBar {
     return getPlayerState().equipment.length;
   }
 
+  /** Visual slot index → equipment array index (Land Slide shuffle) */
+  private getEquipmentIndexForSlot(slotIndex: number): number {
+    const order = getBossEquipmentDisplayOrder();
+    if (order && slotIndex < order.length) return order[slotIndex];
+    return slotIndex;
+  }
+
   protected createCardForItem(x: number, y: number, index: number): ItemCard {
-    const equip = getPlayerState().equipment[index];
-    return new ItemCard(this.scene, x, y, equip.def, {
+    const equipIndex = this.getEquipmentIndexForSlot(index);
+    const equip = getPlayerState().equipment[equipIndex];
+    const card = new ItemCard(this.scene, x, y, equip.def, {
       mode: 'compact',
       cardScale: UI.EQUIP_CARD_SCALE,
     });
+    card.setData('equipIndex', equipIndex);
+    card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
+    card.setFaceDown(isBossEquipmentHidden());
+    card.setSuppressTooltip(isBossEquipmentHintsHidden());
+    card.setSuppressHints(isBossEquipmentHintsHidden());
+    return card;
   }
 
   protected buildActionTabs(card: ItemCard, index: number): CardActionTabConfig[] | null {
     const player = getPlayerState();
-    const equip = player.equipment[index];
+    const equipIndex = (card.getData('equipIndex') as number) ?? this.getEquipmentIndexForSlot(index);
+    const equip = player.equipment[equipIndex];
     if (!equip) return null;
 
     return [
       {
         label: `SELL\n$${equip.sellValue}`,
         color: 0x338833,
-        callback: () => this.animateSellCard(card, index),
+        callback: () => this.animateSellCard(card, equipIndex),
       },
     ];
   }
 
   protected onReorder(fromIndex: number, toIndex: number): void {
-    getPlayerState().reorderEquipment(fromIndex, toIndex);
+    const fromEquip = this.getEquipmentIndexForSlot(fromIndex);
+    const toEquip = this.getEquipmentIndexForSlot(toIndex);
+    getPlayerState().reorderEquipment(fromEquip, toEquip);
+    if (getBossEquipmentDisplayOrder()) {
+      remapEquipmentDisplayOrderAfterReorder(fromEquip, toEquip);
+      this.refresh();
+    }
     this.updateHints(this.lastGame, getPlayerState());
   }
 
   protected onSellComplete(index: number): void {
+    remapEquipmentDisplayOrderAfterRemove(index);
     getPlayerState().sellEquipment(index);
     this.emit('equipment-changed');
   }

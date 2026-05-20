@@ -119,13 +119,12 @@ function popupForDie(
 function popupForEquip(
   scene: Scene,
   equipBar: EquipmentBar,
-  index: number,
+  equipIndex: number,
   type: ScoreAnimPopupType,
   value: number,
 ): void {
-  const cards = equipBar.getCards();
-  if (index >= cards.length) return;
-  const card = cards[index];
+  const card = equipBar.getCardByEquipIndex(equipIndex);
+  if (!card) return;
   // Cards are children of the EquipmentBar container — offset by bar's world position
   const wx = equipBar.x + card.x;
   const wy = equipBar.y + card.y;
@@ -155,10 +154,9 @@ export interface ScoreAnimationConfig {
 }
 
 /** Wiggle an equipment card */
-function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, index: number): void {
-  const cards = equipBar.getCards();
-  if (index >= cards.length) return;
-  const card = cards[index];
+function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, equipIndex: number): void {
+  const card = equipBar.getCardByEquipIndex(equipIndex);
+  if (!card) return;
   const origX = card.x;
   scene.tweens.add({
     targets: card,

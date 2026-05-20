@@ -11,6 +11,7 @@ import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
 import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
 import { dieMatchesPip, hasStackedDeck } from './effects/helpers';
+import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
@@ -103,9 +104,13 @@ export function getHandDef(type: HandType): HandDefinition {
   return HAND_TABLE.find((h) => h.type === type)!;
 }
 
-function buildResult(type: HandType, scoringDice: Die[]): HandResult {
+export function buildHandResult(type: HandType, scoringDice: Die[]): HandResult {
   const def = getHandDef(type);
   return { type, name: def.name, baseMiles: def.baseMiles, baseMult: def.baseMult, rank: def.rank, scoringDice };
+}
+
+function buildResult(type: HandType, scoringDice: Die[]): HandResult {
+  return buildHandResult(type, scoringDice);
 }
 
 /**
@@ -337,37 +342,34 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   const firstDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[0].id : null;
   const lastDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[handResult.scoringDice.length - 1].id : null;
   for (const die of handResult.scoringDice) {
-    // Calculate how many times this die triggers:
-    // red_bullet sticker: trigger this die twice
-    let triggers = die.sticker === 'red_bullet' ? 2 : 1;
-    // PIP_RETRIGGER: One-Eyed Jack — extra trigger for matching pip
-    const maxCopyDepth = equipment.length;
-    for (let ei = 0; ei < equipment.length; ei++) {
-      let equip = equipment[ei];
-      // Resolve copy items
-      if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-        const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
-        if (!resolved) continue;
-        equip = resolved;
+    const bossDisabled = isDiceScoringDisabledByBoss(die);
+    // Calculate how many times this die triggers (disabled dice: no retriggers/stickers)
+    let triggers = 1;
+    if (!bossDisabled) {
+      triggers = die.sticker === 'red_bullet' ? 2 : 1;
+      const maxCopyDepth = equipment.length;
+      for (let ei = 0; ei < equipment.length; ei++) {
+        let equip = equipment[ei];
+        if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+          const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
+          if (!resolved) continue;
+          equip = resolved;
+        }
+        if (equip.def.effectType === 'PIP_RETRIGGER' && dieMatchesPip(die, equip.def.effectParams.pip as number, equipment, stackedDeck)) {
+          triggers++;
+        }
+        if (equip.def.effectType === 'FIRST_DICE_RETRIGGER' && die.id === firstDieId) {
+          triggers += equip.def.effectParams.value as number;
+        }
+        if (equip.def.effectType === 'LAST_DICE_RETRIGGER' && die.id === lastDieId) {
+          triggers += equip.def.effectParams.value as number;
+        }
+        if (equip.def.effectType === 'ENHANCED_RETRIGGER' && die.enhancement !== null) {
+          triggers++;
+        }
       }
-      if (equip.def.effectType === 'PIP_RETRIGGER' && dieMatchesPip(die, equip.def.effectParams.pip as number, equipment, stackedDeck)) {
-        triggers++;
-      }
-      // FIRST_DICE_RETRIGGER: Quick Draw — retrigger first die N additional times
-      if (equip.def.effectType === 'FIRST_DICE_RETRIGGER' && die.id === firstDieId) {
-        triggers += equip.def.effectParams.value as number;
-      }
-      // LAST_DICE_RETRIGGER: Last Laugh — retrigger last die N additional times
-      if (equip.def.effectType === 'LAST_DICE_RETRIGGER' && die.id === lastDieId) {
-        triggers += equip.def.effectParams.value as number;
-      }
-      // ENHANCED_RETRIGGER: Moonshine — retrigger enhanced dice
-      if (equip.def.effectType === 'ENHANCED_RETRIGGER' && die.enhancement !== null) {
-        triggers++;
-      }
+      triggers += globalRetriggerCount;
     }
-    // War Drums / Last Stand: retrigger all scored dice
-    triggers += globalRetriggerCount;
     for (let t = 0; t < triggers; t++) {
       const triggerLabel = t > 0 ? ' (retrigger)' : '';
 
@@ -383,17 +385,27 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
       // Base effect — value as miles (stone dice have 0 value but add 50 miles)
       const dieMiles = die.enhancement === 'stone' ? 50 : die.value;
-      totalValue += dieMiles;
-      animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: dieMiles, dieId: die.id });
-      console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: +${dieMiles} ${die.enhancement === 'stone' ? 'miles (STONE)' : 'value'} (total: ${totalValue})`);
+      if (!bossDisabled) {
+        totalValue += dieMiles;
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: dieMiles, dieId: die.id });
+        console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: +${dieMiles} ${die.enhancement === 'stone' ? 'miles (STONE)' : 'value'} (total: ${totalValue})`);
+      } else {
+        console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: DISABLED by boss (skipped)`);
+      }
 
       // Permanent bonus miles (e.g. from Cowboy Boots)
-      if (die.bonusMiles > 0) {
+      if (!bossDisabled && die.bonusMiles > 0) {
         totalValue += die.bonusMiles;
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: die.bonusMiles, dieId: die.id });
         console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: +${die.bonusMiles} bonus miles (total: ${totalValue})`);
       }
-      // Dice enhancement effects
+      // Dice enhancement effects (skipped when boss-disabled)
+      if (bossDisabled) {
+        pipelineCtx.totalValue = totalValue;
+        pipelineCtx.bonusMult = bonusMult;
+        pipelineCtx.xMult = xMult;
+        continue;
+      }
       switch (die.enhancement) {
         case 'bone':
           bonusMult += 4;
@@ -467,6 +479,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
       // 'On scored' equipment — items that trigger per matching die (left to right)
       for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+        if (isEquipmentDisabledByBoss(eIdx)) continue;
         const originalEquip = equipment[eIdx];
         let equip = originalEquip;
 

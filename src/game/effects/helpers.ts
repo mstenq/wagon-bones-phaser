@@ -4,6 +4,7 @@ import { EquipmentInstance } from '../ItemsSystem';
 import { resolveCopyTarget } from '../Constants';
 import { Die, HandType } from '../types';
 import { getPlayerState } from '../PlayerState';
+import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 import type { ScoringPipelineContext } from './types';
 
 export type UnresolvedCopyBehavior = 'none' | 'skip';
@@ -15,6 +16,7 @@ export function forEachEquipmentResolved(
 ): void {
   const maxCopyDepth = equipment.length;
   for (let i = 0; i < equipment.length; i++) {
+    if (isEquipmentDisabledByBoss(i)) continue;
     const original = equipment[i];
     let equip = original;
 

@@ -33,7 +33,19 @@ import {
 import { getRandomTrailGuideDef, getRandomSupplyDef } from './ConsumablesSystem';
 import { applyScoringMutations } from './effects/applyMutations';
 import { createEmptyModifiers } from './TrailEventsSystem';
-import { getBossRoundConfigMods } from './BossEffectsSystem';
+import {
+  getBossRoundConfigMods,
+  initBossRoundState,
+  resetBossRoundState,
+  applyBossOnDayStart,
+  applyBossAfterRoll,
+  applyBossOnScore,
+  applyBossAfterScore,
+  applyBossHandRestriction,
+  getBossAdjustedHandStats,
+  canPlayHandType,
+  recordBossHandPlayed,
+} from './BossEffectsSystem';
 import { generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
 
 export class GameState {
@@ -113,17 +125,24 @@ export class GameState {
     }
 
     // Apply boss round modifiers (negated by Saint Elmo's Shield / Sheriff's Badge)
+    resetBossRoundState();
+    initBossRoundState();
     const bossMods = getBossRoundConfigMods();
     if (bossMods.targetMilesMultiplier !== 1) {
       this.config.targetMiles = Math.ceil(this.config.targetMiles * bossMods.targetMilesMultiplier);
     }
-    if (bossMods.rerollsModifier !== 0) {
-      this.config.maxRerolls = Math.max(0, this.config.maxRerolls + bossMods.rerollsModifier);
+    if (bossMods.setMaxRerolls !== null) {
+      this.config.maxRerolls = bossMods.setMaxRerolls;
+    }
+    if (bossMods.setMaxDays !== null) {
+      this.config.maxDays = bossMods.setMaxDays;
     }
 
     // Clear trail event modifiers after consumption
     player.trailEventModifiers = createEmptyModifiers();
     player.bossEffectDisabled = false;
+
+    applyBossOnDayStart(1);
 
     // Apply day penalties (e.g. Stagecoach: -1 day)
     const dayMods = getDayModifiers(player.equipment);
@@ -227,6 +246,7 @@ export class GameState {
     // Roll them
     this.state.rolledDice = rollDice(selected);
     this.state.currentHandType = detectBestHand(this.state.rolledDice).type;
+    applyBossAfterRoll(this.state.rolledDice);
     this.emit('phase-change', this.state.phase);
     this.emit('dice-rolled', this.state.rolledDice);
     return true;
@@ -279,12 +299,40 @@ export class GameState {
 
   // ─── SCORE Phase ───
 
+  /** Preview hand + boss legality before entering SCORE phase */
+  validateScoreSelection(diceIds: string[]): { allowed: boolean; reason?: string } {
+    const diceMap = new Map(this.state.rolledDice.map((d) => [d.id, d]));
+    const selected = diceIds.map((id) => diceMap.get(id)).filter((d): d is Die => d !== undefined);
+    if (selected.length !== diceIds.length) return { allowed: false, reason: 'Invalid dice selection' };
+    const handResult = applyBossHandRestriction(detectBestHand(selected), selected);
+    return canPlayHandType(handResult.type as HandType);
+  }
+
+  /** Revert to ROLL after a failed score (e.g. Call Girl duplicate hand) */
+  cancelScore(): void {
+    if (this.state.phase !== 'SCORE') return;
+    this.state.phase = 'ROLL';
+    this.emit('phase-change', this.state.phase);
+  }
+
   /** Calculate score and advance to DAY_END. Returns the score result. */
   calculateScore(): ScoreResult | null {
     if (this.state.phase !== 'SCORE') return null;
     if (this.state.selectedForScore.length === 0) return null;
 
-    const handResult: HandResult = detectBestHand(this.state.selectedForScore);
+    const selectedDice = this.state.selectedForScore;
+    let handResult: HandResult = detectBestHand(selectedDice);
+
+    // Boss: River — non-straights downgrade to high card
+    handResult = applyBossHandRestriction(handResult, selectedDice);
+
+    const handType = handResult.type as HandType;
+    const playCheck = canPlayHandType(handType);
+    if (!playCheck.allowed) {
+      console.log('[SCORE] Blocked by boss:', playCheck.reason);
+      this.cancelScore();
+      return null;
+    }
 
     // Open Palm: all played dice count as scoring
     const hasOpenPalm = getPlayerState().equipment.some((e) => e.def.effectType === 'ALL_DICE_SCORE');
@@ -311,8 +359,10 @@ export class GameState {
 
     // Apply hand level scaling before scoring
     const player = getPlayerState();
-    const handType = handResult.type as HandType;
-    const stats = player.getHandStats(handType);
+    const stats = getBossAdjustedHandStats(handType, player.getHandStats(handType));
+
+    recordBossHandPlayed(handType);
+    applyBossOnScore(handType, selectedDice);
 
     // Each level above 1 adds milesPerLevel/multPerLevel from trail guide data
     const levelBonus = stats.level - 1;
@@ -407,6 +457,7 @@ export class GameState {
 
     // Record hand played
     player.recordHandPlayed(handType);
+    applyBossAfterScore();
 
     // Post-scoring equipment updates (Steam Engine decay, Surveyor's Transit, Repeat Offender, Emergency Supplies)
     const handUpgrades = processEquipmentAfterHandScored(player.equipment, handType);
@@ -478,6 +529,7 @@ export class GameState {
 
     // Next day — draw fresh dice
     this.state.day++;
+    applyBossOnDayStart(this.state.day);
 
     // Hand = all currently available (non-spent) dice
     this.state.hand = [...player.availableDice].sort(() => Math.random() - 0.5);

@@ -25,6 +25,11 @@ import { playScoreAnimation } from '../animations/ScoreAnimation';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { getLoadedDiceMultiplier } from '../../game/Constants';
+import {
+  isDiceScoringDisabledByBoss,
+  isDiceLockedByBoss,
+  revealLandSlideHints,
+} from '../../game/BossEffectsSystem';
 
 const DICE_SPACING = UI.DICE_SPACING;
 
@@ -401,9 +406,28 @@ export class GameScene extends Scene {
       this.updateRollButtons();
 
       this.instructionText.setText('Lock dice you want to keep, then re-roll the rest');
+      this.applyBossRollDiceState();
     });
 
     this.updateHUD();
+  }
+
+  /** Bounty lock + boss-disabled visuals on rolled dice */
+  private applyBossRollDiceState(): void {
+    for (const sprite of this.rollSprites) {
+      const id = sprite.dieData.id;
+      sprite.setDisabled(isDiceScoringDisabledByBoss(sprite.dieData));
+      if (isDiceLockedByBoss(id)) {
+        this.lockedDiceIds.add(id);
+        sprite.setForced(true);
+        const lockIdx = this.rollSprites.indexOf(sprite);
+        if (this.lockIcons[lockIdx]) this.lockIcons[lockIdx].setVisible(true);
+      }
+    }
+    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) =>
+      this.lockedDiceIds.has(d.id),
+    );
+    this.updateRollButtons();
   }
 
   /** Shared: wire up click handlers on roll sprites (click to lock/unlock, drag to reorder) */
@@ -426,6 +450,7 @@ export class GameScene extends Scene {
         }
 
         const id = sprite.dieData.id;
+        if (isDiceLockedByBoss(id)) return;
         const lockIdx = this.rollSprites.indexOf(sprite);
         const lockIcon = this.lockIcons[lockIdx];
         if (this.lockedDiceIds.has(id)) {
@@ -485,6 +510,7 @@ export class GameScene extends Scene {
     this.updateRollButtons();
 
     this.instructionText.setText('Lock dice you want to keep, then re-roll the rest');
+    this.applyBossRollDiceState();
     this.updateHUD();
   }
 
@@ -518,6 +544,9 @@ export class GameScene extends Scene {
       lockedDiceIds: new Set(this.lockedDiceIds),
       contentCX: this.contentCX,
       onComplete: () => {
+        revealLandSlideHints();
+        this.equipBar.updateHints(this.gameState, getPlayerState());
+
         // If hand upgrades occurred during scoring (e.g. Surveyor's Transit), animate them
         if (result.handUpgrades && result.handUpgrades.length > 0) {
           playHandUpgradeAnimation({
@@ -612,12 +641,22 @@ export class GameScene extends Scene {
     const ids = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     if (ids.length === 0) return;
 
+    const validation = this.gameState.validateScoreSelection(ids);
+    if (!validation.allowed) {
+      this.showFloatingText(validation.reason ?? 'Cannot play this hand', 0xff6644);
+      return;
+    }
+
     const success = this.gameState.selectForScore(ids);
     if (!success) return;
 
     const result = this.gameState.calculateScore();
     if (result) {
       this.enterScorePhase(result);
+    } else {
+      this.gameState.cancelScore();
+      this.showFloatingText('Cannot play this hand', 0xff6644);
+      this.updateRollButtons();
     }
   }
 
@@ -850,6 +889,7 @@ export class GameScene extends Scene {
     const player = getPlayerState();
     const boss = player.currentBoss;
     this.sidebar.updateData({
+      boss: boss ?? null,
       title: boss
         ? boss.name
         : s.phase === 'SELECT'
@@ -1354,9 +1394,8 @@ export class GameScene extends Scene {
     const player = getPlayerState();
     const crateIndex = player.equipment.findIndex((e) => e.def.effectType === 'ROUND_START_ADD_DICE');
     if (crateIndex >= 0) {
-      const cards = this.equipBar.getCards();
-      if (crateIndex < cards.length) {
-        const card = cards[crateIndex];
+      const card = this.equipBar.getCardByEquipIndex(crateIndex);
+      if (card) {
         const origX = card.x;
         this.tweens.add({
           targets: card,
@@ -1409,9 +1448,8 @@ export class GameScene extends Scene {
   /** Animate an equipment card being destroyed by fire (used by Funeral Pyre, Haunted Totem, etc.) */
   private animateEquipmentFireDestruction(sourceIndex: number, victimIndex: number, onComplete?: () => void): void {
     ensureAuraTextures(this);
-    const cards = this.equipBar.getCards();
-    const sourceCard = cards[sourceIndex];
-    const victimCard = cards[victimIndex];
+    const sourceCard = this.equipBar.getCardByEquipIndex(sourceIndex);
+    const victimCard = this.equipBar.getCardByEquipIndex(victimIndex);
     if (!sourceCard || !victimCard) {
       // Fallback: just remove immediately if cards aren't available
       const player = getPlayerState();
@@ -1596,7 +1634,6 @@ export class GameScene extends Scene {
     console.log('[DEBUG] onStackDiceClick: animating:', this.animating, 'selectedCount:', this.selectedHandIds.size, 'stackKey:', stack.key, 'stackDice:', stack.dice.length);
     if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
     if (this.selectedHandIds.size >= this.maxSelectForRoll) { console.log('[DEBUG] BLOCKED: max selected'); return; }
-
     // Sound
     this.sound.play('sfx_card_slide1', { volume: 0.4 });
 
@@ -1753,9 +1790,8 @@ export class GameScene extends Scene {
     if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
     const die = sprite.dieData;
 
-    // Can't remove forced dice
+    // Can't remove forced dice (including Bounty-locked)
     if (this.forcedDiceIds.has(die.id)) return;
-
     // Sound
     this.sound.play('sfx_card_slide2', { volume: 0.35 });
 

@@ -78,6 +78,7 @@ export class DiceSprite extends GameObjects.Container {
   private _selected: boolean = false;
   private _forced: boolean = false;
   _disabled: boolean = false;
+  private disabledOverlay: GameObjects.Graphics;
   private _showAuraLabel: boolean = false;
 
   constructor(scene: Scene, x: number, y: number, dieData: Die, options?: { showAuraLabel?: boolean }) {
@@ -96,7 +97,8 @@ export class DiceSprite extends GameObjects.Container {
         strokeThickness: 1,
       })
       .setOrigin(0.5, 0.5);
-    this.add([this.auraGfx, this.bg, this.valueText]);
+    this.disabledOverlay = scene.add.graphics();
+    this.add([this.auraGfx, this.bg, this.valueText, this.disabledOverlay]);
 
     this.setSize(DICE_SIZE, DICE_SIZE);
     this.setInteractive(new Phaser.Geom.Rectangle(0, 0, DICE_SIZE, DICE_SIZE), Phaser.Geom.Rectangle.Contains);
@@ -141,7 +143,18 @@ export class DiceSprite extends GameObjects.Container {
 
   setDisabled(disabled: boolean): void {
     this._disabled = disabled;
-    this.setAlpha(disabled ? 0.4 : 1);
+    this.setAlpha(disabled ? 0.55 : 1);
+    this.drawDisabledOverlay();
+  }
+
+  private drawDisabledOverlay(): void {
+    this.disabledOverlay.clear();
+    if (!this._disabled) return;
+    const r = D12_INNER_RADIUS * 0.85;
+    this.disabledOverlay.lineStyle(4, 0xcc2222, 1);
+    this.disabledOverlay.lineBetween(-r, -r, r, r);
+    this.disabledOverlay.lineBetween(r, -r, -r, r);
+    this.disabledOverlay.setDepth(10);
   }
 
   toggleSelected(): void {

@@ -14,6 +14,8 @@ import { DicePouch } from './DicePouch';
 import { DicePouchModal } from './DicePouchModal';
 import { JourneyInfoModal } from './JourneyInfoModal';
 import { OptionsModal } from './OptionsModal';
+import { BossTestModal } from './BossTestModal';
+import { isDevMode } from '../../game/DevMode';
 
 export interface LayoutResult {
   sidebar: Sidebar;
@@ -83,6 +85,11 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   sidebar.setOptionsCallback(() => {
     new OptionsModal(scene, sidebarW, width - sidebarW, height);
   });
+  if (isDevMode()) {
+    sidebar.setDevBossTestCallback(() => {
+      new BossTestModal(scene, sidebarW, width - sidebarW, height);
+    });
+  }
 
   // ─── Content area metrics ───
   const contentX = sidebarW + UI.FELT_PADDING;

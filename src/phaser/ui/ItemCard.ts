@@ -86,6 +86,12 @@ export class ItemCard extends GameObjects.Container {
   private _def: CardData;
   private _options: ItemCardOptions;
   private _sold: boolean = false;
+  private _bossDisabled: boolean = false;
+  private _faceDown: boolean = false;
+  private _suppressTooltip: boolean = false;
+  private _suppressHints: boolean = false;
+  private disabledOverlay: GameObjects.Graphics;
+  private faceDownCover: GameObjects.Graphics | null = null;
   private costText: GameObjects.Text | null = null;
   private soldOverlay: GameObjects.Graphics;
   private tooltip: GameObjects.Container | null = null;
@@ -120,6 +126,9 @@ export class ItemCard extends GameObjects.Container {
     this.soldOverlay = scene.add.graphics();
     this.soldOverlay.setVisible(false);
     this.add(this.soldOverlay);
+
+    this.disabledOverlay = scene.add.graphics();
+    this.add(this.disabledOverlay);
 
     this.setSize(this._cardW, this._cardH);
     this.setInteractive(new Phaser.Geom.Rectangle(0, 0, this._cardW, this._cardH), Phaser.Geom.Rectangle.Contains);
@@ -157,6 +166,64 @@ export class ItemCard extends GameObjects.Container {
     if (this.costText) {
       this.costText.setColor(canAfford ? '#ffd700' : '#ff4444');
     }
+  }
+
+  setBossDisabled(disabled: boolean): void {
+    this._bossDisabled = disabled;
+    this.drawBossDisabledOverlay();
+  }
+
+  setFaceDown(faceDown: boolean): void {
+    this._faceDown = faceDown;
+    this.refreshFaceDown();
+  }
+
+  setSuppressTooltip(suppress: boolean): void {
+    this._suppressTooltip = suppress;
+    if (suppress) this.hideTooltip();
+  }
+
+  setSuppressHints(suppress: boolean): void {
+    this._suppressHints = suppress;
+    if (suppress) {
+      for (const obj of this.hintObjects) obj.destroy();
+      this.hintObjects = [];
+    }
+  }
+
+  private drawBossDisabledOverlay(): void {
+    this.disabledOverlay.clear();
+    if (!this._bossDisabled) return;
+    const hw = this._cardW / 2;
+    const hh = this._cardH / 2;
+    this.disabledOverlay.lineStyle(5, 0xcc2222, 1);
+    this.disabledOverlay.lineBetween(-hw * 0.7, -hh * 0.7, hw * 0.7, hh * 0.7);
+    this.disabledOverlay.lineBetween(hw * 0.7, -hh * 0.7, -hw * 0.7, hh * 0.7);
+    this.disabledOverlay.setDepth(20);
+  }
+
+  private refreshFaceDown(): void {
+    if (this.faceDownCover) {
+      this.faceDownCover.destroy();
+      this.faceDownCover = null;
+    }
+    if (this.cardImage) this.cardImage.setVisible(!this._faceDown);
+    if (!this._faceDown) return;
+
+    const hw = this._cardW / 2;
+    const hh = this._cardH / 2;
+    const g = this.scene.add.graphics();
+    g.fillStyle(0x2a1f3d, 1);
+    g.fillRoundedRect(-hw, -hh, this._cardW, this._cardH, CARD_RADIUS);
+    g.lineStyle(2, 0x6a4a8a, 0.9);
+    g.strokeRoundedRect(-hw, -hh, this._cardW, this._cardH, CARD_RADIUS);
+    // Decorative diamond pattern
+    g.fillStyle(0x4a3560, 0.6);
+    g.fillTriangle(0, -hh + 12, -14, 0, 14, 0);
+    g.fillTriangle(0, hh - 12, -14, 0, 14, 0);
+    this.faceDownCover = g;
+    this.add(g);
+    this.bringToTop(g);
   }
 
   // ─── Drawing ───
@@ -392,6 +459,7 @@ export class ItemCard extends GameObjects.Container {
 
   /** Render or update the hint rows below the card */
   updateHints(game: GameState | null, player: PlayerState): void {
+    if (this._suppressHints) return;
     if (!this._def.hintDisplay && !this._def.aura) return;
 
     const baseRows = this._def.hintDisplay ? this._def.hintDisplay(game, player) : [];
@@ -723,6 +791,7 @@ export class ItemCard extends GameObjects.Container {
   // ─── Tooltip ───
 
   private showTooltip(): void {
+    if (this._suppressTooltip || this._faceDown) return;
     if (this.tooltip) return;
 
     const matrix = this.getWorldTransformMatrix();

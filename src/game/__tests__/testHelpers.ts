@@ -2,7 +2,8 @@
 // Factories and utilities for setting up game state in tests.
 // Usage: const { game, player } = setupGame({ equipment: [item('horseshoe')] });
 
-import { Die, DiceEnhancement, DiceAura, DiceSticker, HandType } from '../types';
+import { Die, DiceEnhancement, DiceAura, DiceSticker, HandType, BossDef } from '../types';
+import bossesData from '../../data/bosses.json';
 import { GameState } from '../GameState';
 import { PlayerState, resetPlayerState, ProfessionDef } from '../PlayerState';
 import { EquipmentDef, EquipmentInstance, getAllEquipment } from '../ItemsSystem';
@@ -115,6 +116,8 @@ export interface GameSetupOptions {
   handSize?: number;
   /** Max equipment slots */
   maxEquipmentSlots?: number;
+  /** Boss id for current leg (sets round to 3) */
+  bossId?: string;
 }
 
 export interface GameSetupResult {
@@ -149,8 +152,24 @@ export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
     }
   }
 
+  if (options.bossId) {
+    player.round = 3;
+    const boss = (bossesData as BossDef[]).find((b) => b.id === options.bossId);
+    if (!boss) throw new Error(`Unknown boss id: "${options.bossId}"`);
+    player.setBossForCurrentLeg(boss);
+  }
+
   const game = new GameState();
   return { game, player };
+}
+
+/** Force boss on current leg (round 3) */
+export function setBoss(player: PlayerState, bossId: string): BossDef {
+  const boss = (bossesData as BossDef[]).find((b) => b.id === bossId);
+  if (!boss) throw new Error(`Unknown boss id: "${bossId}"`);
+  player.round = 3;
+  player.setBossForCurrentLeg(boss);
+  return boss;
 }
 
 // ─── Score Calculation Helper ───
@@ -170,6 +189,8 @@ export interface ScoreTestOptions {
   money?: number;
   /** Profession id */
   profession?: string;
+  /** Boss id (boss round) */
+  bossId?: string;
   /** Current day (1-based, default: 1) */
   currentDay?: number;
   /** Max days for the round (default: game default) */
@@ -191,6 +212,7 @@ export function calculateTestScore(options: ScoreTestOptions) {
     money: options.money ?? 10,
     profession: options.profession,
     handLevels: options.handLevels,
+    bossId: options.bossId,
   });
 
   // Set rerolls (default matches GAMEPLAY.MAX_REROLLS = 6)

@@ -163,4 +163,5 @@ export interface BossDef {
   description: string;
   effectType: string;
   effectParams: Record<string, unknown>;
+  minimumLeg?: number;
 }
