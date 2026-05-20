@@ -76,6 +76,27 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     expect(inst.def.effectType).toBe('LUCKY_NUMBER_PIP_XMULT');
     expect(inst.def.effectParams.value).toBe(1.5);
   });
+
+  test('gambler uses x2 mult on lucky pip', () => {
+    const luckyNum = itemWithState('lucky_number', { pip: 5 });
+    const scored = [die({ value: 5 }), die({ value: 5 })];
+    const { game, player } = setupGame({
+      equipment: [luckyNum],
+      dice: [...scored, ...diceWithValue(1, 50)],
+      profession: 'gambler',
+    });
+    game.startRound();
+    luckyNum.state.pip = 5;
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scored;
+    game.state.selectedForRoll = scored;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scored.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // Two matching lucky dice each apply x2 → 1 × 2 × 2 = 4
+    expect(result.mult).toBeCloseTo(4, 5);
+    expect(player.profession?.id).toBe('gambler');
+  });
 });
 
 // ─── PIP_RETRIGGER: One-Eyed Jack ───
@@ -147,6 +168,32 @@ describe('PIP_SUPPLY_CHANCE: Snake Eyes', () => {
       Math.random = original;
     }
   });
+
+  test('merchant has 1 in 2 chance (always succeeds at roll 0.4)', () => {
+    const original = Math.random;
+    Math.random = () => 0.4;
+
+    try {
+      const scoredDie = die({ value: 1 });
+      const { game, player } = setupGame({
+        equipment: [item('snake_eyes')],
+        dice: [scoredDie, ...diceWithValue(2, 20)],
+        profession: 'merchant',
+      });
+
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = [scoredDie];
+      game.state.selectedForRoll = [scoredDie];
+      game.state.rerollsRemaining = 6;
+      game.selectForScore([scoredDie.id]);
+      game.calculateScore();
+
+      expect(player.consumables.length).toBe(1);
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 // ─── ENHANCED_SCORE_MONEY: Gold Pan ───
@@ -157,6 +204,17 @@ describe('ENHANCED_SCORE_MONEY: Gold Pan', () => {
     expect(inst.def.effectType).toBe('ENHANCED_SCORE_MONEY');
     expect(inst.def.effectParams.chance).toEqual([1, 2]);
     expect(inst.def.effectParams.value).toBe(2);
+  });
+
+  test('prospector always earns $2 on enhanced die score', () => {
+    const enhanced = die({ value: 5, enhancement: 'gold' });
+    const { player } = calculateTestScore({
+      scoredDice: [enhanced, die({ value: 5 })],
+      equipment: [item('gold_pan')],
+      profession: 'prospector',
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(12);
   });
 });
 

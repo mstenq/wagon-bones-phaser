@@ -352,6 +352,16 @@ describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
     });
     expect(result.mult).toBeCloseTo(1.3, 5);
   });
+
+  test('scout gains x0.2 per trail guide used', () => {
+    const { player } = setupGame({ equipment: [item('guide_lantern')], profession: 'scout' });
+    const tgDef = createTrailGuideConsumableDef(trailGuidesData[0]);
+    const consumed = createConsumableInstance(tgDef);
+    executeConsumableEffect(consumed, player);
+
+    const lantern = player.equipment.find((e) => e.def.id === 'guide_lantern')!;
+    expect(lantern.state.xMult).toBeCloseTo(1.2, 5);
+  });
 });
 
 // ─── XMULT_RISKY: Nitro ───

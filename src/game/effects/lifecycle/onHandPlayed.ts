@@ -4,7 +4,7 @@ import type { Die, HandType, HandStats } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
-import { dieMatchesPip, handTypeMatches, hasStackedDeck } from '../helpers';
+import { dieMatchesPip, handTypeMatches, hasStackedDeck, resolveEffectParam } from '../helpers';
 import { getPlayerState } from '../../PlayerState';
 
 function getMostPlayedHandTypes(handStats: Map<HandType, HandStats>): HandType[] {
@@ -22,11 +22,15 @@ function getMostPlayedHandTypes(handStats: Map<HandType, HandStats>): HandType[]
 
 effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice) => {
   switch (equip.def.effectType) {
-    case 'HAND_MULT_GAIN':
-      if (handTypeMatches(handType as any, equip.def.effectParams.handType as string)) {
-        equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.value as number);
+    case 'HAND_MULT_GAIN': {
+      const p = equip.def.effectParams as Record<string, unknown>;
+      if (handTypeMatches(handType as any, p.handType as string)) {
+        const professionId = getPlayerState().profession?.id;
+        equip.state.mult =
+          (equip.state.mult ?? 0) + resolveEffectParam<number>(p, 'value', professionId);
       }
       break;
+    }
     case 'EVERY_NTH_HAND_XMULT':
       equip.state.handsPlayed = (equip.state.handsPlayed ?? 0) + 1;
       break;
@@ -38,7 +42,10 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       if (hasSix) {
         equip.state.mult = 0;
       } else {
-        equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.multPerHand as number);
+        const p = equip.def.effectParams as Record<string, unknown>;
+        const professionId = player.profession?.id;
+        equip.state.mult =
+          (equip.state.mult ?? 0) + resolveEffectParam<number>(p, 'multPerHand', professionId);
       }
       break;
     }

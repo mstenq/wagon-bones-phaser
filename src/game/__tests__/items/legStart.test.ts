@@ -214,6 +214,22 @@ describe('LOW_MONEY_SUPPLY: Emergency Supplies', () => {
     const lastConsumable = player.consumables[player.consumables.length - 1];
     expect(lastConsumable.def.category).toBe('supply');
   });
+
+  test('doctor triggers at $8 or less', () => {
+    const inst = item('emergency_supplies');
+    const { player } = setupGame({ equipment: [inst], money: 8, profession: 'doctor' });
+    player.consumables = [];
+    processEquipmentAfterHandScored([inst], HandType.PAIR);
+    expect(player.consumables.length).toBe(1);
+  });
+
+  test('doctor does NOT trigger above $8', () => {
+    const inst = item('emergency_supplies');
+    const { player } = setupGame({ equipment: [inst], money: 9, profession: 'doctor' });
+    const initialConsumables = player.consumables.length;
+    processEquipmentAfterHandScored([inst], HandType.PAIR);
+    expect(player.consumables.length).toBe(initialConsumables);
+  });
 });
 
 // ─── Funeral Pyre + Haunted Totem Interaction Tests ───

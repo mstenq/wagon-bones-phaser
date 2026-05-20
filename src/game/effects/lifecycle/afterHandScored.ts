@@ -5,6 +5,7 @@ import type { EquipmentInstance } from '../../ItemsSystem';
 import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
 import { checkLoadedChance } from '../../Constants';
+import { resolveChance, resolveEffectParam } from '../helpers';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import handsData from '../../../data/hands.json';
 
@@ -29,8 +30,9 @@ effectRegistry.registerLifecycle('after-hand-scored', (equip, handType, _scoring
       break;
     }
     case 'LOW_MONEY_SUPPLY': {
-      const threshold = equip.def.effectParams.threshold as number;
+      const p = equip.def.effectParams as Record<string, unknown>;
       const player = getPlayerState();
+      const threshold = resolveEffectParam<number>(p, 'threshold', player.profession?.id);
       if (player.economy.balance <= threshold) {
         const supplyDef = getRandomSupplyDef();
         player.addConsumable(supplyDef);
@@ -55,7 +57,9 @@ export function processEquipmentAfterHandScored(
         break;
       }
       case 'HAND_UPGRADE_CHANCE': {
-        if (checkLoadedChance(equip.def.effectParams.chance as [number, number], equipment)) {
+        const p = equip.def.effectParams as Record<string, unknown>;
+        const chance = resolveChance(p, getPlayerState().profession?.id);
+        if (checkLoadedChance(chance, equipment)) {
           const player = getPlayerState();
           const stats = player.getHandStats(handType);
           const handDef = HAND_TABLE.find((h) => h.type === handType)!;
@@ -88,8 +92,9 @@ export function processEquipmentAfterHandScored(
         break;
       }
       case 'LOW_MONEY_SUPPLY': {
-        const threshold = equip.def.effectParams.threshold as number;
+        const p = equip.def.effectParams as Record<string, unknown>;
         const player = getPlayerState();
+        const threshold = resolveEffectParam<number>(p, 'threshold', player.profession?.id);
         if (player.economy.balance <= threshold) {
           const supplyDef = getRandomSupplyDef();
           player.addConsumable(supplyDef);

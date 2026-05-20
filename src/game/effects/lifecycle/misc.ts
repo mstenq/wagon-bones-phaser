@@ -2,6 +2,8 @@
 
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { checkLoadedChance } from '../../Constants';
+import { getPlayerState } from '../../PlayerState';
+import { resolveChance } from '../helpers';
 
 export function processEquipmentOnDayEnd(equipment: EquipmentInstance[]): void {
   for (const equip of equipment) {
@@ -44,7 +46,9 @@ export function processEquipmentOnPackSkipped(equipment: EquipmentInstance[]): v
 export function processEquipmentOnPackOpened(equipment: EquipmentInstance[]): boolean {
   for (const equip of equipment) {
     if (equip.def.effectType === 'PACK_OPEN_SUPPLY_CHANCE') {
-      if (checkLoadedChance(equip.def.effectParams.chance as [number, number], equipment)) {
+      const p = equip.def.effectParams as Record<string, unknown>;
+      const chance = resolveChance(p, getPlayerState().profession?.id);
+      if (checkLoadedChance(chance, equipment)) {
         return true;
       }
     }

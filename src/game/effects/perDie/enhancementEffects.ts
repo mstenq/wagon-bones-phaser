@@ -3,6 +3,7 @@
 import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
 import { checkLoadedChance } from '../../Constants';
+import { resolveChance } from '../helpers';
 
 effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement === 'gold') {
@@ -16,7 +17,7 @@ effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => 
 effectRegistry.registerPerDie('ENHANCED_SCORE_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement !== null) {
     const p = equip.def.effectParams as Record<string, unknown>;
-    if (checkLoadedChance(p.chance as [number, number], ctx.equipment)) {
+    if (checkLoadedChance(resolveChance(p, getPlayerState().profession?.id), ctx.equipment)) {
       const value = p.value as number;
       getPlayerState().economy.earn(value);
       ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'money', value, dieId: die.id });

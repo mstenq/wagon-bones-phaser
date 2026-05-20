@@ -231,3 +231,5 @@ export function handTypeMatches(played: HandType, required: string): boolean {
 
   return false;
 }
+
+export { resolveEffectParam, resolveChance } from '../effectParams';

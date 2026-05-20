@@ -234,6 +234,14 @@ describe('HAND_MULT_GAIN: Card Counter', () => {
     // PAIR: baseMult=1 + 6 = 7
     expect(result.mult).toBe(7);
   });
+
+  test('con artist gains +4 mult per two pair hand', () => {
+    const inst = item('card_counter');
+    const { player } = setupGame({ equipment: [inst] });
+    player.applyProfession('con_artist');
+    processEquipmentOnHandPlayed([inst], HandType.TWO_PAIR);
+    expect(inst.state.mult).toBe(4);
+  });
 });
 
 // ─── HAND_MILES Items ───
@@ -401,6 +409,30 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
     const handTypes = Object.values(HandType);
     expect(inst.state.targetHand).toBeGreaterThanOrEqual(0);
     expect(inst.state.targetHand).toBeLessThan(handTypes.length);
+  });
+
+  test('hunter earns $8 when hand matches target', () => {
+    const inst = item('wanted_poster');
+    const handTypes = Object.values(HandType);
+    const pairIdx = handTypes.indexOf(HandType.PAIR);
+
+    const { game, player } = setupGame({
+      equipment: [inst],
+      dice: [...diceWithValue(5, 2), ...diceWithValue(1, 50)],
+      money: 10,
+      profession: 'hunter',
+    });
+
+    game.startRound();
+    inst.state.targetHand = pairIdx;
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = diceWithValue(5, 2);
+    game.state.selectedForRoll = game.state.rolledDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    game.calculateScore();
+    expect(player.economy.balance).toBe(18);
   });
 });
 

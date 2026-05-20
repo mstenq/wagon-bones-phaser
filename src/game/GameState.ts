@@ -511,7 +511,7 @@ export class GameState {
     return {
       availableCount: available,
       refreshCost: cost,
-      canAfford: player.economy.balance >= cost,
+      canAfford: player.canAfford(cost),
       freeIfUsed,
     };
   }

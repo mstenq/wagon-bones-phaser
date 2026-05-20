@@ -16,8 +16,8 @@ export class Economy {
     this._balance += amount;
   }
 
-  spend(amount: number): boolean {
-    if (amount > this._balance) return false;
+  spend(amount: number, minBalance: number = 0): boolean {
+    if (this._balance - amount < minBalance) return false;
     this._balance -= amount;
     return true;
   }

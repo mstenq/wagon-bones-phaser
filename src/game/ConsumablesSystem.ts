@@ -10,6 +10,7 @@ import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition } from './types';
 import handsData from '../data/hands.json';
 import { checkLoadedChance, PACK_ONLY_FRONTIER_IDS } from './Constants';
+import { resolveEffectParam } from './effects/helpers';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -304,7 +305,8 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
     // Update Guide Lantern xMult
     for (const equip of player.equipment) {
       if (equip.def.effectType === 'TRAIL_GUIDE_XMULT') {
-        const gain = (equip.def.effectParams.value as number) ?? 0.1;
+        const p = equip.def.effectParams as Record<string, unknown>;
+        const gain = resolveEffectParam<number>(p, 'value', player.profession?.id) ?? 0.1;
         equip.state.xMult = (equip.state.xMult ?? 1) + gain;
       }
     }

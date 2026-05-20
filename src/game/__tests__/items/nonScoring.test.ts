@@ -18,6 +18,7 @@ import {
   processEquipmentOnShopEnd,
 } from '../../EquipmentEffects';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
+import { resolveChance, resolveEffectParam } from '../../effectParams';
 import { getBossRoundConfigMods } from '../../BossEffectsSystem';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
@@ -69,6 +70,46 @@ describe('END_ROUND_MONEY: Payday ($4 at end of round)', () => {
     const equip = [item('payday')];
     const result = processEndOfRound(equip);
     expect(result.destroyedIndices).toEqual([]);
+  });
+
+  test('outlaw earns $12 at end of round', () => {
+    const { player } = setupGame({ equipment: [item('payday')] });
+    player.applyProfession('outlaw');
+    const result = processEndOfRound(player.equipment);
+    expect(result.moneyEarned).toBe(12);
+  });
+});
+
+// ─── BANK_NOTE: Bank Note ───
+
+describe('BANK_NOTE: Bank Note', () => {
+  test('allows spending into debt up to $20', () => {
+    const { player } = setupGame({ equipment: [item('bank_note')], money: 5 });
+    expect(player.canAfford(25)).toBe(true);
+    expect(player.trySpend(25)).toBe(true);
+    expect(player.economy.balance).toBe(-20);
+  });
+
+  test('cannot exceed $20 debt', () => {
+    const { player } = setupGame({ equipment: [item('bank_note')], money: 0 });
+    expect(player.canAfford(21)).toBe(false);
+  });
+
+  test('banker debt is wiped when selling bank note', () => {
+    const { player } = setupGame({ equipment: [item('bank_note')], money: 0 });
+    player.applyProfession('banker');
+    player.economy.setBalance(-15);
+    player.sellEquipment(0);
+    expect(player.economy.balance).toBe(0);
+    expect(player.equipment.length).toBe(0);
+  });
+
+  test('non-banker keeps debt when selling bank note', () => {
+    const { player } = setupGame({ equipment: [item('bank_note')], money: 5 });
+    player.trySpend(20);
+    expect(player.economy.balance).toBe(-15);
+    player.sellEquipment(0);
+    expect(player.economy.balance).toBe(-14);
   });
 });
 
@@ -294,6 +335,54 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
     // After 100 attempts at 1 in 4, very likely at least one upgrade
     expect(player.getHandStats(HandType.PAIR).level).toBeGreaterThan(initialLevel);
   });
+
+  test('resolves 1 in 4 by default and 1 in 2 for surveyor', () => {
+    const params = item('surveyors_transit').def.effectParams;
+    expect(resolveChance(params, undefined)).toEqual([1, 4]);
+    expect(resolveChance(params, 'surveyor')).toEqual([1, 2]);
+  });
+
+  test('default 1 in 4 fails between 25% and 50% roll', () => {
+    const original = Math.random;
+    Math.random = () => 0.4;
+    try {
+      const inst = item('surveyors_transit');
+      const { player } = setupGame({ equipment: [inst] });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      processEquipmentAfterHandScored([inst], HandType.PAIR);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('surveyor 1 in 2 succeeds at same roll where default fails', () => {
+    const original = Math.random;
+    Math.random = () => 0.4;
+    try {
+      const inst = item('surveyors_transit');
+      const { player } = setupGame({ equipment: [inst], profession: 'surveyor' });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      processEquipmentAfterHandScored([inst], HandType.PAIR);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 1);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('surveyor 1 in 2 fails above 50% roll', () => {
+    const original = Math.random;
+    Math.random = () => 0.6;
+    try {
+      const inst = item('surveyors_transit');
+      const { player } = setupGame({ equipment: [inst], profession: 'surveyor' });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      processEquipmentAfterHandScored([inst], HandType.PAIR);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore);
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 // ─── TRAIL_TAX ───
@@ -362,6 +451,14 @@ describe('PACK_OPEN_SUPPLY_CHANCE: Leftovers', () => {
     }
     expect(gotTrue).toBe(true);
     expect(gotFalse).toBe(true);
+  });
+
+  test('cook always grants supply on pack open', () => {
+    const inst = item('leftovers');
+    const { player } = setupGame({ equipment: [inst], profession: 'cook' });
+    for (let i = 0; i < 10; i++) {
+      expect(processEquipmentOnPackOpened(player.equipment)).toBe(true);
+    }
   });
 
   test('returns false with no PACK_OPEN_SUPPLY_CHANCE equipment', () => {
@@ -876,6 +973,30 @@ describe('FLOUR_SACK: Flour Sack', () => {
   test('is copy-incompatible', () => {
     const { COPY_INCOMPATIBLE_EFFECTS } = require('../../Constants');
     expect(COPY_INCOMPATIBLE_EFFECTS.has('FLOUR_SACK')).toBe(true);
+  });
+
+  test('farmer has no decay (decayPerRound resolves to 0)', () => {
+    const params = item('flour_sack').def.effectParams;
+    expect(resolveEffectParam<number>(params, 'decayPerRound', 'farmer')).toBe(0);
+    expect(resolveEffectParam<number>(params, 'decayPerRound', undefined)).toBe(1);
+  });
+
+  test('farmer flour sack stays at +5 hand size after multiple rounds', () => {
+    const inst = item('flour_sack');
+    const { player } = setupGame({ equipment: [inst], profession: 'farmer' });
+    for (let i = 0; i < 6; i++) {
+      processEquipmentOnRoundStart([inst]);
+    }
+    expect(inst.state.handSizeBonus).toBe(5);
+    expect(getConfigModifiers(player.equipment).rollSizeBonus).toBe(5);
+  });
+
+  test('non-farmer still decays when farmer profession is not active', () => {
+    const inst = item('flour_sack');
+    setupGame({ equipment: [inst] });
+    processEquipmentOnRoundStart([inst]);
+    processEquipmentOnRoundStart([inst]);
+    expect(inst.state.handSizeBonus).toBe(3);
   });
 });
 

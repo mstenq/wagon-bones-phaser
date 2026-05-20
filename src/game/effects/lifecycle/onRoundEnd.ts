@@ -2,6 +2,8 @@
 
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { checkLoadedChance } from '../../Constants';
+import { getPlayerState } from '../../PlayerState';
+import { resolveEffectParam } from '../helpers';
 
 export function processEndOfRound(equipment: EquipmentInstance[]): {
   moneyEarned: number;
@@ -16,7 +18,8 @@ export function processEndOfRound(equipment: EquipmentInstance[]): {
     const p = effectParams as Record<string, unknown>;
 
     if (effectType === 'END_ROUND_MONEY') {
-      moneyEarned += p.value as number;
+      const professionId = getPlayerState().profession?.id;
+      moneyEarned += resolveEffectParam<number>(p, 'value', professionId);
     }
 
     if (effectType === 'END_ROUND_MONEY_SCALING') {

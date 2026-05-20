@@ -41,6 +41,7 @@ import type { GameState } from '../game/GameState';
 import type { PlayerState } from '../game/PlayerState';
 import { HandType } from '../game/types';
 import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/Constants';
+import { resolveEffectParam, resolveChance } from '../game/effectParams';
 
 /** Raw item definition shape (matches the old JSON + hintDisplay) */
 export interface ItemDef {
@@ -394,10 +395,17 @@ const items: ItemDef[] = [
     cardTemplate: "white-text",
     cost: 6,
     rarity: 'common',
-    description: 'Earn $4 at end of round',
+    description: 'Earn $4 at end of round. Jesse Rawlins (Outlaw) earns $12.',
     effectType: 'END_ROUND_MONEY',
-    effectParams: { value: 4 },
-    hintDisplay: () => [[money('+$4')]],
+    effectParams: { value: 4, professionOverrides: { outlaw: { value: 12 } } },
+    hintDisplay: (_game, player) => {
+      const amount = resolveEffectParam<number>(
+        { value: 4, professionOverrides: { outlaw: { value: 12 } } },
+        'value',
+        player.profession?.id,
+      );
+      return [[money(`+$${amount}`)]];
+    },
   },
 
   // ─── Held-in-Hand Items ───
@@ -564,9 +572,14 @@ const items: ItemDef[] = [
     cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
-    description: 'Item gains +2 mult if played hand contains 2 pair',
+    description:
+      'Item gains +2 mult if played hand contains 2 pair. Victor Hale (Con Artist) gains +4 mult if played hand contains 2 pair.',
     effectType: 'HAND_MULT_GAIN',
-    effectParams: { handType: HandType.TWO_PAIR, value: 2 },
+    effectParams: {
+      handType: HandType.TWO_PAIR,
+      value: 2,
+      professionOverrides: { con_artist: { value: 4 } },
+    },
     initialState: { mult: 0 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'card_counter');
@@ -580,14 +593,16 @@ const items: ItemDef[] = [
     cardTemplate: "white-text-black-outline",
     cost: 8,
     rarity: 'rare',
-    description: 'Each played [number changes each round] gives x1.5 mult when scored',
+    description:
+      'Each played [number changes each round] gives x1.5 mult when scored. Thomas "Tommy" Reeve (Gambler) gains x2 mult when lucky number scores.',
     effectType: 'LUCKY_NUMBER_PIP_XMULT',
-    effectParams: { value: 1.5 },
+    effectParams: { value: 1.5, professionOverrides: { gambler: { value: 2 } } },
     initialState: { pip: 7 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'lucky_number');
       const pip = equip?.state.pip ?? '?';
-      return [[mult('x1.5'), condition(`per ${pip}`)]];
+      const xVal = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 1.5 }, 'value', player.profession?.id);
+      return [[mult(`x${xVal}`), condition(`per ${pip}`)]];
     },
   },
   {
@@ -948,15 +963,37 @@ const items: ItemDef[] = [
     hintDisplay: () => [[mult('+0-23'), odds('random')]],
   },
   {
+    id: 'bank_note',
+    name: 'Bank Note',
+    cardTemplate: 'white-text',
+    cost: 1,
+    rarity: 'common',
+    description:
+      'Go up to $20 in debt. When Charles Whitlock (Banker) sells this item, his debt is wiped clean.',
+    effectType: 'BANK_NOTE',
+    effectParams: { maxDebt: 20 },
+    hintDisplay: (_game, player) => {
+      const debt = player.debtLimit;
+      if (player.economy.balance < 0) {
+        return [[money(`$${player.economy.balance}`), condition('in debt')]];
+      }
+      return [[money(`-$${debt} max`), condition('debt limit')]];
+    },
+  },
+  {
     id: 'snake_eyes',
     name: 'Snake Eyes',
     cardTemplate: "white-text",
     cost: 5,
     rarity: 'uncommon',
-    description: '1 in 4 chance to get a supply card when a 1 is scored',
+    description:
+      '1 in 4 chance to get a supply card when a 1 is scored. Abigail Turner (Merchant) has a 1 in 2 chance.',
     effectType: 'PIP_SUPPLY_CHANCE',
-    effectParams: { pip: 1, chance: [1, 4] },
-    hintDisplay: (_game, player) => [[oddsDisplay([1, 4], player), condition('supply per 1')]],
+    effectParams: { pip: 1, chance: [1, 4], professionOverrides: { merchant: { chance: [1, 2] } } },
+    hintDisplay: (_game, player) => {
+      const p = { pip: 1, chance: [1, 4], professionOverrides: { merchant: { chance: [1, 2] } } };
+      return [[oddsDisplay(resolveChance(p, player.profession?.id), player), condition('supply per 1')]];
+    },
   },
   {
     id: 'coupon_book',
@@ -1041,10 +1078,16 @@ const items: ItemDef[] = [
     cardTemplate: "white-text-black-outline",
     cost: 4,
     rarity: 'common',
-    description: '1 in 2 chance to give $2 when an enhanced die scores',
+    description:
+      '1 in 2 chance to give $2 when an enhanced die scores. Davis Holler (Prospector) has a guaranteed chance.',
     effectType: 'ENHANCED_SCORE_MONEY',
-    effectParams: { chance: [1, 2], value: 2 },
-    hintDisplay: (_game, player) => [[money('$2'), oddsDisplay([1, 2], player), condition('enhanced scored')]],
+    effectParams: { chance: [1, 2], value: 2, professionOverrides: { prospector: { chance: [1, 1] } } },
+    hintDisplay: (_game, player) => {
+      const p = { chance: [1, 2], value: 2, professionOverrides: { prospector: { chance: [1, 1] } } };
+      const chance = resolveChance(p, player.profession?.id);
+      if (chance[0] >= chance[1]) return [[money('$2'), oddsDisplay([1,1], player), condition('enhanced scored')]];
+      return [[money('$2'), oddsDisplay(chance, player), condition('enhanced scored')]];
+    },
   },
 
   // ─── Phase 4 Items ───
@@ -1071,9 +1114,10 @@ const items: ItemDef[] = [
     cardTemplate: "marked",
     cost: 6,
     rarity: 'uncommon',
-    description: '+1 mult per hand played without scoring a 6. Scoring a 6 resets mult to 0.',
+    description:
+      '+1 mult per hand played without scoring a 6. Scoring a 6 resets mult to 0. Isaac Granger (Demon Hunter) gets +2 per hand.',
     effectType: 'MARKED_NO_SIX_MULT',
-    effectParams: { multPerHand: 1 },
+    effectParams: { multPerHand: 1, professionOverrides: { demon_hunter: { multPerHand: 2 } } },
     initialState: { mult: 0 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'marked');
@@ -1087,10 +1131,14 @@ const items: ItemDef[] = [
     cardTemplate: "white-text-black-outline",
     cost: 5,
     rarity: 'uncommon',
-    description: '1 in 4 chance to upgrade trail knowledge of hand type played',
+    description:
+      "1 in 4 chance to upgrade trail knowledge of hand type played. 1 in 2 chance if used by Elias Mercer (Surveyor).",
     effectType: 'HAND_UPGRADE_CHANCE',
-    effectParams: { chance: [1, 4] },
-    hintDisplay: (_game, player) => [[oddsDisplay([1, 4], player), condition('upgrade hand')]],
+    effectParams: { chance: [1, 4], professionOverrides: { surveyor: { chance: [1, 2] } } },
+    hintDisplay: (_game, player) => {
+      const p = { chance: [1, 4], professionOverrides: { surveyor: { chance: [1, 2] } } };
+      return [[oddsDisplay(resolveChance(p, player.profession?.id), player), condition('upgrade hand')]];
+    },
   },
   {
     id: 'guide_lantern',
@@ -1098,15 +1146,17 @@ const items: ItemDef[] = [
     cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
-    description: 'Gain x0.1 mult for every trail guide used',
+    description:
+      'Gain x0.1 mult for every trail guide used. Caleb Winters (Scout) gains x0.2 mult for every trail guide used.',
     effectType: 'TRAIL_GUIDE_XMULT',
-    effectParams: { value: 0.1 },
+    effectParams: { value: 0.1, professionOverrides: { scout: { value: 0.2 } } },
     initialState: { xMult: 1 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'guide_lantern');
       const xm = equip?.state.xMult ?? 1;
+      const gain = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 0.1 }, 'value', player.profession?.id);
       if (xm > 1) return [[mult(`x${xm.toFixed(1)}`)]];
-      return [[mult('x0.1'), condition('per guide used')], [inactive('None')]];
+      return [[mult(`x${gain}`), condition('per guide used')], [inactive('None')]];
     },
   },
   {
@@ -1197,16 +1247,18 @@ const items: ItemDef[] = [
     name: 'Wanted Poster',
     cost: 4,
     rarity: 'common',
-    description: 'Earn $4 if hand is [hand]. Changes each round.',
+    description:
+      'Earn $4 if hand is [hand]. Changes each round of journey. Nathan Cole (Hunter) gains $8.',
     effectType: 'WANTED_HAND_MONEY',
-    effectParams: { value: 4 },
+    effectParams: { value: 4, professionOverrides: { hunter: { value: 8 } } },
     initialState: { targetHand: 0 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'wanted_poster');
       const handIdx = equip?.state.targetHand ?? 0;
       const handTypes = Object.values(HandType);
       const handType = handTypes[handIdx % handTypes.length] as HandType;
-      return [[money('$4'), condition(HAND_NAMES[handType] ?? '?')]];
+      const amount = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 4 }, 'value', player.profession?.id);
+      return [[money(`$${amount}`), condition(HAND_NAMES[handType] ?? '?')]];
     },
   },
 
@@ -1322,12 +1374,15 @@ const items: ItemDef[] = [
     cardTemplate: "black-text",
     cost: 8,
     rarity: 'uncommon',
-    description: 'Create a random supply card if hand is played with $4 or less',
+    description:
+      'Create a random supply card if hand is played with $4 or less. Dr. Eleanor Sykes (Doctor) gets a supply card if hand is played with $8 or less.',
     effectType: 'LOW_MONEY_SUPPLY',
-    effectParams: { threshold: 4 },
+    effectParams: { threshold: 4, professionOverrides: { doctor: { threshold: 8 } } },
     hintDisplay: (_game, player) => {
-      if (player.economy.balance <= 4) return [[text('Supply card!'), active('Active')]];
-      return [[text('Supply card'), condition('≤$4')]];
+      const p = { threshold: 4, professionOverrides: { doctor: { threshold: 8 } } };
+      const threshold = resolveEffectParam<number>(p, 'threshold', player.profession?.id);
+      if (player.economy.balance <= threshold) return [[text('Supply card!'), active('Active')]];
+      return [[text('Supply card'), condition(`≤$${threshold}`)]];
     },
   },
   {
@@ -1352,10 +1407,15 @@ const items: ItemDef[] = [
     cardTemplate: "black-text-white-outline",
     cost: 4,
     rarity: 'common',
-    description: '1 in 2 chance to gain a supply card when opening a booster pack',
+    description:
+      '1 in 2 chance to gain a supply card when opening a booster pack. Martha Delaney (Cook) has a guaranteed chance.',
     effectType: 'PACK_OPEN_SUPPLY_CHANCE',
-    effectParams: { chance: [1, 2] },
-    hintDisplay: (_game, player) => [[oddsDisplay([1, 2], player), text('supply'), condition('on pack open')]],
+    effectParams: { chance: [1, 2], professionOverrides: { cook: { chance: [1, 1] } } },
+    hintDisplay: (_game, player) => {
+      const p = { chance: [1, 2], professionOverrides: { cook: { chance: [1, 1] } } };
+      const chance = resolveChance(p, player.profession?.id);
+      return [[oddsDisplay(chance, player), text('supply'), condition('on pack open')]];
+    },
   },
   {
     id: 'campfire_stories',
@@ -1929,14 +1989,23 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-    description: '+5 hand size, reduces by 1 each round',
+    description:
+      '+5 hand size, reduces by 1 each round. Hank Caldwell (Farmer) keeps the full +5 with no decay.',
     effectType: 'FLOUR_SACK',
-    effectParams: { decayPerRound: 1 },
+    effectParams: { decayPerRound: 1, professionOverrides: { farmer: { decayPerRound: 0 } } },
     initialState: { handSizeBonus: 5 },
     hintDisplay: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'flour_sack');
       const bonus = equip?.state.handSizeBonus ?? 5;
-      if (bonus > 0) return [[active(`+${bonus} hand size`)]];
+      const decay = resolveEffectParam<number>(
+        equip?.def.effectParams ?? { decayPerRound: 1 },
+        'decayPerRound',
+        player.profession?.id,
+      );
+      if (bonus > 0) {
+        if (decay === 0) return [[active(`+${bonus} hand size`), condition('no decay')]];
+        return [[active(`+${bonus} hand size`), condition(`-${decay}/round`)]];
+      }
       return [[inactive('Empty')]];
     },
   },

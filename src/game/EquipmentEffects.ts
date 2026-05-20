@@ -5,6 +5,7 @@ import { Die, HandType, HandResult, ScoreResult, ScoreAnimEvent } from './types'
 import { EquipmentInstance } from './ItemsSystem';
 import { getPlayerState } from './PlayerState';
 import { resolveCopyTarget } from './Constants';
+import { resolveEffectParam } from './effectParams';
 import { effectRegistry, type ScoringPipelineContext } from './effects';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import { applyEquipmentAuras, applyHolyAuraXMult, forEachEquipmentResolved, hasStackedDeck } from './effects/helpers';
@@ -413,12 +414,21 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
           equip.state.roundsHeld = (equip.state.roundsHeld ?? 0) + 1;
         }
         break;
-      case 'FLOUR_SACK':
-        // Flour Sack: reduce hand size bonus by 1 each round (min 0)
+      case 'FLOUR_SACK': {
+        // Flour Sack: reduce hand size bonus each round (min 0); farmer has no decay
         if (!isCopy) {
-          equip.state.handSizeBonus = Math.max(0, (equip.state.handSizeBonus ?? 0) - (equip.def.effectParams.decayPerRound as number));
+          const p = equip.def.effectParams as Record<string, unknown>;
+          const decay = resolveEffectParam<number>(
+            p,
+            'decayPerRound',
+            getPlayerState().profession?.id,
+          );
+          if (decay > 0) {
+            equip.state.handSizeBonus = Math.max(0, (equip.state.handSizeBonus ?? 0) - decay);
+          }
         }
         break;
+      }
       case 'ROUND_START_SUPPLY':
         // Supply Drop: create a random supply card
         supplyCardsToAdd++;

@@ -32,7 +32,7 @@ Deadeye - $5 - +20 mult if 3 or fewer dice are scored
 Trail Rations - $5 - +30 miles per unused re-roll
 Stubborn Mule - $5 - +15 mult when 0 re-rolls remaining
 Toolbelt - $4 - +3 mult for each piece of equipment
-Dynamite - $5 - +15 mult - 1 in 6 change to be destroyed at end of round
+Dynamite - $5 - +15 mult - 1 in 6 chance to be destroyed at end of round
 Even Odds - $4 - +4 when an even pip is scored
 Odd Fellow - $4 - +31 miles when an odd pip is scored
 Extra Saddlebag - $4 - refresh your spent dice for free 1 time a round

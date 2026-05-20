@@ -7,7 +7,7 @@ import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
 import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
-import { forEachEquipmentResolved } from './effects/helpers';
+import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
@@ -15,12 +15,18 @@ import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
 import bossesData from '../data/bosses.json';
 
+export interface ProfessionSpecialEquipment {
+  name: string;
+  effect: string;
+}
+
 export interface ProfessionDef {
   id: string;
   title: string;
   name: string;
   description: string;
   modifiers: Record<string, unknown>;
+  specialEquipment?: ProfessionSpecialEquipment;
 }
 
 export interface PayoutBreakdown {
@@ -219,11 +225,34 @@ export class PlayerState {
     return this.availableDice.length;
   }
 
+  hasBankNote(): boolean {
+    return this.equipment.some((e) => e.def.effectType === 'BANK_NOTE');
+  }
+
+  get debtLimit(): number {
+    if (!this.hasBankNote()) return 0;
+    const note = this.equipment.find((e) => e.def.effectType === 'BANK_NOTE');
+    return (note?.def.effectParams.maxDebt as number) ?? 20;
+  }
+
+  get minBalance(): number {
+    return -this.debtLimit;
+  }
+
+  canAfford(amount: number): boolean {
+    return this.economy.balance - amount >= this.minBalance;
+  }
+
+  trySpend(amount: number): boolean {
+    if (!this.canAfford(amount)) return false;
+    return this.economy.spend(amount, this.minBalance);
+  }
+
   /** Pay to refresh all spent dice back into the available pool. Returns false if can't afford. */
   refreshSpentDice(): boolean {
     const cost = this.refreshCost;
     if (this.spentDiceIds.size === 0) return false; // nothing to refresh
-    if (cost > 0 && !this.economy.spend(cost)) return false;
+    if (cost > 0 && !this.trySpend(cost)) return false;
     this.spentDiceIds.clear();
     return true;
   }
@@ -257,12 +286,12 @@ export class PlayerState {
   }
 
   canRerollShop(): boolean {
-    return this.economy.balance >= this.shopRerollCost;
+    return this.canAfford(this.shopRerollCost);
   }
 
   payShopReroll(): boolean {
     if (!this.canRerollShop()) return false;
-    this.economy.spend(this.shopRerollCost);
+    this.trySpend(this.shopRerollCost);
     this.shopRerollCount++;
     processEquipmentOnShopReroll(this.equipment);
     return true;
@@ -282,7 +311,7 @@ export class PlayerState {
   }
 
   canBuy(item: EquipmentDef): boolean {
-    if (this.economy.balance < item.cost) return false;
+    if (!this.canAfford(item.cost)) return false;
     // Ghost-aura items don't consume a slot
     if (item.aura?.id !== 'ghost' && this.usedEquipmentSlots >= this.maxEquipmentSlots) return false;
     return true;
@@ -290,7 +319,7 @@ export class PlayerState {
 
   buyEquipment(def: EquipmentDef): boolean {
     if (!this.canBuy(def)) return false;
-    this.economy.spend(def.cost);
+    this.trySpend(def.cost);
     this.equipment.push({
       def,
       sellValue: Math.max(1, Math.floor(def.cost / 2)),
@@ -307,6 +336,11 @@ export class PlayerState {
     // Sheriff's Badge: selling disables the current boss effect for this round
     if (item.def.effectType === 'SELL_DISABLE_BOSS' && this.isBossRound) {
       this.bossEffectDisabled = true;
+    }
+
+    // Bank Note: banker wipes debt when selling this item
+    if (item.def.effectType === 'BANK_NOTE' && this.profession?.id === 'banker' && this.economy.balance < 0) {
+      this.economy.setBalance(0);
     }
 
     // Phantom Wagon: if sold after enough rounds, duplicate a random item
@@ -474,7 +508,8 @@ export class PlayerState {
     let equipmentMoney = 0;
     for (const equip of this.equipment) {
       if (equip.def.effectType === 'END_ROUND_MONEY') {
-        equipmentMoney += (equip.def.effectParams.value as number) ?? 0;
+        const p = equip.def.effectParams as Record<string, unknown>;
+        equipmentMoney += resolveEffectParam<number>(p, 'value', this.profession?.id) ?? 0;
       }
       if (equip.def.effectType === 'END_ROUND_MONEY_PER_REROLL') {
         equipmentMoney += ((equip.def.effectParams.value as number) ?? 0) * rerollsRemaining;
@@ -534,8 +569,8 @@ export class PlayerState {
   /** Purchase a permit. Deducts cost, records purchase, applies effect. */
   buyPermit(def: PermitDef): boolean {
     if (this.purchasedPermits.includes(def.id)) return false;
-    if (this.economy.balance < def.cost) return false;
-    this.economy.spend(def.cost);
+    if (!this.canAfford(def.cost)) return false;
+    this.trySpend(def.cost);
     this.purchasedPermits.push(def.id);
     applyPermitEffect(def, this);
     this.currentLegPermit = null; // purchased — no more permit this leg

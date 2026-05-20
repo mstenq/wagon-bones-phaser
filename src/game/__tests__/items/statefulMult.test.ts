@@ -45,6 +45,14 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
     // PAIR: baseMult=1, +5 from marked = 6
     expect(result.mult).toBe(6);
   });
+
+  test('demon hunter gains +2 per hand without a 6', () => {
+    const inst = item('marked');
+    const { player } = setupGame({ equipment: [inst], profession: 'demon_hunter' });
+    const scoringDice = [die({ value: 5 }), die({ value: 5 })];
+    processEquipmentOnHandPlayed([inst], HandType.PAIR, scoringDice);
+    expect(inst.state.mult).toBe(2);
+  });
 });
 
 // ─── STATEFUL_ADD_MILES: Steam Engine ───

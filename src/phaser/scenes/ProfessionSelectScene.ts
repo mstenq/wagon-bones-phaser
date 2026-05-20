@@ -11,7 +11,7 @@ import { Button } from '../ui/Button';
 import professionsData from '../../data/professions.json';
 
 const CARD_W = 190;
-const CARD_H = 280;
+const CARD_H = 310;
 const CARD_GAP = 16;
 const COLS = 5;
 const IMAGE_SIZE = 120;
@@ -209,17 +209,46 @@ export class ProfessionSelectScene extends Scene {
       .setOrigin(0.5, 0);
     container.add(nameText);
 
+    let descY = nameText.y + nameText.height + 6;
+
+    if (prof.specialEquipment) {
+      const equipName = this.add
+        .text(0, descY, prof.specialEquipment.name, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '11px',
+          color: TEXT_COLORS.GOLD,
+          align: 'center',
+          wordWrap: { width: CARD_W - 20 },
+        })
+        .setOrigin(0.5, 0);
+      container.add(equipName);
+
+      const equipEffect = this.add
+        .text(0, equipName.y + equipName.height + 2, prof.specialEquipment.effect, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '10px',
+          color: TEXT_COLORS.PRIMARY,
+          align: 'center',
+          wordWrap: { width: CARD_W - 20 },
+          lineSpacing: 1,
+        })
+        .setOrigin(0.5, 0);
+      container.add(equipEffect);
+
+      descY = equipEffect.y + equipEffect.height + 6;
+    }
+
     // Description
     const desc = this.add
-      .text(0, CARD_H / 2 - 14, prof.description, {
+      .text(0, descY, prof.description, {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '12px',
+        fontSize: '11px',
         color: TEXT_COLORS.MUTED,
         align: 'center',
         wordWrap: { width: CARD_W - 20 },
         lineSpacing: 2,
       })
-      .setOrigin(0.5, 1);
+      .setOrigin(0.5, 0);
     container.add(desc);
 
     // Invisible hit area sprite for precise interaction
