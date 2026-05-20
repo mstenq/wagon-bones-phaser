@@ -65,8 +65,7 @@ effectRegistry.registerPerDie('IRON_DICE_MULT', (ctx, equip, _idx, die, _t) => {
 });
 
 effectRegistry.registerPerDie('ENHANCEMENT_SCORED_MILES', (_ctx, equip, _idx, die, _t) => {
-  // Only first trigger
-  if (_t === 0 && die.enhancement === (equip.def.effectParams as Record<string, unknown>).enhancement) {
+  if (die.enhancement === (equip.def.effectParams as Record<string, unknown>).enhancement) {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     equip.state.miles = (equip.state.miles ?? 0) + value;
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: gained +${value} miles (now ${equip.state.miles})`);

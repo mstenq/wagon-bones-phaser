@@ -1,5 +1,8 @@
 // ─── on-sell lifecycle handlers ───
 
+import type { Die } from '../../types';
+import type { EquipmentInstance } from '../../ItemsSystem';
+import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 
 effectRegistry.registerLifecycle('on-sell', (equip) => {
@@ -47,3 +50,33 @@ effectRegistry.registerLifecycle('on-diamond-destroyed', (equip) => {
       break;
   }
 });
+
+export function processEquipmentOnSell(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    dispatchLifecycle('on-sell', equip);
+  }
+}
+
+export function processEquipmentOnBossDefeat(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    dispatchLifecycle('on-boss-defeat', equip);
+  }
+}
+
+export function processEquipmentOnDiceSpent(equipment: EquipmentInstance[], spentDice: Die[]): void {
+  for (const equip of equipment) {
+    dispatchLifecycle('on-dice-spent', equip, spentDice);
+  }
+}
+
+export function processEquipmentOnLuckyTrigger(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    dispatchLifecycle('on-lucky-trigger', equip);
+  }
+}
+
+export function processEquipmentOnDiamondDestroyed(equipment: EquipmentInstance[]): void {
+  for (const equip of equipment) {
+    dispatchLifecycle('on-diamond-destroyed', equip);
+  }
+}

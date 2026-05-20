@@ -40,7 +40,7 @@ export interface HintSegment {
 import type { GameState } from '../game/GameState';
 import type { PlayerState } from '../game/PlayerState';
 import { HandType } from '../game/types';
-import { COPY_INCOMPATIBLE_EFFECTS, getLoadedDiceMultiplier, resolveCopyTarget } from '../game/Constants';
+import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/Constants';
 
 /** Raw item definition shape (matches the old JSON + hintDisplay) */
 export interface ItemDef {
@@ -266,7 +266,7 @@ const items: ItemDef[] = [
     name: 'Trail Rations',
     cardTemplate: "white-text",
     cost: 5,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: '+30 miles per unused re-roll',
     effectType: 'MILES_PER_UNUSED_REROLL',
     effectParams: { value: 30 },
@@ -282,7 +282,7 @@ const items: ItemDef[] = [
     name: 'Deadeye',
     cardTemplate: "black-text-white-outline",
     cost: 5,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: '+20 mult if 3 or fewer dice are scored',
     effectType: 'CONDITIONAL_MULT',
     effectParams: { condition: 'SCORED_DICE_LTE', threshold: 3, value: 20 },
@@ -298,7 +298,7 @@ const items: ItemDef[] = [
     name: 'Stubborn Mule',
     cardTemplate: "white-text-black-outline",
     cost: 5,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: '+15 mult when 0 re-rolls remaining',
     effectType: 'CONDITIONAL_MULT',
     effectParams: { condition: 'NO_REROLLS', value: 15 },
@@ -360,7 +360,7 @@ const items: ItemDef[] = [
     name: 'Dynamite',
     cardTemplate: "white-text",
     cost: 5,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: '+15 mult. 1 in 6 chance to be destroyed at end of round.',
     effectType: 'ADD_MULT_RISKY',
     effectParams: { value: 15, destroyChance: [1, 6] },
@@ -393,7 +393,7 @@ const items: ItemDef[] = [
     name: 'Payday',
     cardTemplate: "white-text",
     cost: 6,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: 'Earn $4 at end of round',
     effectType: 'END_ROUND_MONEY',
     effectParams: { value: 4 },
@@ -418,7 +418,7 @@ const items: ItemDef[] = [
     name: 'Bottom Dollar',
     cardTemplate: "white-text-black-outline",
     cost: 5,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: 'Adds double the rank of lowest held-in-hand die to mult',
     effectType: 'HELD_LOWEST_MULT',
     effectParams: {},
@@ -451,7 +451,7 @@ const items: ItemDef[] = [
     name: "Prospector's Pouch",
     cardTemplate: "white-text",
     cost: 6,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: 'Each enhanced die held in hand has a 1 in 2 chance to give $1',
     effectType: 'HELD_ENHANCED_MONEY',
     effectParams: { chance: [1, 2], value: 1 },
@@ -467,7 +467,7 @@ const items: ItemDef[] = [
     name: 'The Eleventh Crossing',
     cardTemplate: "white-text",
     cost: 5,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: 'Each 11 held in hand gives +11 mult',
     effectType: 'HELD_PIP_MULT',
     effectParams: { pip: 11, value: 11 },
@@ -546,7 +546,7 @@ const items: ItemDef[] = [
     name: 'Fading Memory',
     cardTemplate: "white-text",
     cost: 5,
-    rarity: 'uncommon',
+    rarity: 'common',
     description: '+20 mult, -4 mult per round played, removed after 5 rounds',
     effectType: 'DECAYING_MULT',
     effectParams: { decayPerRound: 4, maxRounds: 5 },

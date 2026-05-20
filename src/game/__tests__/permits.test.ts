@@ -36,6 +36,24 @@ describe('Reroll overhaul (per-round, not per-day)', () => {
     expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS);
   });
 
+  test('reroll keeps stone dice at zero', () => {
+    const { game, player } = setupGame({
+      dice: [die({ enhancement: 'stone', value: 0 }), ...diceWithValue(5, 10)],
+    });
+
+    game.startRound();
+    const stoneDie = player.dice.find((d) => d.enhancement === 'stone');
+    expect(stoneDie).toBeDefined();
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = [stoneDie!];
+    game.state.rerollsRemaining = GAMEPLAY.MAX_REROLLS;
+
+    expect(game.reroll([stoneDie!.id])).toBe(true);
+    expect(game.state.rolledDice[0].enhancement).toBe('stone');
+    expect(game.state.rolledDice[0].value).toBe(0);
+  });
+
   test('rerolls are NOT reset between days', () => {
     const { game, player } = setupGame({ dice: diceWithValue(5, 50) });
     game.startRound();

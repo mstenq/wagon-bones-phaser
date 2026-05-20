@@ -156,16 +156,17 @@ Coffee - $6 - +2 hand size, -1 day per round
 Flour Sack - $6 - +5 hand size, reduces by 1 each round
 
 ## Phase 10
-Oil Baron - $7 - +2 mult for every $5 you have
-Trailblazer - $8 - earns x0.2 mult per consecutive hand played without playing your most played hand
-Golden Spike - $7 - all scored dice have a 1 in 4 chance to turn into a gold dice
-Sheriff’s Badge - $5 - sell this item to disable the current boss effect
-Double Barrel - $5 - first played 2 pip dice gives x2 mult when scored
-Raffle Ticket - $6 - at the end of each round add $1 of sell value to each piece of equipment
-Ghost Town - $6 - +10 mult for each dice below the collections starting size
-Savings Account - $5 - earn an extra $1 of interest for every $5 you have at end of round. Henry Pritchard (Accountant) earns an additional $1 for every $5.
-Six Feet Under - $5 - item gains 66 miles for every dice that is destroyed
-Eight Second Ride - $7 - Each consecutive scored 8 gains +0.5 xMult over the previous (x1,x1.5,x2,x2.5, x3...)
+Oil Baron - $7 - uncommon - +2 mult for every $5 you have
+Trailblazer - $8 - rare - earns x0.2 mult per consecutive hand played without playing your most played hand
+Golden Spike - $7 - uncommon - all scored dice have a 1 in 4 chance to turn into a gold dice
+Sheriff’s Badge - $5 - uncommon - sell this item to disable the current boss effect
+Double Barrel - $5 - common - first played 2 pip dice gives x2 mult when scored
+Raffle Ticket - $6 - uncommon - at the end of each round add $1 of sell value to each piece of equipment
+Ghost Town - $6 - uncommon - +10 mult for each dice below the collections starting size
+Savings Account - $5 - uncommon - earn an extra $1 of interest for every $5 you have at end of round. Henry Pritchard (Accountant) earns an additional $1 for every $5.
+Six Feet Under - $5 - common - item gains 66 miles for every dice that is destroyed
+Eight Second Ride - $8 - rare - Each consecutive scored 8 gains +0.5 xMult over the previous (x1,x1.5,x2,x2.5, x3...)
+Stacked Deck - $10 - rare - Loaded dice are considered all pip values for equipment effects
 
 ## Legendaries
 the following legendary items must be obtained from pandora's box frontier encounter cards

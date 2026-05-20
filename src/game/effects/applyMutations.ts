@@ -4,6 +4,54 @@ import { getPlayerState } from '../PlayerState';
 import { getConsumableDefById } from '../ConsumablesSystem';
 import { ScoringMutations } from './types';
 
+export function createEmptyScoringMutations(): ScoringMutations {
+  return {
+    moneyEarned: 0,
+    earnedMoney: 0,
+    lostMoney: 0,
+    earnedMiles: 0,
+    lostMiles: 0,
+    gainedDice: 0,
+    lostDice: 0,
+    gainedSupplyCards: 0,
+    gainedEquipment: 0,
+    lostEquipment: 0,
+    daysBonus: 0,
+    loseAllRerolls: false,
+    burnBarrelMoney: 0,
+    burnBarrelTriggered: false,
+    supplyCardsToAdd: 0,
+    diceDestroyed: [],
+    diceEnhanced: [],
+    consumablesGranted: [],
+    diceCopied: [],
+    dieBonusMilesAdded: [],
+  };
+}
+
+export function mergeMutations(target: ScoringMutations, source: ScoringMutations): void {
+  target.moneyEarned += source.moneyEarned;
+  target.earnedMoney += source.earnedMoney;
+  target.lostMoney += source.lostMoney;
+  target.earnedMiles += source.earnedMiles;
+  target.lostMiles += source.lostMiles;
+  target.gainedDice += source.gainedDice;
+  target.lostDice += source.lostDice;
+  target.gainedSupplyCards += source.gainedSupplyCards;
+  target.gainedEquipment += source.gainedEquipment;
+  target.lostEquipment += source.lostEquipment;
+  target.daysBonus += source.daysBonus;
+  target.burnBarrelMoney += source.burnBarrelMoney;
+  target.supplyCardsToAdd += source.supplyCardsToAdd;
+  target.diceDestroyed.push(...source.diceDestroyed);
+  target.diceEnhanced.push(...source.diceEnhanced);
+  target.consumablesGranted.push(...source.consumablesGranted);
+  target.diceCopied.push(...source.diceCopied);
+  target.dieBonusMilesAdded.push(...source.dieBonusMilesAdded);
+  if (source.loseAllRerolls) target.loseAllRerolls = true;
+  if (source.burnBarrelTriggered) target.burnBarrelTriggered = true;
+}
+
 /**
  * Apply the accumulated mutations from scoring to the player state.
  * Called after scoring completes.
@@ -52,6 +100,14 @@ export function applyScoringMutations(mutations: ScoringMutations): void {
         isGrimy: diePartial.isGrimy ?? false,
         bonusMiles: diePartial.bonusMiles ?? 0,
       });
+    }
+  }
+
+  // Permanent bonus miles granted during scoring
+  for (const { id, amount } of mutations.dieBonusMilesAdded) {
+    const die = player.dice.find((d) => d.id === id);
+    if (die) {
+      die.bonusMiles += amount;
     }
   }
 }

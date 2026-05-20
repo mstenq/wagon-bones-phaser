@@ -47,10 +47,10 @@ effectRegistry.registerXMult('ENHANCEMENT_COUNT_XMULT', (ctx, equip, index) => {
 effectRegistry.registerXMult('REPEAT_HAND_XMULT', (ctx, equip, index) => {
   const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
   const handKey = `round_${ctx.handType}`;
-  if (ctx.handType && ctx.equipment.some((e) => e.state[handKey])) {
+  if (ctx.handType && (equip.state[handKey] ?? 0) > 0) {
     ctx.xMult *= xVal;
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
-    console.log(`  [xmult] ${equip.def.name}: x${xVal} (repeat hand) (xMult: ${ctx.xMult})`);
+    console.log(`  [xmult] ${equip.def.name}: x${xVal} (repeat hand ${ctx.handType}) (xMult: ${ctx.xMult})`);
   }
 });
 

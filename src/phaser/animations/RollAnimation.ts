@@ -25,8 +25,8 @@ export function playRollAnimation(
     callback: () => {
       elapsed += interval;
       for (const sprite of diceSprites) {
-        // Show random values during tumble
-        const tempData = { ...sprite.dieData, value: Math.ceil(Math.random() * 12) };
+        const tempValue = sprite.dieData.enhancement === 'stone' ? 0 : Math.ceil(Math.random() * 12);
+        const tempData = { ...sprite.dieData, value: tempValue };
         sprite.setDieData(tempData);
       }
     },

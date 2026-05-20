@@ -210,6 +210,11 @@ export function getFrontierDefById(id: string, aura?: ItemAura | null): Consumab
   return createFrontierConsumableDef(fe, aura);
 }
 
+/** Look up a consumable definition by ID across all categories. */
+export function getConsumableDefById(id: string, aura?: ItemAura | null): ConsumableDef | null {
+  return getSupplyDefById(id, aura) ?? getTrailGuideDefById(id, aura) ?? getFrontierDefById(id, aura);
+}
+
 // ─── Shop Generation ───
 
 /** Generate random consumable cards for the shop.

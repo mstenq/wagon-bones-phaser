@@ -6,7 +6,7 @@ import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
-import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnLegStart, processEquipmentOnDiceAdded } from './EquipmentEffects';
+import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
@@ -41,6 +41,7 @@ const SHOP_REROLL_COST = GAMEPLAY.SHOP_REROLL_COST;
 export class PlayerState {
   economy: Economy;
   dice: Die[]; // all dice the player owns
+  loadedDieTarget: number | null = null; // selected face for loaded enhancement dice
   spentDiceIds: Set<string> = new Set(); // dice used this cycle (persists across days & rounds)
   equipment: EquipmentInstance[];
   maxEquipmentSlots: number;
@@ -217,6 +218,14 @@ export class PlayerState {
     if (cost > 0 && !this.economy.spend(cost)) return false;
     this.spentDiceIds.clear();
     return true;
+  }
+
+  setLoadedDieTarget(value: number | null): void {
+    if (value === null) {
+      this.loadedDieTarget = null;
+      return;
+    }
+    this.loadedDieTarget = Math.max(1, Math.min(12, Math.floor(value)));
   }
 
   addDie(die: Die): void {
@@ -487,8 +496,6 @@ export class PlayerState {
       this.currentLegPermit = null;
       this.permitPurchasedThisLeg = false;
 
-      // Process leg-start equipment effects (currently a no-op, effects moved to round start)
-      processEquipmentOnLegStart(this.equipment);
     }
     // Spent dice persist across rounds — only refreshed by paying or auto-refresh
     return this.journeyComplete;

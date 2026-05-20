@@ -1,4 +1,5 @@
 import { GAMEPLAY } from './Constants';
+import type { ScoringMutations } from './effects/types';
 
 export type PhaseState = 'SELECT' | 'ROLL' | 'SCORE' | 'DAY_END' | 'ROUND_END';
 
@@ -106,6 +107,8 @@ export interface ScoreResult {
   roundScoreBefore?: number;
   /** Hand upgrades that occurred during scoring (e.g. Surveyor's Transit) */
   handUpgrades?: HandUpgradeInfo[];
+  /** Scoring mutations (deferred to applyScoringMutations) */
+  mutations: ScoringMutations;
 }
 
 export interface GameConfig {
@@ -147,7 +150,8 @@ export type GameEventType =
   | 'round-won'
   | 'round-lost'
   | 'reroll-updated'
-  | 'spent-refreshed';
+  | 'spent-refreshed'
+  | 'death-prevented';
 
 export type GameEventCallback = (data?: unknown) => void;
 

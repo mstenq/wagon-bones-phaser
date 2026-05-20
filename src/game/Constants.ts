@@ -43,6 +43,9 @@ export const CHANCES = {
   AURA_HOLY: 0.03,
   AURA_FIRE: 0.14,
   AURA_ICY: 0.2,
+  RARE: 0.05,
+  UNCOMMON: 0.25,
+  COMMON: 0.7,
 };
 
 // ─── Shop Stock Category Weights ───

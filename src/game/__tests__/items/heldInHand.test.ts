@@ -90,6 +90,42 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     });
     expect(result.mult).toBe(1);
   });
+
+  test('mirror lake copies bottom dollar', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3 }), die({ value: 7 })],
+      equipment: [item('mirror_lake'), item('bottom_dollar')],
+    });
+    expect(result.mult).toBe(13);
+  });
+
+  test('retriggers when the lowest held die has red_bullet', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, sticker: 'red_bullet' }), die({ value: 7 })],
+      equipment: [item('bottom_dollar')],
+    });
+    // PAIR: baseMult=1
+    // Lowest held = 3, and red_bullet adds one held retrigger
+    // Bottom Dollar adds +6 per trigger, so +12 total
+    // heldMult = (1 + 12) * 1 = 13
+    expect(result.mult).toBe(13);
+  });
+
+  test('stacks natural trigger, red_bullet, and silver_bullets retrigger on the lowest held die', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, sticker: 'red_bullet' }), die({ value: 7 })],
+      equipment: [item('bottom_dollar'), item('silver_bullets')],
+    });
+    // PAIR: baseMult=1
+    // Lowest held = 3
+    // Triggers: natural + red_bullet + silver_bullets = 3 total triggers
+    // Bottom Dollar adds +6 per trigger, so +18 total
+    // heldMult = (1 + 18) * 1 = 19
+    expect(result.mult).toBe(19);
+  });
 });
 
 // ─── HELD_PIP_XMULT: Ace in the Hole ───
@@ -132,6 +168,15 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
       equipment: [item('ace_in_the_hole'), item('silver_bullets')],
     });
     // 2 triggers per die: xMult = 1.5 * 1.5 = 2.25
+    expect(result.mult).toBe(2.25);
+  });
+
+  test('echo chamber copies ace in the hole', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 1 })],
+      equipment: [item('ace_in_the_hole'), item('echo_chamber')],
+    });
     expect(result.mult).toBe(2.25);
   });
 });
@@ -212,6 +257,22 @@ describe("HELD_ENHANCED_MONEY: Prospector's Pouch", () => {
         money: 10,
       });
       expect(player.economy.balance).toBe(10); // unchanged
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('mirror lake copies prospectors pouch', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const { player } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        heldDice: [die({ value: 3, enhancement: 'bone' })],
+        equipment: [item('mirror_lake'), item('prospectors_pouch')],
+        money: 10,
+      });
+      expect(player.economy.balance).toBe(12);
     } finally {
       Math.random = original;
     }

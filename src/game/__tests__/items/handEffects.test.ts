@@ -49,8 +49,8 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
       scoredDice: diceFromValues([4, 5, 6, 7]),
       equipment: [item('wedding_ring')],
     });
-    // FOUR_STRAIGHT: baseMult=3, no pair → no bonus from wedding ring
-    expect(result.mult).toBe(3);
+    // FOUR_STRAIGHT: baseMult=2, no pair → no bonus from wedding ring
+    expect(result.mult).toBe(2);
   });
 });
 
@@ -267,9 +267,9 @@ describe('HAND_MILES: Rail Line (FOUR_STRAIGHT, +80 miles)', () => {
       scoredDice: diceFromValues([3, 4, 5, 6]),
       equipment: [item('rail_line')],
     });
-    // FOUR_STRAIGHT: baseMiles=20, +80 = 100, baseMult=3
-    // totalValue = 18, miles = (100 + 18) * 3 = 354
-    expect(result.miles).toBe(354);
+    // FOUR_STRAIGHT: baseMiles=15, +80 = 95, baseMult=2
+    // totalValue = 18, miles = (95 + 18) * 2 = 226
+    expect(result.miles).toBe(226);
   });
 
   test('does not trigger on non-FOUR_STRAIGHT hand', () => {
@@ -412,8 +412,8 @@ describe('HAND_MULT: Rail Splitter (4 straight, +8)', () => {
       scoredDice: diceFromValues([3, 4, 5, 6]),
       equipment: [item('rail_splitter')],
     });
-    // FOUR_STRAIGHT: baseMult=3, +8 = 11
-    expect(result.mult).toBe(11);
+    // FOUR_STRAIGHT: baseMult=2, +8 = 10
+    expect(result.mult).toBe(10);
   });
 
   test('activates on 5 straight (contains 4 straight)', () => {
@@ -451,8 +451,8 @@ describe('HAND_MULT: Open Range (5 straight, +12)', () => {
       scoredDice: diceFromValues([3, 4, 5, 6]),
       equipment: [item('open_range')],
     });
-    // FOUR_STRAIGHT: baseMult=3, no bonus
-    expect(result.mult).toBe(3);
+    // FOUR_STRAIGHT: baseMult=2, no bonus
+    expect(result.mult).toBe(2);
   });
 
   test('does not activate on pair', () => {

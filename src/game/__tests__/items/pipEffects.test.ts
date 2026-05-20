@@ -121,6 +121,32 @@ describe('PIP_SUPPLY_CHANCE: Snake Eyes', () => {
     expect(inst.def.effectParams.pip).toBe(1);
     expect(inst.def.effectParams.chance).toEqual([1, 4]);
   });
+
+  test('grants a supply in the live GameState score flow', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+
+    try {
+      const scoredDie = die({ value: 1 });
+      const { game, player } = setupGame({
+        equipment: [item('snake_eyes')],
+        dice: [scoredDie, ...diceWithValue(2, 20)],
+      });
+
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = [scoredDie];
+      game.state.selectedForRoll = [scoredDie];
+      game.state.rerollsRemaining = 6;
+      game.selectForScore([scoredDie.id]);
+
+      game.calculateScore();
+
+      expect(player.consumables.length).toBe(1);
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 // ─── ENHANCED_SCORE_MONEY: Gold Pan ───
@@ -167,6 +193,16 @@ describe('PERMANENT_DIE_MILES_GAIN: Cowboy Boots', () => {
     });
     // PAIR baseMiles=10, dice: (5+10) + 5 = 20, total = 30
     expect(result.miles).toBe(30);
+  });
+
+  test('gains bonusMiles for each last_laugh retrigger on the last die', () => {
+    const lastDie = die({ value: 5 });
+    calculateTestScore({
+      scoredDice: [die({ value: 5 }), lastDie],
+      equipment: [item('cowboy_boots'), item('last_laugh')],
+    });
+    // first die triggers once for +5, last die triggers twice total for +10
+    expect(lastDie.bonusMiles).toBe(10);
   });
 });
 
@@ -296,6 +332,26 @@ describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
     });
     expect(inst.state.miles).toBe(0);
   });
+
+  test('gains miles for each red_bullet retrigger on a wooden die', () => {
+    const inst = item('covered_wagon');
+    calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden', sticker: 'red_bullet' })],
+      equipment: [inst],
+    });
+    // base trigger + red_bullet retrigger = 2 wooden triggers
+    expect(inst.state.miles).toBe(60);
+  });
+
+  test('gains miles for each quick_draw retrigger on the first wooden die', () => {
+    const inst = item('covered_wagon');
+    calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
+      equipment: [item('quick_draw'), inst],
+    });
+    // first wooden die triggers 3 times total, adding +30 each time
+    expect(inst.state.miles).toBe(90);
+  });
 });
 
 // ─── BONE_DICE_XMULT_CHANCE: Bone Charm ───
@@ -349,6 +405,18 @@ describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
       equipment: [inst],
     });
     expect(inst.state.miles).toBe(0);
+  });
+
+  test('gains miles again for last_stand retriggers on final day', () => {
+    const inst = item('five_mile_marker');
+    calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst, item('last_stand')],
+      currentDay: 5,
+      maxDays: 5,
+    });
+    // Two 5s score naturally (+10), then Last Stand retriggers both on final day (+10)
+    expect(inst.state.miles).toBe(20);
   });
 
   test('accumulated miles apply as bonus', () => {

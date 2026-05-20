@@ -3,18 +3,21 @@
 import { effectRegistry } from '../registry';
 
 effectRegistry.registerPerDie('PERMANENT_DIE_MILES_GAIN', (ctx, equip, _idx, die, _t) => {
-  // Only first trigger
-  if (_t === 0) {
-    const value = (equip.def.effectParams as Record<string, unknown>).value as number;
-    die.bonusMiles = (die.bonusMiles ?? 0) + value;
+  const value = (equip.def.effectParams as Record<string, unknown>).value as number;
+  die.bonusMiles = (die.bonusMiles ?? 0) + value;
+
+  const pouchDie = ctx.allDice.find((candidate) => candidate.id === die.id);
+  if (pouchDie && pouchDie !== die) {
+    pouchDie.bonusMiles = (pouchDie.bonusMiles ?? 0) + value;
+  } else if (!pouchDie) {
     ctx.mutations.dieBonusMilesAdded.push({ id: die.id, amount: value });
-    console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: permanently +${value} miles (now ${die.bonusMiles})`);
   }
+
+  console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: permanently +${value} miles (now ${die.bonusMiles})`);
 });
 
 effectRegistry.registerPerDie('PIP_SCORED_MILES_GAIN', (_ctx, equip, _idx, die, _t) => {
-  // Only first trigger
-  if (_t === 0 && die.value === (equip.def.effectParams as Record<string, unknown>).pip) {
+  if (die.value === (equip.def.effectParams as Record<string, unknown>).pip) {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     equip.state.miles = (equip.state.miles ?? 0) + value;
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: gained +${value} miles (now ${equip.state.miles})`);

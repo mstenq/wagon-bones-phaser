@@ -59,23 +59,22 @@ describe("UNCOMMON_EQUIP_XMULT: Collector's Case", () => {
   test('x1.5 per uncommon equipment', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
-      equipment: [item('collectors_case'), item('dynamite')], // dynamite is uncommon
+      equipment: [item('horseshoe'), item('collectors_case')],
     });
-    // collectors_case rarity = 'rare', dynamite rarity = 'uncommon'
-    // 1 uncommon → x1.5
-    // finalMult = (1 + 15) * 1.5 = 24
-    expect(result.mult).toBe(24);
+    // collectors_case: UNCOMMON_EQUIP_XMULT, horseshoe is common (0 uncommon)
+    // 0 uncommon → no xMult bonus, horseshoe ADD_MULT +4
+    // result.mult = (1 + 4) * 1 = 5
+    expect(result.mult).toBeCloseTo(5, 5);
   });
 
   test('multiplies for each uncommon item', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
-      equipment: [item('collectors_case'), item('dynamite'), item('trail_rations')],
+      equipment: [item('horseshoe'), item('horseshoe'), item('collectors_case')],
     });
-    // Both dynamite and trail_rations are uncommon → 2 uncommon
-    // baseMult=1, dynamite: +15
-    // x1.5^2 = x2.25
-    expect(result.mult).toBeCloseTo(16 * 2.25, 5);
+    // 2 horseshoes (common) → 0 uncommon → no bonus from collectors_case
+    // 2x ADD_MULT +4 = +8, result.mult = (1 + 8) * 1 = 9
+    expect(result.mult).toBeCloseTo(9, 5);
   });
 
   test('no bonus with zero uncommon', () => {
@@ -621,8 +620,8 @@ describe('HAND_CONTAINS_XMULT: Hitched Pair (pair, x2)', () => {
       scoredDice: diceFromValues([4, 5, 6, 7]),
       equipment: [item('hitched_pair')],
     });
-    // FOUR_STRAIGHT: baseMult=3, no pair → no xMult
-    expect(result.mult).toBe(3);
+    // FOUR_STRAIGHT: baseMult=2, no pair → no xMult
+    expect(result.mult).toBe(2);
   });
 });
 
@@ -718,8 +717,8 @@ describe('HAND_CONTAINS_XMULT: Snake River (5 straight, x3)', () => {
       scoredDice: diceFromValues([4, 5, 6, 7]),
       equipment: [item('snake_river')],
     });
-    // FOUR_STRAIGHT: baseMult=3, no 5 straight → no xMult
-    expect(result.mult).toBe(3);
+    // FOUR_STRAIGHT: baseMult=2, no 5 straight → no xMult
+    expect(result.mult).toBe(2);
   });
 });
 

@@ -24,6 +24,7 @@ import { playRollAnimation } from '../animations/RollAnimation';
 import { playScoreAnimation } from '../animations/ScoreAnimation';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
+import { getLoadedDiceMultiplier } from '../../game/Constants';
 
 const DICE_SPACING = UI.DICE_SPACING;
 
@@ -99,6 +100,15 @@ export class GameScene extends Scene {
   // Refresh prompt overlay
   private refreshOverlay: Phaser.GameObjects.Container | null = null;
 
+  // Loaded die target control
+  private loadedDiceLabel: Phaser.GameObjects.Text;
+  private loadedDiceValueBg: Phaser.GameObjects.Graphics;
+  private loadedDiceValueText: Phaser.GameObjects.Text;
+  private loadedDiceValueHitArea: Phaser.GameObjects.Zone;
+  private loadedDiceDecBtn: Button;
+  private loadedDiceIncBtn: Button;
+  private loadedDicePicker: Phaser.GameObjects.Container | null = null;
+
   // Consumable targeting mode (inline dice selection for consumables like coffee_tin)
   private consumableTargeting: DiceSelectionConfig | null = null;
   private consumableTargetIds: Set<string> = new Set();
@@ -130,6 +140,7 @@ export class GameScene extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
+      this.destroyLoadedDicePicker();
       this.gameState = null!;
     });
 
@@ -202,6 +213,8 @@ export class GameScene extends Scene {
       })
       .setOrigin(0.5)
       .setDepth(50);
+
+    this.buildLoadedDiceControl();
 
     // Create buttons (all hidden initially)
     const btnY = height - 30;
@@ -864,6 +877,201 @@ export class GameScene extends Scene {
       this.equipBar.refresh();
       this.equipBar.updateHints(this.gameState, player);
     }
+    this.updateLoadedDiceControl();
+  }
+
+  private buildLoadedDiceControl(): void {
+    const { height } = this.scale;
+    const controlLeft = this.sidebarW + 18;
+    const controlY = height - 34;
+    const boxWidth = 44;
+    const boxHeight = 28;
+    const boxCenterX = controlLeft + 50;
+
+    this.loadedDiceLabel = this.add
+      .text(controlLeft, controlY - 26, 'Loaded Die Number', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.SECONDARY,
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(50);
+
+    this.loadedDiceDecBtn = new Button(this, controlLeft + 12, controlY, '-', 24, 24).onClick(() => {
+      this.adjustLoadedDieTarget(-1);
+    });
+    this.loadedDiceDecBtn.setDepth(50);
+    (this.loadedDiceDecBtn as any).label?.setFontSize?.(14);
+
+    this.loadedDiceValueBg = this.add.graphics().setDepth(50);
+    this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
+    this.loadedDiceValueBg.fillRoundedRect(boxCenterX - boxWidth / 2, controlY - boxHeight / 2, boxWidth, boxHeight, 6);
+    this.loadedDiceValueBg.lineStyle(1, COLORS.PANEL_BORDER, 1);
+    this.loadedDiceValueBg.strokeRoundedRect(boxCenterX - boxWidth / 2, controlY - boxHeight / 2, boxWidth, boxHeight, 6);
+
+    this.loadedDiceValueHitArea = this.add
+      .zone(boxCenterX, controlY, boxWidth, boxHeight)
+      .setOrigin(0.5)
+      .setDepth(52)
+      .setInteractive({ useHandCursor: true });
+    this.loadedDiceValueHitArea.on('pointerdown', () => this.toggleLoadedDicePicker());
+
+    this.loadedDiceValueText = this.add
+      .text(boxCenterX, controlY, '-', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.PRIMARY,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(51);
+
+    this.loadedDiceIncBtn = new Button(this, controlLeft + 88, controlY, '+', 24, 24).onClick(() => {
+      this.adjustLoadedDieTarget(1);
+    });
+    this.loadedDiceIncBtn.setDepth(50);
+    (this.loadedDiceIncBtn as any).label?.setFontSize?.(14);
+
+    this.updateLoadedDiceControl();
+  }
+
+  private adjustLoadedDieTarget(delta: number): void {
+    const player = getPlayerState();
+    const current = player.loadedDieTarget;
+
+    let nextValue: number | null;
+    if (delta > 0) {
+      nextValue = current === null ? 1 : Math.min(12, current + 1);
+    } else {
+      nextValue = current === null ? null : current === 1 ? null : current - 1;
+    }
+
+    player.setLoadedDieTarget(nextValue);
+    this.updateLoadedDiceControl();
+    this.destroyLoadedDicePicker();
+  }
+
+  private updateLoadedDiceControl(): void {
+    if (!this.loadedDiceValueText || !this.loadedDiceDecBtn || !this.loadedDiceIncBtn || !this.loadedDiceValueBg) return;
+
+    const target = getPlayerState().loadedDieTarget;
+    this.loadedDiceValueText.setText(target === null ? '-' : String(target));
+    this.loadedDiceValueText.setColor(target === null ? TEXT_COLORS.SECONDARY : TEXT_COLORS.PRIMARY);
+    this.loadedDiceDecBtn.setEnabled(target !== null);
+    this.loadedDiceIncBtn.setEnabled(target === null || target < 12);
+
+    this.loadedDiceValueBg.clear();
+    this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
+    this.loadedDiceValueBg.fillRoundedRect(this.loadedDiceValueHitArea.x - 22, this.loadedDiceValueHitArea.y - 14, 44, 28, 6);
+    this.loadedDiceValueBg.lineStyle(1, this.loadedDicePicker ? COLORS.GOLD : COLORS.PANEL_BORDER, 1);
+    this.loadedDiceValueBg.strokeRoundedRect(this.loadedDiceValueHitArea.x - 22, this.loadedDiceValueHitArea.y - 14, 44, 28, 6);
+  }
+
+  private toggleLoadedDicePicker(): void {
+    if (this.loadedDicePicker) {
+      this.destroyLoadedDicePicker();
+      return;
+    }
+
+    const picker = this.buildLoadedDicePicker();
+    this.loadedDicePicker = picker;
+    this.updateLoadedDiceControl();
+  }
+
+  private destroyLoadedDicePicker(): void {
+    if (!this.loadedDicePicker) return;
+    this.loadedDicePicker.destroy();
+    this.loadedDicePicker = null;
+    this.updateLoadedDiceControl();
+  }
+
+  private buildLoadedDicePicker(): Phaser.GameObjects.Container {
+    const controlX = this.loadedDiceValueHitArea.x;
+    const controlY = this.loadedDiceValueHitArea.y;
+    const panelWidth = 208;
+    const panelHeight = 214;
+    const panelX = Phaser.Math.Clamp(controlX - panelWidth / 2, this.sidebarW + 12, this.scale.width - panelWidth - 12);
+    const panelY = controlY - panelHeight - 14;
+    const panelCenterX = panelX + panelWidth / 2;
+    const picker = this.add.container(0, 0).setDepth(500);
+
+    const panel = this.add.graphics();
+    panel.fillStyle(COLORS.BG_PANEL, 0.98);
+    panel.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+    panel.lineStyle(2, COLORS.PANEL_BORDER, 1);
+    panel.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+    picker.add(panel);
+
+    const title = this.add
+      .text(panelCenterX, panelY + 16, 'Pick Loaded Number', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.SECONDARY,
+      })
+      .setOrigin(0.5, 0.5);
+    picker.add(title);
+
+    const oddsNote = this.add
+      .text(panelCenterX, panelY + 40, this.getLoadedDiceOddsNote(), {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '10px',
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+        wordWrap: { width: panelWidth - 28 },
+      })
+      .setOrigin(0.5, 0.5);
+    picker.add(oddsNote);
+
+    const cols = 4;
+    const cellWidth = 34;
+    const cellHeight = 26;
+    const cellGap = 8;
+    const gridWidth = cols * cellWidth + (cols - 1) * cellGap;
+    const gridStartX = panelX + (panelWidth - gridWidth) / 2 + cellWidth / 2;
+    const gridStartY = panelY + 72 + cellHeight / 2;
+    const selected = getPlayerState().loadedDieTarget;
+
+    for (let value = 1; value <= 12; value++) {
+      const col = (value - 1) % cols;
+      const row = Math.floor((value - 1) / cols);
+      const button = new Button(
+        this,
+        gridStartX + col * (cellWidth + cellGap),
+        gridStartY + row * (cellHeight + cellGap),
+        String(value),
+        cellWidth,
+        cellHeight,
+      ).onClick(() => {
+        getPlayerState().setLoadedDieTarget(value);
+        this.destroyLoadedDicePicker();
+      });
+      button.setDepth(501);
+      (button as any).label?.setFontSize?.(13);
+      if (selected === value) {
+        button.setColor(COLORS.GOLD, COLORS.GOLD);
+        button.setEnabled(false);
+      }
+      picker.add(button);
+    }
+
+    const clearBtn = new Button(this, panelCenterX, panelY + panelHeight - 24, 'Clear', 86, 26).onClick(() => {
+      getPlayerState().setLoadedDieTarget(null);
+      this.destroyLoadedDicePicker();
+    });
+    clearBtn.setDepth(501);
+    (clearBtn as any).label?.setFontSize?.(13);
+    clearBtn.setEnabled(selected !== null);
+    picker.add(clearBtn);
+
+    return picker;
+  }
+
+  private getLoadedDiceOddsNote(): string {
+    const chance = Math.min(1, getLoadedDiceMultiplier(getPlayerState().equipment) / 6);
+    if (chance >= 1) return 'Selected face is guaranteed to roll.';
+    if (chance === 2 / 3) return 'Selected face rolls at 2 in 3.';
+    if (chance === 1 / 3) return 'Selected face rolls at 1 in 3.';
+    return 'Selected face rolls at 1 in 6.';
   }
 
   // ─── Refresh Prompt ───

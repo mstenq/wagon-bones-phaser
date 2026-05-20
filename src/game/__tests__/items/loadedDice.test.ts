@@ -10,8 +10,14 @@ import { getLoadedDiceMultiplier } from '../../Constants';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
 import { getItemAuraById } from '../../ItemsSystem';
 import { HandType } from '../../types';
+import { rollDie } from '../../DiceSystem';
+import { getPlayerState, resetPlayerState } from '../../PlayerState';
+import '../../effects';
 
-beforeEach(() => resetDieIds());
+beforeEach(() => {
+  resetDieIds();
+  resetPlayerState();
+});
 
 // ─── getLoadedDiceMultiplier ───
 
@@ -58,6 +64,88 @@ describe('LOADED_DICE: item definition', () => {
       equipment: [],
     });
     expect(withLoaded.miles).toBe(without.miles);
+  });
+});
+
+// ─── loaded enhancement die rolling ───
+
+describe('loaded enhancement rolling', () => {
+  test('uses the selected loaded die target when the weighted range hits the target bucket', () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(7);
+    const original = Math.random;
+    Math.random = () => 0;
+
+    try {
+      const rolled = rollDie(die({ enhancement: 'loaded', value: 0 }));
+      expect(rolled.value).toBe(7);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('falls back to a normal roll when no loaded die target is selected', () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(null);
+    const original = Math.random;
+    Math.random = () => 0.01;
+
+    try {
+      const rolled = rollDie(die({ enhancement: 'loaded', value: 0 }));
+      expect(rolled.value).toBe(1);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('raises the selected face close to one-in-six for loaded dice', () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(9);
+
+    let targetHits = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ enhancement: 'loaded', value: 0 })).value === 9) {
+        targetHits++;
+      }
+    }
+
+    const rate = targetHits / trials;
+    expect(rate).toBeGreaterThan(0.15);
+    expect(rate).toBeLessThan(0.185);
+  });
+
+  test('Loaded Dice equipment raises the selected face close to one-in-three', () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(9);
+    player.equipment = [item('loaded_dice')];
+
+    let targetHits = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ enhancement: 'loaded', value: 0 })).value === 9) {
+        targetHits++;
+      }
+    }
+
+    const rate = targetHits / trials;
+    expect(rate).toBeGreaterThan(0.31);
+    expect(rate).toBeLessThan(0.36);
+  });
+
+  test('enough Loaded Dice equipment can guarantee the selected face', () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(4);
+    player.equipment = [item('loaded_dice'), item('loaded_dice'), item('loaded_dice')];
+    const original = Math.random;
+    Math.random = () => 0.99;
+
+    try {
+      const rolled = rollDie(die({ enhancement: 'loaded', value: 0 }));
+      expect(rolled.value).toBe(4);
+    } finally {
+      Math.random = original;
+    }
   });
 });
 

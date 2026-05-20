@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import '../setup';
-import { calculateTestScore, diceWithValue, item, itemWithState, setupGame, resetDieIds } from '../testHelpers';
+import { calculateTestScore, die, diceWithValue, item, itemWithState, setupGame, resetDieIds } from '../testHelpers';
 import { processEndOfRound, processEquipmentOnHandPlayed, processEquipmentOnReroll, getScoredRetriggerCount, processEquipmentOnRoundStart, getConfigModifiers } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
@@ -463,5 +463,17 @@ describe('Mirror Lake copies ROUND_START_SUPPLY', () => {
     const equipment = [item('mirror_lake'), item('supply_drop')];
     const result = processEquipmentOnRoundStart(equipment);
     expect(result.supplyCardsToAdd).toBe(2);
+  });
+});
+
+describe('Copy item per-die scoring effects', () => {
+  test('mirror lake copies gold tooth money on scored gold dice', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('gold_tooth')],
+      money: 10,
+    });
+
+    expect(player.economy.balance).toBe(18);
   });
 });

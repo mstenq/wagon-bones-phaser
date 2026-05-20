@@ -1,6 +1,7 @@
 import './setup';
 import { describe, test, expect } from 'bun:test';
-import { generateShopStock, getAllEquipment } from '../ItemsSystem';
+import itemAurasData from '../../data/item_auras.json';
+import { generateRandomEquipment, generateShopStock, getAllEquipment } from '../ItemsSystem';
 import { getRandomSupplyDef, getRandomTrailGuideDef, getRandomFrontierDef } from '../ConsumablesSystem';
 
 describe('Shop stock exclusion', () => {
@@ -95,6 +96,54 @@ describe('Shop stock exclusion', () => {
     expect(result.length).toBe(3);
     for (const item of result) {
       expect(item.id).toBe('horseshoe');
+    }
+  });
+
+  test('generateRandomEquipment uses weighted rarity thresholds when no rarity is provided', () => {
+    const originalRandom = Math.random;
+    const rarityRolls = [0.01, 0.2, 0.9];
+    const auraRollCount = itemAurasData.length;
+    let rarityIndex = 0;
+    let callStep = 0;
+
+    Math.random = () => {
+      if (callStep === 0) {
+        callStep++;
+        return rarityRolls[rarityIndex] ?? 1;
+      }
+
+      if (callStep === 1) {
+        callStep++;
+        return 0;
+      }
+
+      callStep++;
+      if (callStep > auraRollCount + 1) {
+        callStep = 0;
+        rarityIndex++;
+      }
+      return 1;
+    };
+
+    try {
+      expect(generateRandomEquipment().rarity).toBe('rare');
+      expect(generateRandomEquipment().rarity).toBe('uncommon');
+      expect(generateRandomEquipment().rarity).toBe('common');
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
+  test('generateRandomEquipment respects explicit rarity filters before weighted rolls', () => {
+    const originalRandom = Math.random;
+    const rolls = [0.01, 0, 1, 1, 1, 1, 1];
+
+    Math.random = () => rolls.shift() ?? 1;
+
+    try {
+      expect(generateRandomEquipment({ rarity: 'common' }).rarity).toBe('common');
+    } finally {
+      Math.random = originalRandom;
     }
   });
 });

@@ -1,5 +1,8 @@
 // ─── on-hand-played lifecycle handlers ───
 
+import type { Die, HandType } from '../../types';
+import type { EquipmentInstance } from '../../ItemsSystem';
+import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { handTypeMatches } from '../helpers';
 
@@ -38,3 +41,13 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
     }
   }
 });
+
+export function processEquipmentOnHandPlayed(
+  equipment: EquipmentInstance[],
+  handType: HandType,
+  scoringDice?: Die[],
+): void {
+  for (const equip of equipment) {
+    dispatchLifecycle('on-hand-played', equip, handType, scoringDice);
+  }
+}

@@ -14,7 +14,7 @@ import {
   GameEventCallback,
   HandType,
 } from './types';
-import { rollDice, detectBestHand, scoreHand, createDie } from './DiceSystem';
+import { rollDice, rollDie, detectBestHand, scoreHand, createDie } from './DiceSystem';
 import { getPlayerState } from './PlayerState';
 import {
   applyEquipmentEffects,
@@ -31,6 +31,7 @@ import {
   getDayModifiers,
 } from './EquipmentEffects';
 import { getRandomTrailGuideDef, getRandomSupplyDef } from './ConsumablesSystem';
+import { applyScoringMutations } from './effects/applyMutations';
 import { createEmptyModifiers } from './TrailEventsSystem';
 import { generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
 
@@ -230,7 +231,7 @@ export class GameState {
 
     this.state.rolledDice = this.state.rolledDice.map((d) => {
       if (diceIds.includes(d.id)) {
-        return { ...d, value: Math.ceil(Math.random() * 12) };
+        return rollDie(d);
       }
       return d;
     });
@@ -327,6 +328,7 @@ export class GameState {
     const baseResult = scoreHand(leveledResult, player.equipment, {
       currentDay: this.state.day,
       maxDays: this.config.maxDays,
+      allDice: player.dice,
     });
     console.log(
       '[SCORE] After scoreHand: totalValue:',
@@ -355,6 +357,7 @@ export class GameState {
       miles: (baseResult.handResult.baseMiles + baseResult.totalValue) * heldMult,
       mult: heldMult,
       animEvents: [...baseResult.animEvents, ...heldResult.animEvents],
+      mutations: baseResult.mutations,
     };
     console.log('[SCORE] After held-in-hand: mult:', afterHeldResult.mult, '| miles:', afterHeldResult.miles);
 
@@ -379,6 +382,8 @@ export class GameState {
 
     console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
 
+  applyScoringMutations(finalResult.mutations);
+
     // Process sticker rewards
     // blue_moon: grant trail guides for the scored hand type
     if (heldResult.trailGuidesForHand > 0) {
@@ -393,7 +398,7 @@ export class GameState {
     player.recordHandPlayed(handType);
 
     // Post-scoring equipment updates (Steam Engine decay, Surveyor's Transit, Repeat Offender, Emergency Supplies)
-    const handUpgrades = processEquipmentAfterHandScored(player.equipment, handType, this.state.selectedForScore);
+    const handUpgrades = processEquipmentAfterHandScored(player.equipment, handType);
 
     this.state.totalMiles += Math.floor(finalResult.miles);
     this.state.phase = 'DAY_END';

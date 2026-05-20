@@ -5,9 +5,10 @@ import { Die, HandType, HandResult, HandDefinition, ScoreResult, ScoreAnimEvent 
 import handsData from '../data/hands.json';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
-import { getScoredRetriggerCount, processEquipmentOnLuckyTrigger, processEquipmentOnDiamondDestroyed } from './EquipmentEffects';
+import { effectRegistry, getScoredRetriggerCount } from './effects';
+import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
-import { resolveCopyTarget, checkLoadedChance } from './Constants';
+import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -39,6 +40,14 @@ export function createPouch(count: number): Die[] {
 export function rollDie(die: Die): Die {
   // Stone dice never get a numeric value
   if (die.enhancement === 'stone') return { ...die, value: 0 };
+  const player = getPlayerState();
+  const loadedTarget = player.loadedDieTarget;
+  if (die.enhancement === 'loaded' && loadedTarget !== null) {
+    const loadedChance = Math.min(1, getLoadedDiceMultiplier(player.equipment) / 6);
+    const otherFaces = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((face) => face !== loadedTarget);
+    if (Math.random() < loadedChance) return { ...die, value: loadedTarget };
+    return { ...die, value: otherFaces[Math.floor(Math.random() * otherFaces.length)] };
+  }
   return { ...die, value: Math.ceil(Math.random() * 12) };
 }
 
@@ -227,7 +236,7 @@ function detectBestHandFromDice(dice: Die[]): HandResult {
  * Calculate score for a played hand.
  * miles = (handBaseMiles + sum of scoring dice values) × handBaseMult
  */
-export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[], scoreContext?: { currentDay: number; maxDays: number }): ScoreResult {
+export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[], scoreContext?: { currentDay: number; maxDays: number; rerollsRemaining?: number; allDice?: Die[] }): ScoreResult {
   let totalValue = 0;
   let bonusMult = 0;
   let xMult = 1;
@@ -262,6 +271,47 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   }
 
   console.log('  [scoreHand] Step 3: Per-die scoring');
+
+  // Create pipeline context for per-die handlers
+  const pipelineCtx: import('./effects/types').ScoringPipelineContext = {
+    handResult,
+    scoringDice: handResult.scoringDice,
+    heldDice: [],
+    equipment,
+    rerollsRemaining: scoreContext?.rerollsRemaining ?? 0,
+    currentDay: scoreContext?.currentDay ?? 1,
+    maxDays: scoreContext?.maxDays ?? 5,
+    allDice: scoreContext?.allDice ?? [],
+    handType: handResult.type,
+    playerBalance: player.economy.balance,
+    totalValue,
+    bonusMult,
+    xMult,
+    bonusMiles: 0,
+    animEvents,
+    mutations: {
+      moneyEarned: 0,
+      earnedMoney: 0,
+      lostMoney: 0,
+      earnedMiles: 0,
+      lostMiles: 0,
+      gainedDice: 0,
+      lostDice: 0,
+      gainedSupplyCards: 0,
+      gainedEquipment: 0,
+      lostEquipment: 0,
+      daysBonus: 0,
+      loseAllRerolls: false,
+      burnBarrelMoney: 0,
+      burnBarrelTriggered: false,
+      supplyCardsToAdd: 0,
+      diceDestroyed: [],
+      diceEnhanced: [],
+      consumablesGranted: [],
+      diceCopied: [],
+      dieBonusMilesAdded: [],
+    },
+  };
   // Step 3: Per-die scoring (left to right)
   // Calculate global retrigger count (War Drums, Last Stand) once
   const globalRetriggerCount = getScoredRetriggerCount(equipment, scoreContext);
@@ -302,6 +352,16 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
     for (let t = 0; t < triggers; t++) {
       const triggerLabel = t > 0 ? ' (retrigger)' : '';
 
+      // Save ctx values before this trigger (for delta calculation)
+      const savedCtxTotalValue = pipelineCtx.totalValue;
+      const savedCtxBonusMult = pipelineCtx.bonusMult;
+      const savedCtxXMult = pipelineCtx.xMult;
+
+      // Sync accumulated values from handlers into locals at start of each trigger
+      totalValue = savedCtxTotalValue;
+      bonusMult = savedCtxBonusMult;
+      xMult = savedCtxXMult;
+
       // Base effect — value as miles (stone dice have 0 value but add 50 miles)
       const dieMiles = die.enhancement === 'stone' ? 50 : die.value;
       totalValue += dieMiles;
@@ -336,13 +396,13 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
             bonusMult += 20;
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
-            processEquipmentOnLuckyTrigger(equipment);
+            for (const e of equipment) dispatchLifecycle('on-lucky-trigger', e);
           }
           if (checkLoadedChance([1, 15], equipment)) {
             player.economy.earn(20);
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit $20!`);
-            processEquipmentOnLuckyTrigger(equipment);
+            for (const e of equipment) dispatchLifecycle('on-lucky-trigger', e);
           }
           break;
         }
@@ -388,154 +448,38 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
       // 'On scored' equipment — items that trigger per matching die (left to right)
       for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
-        const equip = equipment[eIdx];
-        const { effectType, effectParams } = equip.def;
-        const p = effectParams as Record<string, unknown>;
+        const originalEquip = equipment[eIdx];
+        let equip = originalEquip;
 
-        switch (effectType) {
-          case 'PIP_MULT':
-            if (die.value === (p.pip as number)) {
-              bonusMult += p.value as number;
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
-              console.log(
-                `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`,
-              );
-            }
-            break;
-          case 'PIP_MILES':
-            if (die.value === (p.pip as number)) {
-              totalValue += p.value as number;
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
-              console.log(
-                `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`,
-              );
-            }
-            break;
-          case 'PARITY_MULT':
-            if (matchesParity(die.value, p.parity as string)) {
-              bonusMult += p.value as number;
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
-              console.log(
-                `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`,
-              );
-            }
-            break;
-          case 'PARITY_MILES':
-            if (matchesParity(die.value, p.parity as string)) {
-              totalValue += p.value as number;
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
-              console.log(
-                `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`,
-              );
-            }
-            break;
-          case 'GOLD_DICE_MONEY':
-            if (die.enhancement === 'gold') {
-              player.economy.earn(p.value as number);
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
-              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value}`);
-            }
-            break;
-          case 'LUCKY_NUMBER_PIP_XMULT':
-            if (die.value === (equip.state.pip ?? 0)) {
-              xMult *= p.value as number;
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
-              console.log(
-                `  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value} (lucky number ${equip.state.pip})`,
-              );
-            }
-            break;
-          case 'PIP_SUPPLY_CHANCE': {
-            if (die.value === (p.pip as number)) {
-              if (checkLoadedChance(p.chance as [number, number], equipment)) {
-                const supplyDef = getRandomSupplyDef();
-                player.consumables.push(createConsumableInstance(supplyDef));
-                animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'supply', value: 0, dieId: die.id });
-                console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: granted supply card '${supplyDef.name}'`);
-              }
-            }
-            break;
+        if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+          const resolved = resolveCopyTarget(equipment, eIdx, equipment.length);
+          if (!resolved) {
+            console.log(`  [scoreHand]   ${originalEquip.def.name}: nothing to copy for per-die trigger`);
+            continue;
           }
-          case 'ENHANCED_SCORE_MONEY': {
-            if (die.enhancement !== null) {
-              if (checkLoadedChance(p.chance as [number, number], equipment)) {
-                player.economy.earn(p.value as number);
-                animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
-                console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value}`);
-              }
-            }
-            break;
-          }
-          case 'PERMANENT_DIE_MILES_GAIN': {
-            // Cowboy Boots: permanently add miles to this die (only on first trigger)
-            if (t === 0) {
-              die.bonusMiles = (die.bonusMiles ?? 0) + (p.value as number);
-              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: permanently +${p.value} miles (now ${die.bonusMiles})`);
-            }
-            break;
-          }
-          case 'LUCKY_DICE_MONEY': {
-            // Lucky Penny: lucky dice earn money when scored
-            if (die.enhancement === 'lucky') {
-              player.economy.earn(p.value as number);
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'money', value: p.value as number, dieId: die.id });
-              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +$${p.value}`);
-            }
-            break;
-          }
-          case 'BONE_DICE_XMULT_CHANCE': {
-            // Bone Charm: bone dice have chance to give xMult
-            if (die.enhancement === 'bone') {
-              if (checkLoadedChance(p.chance as [number, number], equipment)) {
-                xMult *= p.value as number;
-                animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
-                console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: x${p.value}`);
-              }
-            }
-            break;
-          }
-          case 'WOODEN_DICE_MILES': {
-            // Wood Axe: wooden dice give bonus miles
-            if (die.enhancement === 'wooden') {
-              totalValue += p.value as number;
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'miles', value: p.value as number, dieId: die.id });
-              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} miles (totalValue: ${totalValue})`);
-            }
-            break;
-          }
-          case 'IRON_DICE_MULT': {
-            // Iron Spurs: steel dice give bonus mult
-            if (die.enhancement === 'steel') {
-              bonusMult += p.value as number;
-              animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: eIdx }, popupType: 'mult', value: p.value as number, dieId: die.id });
-              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: +${p.value} mult (bonusMult: ${bonusMult})`);
-            }
-            break;
-          }
-          case 'ENHANCEMENT_SCORED_MILES': {
-            // Covered Wagon: gains permanent miles per matching enhancement scored (only first trigger)
-            if (t === 0 && die.enhancement === (p.enhancement as string)) {
-              equip.state.miles = (equip.state.miles ?? 0) + (p.value as number);
-              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: gained +${p.value} miles (now ${equip.state.miles})`);
-            }
-            break;
-          }
-          case 'PIP_SCORED_MILES_GAIN': {
-            // 5 Mile Marker: gains permanent miles when matching pip scored (only first trigger)
-            if (t === 0 && die.value === (p.pip as number)) {
-              equip.state.miles = (equip.state.miles ?? 0) + (p.value as number);
-              console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} → ${equip.def.name}: gained +${p.value} miles (now ${equip.state.miles})`);
-            }
-            break;
-          }
-          case 'GRAVEROBBER_XMULT': {
-            // Graverobber: handled in pre-scoring pass (enhancements already stripped)
-            break;
-          }
+          equip = resolved;
+        }
+
+        const handler = effectRegistry.getPerDie(equip.def.effectType);
+        if (handler) {
+          handler(pipelineCtx, equip, eIdx, die, t);
         }
       }
-    } // end retrigger loop
+
+      // Sync locals back to pipeline context, preserving handler deltas
+      const handlerDeltaTotalValue = pipelineCtx.totalValue - savedCtxTotalValue;
+      const handlerDeltaBonusMult = pipelineCtx.bonusMult - savedCtxBonusMult;
+      const handlerDeltaXMult = pipelineCtx.xMult / savedCtxXMult;
+      pipelineCtx.totalValue = totalValue + handlerDeltaTotalValue;
+      pipelineCtx.bonusMult = bonusMult + handlerDeltaBonusMult;
+      pipelineCtx.xMult = xMult * handlerDeltaXMult;
+    } // end trigger loop
   }
+
+  // Final sync: pipeline context is the source of truth
+  totalValue = pipelineCtx.totalValue;
+  bonusMult = pipelineCtx.bonusMult;
+  xMult = pipelineCtx.xMult;
 
   // SOLO_FIRST_DAY_ENHANCE: Lucky Find — if 1 die scored alone on day 1, enhance it
   if (scoreContext && scoreContext.currentDay === 1 && handResult.scoringDice.length === 1) {
@@ -619,7 +563,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
       // Diamond Coffin: track diamond destruction
       if (wasDiamond) {
-        processEquipmentOnDiamondDestroyed(equipment);
+        for (const e of equipment) dispatchLifecycle('on-diamond-destroyed', e);
       }
     }
   }
@@ -629,11 +573,5 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   console.log(
     `  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalValue} value) * (${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult = ${miles} miles (mult: ${mult})`,
   );
-  return { handResult, totalValue, miles, mult, animEvents };
-}
-
-function matchesParity(value: number, parity: string): boolean {
-  if (parity === 'even') return value % 2 === 0;
-  if (parity === 'odd') return value % 2 !== 0;
-  return false;
+  return { handResult, totalValue, miles, mult, animEvents, mutations: pipelineCtx.mutations };
 }

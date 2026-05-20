@@ -40,6 +40,10 @@ export class EffectRegistry {
     this.heldDieHandlers.set(effectType, handler);
   }
 
+  getHeldDie(effectType: string): HeldDieEffectHandler | undefined {
+    return this.heldDieHandlers.get(effectType);
+  }
+
   registerLifecycle(phase: LifecyclePhase, handler: LifecycleHandler): void {
     if (!this.lifecycleHandlers.has(phase)) {
       this.lifecycleHandlers.set(phase, []);

@@ -43,3 +43,13 @@
 ## Code Feedback
 - lets convert the JSON data into JS arrays that are typed. It would make a lot of things much easier in our code base if we were sure about the shape of the data without doing checks.
 - Dead code: these TrailEventModifiers are defined and set but never consumed by game logic or UI: `flatMilesPenalty`, `moneyPerDayLoss`, `disableRerollDay1`, `standardDiceDay1`, `diamondCrackDoubled`, `luckyOddsHalved`, `scoredDiceDestroyChance`. Need to implement their effects in GameState/GameScene or remove them.
+
+## Balance Notes
+bone_collector: Should increase miles amount
+gold_tooth: should only unlock when you have at least 1 gold dice
+spare_wagon_parts: don't like effect. Instead it should prevent negative trail events completely. For every negative event gains x0.75 mult.
+scouts_spyglass: don't like the effect. Instead should let you upcoming trail event type (positive/negative/animal/weather) and let you decide to avoid event or do the event. Avoiding the event adds +50 miles to the item.
+rail_splitter: should probably be 10 mult
+4 straight: adjust stats to be equal to 2-pair
+covered_wagon: already have wood_axe, I think we just deprecate covered_wagon.
+

@@ -8,6 +8,7 @@ export type { HintSegment, HintStyle } from '../data/items';
 
 import type { GameState } from './GameState';
 import type { PlayerState } from './PlayerState';
+import { CHANCES } from './Constants';
 
 export interface ItemAura {
   id: string;
@@ -93,6 +94,25 @@ export function getAllEquipment(): EquipmentDef[] {
   return ITEMS_POOL;
 }
 
+function pickWeightedEquipmentRarity(pool: EquipmentDef[]): string | null {
+  const rarityWeights: Array<{ rarity: string; weight: number }> = [
+    { rarity: 'rare', weight: CHANCES.RARE },
+    { rarity: 'uncommon', weight: CHANCES.UNCOMMON },
+    { rarity: 'common', weight: CHANCES.COMMON },
+  ].filter(({ rarity }) => pool.some((item) => item.rarity === rarity));
+
+  const totalWeight = rarityWeights.reduce((sum, entry) => sum + entry.weight, 0);
+  if (totalWeight <= 0) return null;
+
+  let roll = Math.random() * totalWeight;
+  for (const entry of rarityWeights) {
+    if (roll < entry.weight) return entry.rarity;
+    roll -= entry.weight;
+  }
+
+  return rarityWeights[rarityWeights.length - 1]?.rarity ?? null;
+}
+
 // ─── Random Equipment Generation ───
 
 /** Generate a random piece of equipment filtered by rarity.
@@ -118,6 +138,14 @@ export function generateRandomEquipment(options?: { rarity?: string; excludeRari
   if (options?.excludeRarity) {
     const filtered = pool.filter((i) => i.rarity !== options.excludeRarity);
     if (filtered.length > 0) pool = filtered;
+  }
+
+  if (!options?.rarity) {
+    const rarity = pickWeightedEquipmentRarity(pool);
+    if (rarity) {
+      const filtered = pool.filter((i) => i.rarity === rarity);
+      if (filtered.length > 0) pool = filtered;
+    }
   }
 
   const picked = pool[Math.floor(Math.random() * pool.length)];

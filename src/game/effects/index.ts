@@ -1,7 +1,16 @@
 // ─── Effects Barrel ───
 
 export { effectRegistry, EffectRegistry } from './registry';
-export { getScoredRetriggerCount } from './helpers';
+export {
+  getConfigModifiers,
+  findDeathPrevention,
+  getDayModifiers,
+  getScoredRetriggerCount,
+  forEachEquipmentResolved,
+  applyEquipmentAuras,
+  applyHolyAuraXMult,
+} from './helpers';
+export { applyScoringMutations, createEmptyScoringMutations, mergeMutations } from './applyMutations';
 export type {
   ScoringPipelineContext,
   ScoringMutations,
@@ -12,7 +21,6 @@ export type {
   LifecyclePhase,
   LifecycleHandler,
 } from './types';
-console.error("[effects/index.ts] loaded");
 
 // Import all handler modules to register them
 import './additive';

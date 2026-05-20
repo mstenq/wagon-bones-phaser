@@ -1,9 +1,14 @@
 // ─── after-hand-scored lifecycle handlers ───
 
+import { Die, HandDefinition, HandType, HandUpgradeInfo } from '../../types';
+import type { EquipmentInstance } from '../../ItemsSystem';
 import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
 import { checkLoadedChance } from '../../Constants';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
+import handsData from '../../../data/hands.json';
+
+const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
 effectRegistry.registerLifecycle('after-hand-scored', (equip, handType, _scoringDice) => {
   switch (equip.def.effectType) {
@@ -34,3 +39,65 @@ effectRegistry.registerLifecycle('after-hand-scored', (equip, handType, _scoring
     }
   }
 });
+
+export function processEquipmentAfterHandScored(
+  equipment: EquipmentInstance[],
+  handType: HandType,
+  _scoringDice?: Die[],
+): HandUpgradeInfo[] {
+  const upgrades: HandUpgradeInfo[] = [];
+
+  for (const equip of equipment) {
+    switch (equip.def.effectType) {
+      case 'STATEFUL_ADD_MILES': {
+        const decay = equip.def.effectParams.decayPerHand as number;
+        equip.state.miles = Math.max(0, (equip.state.miles ?? 0) - decay);
+        break;
+      }
+      case 'HAND_UPGRADE_CHANCE': {
+        if (checkLoadedChance(equip.def.effectParams.chance as [number, number], equipment)) {
+          const player = getPlayerState();
+          const stats = player.getHandStats(handType);
+          const handDef = HAND_TABLE.find((h) => h.type === handType)!;
+          const oldLevel = stats.level;
+          const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
+          const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
+
+          player.upgradeHandLevel(handType);
+
+          const newLevel = stats.level;
+          const newBaseMiles = handDef.baseMiles + stats.milesPerLevel * (newLevel - 1);
+          const newBaseMult = handDef.baseMult + stats.multPerLevel * (newLevel - 1);
+
+          upgrades.push({
+            handType,
+            handName: handDef.name,
+            oldLevel,
+            newLevel,
+            oldBaseMiles,
+            newBaseMiles,
+            oldBaseMult,
+            newBaseMult,
+          });
+        }
+        break;
+      }
+      case 'REPEAT_HAND_XMULT': {
+        const handKey = `round_${handType}`;
+        equip.state[handKey] = (equip.state[handKey] ?? 0) + 1;
+        break;
+      }
+      case 'LOW_MONEY_SUPPLY': {
+        const threshold = equip.def.effectParams.threshold as number;
+        const player = getPlayerState();
+        if (player.economy.balance <= threshold) {
+          const supplyDef = getRandomSupplyDef();
+          player.addConsumable(supplyDef);
+        }
+        break;
+      }
+    }
+  }
+
+  return upgrades;
+}

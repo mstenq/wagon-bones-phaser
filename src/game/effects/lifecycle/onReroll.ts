@@ -1,5 +1,7 @@
 // ─── on-reroll lifecycle handlers ───
 
+import type { EquipmentInstance } from '../../ItemsSystem';
+import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 
 effectRegistry.registerLifecycle('on-reroll', (equip, diceCount) => {
@@ -18,10 +20,8 @@ effectRegistry.registerLifecycle('on-reroll', (equip, diceCount) => {
   }
 });
 
-effectRegistry.registerLifecycle('on-shop-reroll', (equip) => {
-  switch (equip.def.effectType) {
-    case 'SHOP_REROLL_MULT_GAIN':
-      equip.state.mult = (equip.state.mult ?? 0) + (equip.def.effectParams.value as number);
-      break;
+export function processEquipmentOnReroll(equipment: EquipmentInstance[], diceCount: number): void {
+  for (const equip of equipment) {
+    dispatchLifecycle('on-reroll', equip, diceCount);
   }
-});
+}
