@@ -33,6 +33,7 @@ import {
 import { getRandomTrailGuideDef, getRandomSupplyDef } from './ConsumablesSystem';
 import { applyScoringMutations } from './effects/applyMutations';
 import { createEmptyModifiers } from './TrailEventsSystem';
+import { getBossRoundConfigMods } from './BossEffectsSystem';
 import { generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
 
 export class GameState {
@@ -109,6 +110,15 @@ export class GameState {
     // Apply trail event: boss upgrade multiplier
     if (trailMods.bossUpgradeMultiplier !== 1.0) {
       this.config.targetMiles = Math.ceil(this.config.targetMiles * trailMods.bossUpgradeMultiplier);
+    }
+
+    // Apply boss round modifiers (negated by Saint Elmo's Shield / Sheriff's Badge)
+    const bossMods = getBossRoundConfigMods();
+    if (bossMods.targetMilesMultiplier !== 1) {
+      this.config.targetMiles = Math.ceil(this.config.targetMiles * bossMods.targetMilesMultiplier);
+    }
+    if (bossMods.rerollsModifier !== 0) {
+      this.config.maxRerolls = Math.max(0, this.config.maxRerolls + bossMods.rerollsModifier);
     }
 
     // Clear trail event modifiers after consumption

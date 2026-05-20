@@ -77,3 +77,21 @@ effectRegistry.registerXMult('GRAVEROBBER_XMULT', (ctx, equip, index) => {
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
 });
+
+effectRegistry.registerXMult('ENHANCED_DESTROYED_XMULT', (ctx, equip, index) => {
+  const xm = equip.state.xMult ?? 1;
+  if (xm > 1) {
+    ctx.xMult *= xm;
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
+    console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
+  }
+});
+
+effectRegistry.registerXMult('REROLL_COUNT_XMULT', (ctx, equip, index) => {
+  const xm = equip.state.xMult ?? 1;
+  if (xm > 1) {
+    ctx.xMult *= xm;
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
+    console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
+  }
+});

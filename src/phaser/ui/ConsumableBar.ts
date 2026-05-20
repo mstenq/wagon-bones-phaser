@@ -23,7 +23,7 @@ export class ConsumableBar extends CardBar {
 
   protected getSlotLabel(): string {
     const player = getPlayerState();
-    return `${player.usedConsumableSlots}/${player.maxConsumableSlots}`;
+    return `${player.consumables.length}/${player.maxConsumableSlots}`;
   }
 
   protected getItemCount(): number {

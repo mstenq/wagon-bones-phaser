@@ -34,6 +34,8 @@ export const GAMEPLAY = {
   // Interest: $1 per INTEREST_PER dollars held, capped at INTEREST_CAP
   INTEREST_PER: 5,
   INTEREST_CAP: 25, // default cap; vouchers can raise this
+  /** Miles/score at or above this use Balatro-style scientific notation (e.g. 1.27e9) */
+  SCORE_SCIENTIFIC_THRESHOLD: 1_000_000_000_000,
 };
 
 // ─── RNG / Chance Tuning ───
@@ -46,7 +48,12 @@ export const CHANCES = {
   RARE: 0.05,
   UNCOMMON: 0.25,
   COMMON: 0.7,
+  /** Pandora's Box / Spiritual Journey spawn rate in eligible booster packs */
+  RARE_PACK_CARD: 3 / 1000,
 };
+
+/** Frontier cards that only appear in booster packs — never shop, trail events, or random grants. */
+export const PACK_ONLY_FRONTIER_IDS = new Set(['pandoras_box', 'spiritual_journey']);
 
 // ─── Shop Stock Category Weights ───
 // Controls the mix of equipment vs consumables in shop slots.

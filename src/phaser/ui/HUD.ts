@@ -3,6 +3,7 @@
 
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { formatScore } from '../../game/formatScore';
 
 const HUD_Y = UI.HUD_Y;
 const FONT_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -65,7 +66,7 @@ export class HUD extends GameObjects.Container {
     this.dayText.setText(`${data.day} / ${data.maxDays}`);
     this.diceRemainingText.setText(`${data.diceRemaining} (${data.diceSpent} spent)`);
     this.rerollsText.setText(`${data.rerolls}`);
-    this.milesText.setText(`${data.miles} / ${data.targetMiles}`);
+    this.milesText.setText(`${formatScore(data.miles)} / ${formatScore(data.targetMiles)}`);
     this.phaseText.setText(data.phase);
   }
 }

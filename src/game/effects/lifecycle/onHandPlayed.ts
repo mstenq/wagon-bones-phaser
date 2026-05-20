@@ -4,7 +4,7 @@ import type { Die, HandType, HandStats } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
-import { dieMatchesPip, handTypeMatches } from '../helpers';
+import { dieMatchesPip, handTypeMatches, hasStackedDeck } from '../helpers';
 import { getPlayerState } from '../../PlayerState';
 
 function getMostPlayedHandTypes(handStats: Map<HandType, HandStats>): HandType[] {
@@ -32,8 +32,9 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       break;
     case 'MARKED_NO_SIX_MULT': {
       const player = getPlayerState();
+      const stackedDeck = hasStackedDeck(player.equipment);
       const hasSix =
-        (scoringDice as Die[])?.some((d) => dieMatchesPip(d, 6, player.equipment)) ?? false;
+        (scoringDice as Die[])?.some((d) => dieMatchesPip(d, 6, player.equipment, stackedDeck)) ?? false;
       if (hasSix) {
         equip.state.mult = 0;
       } else {
@@ -65,6 +66,9 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       }
       break;
     }
+    case 'CONSECUTIVE_PIP_XMULT':
+      equip.state.consecutiveCount = 0;
+      break;
   }
 });
 

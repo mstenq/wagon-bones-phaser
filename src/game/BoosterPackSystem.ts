@@ -10,7 +10,7 @@ import {
   DiceSelectionEffectParams,
   pickRandomAura,
 } from './DiceSelectionSystem';
-import { CHANCES, PACK_WEIGHTS } from './Constants';
+import { CHANCES, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS } from './Constants';
 import packsData from '../data/packs.json';
 import supplyCardsData from '../data/supply_cards.json';
 import trailGuidesData from '../data/trail_guides.json';
@@ -130,9 +130,99 @@ const SUPPLY_CARDS = supplyCardsData;
 const TRAIL_GUIDES = trailGuidesData;
 const FRONTIER_ENCOUNTERS = frontierEncountersData;
 
+type FrontierEntry = (typeof frontierEncountersData)[number];
+
+/** Ultra-rare cards excluded from normal pools; only appear via RARE_PACK_CARD rolls. */
+const RARE_PACK_CARDS: { id: string; packs: PackCategory[] }[] = [
+  { id: 'pandoras_box', packs: ['frontier', 'supply'] },
+  { id: 'spiritual_journey', packs: ['frontier', 'trail_guide'] },
+];
+
+export const RARE_PACK_CARD_IDS = PACK_ONLY_FRONTIER_IDS;
+
+const STANDARD_FRONTIER_POOL = FRONTIER_ENCOUNTERS.filter((fe) => !PACK_ONLY_FRONTIER_IDS.has(fe.id));
+
 function pickRandom<T>(arr: T[], count: number): T[] {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.min(count, arr.length));
+}
+
+function rollRarePackCard(packCategory: PackCategory): FrontierEntry | null {
+  for (const rare of RARE_PACK_CARDS) {
+    if (!rare.packs.includes(packCategory)) continue;
+    if (Math.random() < CHANCES.RARE_PACK_CARD) {
+      const fe = FRONTIER_ENCOUNTERS.find((f) => f.id === rare.id);
+      if (fe) return fe;
+    }
+  }
+  return null;
+}
+
+/** Exported for tests — rolls a single rare pack card slot. */
+export function tryRollRarePackCard(packCategory: PackCategory): FrontierEntry | null {
+  return rollRarePackCard(packCategory);
+}
+
+function buildSupplyPackItem(s: (typeof SUPPLY_CARDS)[number]): PackItem {
+  const item: PackItem = {
+    id: s.id + '_' + Math.random().toString(36).slice(2, 6),
+    name: s.name,
+    description: s.description,
+    category: 'supply' as PackCategory,
+    supplyCardId: s.id,
+  };
+  if ('diceSelection' in s && s.diceSelection) {
+    const ds = s.diceSelection as {
+      drawCount: number;
+      pickCount: number;
+      effectType: string;
+      effectParams: Record<string, unknown>;
+    };
+    item.diceSelection = {
+      drawCount: ds.drawCount,
+      pickCount: ds.pickCount,
+      effectType: ds.effectType as DiceSelectionEffectType,
+      effectParams: ds.effectParams as DiceSelectionEffectParams,
+      cardName: s.name,
+      description: s.description,
+      skippable: true,
+    };
+  }
+  if ('instantEffect' in s && s.instantEffect) {
+    item.instantEffect = s.instantEffect as InstantEffect;
+  }
+  return item;
+}
+
+function buildFrontierPackItem(fe: FrontierEntry): PackItem {
+  const item: PackItem = {
+    id: fe.id + '_' + Math.random().toString(36).slice(2, 6),
+    name: fe.name,
+    description: fe.description,
+    category: 'frontier' as PackCategory,
+    frontierEncounterId: fe.id,
+  };
+  if ('diceSelection' in fe && fe.diceSelection) {
+    const ds = fe.diceSelection as {
+      drawCount: number;
+      pickCount: number;
+      effectType: string;
+      effectParams: Record<string, unknown>;
+    };
+    item.diceSelection = {
+      drawCount: ds.drawCount,
+      pickCount: ds.pickCount,
+      effectType: ds.effectType as DiceSelectionEffectType,
+      effectParams: ds.effectParams as DiceSelectionEffectParams,
+      cardName: fe.name,
+      description: fe.description,
+      skippable: true,
+    };
+  }
+  if ('instantEffect' in fe && fe.instantEffect) {
+    item.instantEffect = fe.instantEffect as InstantEffect;
+  }
+  return item;
 }
 
 /** Generate the contents of a pack when it's opened */
@@ -185,79 +275,58 @@ function generateDicePackContents(count: number): PackItem[] {
 }
 
 function generateSupplyPackContents(count: number): PackItem[] {
-  return pickRandom(SUPPLY_CARDS, count).map((s) => {
-    const item: PackItem = {
-      id: s.id + '_' + Math.random().toString(36).slice(2, 6),
-      name: s.name,
-      description: s.description,
-      category: 'supply' as PackCategory,
-      supplyCardId: s.id,
-    };
-    if ('diceSelection' in s && s.diceSelection) {
-      const ds = s.diceSelection as {
-        drawCount: number;
-        pickCount: number;
-        effectType: string;
-        effectParams: Record<string, unknown>;
-      };
-      item.diceSelection = {
-        drawCount: ds.drawCount,
-        pickCount: ds.pickCount,
-        effectType: ds.effectType as DiceSelectionEffectType,
-        effectParams: ds.effectParams as DiceSelectionEffectParams,
-        cardName: s.name,
-        description: s.description,
-        skippable: true,
-      };
+  const items: PackItem[] = [];
+  const normalCards = pickRandom(SUPPLY_CARDS, count);
+  let normalIdx = 0;
+
+  for (let i = 0; i < count; i++) {
+    const rare = rollRarePackCard('supply');
+    if (rare) {
+      items.push(buildFrontierPackItem(rare));
+      continue;
     }
-    if ('instantEffect' in s && s.instantEffect) {
-      item.instantEffect = s.instantEffect as InstantEffect;
-    }
-    return item;
-  });
+    items.push(buildSupplyPackItem(normalCards[normalIdx++]));
+  }
+  return items;
 }
 
 function generateTrailGuidePackContents(count: number): PackItem[] {
-  return pickRandom(TRAIL_GUIDES, count).map((tg) => ({
-    id: tg.id + '_' + Math.random().toString(36).slice(2, 6),
-    name: tg.name,
-    description: tg.description,
-    category: 'trail_guide' as PackCategory,
-    trailGuideId: tg.id,
-  }));
+  const items: PackItem[] = [];
+  const normalCards = pickRandom(TRAIL_GUIDES, count);
+  let normalIdx = 0;
+
+  for (let i = 0; i < count; i++) {
+    const rare = rollRarePackCard('trail_guide');
+    if (rare) {
+      items.push(buildFrontierPackItem(rare));
+      continue;
+    }
+    const tg = normalCards[normalIdx++];
+    items.push({
+      id: tg.id + '_' + Math.random().toString(36).slice(2, 6),
+      name: tg.name,
+      description: tg.description,
+      category: 'trail_guide' as PackCategory,
+      trailGuideId: tg.id,
+    });
+  }
+  return items;
 }
 
 function generateFrontierPackContents(count: number): PackItem[] {
-  return pickRandom(FRONTIER_ENCOUNTERS, count).map((fe) => {
-    const item: PackItem = {
-      id: fe.id + '_' + Math.random().toString(36).slice(2, 6),
-      name: fe.name,
-      description: fe.description,
-      category: 'frontier' as PackCategory,
-      frontierEncounterId: fe.id,
-    };
-    if ('diceSelection' in fe && fe.diceSelection) {
-      const ds = fe.diceSelection as {
-        drawCount: number;
-        pickCount: number;
-        effectType: string;
-        effectParams: Record<string, unknown>;
-      };
-      item.diceSelection = {
-        drawCount: ds.drawCount,
-        pickCount: ds.pickCount,
-        effectType: ds.effectType as DiceSelectionEffectType,
-        effectParams: ds.effectParams as DiceSelectionEffectParams,
-        cardName: fe.name,
-        description: fe.description,
-        skippable: true,
-      };
+  const items: PackItem[] = [];
+  const normalCards = pickRandom(STANDARD_FRONTIER_POOL, count);
+  let normalIdx = 0;
+
+  for (let i = 0; i < count; i++) {
+    const rare = rollRarePackCard('frontier');
+    if (rare) {
+      items.push(buildFrontierPackItem(rare));
+      continue;
     }
-    if ('instantEffect' in fe && fe.instantEffect) {
-      item.instantEffect = fe.instantEffect as InstantEffect;
-    }
-    return item;
-  });
+    items.push(buildFrontierPackItem(normalCards[normalIdx++]));
+  }
+  return items;
 }
 
 function generateEquipmentPackContents(count: number): PackItem[] {

@@ -5,6 +5,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { formatScore } from '../../game/formatScore';
 import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
 import { Button } from './Button';
 
@@ -470,8 +471,8 @@ export class Sidebar extends GameObjects.Container {
 
   updateData(data: Partial<SidebarData>): void {
     if (data.title !== undefined) this.titleText.setText(data.title);
-    if (data.roundScore !== undefined) this.roundScoreText.setText(`${data.roundScore}`);
-    if (data.milesBase !== undefined) this.milesBaseText.setText(`${data.milesBase}`);
+    if (data.roundScore !== undefined) this.roundScoreText.setText(formatScore(data.roundScore));
+    if (data.milesBase !== undefined) this.milesBaseText.setText(formatScore(data.milesBase));
     if (data.mult !== undefined) this.multText.setText(`${data.mult}`);
     if (data.handName !== undefined) {
       if (data.handName) {
@@ -503,7 +504,7 @@ export class Sidebar extends GameObjects.Container {
       this.legText.setText(roundLabel);
     }
     if (data.targetMiles !== undefined) {
-      this.targetText.setText(`${data.targetMiles} mi`);
+      this.targetText.setText(`${formatScore(data.targetMiles)} mi`);
     }
 
     // Always refresh money from player state
@@ -536,7 +537,7 @@ export class Sidebar extends GameObjects.Container {
 
   /** Set miles value with a pop animation on the blue pill */
   setMilesAnimated(value: number): void {
-    this.milesBaseText.setText(`${value}`);
+    this.milesBaseText.setText(formatScore(value));
     this.scene.tweens.add({
       targets: this.milesBaseText,
       scaleX: 1.3,
@@ -562,7 +563,7 @@ export class Sidebar extends GameObjects.Container {
 
   /** Set round score with a pop animation */
   setRoundScoreAnimated(value: number): void {
-    this.roundScoreText.setText(`${value}`);
+    this.roundScoreText.setText(formatScore(value));
     this.scene.tweens.add({
       targets: this.roundScoreText,
       scaleX: 1.3,

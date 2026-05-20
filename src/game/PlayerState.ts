@@ -7,6 +7,7 @@ import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
 import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
+import { forEachEquipmentResolved } from './effects/helpers';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
@@ -78,7 +79,6 @@ export class PlayerState {
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
     this.dice = createPouch(DEFAULT_STARTING_DICE);
-    this.startingDiceCount = DEFAULT_STARTING_DICE;
     this.nextDieId = this.dice.length; // start counter after initial dice
     this.equipment = [];
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
@@ -105,6 +105,11 @@ export class PlayerState {
     const profMods = this.profession?.modifiers as Record<string, unknown> | undefined;
     const profRerolls = typeof profMods?.rerolls === 'number' ? profMods.rerolls : 0;
     return GAMEPLAY.MAX_REROLLS + this.permitRerollBonus - this.permitRerollPenalty + profRerolls - this.trailEventModifiers.rerollPenalty;
+  }
+
+  /** Snapshot dice count after run setup (profession, etc.) for Ghost Town. */
+  finalizeRunSetup(): void {
+    this.startingDiceCount = this.dice.length;
   }
 
   /** Apply profession modifiers after selection */
@@ -450,17 +455,16 @@ export class PlayerState {
     if (!noInterest) {
       const cappedMoney = Math.min(this.economy.balance, this.interestCap);
       interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
-      // Savings Account: extra interest per $5 held
-      for (const equip of this.equipment) {
-        if (equip.def.effectType === 'SAVINGS_ACCOUNT_INTEREST') {
-          const p = equip.def.effectParams as Record<string, unknown>;
-          const chunk = (p.perChunk as number) ?? 5;
-          const perChunk = (p.value as number) ?? 1;
-          const accountantBonus =
-            this.profession?.id === 'accountant' ? ((p.accountantBonus as number) ?? 1) : 0;
-          interest += Math.floor(cappedMoney / chunk) * (perChunk + accountantBonus);
-        }
-      }
+      // Savings Account: extra interest per $5 held (with copy-resolution)
+      forEachEquipmentResolved(this.equipment, (equip) => {
+        if (equip.def.effectType !== 'SAVINGS_ACCOUNT_INTEREST') return;
+        const p = equip.def.effectParams as Record<string, unknown>;
+        const chunk = (p.perChunk as number) ?? 5;
+        const perChunk = (p.value as number) ?? 1;
+        const accountantBonus =
+          this.profession?.id === 'accountant' ? ((p.accountantBonus as number) ?? 1) : 0;
+        interest += Math.floor(cappedMoney / chunk) * (perChunk + accountantBonus);
+      }, 'skip');
     }
 
     // Outlaw reroll bonus

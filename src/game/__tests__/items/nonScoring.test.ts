@@ -15,7 +15,10 @@ import {
   processEquipmentOnPackOpened,
   processEquipmentOnBossDefeat,
   processEquipmentOnRoundStart,
+  processEquipmentOnShopEnd,
 } from '../../EquipmentEffects';
+import { getRandomSupplyDef } from '../../ConsumablesSystem';
+import { getBossRoundConfigMods } from '../../BossEffectsSystem';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
 
@@ -919,5 +922,73 @@ describe('SELL_DISABLE_BOSS: Sheriff\'s Badge', () => {
     player.sellEquipment(0);
     expect(player.bossEffectDisabled).toBe(true);
     expect(player.equipment.length).toBe(0);
+  });
+});
+
+// ─── SHOP_END_GHOST_CONSUMABLE: Ghost Lantern ───
+
+describe('SHOP_END_GHOST_CONSUMABLE: Ghost Lantern', () => {
+  test('creates ghost copy of random consumable at shop end', () => {
+    const { player } = setupGame({ equipment: [item('ghost_lantern')] });
+    const supplyDef = getRandomSupplyDef();
+    player.addConsumable(supplyDef);
+    expect(player.consumables.length).toBe(1);
+
+    processEquipmentOnShopEnd(player.equipment);
+
+    expect(player.consumables.length).toBe(2);
+    const ghost = player.consumables.find((c) => c.def.aura?.id === 'ghost');
+    expect(ghost).toBeDefined();
+    expect(ghost!.def.id).toBe(supplyDef.id);
+  });
+
+  test('does nothing with no consumables', () => {
+    const { player } = setupGame({ equipment: [item('ghost_lantern')] });
+    processEquipmentOnShopEnd(player.equipment);
+    expect(player.consumables.length).toBe(0);
+  });
+});
+
+// ─── ALL_RETRIGGER: The Seventh Trumpet ───
+
+describe('ALL_RETRIGGER: The Seventh Trumpet', () => {
+  test('retriggers all scored dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('seventh_trumpet')],
+    });
+    // PAIR base miles from dice: (5+5)*2 triggers = 20 value
+    // baseMult=1, mult=1 → miles = (10 + 20) * 1 = 30
+    expect(result.miles).toBe(30);
+  });
+
+  test('retriggers held-in-hand effects', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'steel' })],
+      equipment: [item('seventh_trumpet')],
+    });
+    // Steel held triggers twice (base + seventh trumpet): x1.5 * x1.5 = 2.25
+    expect(result.mult).toBeCloseTo(2.25, 5);
+  });
+});
+
+// ─── Saint Elmo's Shield: boss negation ───
+
+describe("Saint Elmo's Shield boss negation", () => {
+  test('negates boss distance multiplier', () => {
+    const { player } = setupGame({ equipment: [item('saint_elmos_shield')] });
+    player.round = 3;
+    (player as any).bossAssignments = [
+      {
+        id: 'the_marathon',
+        name: 'The Marathon',
+        description: 'Distance is 4x normal',
+        effectType: 'DISTANCE_MULTIPLIER',
+        effectParams: { multiplier: 4 },
+      },
+    ] as any;
+
+    expect(getBossRoundConfigMods().targetMilesMultiplier).toBe(1);
   });
 });

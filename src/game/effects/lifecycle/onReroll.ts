@@ -17,6 +17,19 @@ effectRegistry.registerLifecycle('on-reroll', (equip, diceCount) => {
       equip.state.mult = Math.max(0, (equip.state.mult ?? 0) - loss);
       break;
     }
+    case 'REROLL_COUNT_XMULT': {
+      const perThreshold = (equip.def.effectParams.threshold as number) ?? 23;
+      const gainPerThreshold = (equip.def.effectParams.value as number) ?? 1;
+      const prevTotal = equip.state.rerollsTotal ?? 0;
+      const newTotal = prevTotal + (diceCount as number);
+      equip.state.rerollsTotal = newTotal;
+      const prevMultiples = Math.floor(prevTotal / perThreshold);
+      const newMultiples = Math.floor(newTotal / perThreshold);
+      if (newMultiples > prevMultiples) {
+        equip.state.xMult = (equip.state.xMult ?? 1) + gainPerThreshold * (newMultiples - prevMultiples);
+      }
+      break;
+    }
   }
 });
 

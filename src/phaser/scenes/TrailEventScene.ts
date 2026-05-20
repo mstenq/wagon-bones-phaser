@@ -225,7 +225,8 @@ export class TrailEventScene extends Scene {
 
     // Check saint_elmos_shield
     const player = getPlayerState();
-    const hassaint_elmos_shield = player.equipment.some((e) => e.def.id === 'saint_elmos_shield');
+    const shieldEquip = player.equipment.find((e) => e.def.id === 'saint_elmos_shield');
+    const hassaint_elmos_shield = shieldEquip !== undefined;
 
     // Build effect summary lines
     const effectLines: { text: string; color: string; negative: boolean }[] = [];
@@ -309,9 +310,9 @@ export class TrailEventScene extends Scene {
     }
 
     // saint_elmos_shield message
-    if (hassaint_elmos_shield && result.effects.some((e) => isNegativeEffect(e))) {
+    if (shieldEquip && result.effects.some((e) => isNegativeEffect(e))) {
       const provText = this.add
-        .text(contentCX, resultY - 28, '✨ saint_elmos_shield protects you! ✨', {
+        .text(contentCX, resultY - 28, `✨ ${shieldEquip.def.name} protects you! ✨`, {
           fontFamily: FONTS.HEADING,
           fontSize: '16px',
           color: TEXT_COLORS.GOLD,

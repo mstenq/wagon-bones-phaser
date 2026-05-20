@@ -9,7 +9,7 @@ import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition } from './types';
 import handsData from '../data/hands.json';
-import { checkLoadedChance } from './Constants';
+import { checkLoadedChance, PACK_ONLY_FRONTIER_IDS } from './Constants';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -177,16 +177,21 @@ export function getRandomTrailGuideDef(aura?: ItemAura | null, excludeIds?: stri
   return createTrailGuideConsumableDef(tg, aura);
 }
 
-/** Get a random frontier encounter def */
+/** Get a random frontier encounter def (excludes pack-only ultra-rare cards). */
 export function getRandomFrontierDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
-  let pool = FRONTIER_ENCOUNTERS;
+  let pool = FRONTIER_ENCOUNTERS.filter((f) => !PACK_ONLY_FRONTIER_IDS.has(f.id));
   if (excludeIds && excludeIds.length > 0) {
     const excluded = new Set(excludeIds);
     pool = pool.filter((f) => !excluded.has(f.id));
   }
-  if (pool.length === 0) pool = FRONTIER_ENCOUNTERS; // fallback if all excluded
+  if (pool.length === 0) pool = FRONTIER_ENCOUNTERS.filter((f) => !PACK_ONLY_FRONTIER_IDS.has(f.id));
   const fe = pool[Math.floor(Math.random() * pool.length)];
   return createFrontierConsumableDef(fe, aura);
+}
+
+/** Shop stock frontier picker — pack-only cards never appear as standalone shop cards. */
+export function getShopRandomFrontierDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
+  return getRandomFrontierDef(aura, excludeIds);
 }
 
 /** Get a supply card def by id */
@@ -232,9 +237,9 @@ export function generateShopConsumables(count: number, options?: { includeFronti
     pool.push(createTrailGuideConsumableDef(tg));
   }
 
-  // Add frontier encounters if enabled (Demon Hunter)
+  // Add frontier encounters if enabled (Demon Hunter) — excludes pack-only cards
   if (options?.includeFrontier) {
-    for (const fe of FRONTIER_ENCOUNTERS) {
+    for (const fe of FRONTIER_ENCOUNTERS.filter((f) => !PACK_ONLY_FRONTIER_IDS.has(f.id))) {
       pool.push(createFrontierConsumableDef(fe));
     }
   }

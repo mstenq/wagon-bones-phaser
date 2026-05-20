@@ -11,6 +11,7 @@ import {
   processEquipmentOnRoundStart,
   processEquipmentOnDiceAdded,
   processEquipmentOnDiamondDestroyed,
+  processEquipmentOnDiceDestroyed,
 } from '../../EquipmentEffects';
 import { executeConsumableEffect, createConsumableInstance, createTrailGuideConsumableDef } from '../../ConsumablesSystem';
 import { HandType } from '../../types';
@@ -897,5 +898,69 @@ describe('CONSECUTIVE_PIP_XMULT: Eight Second Ride', () => {
     });
     // THREE_OF_A_KIND: baseMult=3, x1 * x1.5 * x2 = x3 → 9
     expect(result.mult).toBeCloseTo(9, 5);
+  });
+});
+
+// ─── ENHANCED_DESTROYED_XMULT: Book of the Dead ───
+
+describe('ENHANCED_DESTROYED_XMULT: Book of the Dead', () => {
+  test('gains x1 per destroyed enhanced die', () => {
+    const inst = item('book_of_the_dead');
+    const { player } = setupGame({ equipment: [inst] });
+    const enhanced = die({ value: 4, enhancement: 'wooden' });
+    player.dice = [enhanced, die({ value: 5 })];
+
+    processEquipmentOnDiceDestroyed([inst], 1, 1);
+
+    expect(inst.state.xMult).toBe(2);
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    expect(result.mult).toBeCloseTo(2, 5);
+  });
+
+  test('does not gain xMult from standard die destruction', () => {
+    const inst = item('book_of_the_dead');
+    processEquipmentOnDiceDestroyed([inst], 1, 0);
+    expect(inst.state.xMult).toBe(1);
+  });
+});
+
+// ─── PIP_XMULT: The Devil's Hand ───
+
+describe("PIP_XMULT: The Devil's Hand", () => {
+  test('x2 mult per scored 6', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 6 }), die({ value: 6 }), die({ value: 5 })],
+      equipment: [item('devils_hand')],
+    });
+    // PAIR: baseMult=1, two scored 6s → x2 * x2 = x4
+    expect(result.mult).toBeCloseTo(4, 5);
+  });
+});
+
+// ─── REROLL_COUNT_XMULT: The 23rd Psalm ───
+
+describe('REROLL_COUNT_XMULT: The 23rd Psalm', () => {
+  test('gains x1 mult every 23 dice rerolled', () => {
+    const inst = item('twenty_third_psalm');
+    processEquipmentOnReroll([inst], 23);
+    expect(inst.state.xMult).toBe(2);
+    expect(inst.state.rerollsTotal).toBe(23);
+
+    processEquipmentOnReroll([inst], 23);
+    expect(inst.state.xMult).toBe(3);
+    expect(inst.state.rerollsTotal).toBe(46);
+  });
+
+  test('applies accumulated xMult when scoring', () => {
+    const inst = item('twenty_third_psalm');
+    processEquipmentOnReroll([inst], 46);
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    expect(result.mult).toBeCloseTo(3, 5);
   });
 });

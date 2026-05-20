@@ -16,7 +16,7 @@ effectRegistry.registerHeldDie('HELD_LOWEST_MULT', (ctx, equip, _idx, die, _t) =
 
 effectRegistry.registerHeldDie('HELD_PIP_XMULT', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
-  if (dieMatchesPip(die, p.pip as number, ctx.equipment)) {
+  if (dieMatchesPip(die, p.pip as number, ctx.equipment, ctx.hasStackedDeck)) {
     const xVal = p.value as number;
     ctx.xMult *= xVal;
     ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'xmult', value: xVal });
@@ -26,7 +26,7 @@ effectRegistry.registerHeldDie('HELD_PIP_XMULT', (ctx, equip, _idx, die, _t) => 
 
 effectRegistry.registerHeldDie('HELD_PIP_MULT', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
-  if (dieMatchesPip(die, p.pip as number, ctx.equipment)) {
+  if (dieMatchesPip(die, p.pip as number, ctx.equipment, ctx.hasStackedDeck)) {
     const value = p.value as number;
     ctx.bonusMult += value;
     ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'mult', value });

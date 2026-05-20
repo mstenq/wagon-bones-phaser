@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { resetPlayerState } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
+import { formatScore } from '../../game/formatScore';
 import { Button } from '../ui/Button';
 
 interface GameOverData {
@@ -57,7 +58,7 @@ export class GameOver extends Scene {
         .setOrigin(0.5);
     }
 
-    const milesLabel = `${data.totalMiles} / ${data.targetMiles} miles`;
+    const milesLabel = `${formatScore(data.totalMiles)} / ${formatScore(data.targetMiles)} miles`;
     const legLabel = data.leg ? `Leg ${data.leg}${data.round ? ` — Round ${data.round}` : ''}` : '';
     const infoY = isVictory ? 0.48 : 0.42;
 

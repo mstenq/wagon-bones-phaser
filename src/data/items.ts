@@ -762,7 +762,76 @@ const items: ItemDef[] = [
     description: 'Disables all boss effects and negative effects from trail events are prevented. Divine favor intervenes.',
     effectType: 'NONE',
     effectParams: {},
-    hintDisplay: () => [[active('Negates'), text(' negative effects')]],
+    hintDisplay: () => [[active('Negates'), text(' boss & trail penalties')]],
+  },
+  {
+    id: 'book_of_the_dead',
+    name: 'Book of the Dead',
+    cardTemplate: 'white-text-black-outline',
+    cost: 20,
+    rarity: 'legendary',
+    description: 'Gains x1 mult for each destroyed enhanced dice',
+    effectType: 'ENHANCED_DESTROYED_XMULT',
+    effectParams: { value: 1 },
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'book_of_the_dead');
+      const xm = equip?.state.xMult ?? 1;
+      if (xm > 1) return [[mult(`x${xm}`)]];
+      return [[mult('x1'), condition('per enhanced destroyed')], [inactive('None')]];
+    },
+  },
+  {
+    id: 'devils_hand',
+    name: "The Devil's Hand",
+    cardTemplate: 'hellfire',
+    cost: 20,
+    rarity: 'legendary',
+    description: "Played 6's give x2 mult when scored",
+    effectType: 'PIP_XMULT',
+    effectParams: { pip: 6, value: 2 },
+    hintDisplay: () => [[mult('x2'), condition('per 6 scored')]],
+  },
+  {
+    id: 'twenty_third_psalm',
+    name: 'The 23rd Psalm',
+    cardTemplate: 'white-text-black-outline',
+    cost: 20,
+    rarity: 'legendary',
+    description: 'Item gains x1 mult for every 23 dice re-rolled',
+    effectType: 'REROLL_COUNT_XMULT',
+    effectParams: { threshold: 23, value: 1 },
+    initialState: { xMult: 1, rerollsTotal: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'twenty_third_psalm');
+      const xm = equip?.state.xMult ?? 1;
+      const total = equip?.state.rerollsTotal ?? 0;
+      const remaining = 23 - (total % 23);
+      if (xm > 1) return [[mult(`x${xm}`)], [condition(`${remaining} to next`)]];
+      return [[mult('x1'), condition('per 23 rerolled')], [text(`${total % 23}/23`)]];
+    },
+  },
+  {
+    id: 'ghost_lantern',
+    name: 'Ghost Lantern',
+    cardTemplate: 'white-text-black-outline',
+    cost: 20,
+    rarity: 'legendary',
+    description: 'Creates a ghost copy of a random consumable card in your possession at the end of the shop phase',
+    effectType: 'SHOP_END_GHOST_CONSUMABLE',
+    effectParams: {},
+    hintDisplay: () => [[active('Ghost copy'), condition('end of shop')]],
+  },
+  {
+    id: 'seventh_trumpet',
+    name: 'The Seventh Trumpet',
+    cardTemplate: 'white-text-black-outline',
+    cost: 20,
+    rarity: 'legendary',
+    description: 'Retriggers all played dice, and all held in hand effects',
+    effectType: 'ALL_RETRIGGER',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[text('Retrigger'), condition('all played & held')]],
   },
 
   // ─── Phase 3 Items ───
@@ -1911,7 +1980,7 @@ const items: ItemDef[] = [
   {
     id: 'golden_spike',
     name: 'Golden Spike',
-    cardTemplate: 'white-text-black-outline',
+    cardTemplate: 'black-text',
     cost: 7,
     rarity: 'uncommon',
     description: 'All scored dice have a 1 in 4 chance to turn into a gold dice',
@@ -1922,7 +1991,7 @@ const items: ItemDef[] = [
   {
     id: 'sheriffs_badge',
     name: "Sheriff's Badge",
-    cardTemplate: 'white-text-black-outline',
+    cardTemplate: 'black-text',
     cost: 5,
     rarity: 'uncommon',
     description: 'Sell this item to disable the current boss effect',
@@ -1933,7 +2002,7 @@ const items: ItemDef[] = [
   {
     id: 'double_barrel',
     name: 'Double Barrel',
-    cardTemplate: 'white-text',
+    cardTemplate: 'black-text',
     cost: 5,
     rarity: 'common',
     description: 'First played 2 pip dice gives x2 mult when scored',

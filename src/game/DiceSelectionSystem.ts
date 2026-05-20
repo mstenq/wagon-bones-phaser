@@ -89,11 +89,12 @@ export function applyDiceSelectionEffect(config: DiceSelectionConfig, selectedDi
 
 function applyDestroy(player: ReturnType<typeof getPlayerState>, selectedDice: Die[]): string {
   const ids = new Set(selectedDice.map((d) => d.id));
+  const enhancedCount = selectedDice.filter((d) => d.enhancement !== null).length;
   const before = player.dice.length;
   player.dice = player.dice.filter((d) => !ids.has(d.id));
   const removed = before - player.dice.length;
   if (removed > 0) {
-    processEquipmentOnDiceDestroyed(player.equipment, removed);
+    processEquipmentOnDiceDestroyed(player.equipment, removed, enhancedCount);
   }
   return `Destroyed ${removed} dice`;
 }

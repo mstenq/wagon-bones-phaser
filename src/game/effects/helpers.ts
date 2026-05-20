@@ -158,6 +158,9 @@ export function getScoredRetriggerCount(equipment: EquipmentInstance[], context?
     if (equip.def.effectType === 'SCORED_RETRIGGER_FINAL_DAY' && context && context.currentDay >= context.maxDays) {
       count++;
     }
+    if (equip.def.effectType === 'ALL_RETRIGGER') {
+      count += (equip.def.effectParams.value as number) ?? 1;
+    }
   }
   return count;
 }
@@ -168,18 +171,28 @@ export function hasStackedDeck(equipment: EquipmentInstance[]): boolean {
 }
 
 /** True if die matches a pip for equipment effects (Stacked Deck: loaded = all pips). */
-export function dieMatchesPip(die: Die, pip: number, equipment: EquipmentInstance[]): boolean {
+export function dieMatchesPip(
+  die: Die,
+  pip: number,
+  equipment: EquipmentInstance[],
+  stackedDeck?: boolean,
+): boolean {
   if (die.value === pip) return true;
-  if (hasStackedDeck(equipment) && die.enhancement === 'loaded') return true;
+  if ((stackedDeck ?? hasStackedDeck(equipment)) && die.enhancement === 'loaded') return true;
   return false;
 }
 
 /** True if die matches even/odd parity (Stacked Deck: loaded = all pips, so both parities). */
-export function dieMatchesParity(die: Die, parity: 'even' | 'odd', equipment: EquipmentInstance[]): boolean {
+export function dieMatchesParity(
+  die: Die,
+  parity: 'even' | 'odd',
+  equipment: EquipmentInstance[],
+  stackedDeck?: boolean,
+): boolean {
   const isEven = die.value % 2 === 0;
   const matches = parity === 'even' ? isEven : !isEven;
   if (matches) return true;
-  if (hasStackedDeck(equipment) && die.enhancement === 'loaded') return true;
+  if ((stackedDeck ?? hasStackedDeck(equipment)) && die.enhancement === 'loaded') return true;
   return false;
 }
 

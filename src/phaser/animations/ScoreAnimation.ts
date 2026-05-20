@@ -11,6 +11,7 @@ import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { ANIM } from '../../game/Constants';
+import { formatScore } from '../../game/formatScore';
 
 // ─── Floating Score Popup ───
 
@@ -103,7 +104,7 @@ function popupForDie(
   value: number,
 ): void {
   if (type === 'miles') {
-    floatingText(scene, sprite.x, sprite.y, `+${value} mi`, POPUP_MILES_COLOR, 'up');
+    floatingText(scene, sprite.x, sprite.y, `+${formatScore(value)} mi`, POPUP_MILES_COLOR, 'up');
   } else if (type === 'mult') {
     floatingText(scene, sprite.x, sprite.y, `+${value} mult`, POPUP_MULT_COLOR, 'up');
   } else if (type === 'xmult') {
@@ -129,7 +130,7 @@ function popupForEquip(
   const wx = equipBar.x + card.x;
   const wy = equipBar.y + card.y;
   if (type === 'miles') {
-    floatingText(scene, wx, wy, `+${value} mi`, POPUP_MILES_COLOR, 'down');
+    floatingText(scene, wx, wy, `+${formatScore(value)} mi`, POPUP_MILES_COLOR, 'down');
   } else if (type === 'mult') {
     floatingText(scene, wx, wy, `+${value} mult`, POPUP_MULT_COLOR, 'down');
   } else if (type === 'xmult') {

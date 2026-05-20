@@ -2,9 +2,28 @@ import './setup';
 import { describe, test, expect } from 'bun:test';
 import itemAurasData from '../../data/item_auras.json';
 import { generateRandomEquipment, generateShopStock, getAllEquipment } from '../ItemsSystem';
-import { getRandomSupplyDef, getRandomTrailGuideDef, getRandomFrontierDef } from '../ConsumablesSystem';
+import { getRandomSupplyDef, getRandomTrailGuideDef, getRandomFrontierDef, getShopRandomFrontierDef, generateShopConsumables } from '../ConsumablesSystem';
 
 describe('Shop stock exclusion', () => {
+  test('generateShopStock never includes legendary items', () => {
+    for (let i = 0; i < 50; i++) {
+      const stock = generateShopStock(5);
+      for (const item of stock) {
+        expect(item.rarity).not.toBe('legendary');
+      }
+    }
+  });
+
+  test('generateRandomEquipment never rolls legendary without explicit rarity', () => {
+    for (let i = 0; i < 50; i++) {
+      expect(generateRandomEquipment().rarity).not.toBe('legendary');
+    }
+  });
+
+  test('generateRandomEquipment allows legendary when explicitly requested', () => {
+    expect(generateRandomEquipment({ rarity: 'legendary' }).rarity).toBe('legendary');
+  });
+
   test('generateShopStock excludes items by id', () => {
     // Generate a full stock to get some IDs
     const stock = generateShopStock(5);
@@ -59,6 +78,32 @@ describe('Shop stock exclusion', () => {
       }
     }
     expect(foundExcluded).toBe(false);
+  });
+
+  test('getRandomFrontierDef never returns pack-only cards', () => {
+    for (let i = 0; i < 500; i++) {
+      const def = getRandomFrontierDef();
+      expect(def.id).not.toBe('pandoras_box');
+      expect(def.id).not.toBe('spiritual_journey');
+    }
+  });
+
+  test('getShopRandomFrontierDef never returns pack-only cards', () => {
+    for (let i = 0; i < 500; i++) {
+      const def = getShopRandomFrontierDef();
+      expect(def.id).not.toBe('pandoras_box');
+      expect(def.id).not.toBe('spiritual_journey');
+    }
+  });
+
+  test('generateShopConsumables never includes pack-only frontier cards', () => {
+    for (let i = 0; i < 20; i++) {
+      const stock = generateShopConsumables(20, { includeFrontier: true });
+      for (const def of stock) {
+        expect(def.id).not.toBe('pandoras_box');
+        expect(def.id).not.toBe('spiritual_journey');
+      }
+    }
   });
 
   test('getRandomFrontierDef excludes by id', () => {

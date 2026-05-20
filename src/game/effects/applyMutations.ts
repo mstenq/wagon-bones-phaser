@@ -2,8 +2,9 @@
 
 import { getPlayerState } from '../PlayerState';
 import { getConsumableDefById } from '../ConsumablesSystem';
+import { Die } from '../types';
 import { ScoringMutations } from './types';
-import { processEquipmentOnDiceDestroyed } from './lifecycle/onSell';
+import { processEquipmentOnDiceDestroyed } from './lifecycle/onDiceDestroyed';
 
 export function createEmptyScoringMutations(): ScoringMutations {
   return {
@@ -53,6 +54,17 @@ export function mergeMutations(target: ScoringMutations, source: ScoringMutation
   if (source.burnBarrelTriggered) target.burnBarrelTriggered = true;
 }
 
+/** Apply dice enhancement mutations immediately (used during pre-scoring). */
+export function applyDiceEnhancementMutations(mutations: ScoringMutations, scoringDice: Die[]): void {
+  const player = getPlayerState();
+  for (const { id, enhancement } of mutations.diceEnhanced) {
+    const scored = scoringDice.find((d) => d.id === id);
+    if (scored) scored.enhancement = enhancement;
+    const pouchDie = player.dice.find((d) => d.id === id);
+    if (pouchDie) pouchDie.enhancement = enhancement;
+  }
+}
+
 /**
  * Apply the accumulated mutations from scoring to the player state.
  * Called after scoring completes.
@@ -67,13 +79,15 @@ export function applyScoringMutations(mutations: ScoringMutations): void {
 
   // Dice destroyed during scoring
   if (mutations.diceDestroyed.length > 0) {
+    let enhancedCount = 0;
     for (const dieId of mutations.diceDestroyed) {
       const idx = player.dice.findIndex((d) => d.id === dieId);
       if (idx >= 0) {
+        if (player.dice[idx].enhancement !== null) enhancedCount++;
         player.dice.splice(idx, 1);
       }
     }
-    processEquipmentOnDiceDestroyed(player.equipment, mutations.diceDestroyed.length);
+    processEquipmentOnDiceDestroyed(player.equipment, mutations.diceDestroyed.length, enhancedCount);
   }
 
   // Dice enhanced during scoring

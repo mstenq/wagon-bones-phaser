@@ -137,6 +137,7 @@ export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
   if (options.profession) player.applyProfession(options.profession);
   if (options.equipment) player.equipment = [...options.equipment];
   if (options.dice) player.dice = [...options.dice];
+  player.finalizeRunSetup();
   if (options.handSize !== undefined) player.handSize = options.handSize;
   if (options.maxEquipmentSlots !== undefined) player.maxEquipmentSlots = options.maxEquipmentSlots;
 

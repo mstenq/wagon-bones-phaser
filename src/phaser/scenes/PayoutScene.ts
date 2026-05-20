@@ -7,6 +7,7 @@ import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState, PayoutBreakdown } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
+import { formatScore } from '../../game/formatScore';
 import { Button } from '../ui/Button';
 
 export interface PayoutData {
@@ -64,7 +65,11 @@ export class PayoutScene extends Scene {
 
     // Miles scored
     this.add
-      .text(width / 2, height * 0.25, `${data.totalMiles} / ${data.targetMiles} miles`, {
+      .text(
+        width / 2,
+        height * 0.25,
+        `${formatScore(data.totalMiles)} / ${formatScore(data.targetMiles)} miles`,
+        {
         fontFamily: FONTS.PRIMARY,
         fontSize: '22px',
         color: TEXT_COLORS.SCORE_GREEN,

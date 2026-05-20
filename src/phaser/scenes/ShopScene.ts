@@ -6,6 +6,7 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
+import { processEquipmentOnShopReroll, processEquipmentOnShopEnd } from '../../game/EquipmentEffects';
 import { TEXT_COLORS, FONTS, UI, SHOP_WEIGHTS } from '../../game/Constants';
 import { generateShopStock, EquipmentDef } from '../../game/ItemsSystem';
 import { generateShopPacks, PackInstance } from '../../game/BoosterPackSystem';
@@ -17,7 +18,7 @@ import {
   getConsumableTexturePrefix,
   getRandomSupplyDef,
   getRandomTrailGuideDef,
-  getRandomFrontierDef,
+  getShopRandomFrontierDef,
 } from '../../game/ConsumablesSystem';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
@@ -205,6 +206,7 @@ export class ShopScene extends Scene {
     new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
       .setColor(0x8b2020, 0xb03030)
       .onClick(() => {
+        processEquipmentOnShopEnd(getPlayerState().equipment);
         this.stockItems = null!;
         this.packs = null!;
         this.scene.start('Game');
@@ -934,7 +936,7 @@ export class ShopScene extends Scene {
         } else if (picked === 'trail_guide') {
           def = getRandomTrailGuideDef(undefined, excludeIds);
         } else {
-          def = getRandomFrontierDef(undefined, excludeIds);
+          def = getShopRandomFrontierDef(undefined, excludeIds);
         }
         items.push({ type: 'consumable', def });
         excludeIds.push(def.id); // also exclude from subsequent slots
@@ -975,7 +977,7 @@ export class ShopScene extends Scene {
     let def: ConsumableDef;
     if (picked === 'supply') def = getRandomSupplyDef(undefined, excludeIds);
     else if (picked === 'trail_guide') def = getRandomTrailGuideDef(undefined, excludeIds);
-    else def = getRandomFrontierDef(undefined, excludeIds);
+    else def = getShopRandomFrontierDef(undefined, excludeIds);
     return { type: 'consumable', def };
   }
 

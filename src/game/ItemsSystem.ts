@@ -41,6 +41,17 @@ const ITEMS_POOL: EquipmentDef[] = allItems as EquipmentDef[];
 const ITEM_AURAS: ItemAura[] = itemAurasData as ItemAura[];
 
 const SHOP_SIZE = 5;
+const LEGENDARY_RARITY = 'legendary';
+
+/** Equipment pool eligible for shop stock and random rolls (excludes legendaries). */
+function getShopEquipmentPool(excludeIds?: string[]): EquipmentDef[] {
+  let pool = ITEMS_POOL.filter((i) => i.rarity !== LEGENDARY_RARITY);
+  if (excludeIds && excludeIds.length > 0) {
+    const excluded = new Set(excludeIds);
+    pool = pool.filter((i) => !excluded.has(i.id));
+  }
+  return pool;
+}
 
 // ─── Aura Helpers ───
 
@@ -75,11 +86,7 @@ export function applyRandomAura(def: EquipmentDef): EquipmentDef {
 
 /** Generate a random shop stock of equipment, with random aura rolls */
 export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string[]): EquipmentDef[] {
-  let pool = ITEMS_POOL;
-  if (excludeIds && excludeIds.length > 0) {
-    const excluded = new Set(excludeIds);
-    pool = pool.filter((i) => !excluded.has(i.id));
-  }
+  let pool = getShopEquipmentPool(excludeIds);
   if (pool.length === 0) {
     // Fallback: if all items are owned, generate horseshoe copies
     const horseshoe = ITEMS_POOL.find((i) => i.id === 'horseshoe') ?? ITEMS_POOL[0];
@@ -129,6 +136,11 @@ export function createEquipmentInstance(def: EquipmentDef): EquipmentInstance {
 
 export function generateRandomEquipment(options?: { rarity?: string; excludeRarity?: string }): EquipmentDef {
   let pool = [...ITEMS_POOL];
+
+  // Legendaries are only granted via explicit rarity (e.g. Pandora's Box)
+  if (options?.rarity !== LEGENDARY_RARITY) {
+    pool = pool.filter((i) => i.rarity !== LEGENDARY_RARITY);
+  }
 
   if (options?.rarity) {
     const filtered = pool.filter((i) => i.rarity === options.rarity);

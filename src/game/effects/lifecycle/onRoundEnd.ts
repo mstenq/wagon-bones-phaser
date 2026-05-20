@@ -38,6 +38,7 @@ export function processEndOfRound(equipment: EquipmentInstance[]): {
       }
     }
 
+    // Intentionally includes self — Raffle Ticket compounds its own sell value each round.
     if (effectType === 'END_ROUND_SELL_VALUE_ALL') {
       const bonus = (p.value as number) ?? 1;
       for (const other of equipment) {

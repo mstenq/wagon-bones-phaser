@@ -74,6 +74,7 @@ export class ProfessionSelectScene extends Scene {
       if (!this.selectedId) return;
       const player = getPlayerState();
       player.applyProfession(this.selectedId);
+      player.finalizeRunSetup();
       this.scene.start('Shop');
     });
 

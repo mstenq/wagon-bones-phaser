@@ -13,6 +13,7 @@ export interface ScoringPipelineContext {
   readonly scoringDice: Die[];
   readonly heldDice: Die[];
   readonly equipment: EquipmentInstance[];
+  readonly hasStackedDeck: boolean;
   readonly rerollsRemaining: number;
   readonly currentDay: number;
   readonly maxDays: number;
@@ -85,10 +86,12 @@ export interface HeldDieEffectHandler {
 
 /** Lifecycle hook phases */
 export type LifecyclePhase =
+  | 'on-pre-scoring'       // Before per-die scoring (enhancement changes)
   | 'on-hand-played'       // Before scoring starts
   | 'after-hand-scored'    // After scoring completes
   | 'on-reroll'            // When player rerolls dice
   | 'on-shop-reroll'       // When player rerolls the shop
+  | 'on-shop-end'          // When the player leaves the shop
   | 'on-sell'              // When player sells equipment
   | 'on-day-end'           // At end of each day
   | 'on-round-start'       // At start of each round

@@ -7,8 +7,8 @@ import { getPlayerState } from './PlayerState';
 import { resolveCopyTarget } from './Constants';
 import { effectRegistry, type ScoringPipelineContext } from './effects';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
-import { applyEquipmentAuras, applyHolyAuraXMult, forEachEquipmentResolved } from './effects/helpers';
-import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onSell';
+import { applyEquipmentAuras, applyHolyAuraXMult, forEachEquipmentResolved, hasStackedDeck } from './effects/helpers';
+import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
 
 export interface ScoringContext {
   handResult: HandResult;
@@ -37,6 +37,7 @@ function createEquipmentScoringContext(
     scoringDice: context.scoringDice,
     heldDice: context.heldDice,
     equipment,
+    hasStackedDeck: hasStackedDeck(equipment),
     rerollsRemaining: context.rerollsRemaining,
     currentDay: context.currentDay,
     maxDays: context.maxDays,
@@ -133,7 +134,9 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
       if (!resolved) continue;
       equip = resolved;
     }
-    if (equip.def.effectType === 'HELD_RETRIGGER') doubleDownCount++;
+    if (equip.def.effectType === 'HELD_RETRIGGER' || equip.def.effectType === 'ALL_RETRIGGER') {
+      doubleDownCount += (equip.def.effectParams.value as number) ?? 1;
+    }
   }
 
   const heldCtx: ScoringPipelineContext = {
@@ -148,6 +151,7 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
     scoringDice: [],
     heldDice,
     equipment,
+    hasStackedDeck: hasStackedDeck(equipment),
     rerollsRemaining: 0,
     currentDay: 0,
     maxDays: 0,
@@ -251,6 +255,7 @@ export { processEquipmentOnHandPlayed } from './effects/lifecycle/onHandPlayed';
 export { processEquipmentAfterHandScored } from './effects/lifecycle/afterHandScored';
 export { processEquipmentOnReroll } from './effects/lifecycle/onReroll';
 export { processEquipmentOnShopReroll } from './effects/lifecycle/onShopReroll';
+export { processEquipmentOnShopEnd } from './effects/lifecycle/onShopEnd';
 export {
   processEquipmentOnSell,
   processEquipmentOnBossDefeat,
@@ -258,7 +263,8 @@ export {
   processEquipmentOnLuckyTrigger,
   processEquipmentOnDiamondDestroyed,
 } from './effects/lifecycle/onSell';
-export { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onSell';
+export { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
+export { processEquipmentPreScoring } from './effects/lifecycle/onPreScoring';
 
 /** A single animated equipment destruction: source triggered victim's removal */
 export interface AnimatedDestruction {
