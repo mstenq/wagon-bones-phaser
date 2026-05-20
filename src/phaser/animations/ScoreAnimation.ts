@@ -6,6 +6,7 @@
 import { Scene } from 'phaser';
 import { DiceSprite } from '../ui/DiceSprite';
 import { ScoreResult, ScoreAnimPopupType } from '../../game/types';
+import diceEnhancementsData from '../../data/dice_enhancements.json';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
@@ -18,6 +19,9 @@ const POPUP_MULT_COLOR = '#ff4444';
 const POPUP_XMULT_COLOR = '#ff4444';
 const POPUP_MONEY_COLOR = '#ffd700';
 const POPUP_SUPPLY_COLOR = '#9c27b0';
+const POPUP_ENHANCE_COLOR = '#55ddff';
+
+const ENHANCEMENT_NAMES = new Map(diceEnhancementsData.map((e) => [e.id, e.name]));
 
 /**
  * Spawn a short-lived text popup that scales up, shakes, and fades out.
@@ -217,6 +221,8 @@ function getSoundForType(type: string, stepIdx: number): { key: string; config: 
       return { key: 'sfx_coin', config: { volume: 0.4 } };
     case 'supply':
       return { key: 'sfx_tarot1', config: { volume: 0.5 } };
+    case 'enhance':
+      return { key: 'sfx_foil1', config: { volume: 0.35 } };
     default: // miles
       return { key: 'sfx_chips2', config: { volume: 0.3, detune: stepIdx * 80 } };
   }
@@ -346,6 +352,28 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
           }
         }
         scene.sound.play('sfx_chips1', { volume: 0.2, detune: -200 });
+        return;
+      }
+
+      // Special: apply enhancement to die (Lucky Find, Golden Spike, etc.)
+      if (popupType === 'enhance') {
+        if (target.kind === 'die' || target.kind === 'both') {
+          const sprite = dieSpriteMap.get(target.dieId);
+          if (sprite) {
+            shakeDieSprite(scene, sprite);
+            const enhancement = evt.enhancement ?? null;
+            const label = enhancement ? (ENHANCEMENT_NAMES.get(enhancement) ?? enhancement) : 'Enhanced';
+            floatingText(scene, sprite.x, sprite.y, `+${label}`, POPUP_ENHANCE_COLOR, 'up');
+            scene.time.delayedCall(120, () => {
+              sprite.setDieData({ ...sprite.dieData, enhancement });
+            });
+          }
+        }
+        if (target.kind === 'equip' || target.kind === 'both') {
+          wiggleEquipCard(scene, equipBar, target.equipIndex);
+        }
+        const sfx = getSoundForType('enhance', stepIdx);
+        scene.sound.play(sfx.key, sfx.config);
         return;
       }
 

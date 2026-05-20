@@ -217,3 +217,53 @@ describe('animEvents: ordering', () => {
     }
   });
 });
+
+describe('animEvents: enhance popup', () => {
+  test('lucky_find emits enhance event when solo scoring on day 1', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const scoredDie = die({ value: 7 });
+      const { result } = calculateTestScore({
+        scoredDice: [scoredDie],
+        equipment: [item('lucky_find')],
+        currentDay: 1,
+      });
+      const enhanceEvt = result.animEvents.find((e) => e.popupType === 'enhance');
+      expect(enhanceEvt).toEqual(
+        expect.objectContaining({
+          popupType: 'enhance',
+          dieId: scoredDie.id,
+          enhancement: 'bone',
+        }),
+      );
+      expect(result.handResult.scoringDice[0].enhancement).toBe('bone');
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('golden_spike emits enhance event when gold proc hits', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const scoredDie = die({ value: 5 });
+      const { result } = calculateTestScore({
+        scoredDice: [scoredDie, die({ value: 5 })],
+        equipment: [item('stacked_deck'), item('golden_spike')],
+      });
+      const enhanceEvt = result.animEvents.find((e) => e.popupType === 'enhance');
+      expect(enhanceEvt).toEqual(
+        expect.objectContaining({
+          popupType: 'enhance',
+          dieId: scoredDie.id,
+          enhancement: 'gold',
+        }),
+      );
+      // Enhancement is applied directly (pre-scoring pass), not via mutations
+      expect(scoredDie.enhancement).toBe('gold');
+    } finally {
+      Math.random = original;
+    }
+  });
+});

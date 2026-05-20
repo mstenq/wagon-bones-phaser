@@ -170,12 +170,12 @@ Stacked Deck - $10 - rare - Loaded dice are considered all pip values for equipm
 
 ## Legendaries
 the following legendary items must be obtained from pandora's box frontier encounter cards
-Book of the Dead - $? - Gains x1 mult for each destroyed enhanced dice
-The Devil’s Hand - $? - Played 6's give x2 mult when scored
-The 23rd Psalm - $? - Item gains x1 mult for every 23 dice re-rolled
-Saint Elmo’s Shield - $? - Disables all boss round effects and all negative effects from trail events are prevented. Divine favor intervenes.
-Ghost Lantern - $? - Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
-
+Book of the Dead - $20 - Gains x1 mult for each destroyed enhanced dice
+The Devil’s Hand - $20 - Played 6's give x2 mult when scored
+The 23rd Psalm - $20 - Item gains x1 mult for every 23 dice re-rolled
+Saint Elmo’s Shield - $20 - Disables all boss round effects and all negative effects from trail events are prevented. Divine favor intervenes.
+Ghost Lantern - $20 - Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
+The Seventh Trumpet - $20 - Retriggers all played dice, and all held in hand effects
 
  ## Requires features before implementing
  Bounty Contract - $6 - sell this item to gain a free double tag 

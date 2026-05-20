@@ -73,7 +73,7 @@ export type ScoreAnimTarget =
   | { kind: 'equip'; equipIndex: number }
   | { kind: 'both'; dieId: string; equipIndex: number };
 
-export type ScoreAnimPopupType = 'miles' | 'mult' | 'xmult' | 'money' | 'supply' | 'strip';
+export type ScoreAnimPopupType = 'miles' | 'mult' | 'xmult' | 'money' | 'supply' | 'strip' | 'enhance';
 
 export interface ScoreAnimEvent {
   /** Target to animate (die, equip card, or both) */
@@ -84,6 +84,8 @@ export interface ScoreAnimEvent {
   value: number;
   /** Optional: which die is currently being "scored" (for per-die grouping) */
   dieId?: string;
+  /** Enhancement applied (for enhance popup) */
+  enhancement?: DiceEnhancement;
 }
 
 export interface HandUpgradeInfo {

@@ -1,6 +1,7 @@
 // ─── HELD_LOWEST_MULT, HELD_PIP_XMULT, HELD_PIP_MULT, HELD_ENHANCED_MONEY ───
 
 import { effectRegistry } from '../registry';
+import { dieMatchesPip } from '../helpers';
 
 effectRegistry.registerHeldDie('HELD_LOWEST_MULT', (ctx, equip, _idx, die, _t) => {
   // Compute lowest value from held dice
@@ -15,7 +16,7 @@ effectRegistry.registerHeldDie('HELD_LOWEST_MULT', (ctx, equip, _idx, die, _t) =
 
 effectRegistry.registerHeldDie('HELD_PIP_XMULT', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
-  if (die.value === (p.pip as number)) {
+  if (dieMatchesPip(die, p.pip as number, ctx.equipment)) {
     const xVal = p.value as number;
     ctx.xMult *= xVal;
     ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'xmult', value: xVal });
@@ -25,7 +26,7 @@ effectRegistry.registerHeldDie('HELD_PIP_XMULT', (ctx, equip, _idx, die, _t) => 
 
 effectRegistry.registerHeldDie('HELD_PIP_MULT', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
-  if (die.value === (p.pip as number)) {
+  if (dieMatchesPip(die, p.pip as number, ctx.equipment)) {
     const value = p.value as number;
     ctx.bonusMult += value;
     ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'mult', value });

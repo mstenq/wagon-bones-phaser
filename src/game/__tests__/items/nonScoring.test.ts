@@ -875,3 +875,49 @@ describe('FLOUR_SACK: Flour Sack', () => {
     expect(COPY_INCOMPATIBLE_EFFECTS.has('FLOUR_SACK')).toBe(true);
   });
 });
+
+// ─── END_ROUND_SELL_VALUE_ALL: Raffle Ticket ───
+
+describe('END_ROUND_SELL_VALUE_ALL: Raffle Ticket', () => {
+  test('adds $1 sell value to all equipment at end of round', () => {
+    const raffle = item('raffle_ticket');
+    const horseshoe = item('horseshoe');
+    const beforeRaffle = raffle.sellValue;
+    const beforeHorse = horseshoe.sellValue;
+    processEndOfRound([raffle, horseshoe]);
+    expect(raffle.sellValue).toBe(beforeRaffle + 1);
+    expect(horseshoe.sellValue).toBe(beforeHorse + 1);
+  });
+});
+
+// ─── SAVINGS_ACCOUNT_INTEREST: Savings Account ───
+
+describe('SAVINGS_ACCOUNT_INTEREST: Savings Account', () => {
+  test('adds extra interest per $5 held', () => {
+    const { player } = setupGame({ equipment: [item('savings_account')], money: 25 });
+    const payout = player.calculatePayout(0, 0);
+    // base interest $5 + savings $5 = $10
+    expect(payout.interest).toBe(10);
+  });
+
+  test('accountant earns double savings bonus', () => {
+    const { player } = setupGame({ equipment: [item('savings_account')], money: 25 });
+    player.applyProfession('accountant');
+    const payout = player.calculatePayout(0, 0);
+    // base $5 + savings ($5 + $5 accountant) = $15
+    expect(payout.interest).toBe(15);
+  });
+});
+
+// ─── SELL_DISABLE_BOSS: Sheriff's Badge ───
+
+describe('SELL_DISABLE_BOSS: Sheriff\'s Badge', () => {
+  test('selling on boss round disables boss effect', () => {
+    const { player } = setupGame({ equipment: [item('sheriffs_badge')] });
+    player.round = 3;
+    expect(player.isBossRound).toBe(true);
+    player.sellEquipment(0);
+    expect(player.bossEffectDisabled).toBe(true);
+    expect(player.equipment.length).toBe(0);
+  });
+});

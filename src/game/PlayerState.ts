@@ -67,6 +67,8 @@ export class PlayerState {
   trailEventModifiers: TrailEventModifiers = createEmptyModifiers(); // penalties/bonuses from trail events, consumed next round
   skipNextShop: boolean = false; // set by trail events (Native Guide)
   trailGuidesUsed: number = 0; // count of trail guides consumed this journey (for Guide Lantern)
+  startingDiceCount: number = DEFAULT_STARTING_DICE; // collection size at run start (for Ghost Town)
+  bossEffectDisabled: boolean = false; // Sheriff's Badge: disables boss effect for current round when sold
   pendingNewDiceIds: string[] = []; // dice IDs pending animation (Quarry Stone, Mystery Crate, etc.)
   pendingAnimatedDestructions: { sourceIdx: number; victimIdx: number }[] = []; // equipment destructions pending animation (Funeral Pyre, Haunted Totem, etc.)
   pendingJunkDealerCount: number = 0; // number of equipment cards just created by Junk Dealer (for animation)
@@ -76,6 +78,7 @@ export class PlayerState {
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
     this.dice = createPouch(DEFAULT_STARTING_DICE);
+    this.startingDiceCount = DEFAULT_STARTING_DICE;
     this.nextDieId = this.dice.length; // start counter after initial dice
     this.equipment = [];
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
@@ -296,6 +299,11 @@ export class PlayerState {
     const item = this.equipment[index];
     this.economy.earn(item.sellValue);
 
+    // Sheriff's Badge: selling disables the current boss effect for this round
+    if (item.def.effectType === 'SELL_DISABLE_BOSS' && this.isBossRound) {
+      this.bossEffectDisabled = true;
+    }
+
     // Phantom Wagon: if sold after enough rounds, duplicate a random item
     if (item.def.effectType === 'PHANTOM_WAGON') {
       const roundsNeeded = (item.def.effectParams.roundsNeeded as number) ?? 2;
@@ -442,6 +450,17 @@ export class PlayerState {
     if (!noInterest) {
       const cappedMoney = Math.min(this.economy.balance, this.interestCap);
       interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
+      // Savings Account: extra interest per $5 held
+      for (const equip of this.equipment) {
+        if (equip.def.effectType === 'SAVINGS_ACCOUNT_INTEREST') {
+          const p = equip.def.effectParams as Record<string, unknown>;
+          const chunk = (p.perChunk as number) ?? 5;
+          const perChunk = (p.value as number) ?? 1;
+          const accountantBonus =
+            this.profession?.id === 'accountant' ? ((p.accountantBonus as number) ?? 1) : 0;
+          interest += Math.floor(cappedMoney / chunk) * (perChunk + accountantBonus);
+        }
+      }
     }
 
     // Outlaw reroll bonus

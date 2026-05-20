@@ -1,10 +1,24 @@
 // ─── on-hand-played lifecycle handlers ───
 
-import type { Die, HandType } from '../../types';
+import type { Die, HandType, HandStats } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
-import { handTypeMatches } from '../helpers';
+import { dieMatchesPip, handTypeMatches } from '../helpers';
+import { getPlayerState } from '../../PlayerState';
+
+function getMostPlayedHandTypes(handStats: Map<HandType, HandStats>): HandType[] {
+  let max = 0;
+  for (const [, stats] of handStats) {
+    max = Math.max(max, stats.timesPlayed);
+  }
+  if (max === 0) return [];
+  const types: HandType[] = [];
+  for (const [type, stats] of handStats) {
+    if (stats.timesPlayed === max) types.push(type);
+  }
+  return types;
+}
 
 effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice) => {
   switch (equip.def.effectType) {
@@ -17,7 +31,9 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       equip.state.handsPlayed = (equip.state.handsPlayed ?? 0) + 1;
       break;
     case 'MARKED_NO_SIX_MULT': {
-      const hasSix = (scoringDice as any[])?.some((d) => d.value === 6) ?? false;
+      const player = getPlayerState();
+      const hasSix =
+        (scoringDice as Die[])?.some((d) => dieMatchesPip(d, 6, player.equipment)) ?? false;
       if (hasSix) {
         equip.state.mult = 0;
       } else {
@@ -36,6 +52,16 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
     case 'HAND_MILES_GAIN': {
       if (handTypeMatches(handType as any, equip.def.effectParams.handType as string)) {
         equip.state.miles = (equip.state.miles ?? 0) + (equip.def.effectParams.value as number);
+      }
+      break;
+    }
+    case 'TRAILBLAZER_XMULT': {
+      const player = getPlayerState();
+      const mostPlayed = getMostPlayedHandTypes(player.handStats);
+      if (mostPlayed.length > 0 && mostPlayed.includes(handType as HandType)) {
+        equip.state.streak = 0;
+      } else {
+        equip.state.streak = (equip.state.streak ?? 0) + 1;
       }
       break;
     }

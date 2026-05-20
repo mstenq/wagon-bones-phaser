@@ -9,6 +9,10 @@ export {
   forEachEquipmentResolved,
   applyEquipmentAuras,
   applyHolyAuraXMult,
+  dieMatchesPip,
+  dieMatchesParity,
+  hasStackedDeck,
+  isBossEffectNegated,
 } from './helpers';
 export { applyScoringMutations, createEmptyScoringMutations, mergeMutations } from './applyMutations';
 export type {

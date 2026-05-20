@@ -35,7 +35,7 @@ src/data/          # JSON data + items.ts definitions
 | `GameState.ts` | Round state machine: SELECT→ROLL→SCORE→DAY_END→ROUND_END |
 | `PlayerState.ts` | Persistent cross-scene singleton (money, dice, equipment, progression) |
 | `DiceSystem.ts` | Dice creation, rolling, hand detection, scoring |
-| `EquipmentEffects.ts` | Applies equipment effects during scoring and round lifecycle |
+| `EquipmentEffects.ts` | Scoring pipeline orchestrator — delegates to `src/game/effects/` registry |
 | `ItemsSystem.ts` | Equipment definitions, shop stock generation, auras |
 | `Economy.ts` | Money tracking |
 | `Constants.ts` | ALL magic numbers, colors, fonts, layout values — change here, not in logic |
@@ -65,13 +65,50 @@ To add animation for a new effect:
 1. In game logic (`DiceSystem.ts` or `EquipmentEffects.ts`), push to `animEvents[]` next to the scoring code
 2. Done. `ScoreAnimation.ts` plays back whatever events exist in the array.
 
-### Equipment Effects
+### Equipment Effects (Registry-Based)
 
-Equipment is defined in `src/data/items.ts` with an `effectType` string and `effectParams` object. Effects are applied by a large switch statement in `EquipmentEffects.ts`. To add a new equipment item:
+Equipment is defined in `src/data/items.ts` with an `effectType` string and `effectParams` object. Effects are dispatched via a **central registry** in `src/game/effects/`. The old monolithic switch statement has been replaced by handler modules organized by category.
+
+#### Effect Registry Architecture (`src/game/effects/`)
+
+| File / Directory | Purpose |
+|------------------|---------|
+| `registry.ts` | `EffectRegistry` class — registers and dispatches handlers by effectType |
+| `types.ts` | `ScoringPipelineContext`, `ScoringMutations`, handler type interfaces |
+| `helpers.ts` | Shared utilities: `forEachEquipmentResolved`, `applyEquipmentAuras`, `applyHolyAuraXMult` |
+| `applyMutations.ts` | `createEmptyScoringMutations()`, `mergeMutations()` — post-scoring side effects |
+| `index.ts` | Barrel export + imports all handler modules to trigger registration |
+| `additive/` | Additive mult/miles/money handlers (fired in Step 5 of scoring) |
+| `xmult/` | xMult handlers (fired after additive pass) |
+| `perDie/` | Per-scoring-die handlers (pip effects, parity, enhancements) |
+| `heldDie/` | Held-in-hand die handlers |
+| `lifecycle/` | Non-scoring lifecycle hooks (round start, day end, reroll, sell, etc.) |
+
+#### Handler Categories
+
+- **Additive** — `effectRegistry.registerAdditive(effectType, handler)` — adds to `ctx.bonusMult` / `ctx.bonusMiles`
+- **XMult** — `effectRegistry.registerXMult(effectType, handler)` — multiplies `ctx.xMult`
+- **PerDie** — `effectRegistry.registerPerDie(effectType, handler)` — fires once per scoring die per trigger
+- **HeldDie** — `effectRegistry.registerHeldDie(effectType, handler)` — fires once per held die per trigger
+- **Lifecycle** — `effectRegistry.registerLifecycle(phase, handler)` — hooks into game events (see `LifecyclePhase` type)
+
+#### Scoring Pipeline (`EquipmentEffects.ts`)
+
+`applyEquipmentEffects()` builds a `ScoringPipelineContext` and runs these passes in order:
+1. **Additive pass** — dispatches each equipment's `effectType` via `effectRegistry.dispatchAdditive()`
+2. **Auras** — applies fire/icy auras from equipment slots
+3. **XMult pass** — dispatches via `effectRegistry.dispatchXMult()`
+4. **Final calculation** — `(baseMiles + totalValue + bonusMiles) * finalMult`
+
+`processHeldInHand()` handles held dice using `effectRegistry.getHeldDie()`.
+
+#### Adding a New Equipment Effect
+
 1. Add definition to `src/data/items.ts`
-2. Add effect handling in the appropriate function in `EquipmentEffects.ts`
-3. Push `animEvents` for visual feedback
-4. Add test to the **correct existing test file** in `src/game/__tests__/items/` based on effect category (see Testing section below — never create per-phase test files)
+2. Create or append to the appropriate handler file in `src/game/effects/<category>/`
+3. Call `effectRegistry.register<Category>(effectType, handler)` — the handler receives `(ctx, equip, index)` and mutates `ctx` in-place
+4. Push to `ctx.animEvents` for visual feedback
+5. Add test to the **correct existing test file** in `src/game/__tests__/items/` based on effect category (see Testing section below — never create per-phase test files)
 
 ### Hint Display System
 

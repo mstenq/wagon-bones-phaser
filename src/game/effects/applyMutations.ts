@@ -3,6 +3,7 @@
 import { getPlayerState } from '../PlayerState';
 import { getConsumableDefById } from '../ConsumablesSystem';
 import { ScoringMutations } from './types';
+import { processEquipmentOnDiceDestroyed } from './lifecycle/onSell';
 
 export function createEmptyScoringMutations(): ScoringMutations {
   return {
@@ -65,11 +66,14 @@ export function applyScoringMutations(mutations: ScoringMutations): void {
   }
 
   // Dice destroyed during scoring
-  for (const dieId of mutations.diceDestroyed) {
-    const idx = player.dice.findIndex((d) => d.id === dieId);
-    if (idx >= 0) {
-      player.dice.splice(idx, 1);
+  if (mutations.diceDestroyed.length > 0) {
+    for (const dieId of mutations.diceDestroyed) {
+      const idx = player.dice.findIndex((d) => d.id === dieId);
+      if (idx >= 0) {
+        player.dice.splice(idx, 1);
+      }
     }
+    processEquipmentOnDiceDestroyed(player.equipment, mutations.diceDestroyed.length);
   }
 
   // Dice enhanced during scoring

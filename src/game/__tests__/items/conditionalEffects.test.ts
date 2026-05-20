@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, item, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
@@ -287,5 +287,40 @@ describe('FIRST_HAND_ENHANCED_SIX: Hellfire Round', () => {
     });
     const frontier = player.consumables.filter((c) => c.def.category === 'frontier');
     expect(frontier.length).toBe(0);
+  });
+});
+
+// ─── MULT_PER_MONEY_CHUNK: Oil Baron ───
+
+describe('MULT_PER_MONEY_CHUNK: Oil Baron', () => {
+  test('adds +2 mult per $5 held', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('oil_baron')],
+      money: 25,
+    });
+    // PAIR: baseMult=1, +10 from oil baron (25/5*2)
+    expect(result.mult).toBe(11);
+  });
+});
+
+// ─── MULT_PER_MISSING_DICE: Ghost Town ───
+
+describe('MULT_PER_MISSING_DICE: Ghost Town', () => {
+  test('adds +10 mult per die below starting collection size', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const { game, player } = setupGame({
+      equipment: [item('ghost_town')],
+      dice: [...scoredDice, ...diceWithValue(1, 18)],
+    });
+    player.startingDiceCount = 25;
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = player.dice.slice(0, 2);
+    game.state.selectedForRoll = game.state.rolledDice;
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // 5 missing dice → +50 mult → 51 total
+    expect(result.mult).toBe(51);
   });
 });

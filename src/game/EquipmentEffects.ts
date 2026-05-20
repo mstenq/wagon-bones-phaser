@@ -8,6 +8,7 @@ import { resolveCopyTarget } from './Constants';
 import { effectRegistry, type ScoringPipelineContext } from './effects';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import { applyEquipmentAuras, applyHolyAuraXMult, forEachEquipmentResolved } from './effects/helpers';
+import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onSell';
 
 export interface ScoringContext {
   handResult: HandResult;
@@ -257,6 +258,7 @@ export {
   processEquipmentOnLuckyTrigger,
   processEquipmentOnDiamondDestroyed,
 } from './effects/lifecycle/onSell';
+export { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onSell';
 
 /** A single animated equipment destruction: source triggered victim's removal */
 export interface AnimatedDestruction {
@@ -343,6 +345,7 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
         const standardIdx = player.dice.findIndex((d) => d.enhancement === null);
         if (standardIdx >= 0) {
           player.dice.splice(standardIdx, 1);
+          processEquipmentOnDiceDestroyed(player.equipment, 1);
           const moneyVal = equip.def.effectParams.value as number;
           player.economy.earn(moneyVal);
           burnBarrelMoney += moneyVal;

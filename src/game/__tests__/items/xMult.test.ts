@@ -850,3 +850,52 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     expect(result.mult).toBeCloseTo(2.0, 5);
   });
 });
+
+// ─── TRAILBLAZER_XMULT: Trailblazer ───
+
+describe('TRAILBLAZER_XMULT: Trailblazer', () => {
+  test('gains x0.2 per consecutive off-meta hand', () => {
+    const inst = item('trailblazer');
+    const scoredDice = diceWithValue(7, 3);
+    const { game, player } = setupGame({
+      equipment: [inst],
+      dice: [...scoredDice, ...diceWithValue(1, 10)],
+    });
+    player.recordHandPlayed(HandType.PAIR);
+    player.recordHandPlayed(HandType.PAIR);
+    player.recordHandPlayed(HandType.PAIR);
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    // THREE_OF_A_KIND baseMult=3, streak 1 → x1.2 → 3.6
+    expect(result.mult).toBeCloseTo(3.6, 5);
+  });
+
+  test('resets streak when playing most-played hand', () => {
+    const inst = item('trailblazer');
+    const { player } = setupGame({ equipment: [inst] });
+    player.recordHandPlayed(HandType.PAIR);
+    processEquipmentOnHandPlayed([inst], HandType.THREE_OF_A_KIND);
+    processEquipmentOnHandPlayed([inst], HandType.PAIR);
+
+    expect(inst.state.streak).toBe(0);
+  });
+});
+
+// ─── CONSECUTIVE_PIP_XMULT: Eight Second Ride ───
+
+describe('CONSECUTIVE_PIP_XMULT: Eight Second Ride', () => {
+  test('escalates xMult for consecutive scored 8s', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 8 }), die({ value: 8 }), die({ value: 8 })],
+      equipment: [item('eight_second_ride')],
+    });
+    // THREE_OF_A_KIND: baseMult=3, x1 * x1.5 * x2 = x3 → 9
+    expect(result.mult).toBeCloseTo(9, 5);
+  });
+});

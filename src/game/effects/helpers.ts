@@ -2,7 +2,8 @@
 
 import { EquipmentInstance } from '../ItemsSystem';
 import { resolveCopyTarget } from '../Constants';
-import { HandType } from '../types';
+import { Die, HandType } from '../types';
+import { getPlayerState } from '../PlayerState';
 import type { ScoringPipelineContext } from './types';
 
 export type UnresolvedCopyBehavior = 'none' | 'skip';
@@ -159,6 +160,34 @@ export function getScoredRetriggerCount(equipment: EquipmentInstance[], context?
     }
   }
   return count;
+}
+
+/** Whether Stacked Deck is equipped (loaded dice count as all pip values for equipment). */
+export function hasStackedDeck(equipment: EquipmentInstance[]): boolean {
+  return equipment.some((e) => e.def.effectType === 'STACKED_DECK');
+}
+
+/** True if die matches a pip for equipment effects (Stacked Deck: loaded = all pips). */
+export function dieMatchesPip(die: Die, pip: number, equipment: EquipmentInstance[]): boolean {
+  if (die.value === pip) return true;
+  if (hasStackedDeck(equipment) && die.enhancement === 'loaded') return true;
+  return false;
+}
+
+/** True if die matches even/odd parity (Stacked Deck: loaded = all pips, so both parities). */
+export function dieMatchesParity(die: Die, parity: 'even' | 'odd', equipment: EquipmentInstance[]): boolean {
+  const isEven = die.value % 2 === 0;
+  const matches = parity === 'even' ? isEven : !isEven;
+  if (matches) return true;
+  if (hasStackedDeck(equipment) && die.enhancement === 'loaded') return true;
+  return false;
+}
+
+/** Boss effects are negated by Saint Elmo's Shield or selling Sheriff's Badge this round. */
+export function isBossEffectNegated(): boolean {
+  const player = getPlayerState();
+  if (player.equipment.some((e) => e.def.id === 'saint_elmos_shield')) return true;
+  return player.bossEffectDisabled;
 }
 
 export function handTypeMatches(played: HandType, required: string): boolean {

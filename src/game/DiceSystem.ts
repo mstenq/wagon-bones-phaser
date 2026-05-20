@@ -6,9 +6,11 @@ import handsData from '../data/hands.json';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
 import { effectRegistry, getScoredRetriggerCount } from './effects';
+import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
 import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
+import { dieMatchesPip } from './effects/helpers';
 
 const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
 
@@ -270,7 +272,68 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
     }
   }
 
+  // ─── Pre-scoring pass: Golden Spike — chance to turn scoring dice gold before scoring ───
+  for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+    let equip = equipment[eIdx];
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, eIdx, equipment.length);
+      if (!resolved) continue;
+      equip = resolved;
+    }
+    if (equip.def.effectType !== 'SCORED_GOLD_CHANCE') continue;
+    const goldChance = (equip.def.effectParams as Record<string, unknown>).chance as [number, number];
+    for (const die of handResult.scoringDice) {
+      if (die.enhancement === 'gold') continue;
+      if (checkLoadedChance(goldChance, equipment)) {
+        die.enhancement = 'gold';
+        const pouchDie = player.dice.find((d) => d.id === die.id);
+        if (pouchDie) pouchDie.enhancement = 'gold';
+        animEvents.push({
+          target: { kind: 'both', dieId: die.id, equipIndex: eIdx },
+          popupType: 'enhance',
+          value: 0,
+          dieId: die.id,
+          enhancement: 'gold',
+        });
+        console.log(`  [scoreHand] ${equip.def.name}: turned die ${die.id} gold before scoring`);
+      }
+    }
+  }
+
+  // ─── Pre-scoring pass: Lucky Find — enhance solo day-1 die before it scores ───
+  if (scoreContext && scoreContext.currentDay === 1 && handResult.scoringDice.length === 1) {
+    for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+      let equip = equipment[eIdx];
+      if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+        const resolved = resolveCopyTarget(equipment, eIdx, equipment.length);
+        if (!resolved) continue;
+        equip = resolved;
+      }
+      if (equip.def.effectType !== 'SOLO_FIRST_DAY_ENHANCE') continue;
+      const target = handResult.scoringDice[0];
+      if (target.enhancement === null) {
+        const enhancements: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond'];
+        target.enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];
+        const pouchDie = player.dice.find((d) => d.id === target.id);
+        if (pouchDie) pouchDie.enhancement = target.enhancement;
+        animEvents.push({
+          target: { kind: 'both', dieId: target.id, equipIndex: eIdx },
+          popupType: 'enhance',
+          value: 0,
+          dieId: target.id,
+          enhancement: target.enhancement,
+        });
+        console.log(`  [scoreHand] ${equip.def.name}: enhanced die ${target.id} → ${target.enhancement} before scoring`);
+      }
+    }
+  }
+
   console.log('  [scoreHand] Step 3: Per-die scoring');
+
+  // Reset per-hand pip equipment state
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'CONSECUTIVE_PIP_XMULT') equip.state.consecutiveCount = 0;
+  }
 
   // Create pipeline context for per-die handlers
   const pipelineCtx: import('./effects/types').ScoringPipelineContext = {
@@ -331,7 +394,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         if (!resolved) continue;
         equip = resolved;
       }
-      if (equip.def.effectType === 'PIP_RETRIGGER' && die.value === (equip.def.effectParams.pip as number)) {
+      if (equip.def.effectType === 'PIP_RETRIGGER' && dieMatchesPip(die, equip.def.effectParams.pip as number, equipment)) {
         triggers++;
       }
       // FIRST_DICE_RETRIGGER: Quick Draw — retrigger first die N additional times
@@ -481,7 +544,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   bonusMult = pipelineCtx.bonusMult;
   xMult = pipelineCtx.xMult;
 
-  // SOLO_FIRST_DAY_ENHANCE: Lucky Find — if 1 die scored alone on day 1, enhance it
+  // FIRST_DAY_SOLO_COPY: Bloodline — copy the solo die if scored alone on day 1
   if (scoreContext && scoreContext.currentDay === 1 && handResult.scoringDice.length === 1) {
     const maxCopyDepthSolo = equipment.length;
     for (let ei = 0; ei < equipment.length; ei++) {
@@ -491,14 +554,6 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         const resolved = resolveCopyTarget(equipment, ei, maxCopyDepthSolo);
         if (!resolved) continue;
         equip = resolved;
-      }
-      if (equip.def.effectType === 'SOLO_FIRST_DAY_ENHANCE') {
-        const target = handResult.scoringDice[0];
-        if (target.enhancement === null) {
-          const enhancements: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond'];
-          target.enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];
-          console.log(`  [scoreHand] ${equip.def.name}: enhanced die ${target.id} → ${target.enhancement}`);
-        }
       }
       if (equip.def.effectType === 'FIRST_DAY_SOLO_COPY') {
         // Bloodline: copy the solo die into the collection
@@ -527,6 +582,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           const idx = player.dice.findIndex((d) => d.id === target.id);
           if (idx >= 0) {
             player.dice.splice(idx, 1);
+            processEquipmentOnDiceDestroyed(player.equipment, 1);
             console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced 6 (${target.id}), granting frontier card`);
             // Grant frontier encounter card
             const frontierDef = getRandomFrontierDef();
@@ -559,6 +615,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
       const wasDiamond = player.dice[idx].enhancement === 'diamond';
       player.dice.splice(idx, 1);
+      processEquipmentOnDiceDestroyed(player.equipment, 1);
       console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced die ${scoredDie.id} (${scoredDie.enhancement})`);
 
       // Diamond Coffin: track diamond destruction

@@ -247,14 +247,17 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'MODIFY_REROLLS',          // Spare Holster
   'END_ROUND_MONEY',         // Payday
   'END_ROUND_MONEY_PER_REROLL', // Rainy Day Fund
-  'ROUND_START_SELL_VALUE',  // Antique Revolver, Raffle Ticket (not implemented)
+  'ROUND_START_SELL_VALUE',  // Antique Revolver
+  'END_ROUND_SELL_VALUE_ALL', // Raffle Ticket
   'LOADED_DICE',             // Loaded Dice
+  'STACKED_DECK',            // Stacked Deck
   'END_ROUND_MONEY_SCALING', // Railroad Bonds
+  'SELL_DISABLE_BOSS',       // Sheriff's Badge
   'TRAIL_ALMANAC_MONEY',     // Trail Almanac
   'ALLOW_DUPLICATES',        // Counterfeit Goods
   'HELLFIRE_ROUND',          // Hellfire Round
   'OPEN_PALM',               // Open Palm
-  'SAVINGS_ACCOUNT',         // Savings Account (not implemented)
+  'SAVINGS_ACCOUNT_INTEREST', // Savings Account
   'EXPLORER_GUILD',          // Explorer's Guild
   'PHANTOM_WAGON',           // Phantom Wagon
   'PACK_SADDLE',             // Pack Saddle

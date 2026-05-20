@@ -46,6 +46,17 @@ effectRegistry.registerXMult('ENHANCED_DICE_COUNT_XMULT', (ctx, equip, index) =>
   }
 });
 
+effectRegistry.registerXMult('TRAILBLAZER_XMULT', (ctx, equip, index) => {
+  const perHand = (equip.def.effectParams as Record<string, unknown>).value as number;
+  const streak = equip.state.streak ?? 0;
+  if (streak > 0) {
+    const xVal = 1 + streak * perHand;
+    ctx.xMult *= xVal;
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
+    console.log(`  [xmult] ${equip.def.name}: x${xVal.toFixed(1)} (${streak} off-meta hands) (xMult: ${ctx.xMult})`);
+  }
+});
+
 effectRegistry.registerXMult('ROUNDS_SKIPPED_XMULT', (ctx, equip, index) => {
   const skipped = equip.state.roundsSkipped ?? 0;
   if (skipped > 0) {

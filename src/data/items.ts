@@ -1871,6 +1871,159 @@ const items: ItemDef[] = [
       return [[inactive('Empty')]];
     },
   },
+
+  // ─── Phase 10 Items ───
+  {
+    id: 'oil_baron',
+    name: 'Oil Baron',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    description: '+2 mult for every $5 you have',
+    effectType: 'MULT_PER_MONEY_CHUNK',
+    effectParams: { chunk: 5, value: 2 },
+    hintDisplay: (_game, player) => {
+      const multGain = Math.floor(player.economy.balance / 5) * 2;
+      if (multGain > 0) return [[mult(`+${multGain}`), condition('per $5 held')]];
+      return [[mult('+2'), condition('per $5 held')]];
+    },
+  },
+  {
+    id: 'trailblazer',
+    name: 'Trailblazer',
+    cardTemplate: 'white-text',
+    cost: 8,
+    rarity: 'rare',
+    description: 'Earns x0.2 mult per consecutive hand played without playing your most played hand',
+    effectType: 'TRAILBLAZER_XMULT',
+    effectParams: { value: 0.2 },
+    initialState: { streak: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'trailblazer');
+      const streak = equip?.state.streak ?? 0;
+      if (streak > 0) {
+        const xm = 1 + streak * 0.2;
+        return [[mult(`x${xm.toFixed(1)}`), condition(`${streak} hands`)], [active('Active!')]];
+      }
+      return [[mult('x0.2'), condition('per hand off-meta')], [inactive('None')]];
+    },
+  },
+  {
+    id: 'golden_spike',
+    name: 'Golden Spike',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    description: 'All scored dice have a 1 in 4 chance to turn into a gold dice',
+    effectType: 'SCORED_GOLD_CHANCE',
+    effectParams: { chance: [1, 4] },
+    hintDisplay: (_game, player) => [[oddsDisplay([1, 4], player), condition('per scored die')]],
+  },
+  {
+    id: 'sheriffs_badge',
+    name: "Sheriff's Badge",
+    cardTemplate: 'white-text-black-outline',
+    cost: 5,
+    rarity: 'uncommon',
+    description: 'Sell this item to disable the current boss effect',
+    effectType: 'SELL_DISABLE_BOSS',
+    effectParams: {},
+    hintDisplay: () => [[text('Sell to'), condition('disable boss')]],
+  },
+  {
+    id: 'double_barrel',
+    name: 'Double Barrel',
+    cardTemplate: 'white-text',
+    cost: 5,
+    rarity: 'common',
+    description: 'First played 2 pip dice gives x2 mult when scored',
+    effectType: 'FIRST_PIP_XMULT',
+    effectParams: { pip: 2, value: 2 },
+    hintDisplay: () => [[mult('x2'), condition('first 2 scored')]],
+  },
+  {
+    id: 'raffle_ticket',
+    name: 'Raffle Ticket',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'At the end of each round add $1 of sell value to each piece of equipment',
+    effectType: 'END_ROUND_SELL_VALUE_ALL',
+    effectParams: { value: 1 },
+    hintDisplay: () => [[money('+$1'), condition('sell value each item')]],
+  },
+  {
+    id: 'ghost_town',
+    name: 'Ghost Town',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    description: '+10 mult for each dice below the collections starting size',
+    effectType: 'MULT_PER_MISSING_DICE',
+    effectParams: { value: 10 },
+    hintDisplay: (_game, player) => {
+      const missing = Math.max(0, player.startingDiceCount - player.dice.length);
+      if (missing > 0) return [[mult(`+${missing * 10}`), condition(`${missing} dice lost`)]];
+      return [[mult('+10'), condition('per missing die')], [inactive('Full herd')]];
+    },
+  },
+  {
+    id: 'savings_account',
+    name: 'Savings Account',
+    cardTemplate: 'black-text-white-outline',
+    cost: 5,
+    rarity: 'uncommon',
+    description:
+      'Earn an extra $1 of interest for every $5 you have at end of round. Henry Pritchard (Accountant) earns an additional $1 for every $5.',
+    effectType: 'SAVINGS_ACCOUNT_INTEREST',
+    effectParams: { perChunk: 5, value: 1, accountantBonus: 1 },
+    hintDisplay: (_game, player) => {
+      const perChunk = Math.floor(Math.min(player.economy.balance, player.interestCap) / 5);
+      const isAccountant = player.profession?.id === 'accountant';
+      const perDollar = isAccountant ? 2 : 1;
+      if (perChunk > 0) return [[money(`+$${perChunk * perDollar}`), condition('extra interest')]];
+      return [[money('+$1'), condition('per $5 held')]];
+    },
+  },
+  {
+    id: 'six_feet_under',
+    name: 'Six Feet Under',
+    cardTemplate: 'white-text',
+    cost: 5,
+    rarity: 'common',
+    description: 'Item gains 66 miles for every dice that is destroyed',
+    effectType: 'DICE_DESTROYED_MILES_GAIN',
+    effectParams: { value: 66 },
+    initialState: { miles: 0 },
+    hintDisplay: (_game, player) => {
+      const equip = player.equipment.find((e) => e.def.id === 'six_feet_under');
+      const m = equip?.state.miles ?? 0;
+      if (m > 0) return [[miles(`+${m}`), condition('dice destroyed')]];
+      return [[miles('+66'), condition('per die destroyed')]];
+    },
+  },
+  {
+    id: 'eight_second_ride',
+    name: 'Eight Second Ride',
+    cardTemplate: 'white-text',
+    cost: 8,
+    rarity: 'rare',
+    description: 'Each consecutive scored 8 gains +0.5 xMult over the previous (x1, x1.5, x2, x2.5, x3...)',
+    effectType: 'CONSECUTIVE_PIP_XMULT',
+    effectParams: { pip: 8, increment: 0.5 },
+    hintDisplay: () => [[mult('x1→x3+'), condition('consecutive 8s')]],
+  },
+  {
+    id: 'stacked_deck',
+    name: 'Stacked Deck',
+    cardTemplate: 'white-text-black-outline',
+    cost: 10,
+    rarity: 'rare',
+    description: 'Loaded dice are considered all pip values for equipment effects',
+    effectType: 'STACKED_DECK',
+    effectParams: {},
+    hintDisplay: () => [[active('Loaded = all pips')]],
+  },
 ];
 
 export default items;

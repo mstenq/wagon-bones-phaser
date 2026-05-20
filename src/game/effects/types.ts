@@ -99,6 +99,7 @@ export type LifecyclePhase =
   | 'on-pack-opened'       // When a booster pack is opened
   | 'on-lucky-trigger'     // When a lucky die triggers
   | 'on-diamond-destroyed' // When a diamond die is destroyed
+  | 'on-dice-destroyed'    // When dice are removed from the collection
   | 'on-boss-defeat';      // When a boss is defeated
 
 export interface LifecycleHandler {

@@ -10,7 +10,7 @@ import {
   setupGame,
   resetDieIds,
 } from '../testHelpers';
-import { processEquipmentOnRoundStart } from '../../EquipmentEffects';
+import { processEquipmentOnDiceDestroyed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
@@ -428,5 +428,216 @@ describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
     // 50 existing + 10 gained this hand = 60 miles bonus from equipment
     // The miles reported includes 60 bonus in addition to base hand miles
     expect(result.miles).toBeGreaterThan(60);
+  });
+});
+
+// ─── FIRST_PIP_XMULT: Double Barrel ───
+
+describe('FIRST_PIP_XMULT: Double Barrel', () => {
+  test('first scored 2 gives x2 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 2 }), die({ value: 2 })],
+      equipment: [item('double_barrel')],
+    });
+    expect(result.mult).toBe(2);
+  });
+
+  test('x2 triggers again on each retrigger of the first played 2 (War Drums)', () => {
+    const warDrums = itemWithState('war_drums', { daysRemaining: 5 });
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 2 }), die({ value: 2 })],
+      equipment: [item('double_barrel'), warDrums],
+    });
+    // PAIR baseMult=1; first 2 triggers twice (base + war drums) → x2 × x2 = x4
+    expect(result.mult).toBe(4);
+  });
+});
+
+// ─── STACKED_DECK: Stacked Deck interactions ───
+
+const stacked = () => item('stacked_deck');
+const loaded = (value: number) => die({ value, enhancement: 'loaded' });
+
+describe('STACKED_DECK: Stacked Deck', () => {
+  test('Five Mile Marker: loaded die counts as pip 5', () => {
+    const inst = item('five_mile_marker');
+    const { result } = calculateTestScore({
+      scoredDice: [loaded(3), die({ value: 3 })],
+      equipment: [stacked(), inst],
+    });
+    expect(inst.state.miles).toBe(5);
+    expect(result.miles).toBeGreaterThan(10);
+  });
+
+  test('Snake Eyes: loaded die counts as 1 for supply chance', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const scoredDie = loaded(7);
+      const { game, player } = setupGame({
+        equipment: [stacked(), item('snake_eyes')],
+        dice: [scoredDie, ...diceWithValue(2, 20)],
+      });
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = [scoredDie];
+      game.state.selectedForRoll = [scoredDie];
+      game.state.rerollsRemaining = 6;
+      game.selectForScore([scoredDie.id]);
+      game.calculateScore();
+      expect(player.consumables.length).toBe(1);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('Lucky Number: loaded die matches lucky pip regardless of face value', () => {
+    const lucky = item('lucky_number');
+    const scored = [loaded(3), die({ value: 3 })];
+    const { game } = setupGame({
+      equipment: [stacked(), lucky],
+      dice: [...scored, ...diceWithValue(2, 20)],
+    });
+    game.startRound();
+    lucky.state.pip = 7;
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scored;
+    game.state.selectedForRoll = scored;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scored.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR: baseMult=1, x1.5 from lucky number on loaded die
+    expect(result.mult).toBeCloseTo(1.5, 5);
+  });
+
+  test('Even Odds: loaded die triggers even parity bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [loaded(7)],
+      equipment: [stacked(), item('even_odds')],
+    });
+    // HIGH_VALUE: baseMult=1, +4 from even odds on loaded (all pips)
+    expect(result.mult).toBe(5);
+  });
+
+  test('Odd Fellow: loaded die triggers odd parity miles', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [loaded(8)],
+      equipment: [stacked(), item('odd_fellow')],
+    });
+    // HIGH_VALUE: 8 miles + 31 from odd fellow
+    expect(result.totalValue).toBe(39);
+  });
+
+  test('One-Eyed Jack: loaded die retriggers as a 1', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [loaded(7)],
+      equipment: [stacked(), item('one_eyed_jack')],
+    });
+    // HIGH_VALUE: 7 + 7 retrigger = 14
+    expect(result.totalValue).toBe(14);
+  });
+
+  test('Marked: loaded die counts as 6 and resets streak', () => {
+    const markedInst = itemWithState('marked', { mult: 3 });
+    const scoredDie = loaded(9);
+    const { game } = setupGame({
+      equipment: [stacked(), markedInst],
+      dice: [scoredDie, ...diceWithValue(2, 20)],
+    });
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = [scoredDie];
+    game.state.selectedForRoll = [scoredDie];
+    game.state.rerollsRemaining = 6;
+    game.selectForScore([scoredDie.id]);
+    game.calculateScore();
+    expect(markedInst.state.mult).toBe(0);
+  });
+
+  test('Eight Second Ride: loaded die counts as 8 for consecutive xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [loaded(3)],
+      equipment: [stacked(), item('eight_second_ride')],
+    });
+    // HIGH_VALUE: baseMult=1, x1 from first consecutive 8
+    expect(result.mult).toBe(1);
+  });
+
+  test('Ace in the Hole: held loaded die counts as 1', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [loaded(9)],
+      equipment: [stacked(), item('ace_in_the_hole')],
+    });
+    expect(result.mult).toBeCloseTo(1.5, 5);
+  });
+
+  test('Ace in the Hole + Silver Bullets: held loaded retriggers pip 1 xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [loaded(9)],
+      equipment: [stacked(), item('ace_in_the_hole'), item('silver_bullets')],
+    });
+    expect(result.mult).toBeCloseTo(2.25, 5);
+  });
+
+  test('Eleventh Crossing: held loaded die gives +11 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [loaded(4)],
+      equipment: [stacked(), item('eleventh_crossing')],
+    });
+    expect(result.mult).toBe(12);
+  });
+
+  test('Eleventh Crossing + Silver Bullets: held loaded retriggers +11', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [loaded(4)],
+      equipment: [stacked(), item('eleventh_crossing'), item('silver_bullets')],
+    });
+    expect(result.mult).toBe(23);
+  });
+
+  test("Prospector's Pouch + Ace in the Hole: held loaded retriggers money and xMult", () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const { player } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        heldDice: [loaded(9)],
+        equipment: [stacked(), item('ace_in_the_hole'), item('prospectors_pouch'), item('silver_bullets')],
+        money: 10,
+      });
+      // Silver Bullets: 2 held triggers, pouch hits both → +$2
+      expect(player.economy.balance).toBe(12);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('without Stacked Deck loaded die does not count as other pips', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [loaded(7)],
+      equipment: [item('one_eyed_jack')],
+    });
+    expect(result.totalValue).toBe(7);
+  });
+});
+
+// ─── DICE_DESTROYED_MILES_GAIN: Six Feet Under ───
+
+describe('DICE_DESTROYED_MILES_GAIN: Six Feet Under', () => {
+  test('gains 66 miles per destroyed die', () => {
+    const inst = item('six_feet_under');
+    const { player } = setupGame({ equipment: [inst], dice: diceWithValue(5, 3) });
+    processEquipmentOnDiceDestroyed([inst], 2);
+    expect(inst.state.miles).toBe(132);
+
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    expect(result.miles).toBeGreaterThan(132);
   });
 });

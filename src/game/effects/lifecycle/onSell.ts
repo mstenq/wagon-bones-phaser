@@ -4,12 +4,20 @@ import type { Die } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
+import { getPlayerState } from '../../PlayerState';
 
 effectRegistry.registerLifecycle('on-sell', (equip) => {
   switch (equip.def.effectType) {
     case 'SELL_XMULT_GAIN':
       equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
       break;
+    case 'SELL_DISABLE_BOSS': {
+      const player = getPlayerState();
+      if (player.isBossRound) {
+        player.bossEffectDisabled = true;
+      }
+      break;
+    }
   }
 });
 
@@ -78,5 +86,14 @@ export function processEquipmentOnLuckyTrigger(equipment: EquipmentInstance[]): 
 export function processEquipmentOnDiamondDestroyed(equipment: EquipmentInstance[]): void {
   for (const equip of equipment) {
     dispatchLifecycle('on-diamond-destroyed', equip);
+  }
+}
+
+export function processEquipmentOnDiceDestroyed(equipment: EquipmentInstance[], count: number = 1): void {
+  for (const equip of equipment) {
+    if (equip.def.effectType === 'DICE_DESTROYED_MILES_GAIN') {
+      const value = (equip.def.effectParams.value as number) ?? 66;
+      equip.state.miles = (equip.state.miles ?? 0) + value * count;
+    }
   }
 }

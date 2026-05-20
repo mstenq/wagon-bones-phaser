@@ -37,6 +37,13 @@ export function processEndOfRound(equipment: EquipmentInstance[]): {
         destroyedIndices.push(i);
       }
     }
+
+    if (effectType === 'END_ROUND_SELL_VALUE_ALL') {
+      const bonus = (p.value as number) ?? 1;
+      for (const other of equipment) {
+        other.sellValue += bonus;
+      }
+    }
   }
 
   return { moneyEarned, destroyedIndices };

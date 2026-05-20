@@ -113,6 +113,7 @@ export class GameState {
 
     // Clear trail event modifiers after consumption
     player.trailEventModifiers = createEmptyModifiers();
+    player.bossEffectDisabled = false;
 
     // Apply day penalties (e.g. Stagecoach: -1 day)
     const dayMods = getDayModifiers(player.equipment);

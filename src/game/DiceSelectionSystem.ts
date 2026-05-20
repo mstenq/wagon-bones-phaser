@@ -4,6 +4,7 @@
 
 import { Die, DiceAura, DiceEnhancement, DiceSticker } from './types';
 import { getPlayerState } from './PlayerState';
+import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 import { CHANCES } from './Constants';
 import diceAurasData from '../data/dice_auras.json';
 
@@ -91,6 +92,9 @@ function applyDestroy(player: ReturnType<typeof getPlayerState>, selectedDice: D
   const before = player.dice.length;
   player.dice = player.dice.filter((d) => !ids.has(d.id));
   const removed = before - player.dice.length;
+  if (removed > 0) {
+    processEquipmentOnDiceDestroyed(player.equipment, removed);
+  }
   return `Destroyed ${removed} dice`;
 }
 
