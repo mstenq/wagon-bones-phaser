@@ -57,11 +57,11 @@ Earned tags that are **pending** (waiting for shop, boss, or next round) display
 
 ```
   ┌──────┐
-  │ Tag3 │  ← newest on top
+  │ Tag3 │  ← oldest on top
   ├──────┤
   │ Tag2 │
   ├──────┤
-  │ Tag1 │  ← oldest at bottom
+  │ Tag1 │  ← newest at bottom
   ├──────┤
   │  🎲  │  ← dice pouch button
   └──────┘
@@ -77,7 +77,7 @@ Earned tags that are **pending** (waiting for shop, boss, or next round) display
 
 | Step | File | Summary |
 |------|------|---------|
-| 1 | [TAG_IMPLEMENTATION_1.md](TAG_IMPLEMENTATION_1.md) | **Data & Types** — Tag definitions, types, pool/weights, JSON data |
+| 1 | [TAG_IMPLEMENTATION_1.md](TAG_IMPLEMENTATION_1.md) | **Data & Types** — Tag definitions, types, pool/weights, typed TS file |
 | 2 | [TAG_IMPLEMENTATION_2.md](TAG_IMPLEMENTATION_2.md) | **PlayerState & Game Logic** — Tag queue, skip mechanics, stat tracking |
 | 3 | [TAG_IMPLEMENTATION_3.md](TAG_IMPLEMENTATION_3.md) | **RoundSelectScene** — New scene: play vs. skip UI, tag reveal animation |
 | 4 | [TAG_IMPLEMENTATION_4.md](TAG_IMPLEMENTATION_4.md) | **Tag Effects & Integration** — Shop hooks, pack hooks, immediate effects, aura application |
@@ -86,13 +86,13 @@ Earned tags that are **pending** (waiting for shop, boss, or next round) display
 ## Files Modified (Summary)
 
 ### New Files
-- `src/data/trail_tags.json` — Tag definitions (id, name, description, category, minLeg, weight)
+- `src/data/trail_tags.ts` — Typed tag definitions (id, name, description, category, minLeg, weight) + lookup helper
 - `src/game/TagSystem.ts` — Pure game logic: tag pool, selection, granting, effect dispatch
 - `src/phaser/scenes/RoundSelectScene.ts` — Play vs. skip UI scene
 - `src/phaser/ui/TagStack.ts` — Pending tag icons stacked above dice pouch
 
 ### Modified Files
-- `src/game/types.ts` — Add `TrailTagDef`, `TrailTagInstance`, `TagCategory` types
+- `src/game/types.ts` — Re-export `TrailTagDef`, `TrailTagInstance`, `TagCategory` from data layer
 - `src/game/PlayerState.ts` — Add `pendingTags`, `storedAuraTags`, `roundsSkipped`, `daysScored`, `unusedRerollsTotal`, `twinWagonCount`
 - `src/game/EventBus.ts` — Add `TAG_EARNED`, `ROUND_SKIPPED` events
 - `src/game/GameState.ts` — Increment `daysScored` in `calculateScore()`, sum rerolls in round-won

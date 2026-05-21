@@ -104,11 +104,11 @@ Pure game logic — no Phaser imports.
 // ─── TagSystem (No Phaser imports) ───
 // Tag pool selection, random tag generation, and immediate effect dispatch.
 
-import { TrailTagDef, TrailTagInstance, TagCategory, HandType } from './types';
+import { HandType } from './types';
 import { getPlayerState } from './PlayerState';
-import trailTagsData from '../data/trail_tags.json';
+import trailTags, { TrailTagDef, TrailTagInstance, TagCategory } from '../data/trail_tags';
 
-const ALL_TAGS: TrailTagDef[] = trailTagsData as TrailTagDef[];
+const ALL_TAGS: TrailTagDef[] = trailTags;
 
 /** Get the weighted tag pool for the current leg, excluding Twin Wagon from random selection if twinWagonCount > 0 */
 export function getTagPool(leg: number): TrailTagDef[] {
