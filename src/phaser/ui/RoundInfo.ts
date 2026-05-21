@@ -30,6 +30,10 @@ const BTN_H = 44;
 const BTN_GAP = 10;
 const COL_PAD = 14;
 const TAG_SIZE = 36;
+/** Boss portrait on round-select boss column (~2× former circle diameter). */
+const BOSS_PORTRAIT_SIZE = { compact: 64, normal: 96 } as const;
+/** Extra space below round title before boss portrait (avoids overlapping heading). */
+const BOSS_PORTRAIT_TOP_GAP = { compact: 20, normal: 28 } as const;
 
 export function targetMilesForRound(
   leg: number,
@@ -241,13 +245,10 @@ export class RoundInfoPanel extends GameObjects.Container {
     if (isBoss) {
       const boss = getPlayerState().getBossForLeg(config.leg);
       if (boss) {
-        const badge = scene.add.graphics();
-        badge.fillStyle(0x662244, 1);
-        badge.fillCircle(cx, cy, compact ? 16 : 20);
-        badge.lineStyle(2, 0xff66aa, 0.9);
-        badge.strokeCircle(cx, cy, compact ? 16 : 20);
-        this.add(badge);
-        cy += compact ? 34 : 40;
+        cy += compact ? BOSS_PORTRAIT_TOP_GAP.compact : BOSS_PORTRAIT_TOP_GAP.normal;
+        const portraitSize = compact ? BOSS_PORTRAIT_SIZE.compact : BOSS_PORTRAIT_SIZE.normal;
+        this.addBossPortrait(cx, cy, boss.id, portraitSize);
+        cy += portraitSize / 2 + (compact ? 10 : 12);
 
         this.addLabel(cx, cy, boss.name, {
           fontFamily: FONTS.HEADING,
@@ -398,6 +399,25 @@ export class RoundInfoPanel extends GameObjects.Container {
     const size = compact ? 28 : TAG_SIZE;
     const tagX = 16;
     this.addTagBadge(tagX, tagY, tag, size, config);
+  }
+
+  private addBossPortrait(cx: number, cy: number, bossId: string, size: number): void {
+    const imgKey = `boss_${bossId}`;
+    if (this.scene.textures.exists(imgKey)) {
+      const img = this.scene.add.image(cx, cy, imgKey);
+      const tex = img.texture.getSourceImage();
+      img.setScale(size / Math.max(tex.width, tex.height));
+      this.add(img);
+      return;
+    }
+
+    const badge = this.scene.add.graphics();
+    const r = size / 2;
+    badge.fillStyle(0x662244, 1);
+    badge.fillCircle(cx, cy, r);
+    badge.lineStyle(2, 0xff66aa, 0.9);
+    badge.strokeCircle(cx, cy, r);
+    this.add(badge);
   }
 
   private addLabel(

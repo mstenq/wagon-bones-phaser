@@ -134,13 +134,15 @@ export function acquireRewardEquipmentInstance(
   return acquireEquipmentInstance(def, purchasedPermitIds, []);
 }
 
-/** Shop purchase price after modifiers are known (leased items cost $1). */
+/** Shop purchase price after modifiers are known (leased items cost $1).
+ *  When def.cost is $0 (trail tag free slot, On the House, etc.), purchase is always free. */
 export function getEquipmentPurchasePrice(
   def: EquipmentDef,
   modifiers: EquipmentModifier[],
   listPrice: number,
   purchasedPermitIds: string[] = [],
 ): number {
+  if (def.cost === 0) return 0;
   if (modifiers.includes('leased')) {
     return EQUIPMENT_MODIFIER.LEASED_BUY_PRICE;
   }

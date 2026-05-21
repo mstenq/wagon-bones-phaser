@@ -184,6 +184,13 @@ describe('Equipment Modifiers', () => {
       );
     });
 
+    test('leased shop price is $0 when def.cost is overridden to free', () => {
+      const def = getAllEquipment().find((d) => d.cost > 5)!;
+      const freeDef = { ...def, cost: 0 };
+      const listPrice = 12;
+      expect(getEquipmentPurchasePrice(freeDef, ['leased'], listPrice)).toBe(0);
+    });
+
     test('leased sell value is $1', () => {
       const def = getAllEquipment()[0];
       const instance = createEquipmentInstance(def);

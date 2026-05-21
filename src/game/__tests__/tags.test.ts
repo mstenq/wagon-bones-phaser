@@ -17,6 +17,8 @@ import {
   getEquipmentSellValue,
   getItemAuraById,
 } from '../ItemsSystem';
+import { getEquipmentPurchasePrice } from '../EquipmentModifiers';
+import { EQUIPMENT_MODIFIER } from '../Constants';
 import { getPlayerState, resetPlayerState } from '../PlayerState';
 
 const ALL_TAGS = trailTags;
@@ -217,6 +219,75 @@ describe('TagSystem', () => {
       player.addTag(tag);
       const mods = processShopTags(player);
       expect(mods.freeFirstReroll).toBe(true);
+    });
+
+    it('free inject equipment stays $0 with leased modifier', () => {
+      const def = {
+        id: 'bargain_bin',
+        name: 'Bargain Bin',
+        cost: 0,
+        rarity: 'rare',
+        description: '',
+        effectType: 'SHOP_REROLL_MULT_GAIN',
+        effectParams: {},
+      };
+      const listPrice = getEquipmentListPrice(def);
+      expect(listPrice).toBeGreaterThan(0);
+      expect(
+        getEquipmentPurchasePrice(def, ['leased'], listPrice, []),
+      ).toBe(0);
+      expect(
+        getEquipmentPurchasePrice(def, ['leased'], listPrice, []),
+      ).not.toBe(EQUIPMENT_MODIFIER.LEASED_BUY_PRICE);
+    });
+
+    it('free icy aura equipment stays $0 at purchase', () => {
+      const icy = getItemAuraById('icy')!;
+      const def = {
+        id: 'bargain_bin',
+        name: 'Bargain Bin',
+        cost: 0,
+        rarity: 'uncommon',
+        description: '',
+        effectType: 'SHOP_REROLL_MULT_GAIN',
+        effectParams: {},
+        aura: icy,
+      };
+      const listPrice = getEquipmentListPrice(def);
+      expect(listPrice).toBeGreaterThan(0);
+      expect(getEquipmentPurchasePrice(def, [], listPrice, [])).toBe(0);
+    });
+
+    it('On the House free stock stays $0 with leased modifier', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_company_store')!;
+      player.addTag(tag);
+      const mods = processShopTags(player);
+      expect(mods.freeShop).toBe(true);
+
+      const stock = [
+        {
+          type: 'equipment',
+          def: {
+            id: 'horseshoe',
+            name: 'Horseshoe',
+            cost: 5,
+            rarity: 'common',
+            description: '',
+            effectType: 'ADD_MULT',
+            effectParams: {},
+          } as import('../ItemsSystem').EquipmentDef,
+        },
+      ];
+      for (const item of stock) {
+        if (item.type === 'equipment') {
+          item.def = { ...item.def, cost: 0 };
+        }
+      }
+      const listPrice = getEquipmentListPrice(stock[0].def);
+      expect(
+        getEquipmentPurchasePrice(stock[0].def, ['leased'], listPrice, []),
+      ).toBe(0);
     });
   });
 
