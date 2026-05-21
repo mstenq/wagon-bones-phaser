@@ -108,16 +108,33 @@ export function applyRandomAura(def: EquipmentDef): EquipmentDef {
 
 // ─── Shop Stock ───
 
-/** Generate a random shop stock of equipment, with random aura rolls */
+/** Generate a random shop stock of equipment, with random aura rolls.
+ *  Each slot rolls rarity via CHANCES (5% rare / 25% uncommon / 70% common), then picks uniformly within that tier. */
 export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string[]): EquipmentDef[] {
-  let pool = getShopEquipmentPool(excludeIds);
-  if (pool.length === 0) {
-    // Fallback: if all items are owned, generate horseshoe copies
-    const horseshoe = ITEMS_POOL.find((i) => i.id === 'horseshoe') ?? ITEMS_POOL[0];
-    return Array.from({ length: count }, () => applyRandomAura({ ...horseshoe }));
+  const horseshoe = ITEMS_POOL.find((i) => i.id === 'horseshoe') ?? ITEMS_POOL[0];
+  const usedIds = new Set(excludeIds ?? []);
+  const stock: EquipmentDef[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const available = getShopEquipmentPool([...usedIds]);
+    if (available.length === 0) {
+      stock.push(applyRandomAura({ ...horseshoe }));
+      continue;
+    }
+
+    let candidates = available;
+    const rarity = pickWeightedEquipmentRarity(available);
+    if (rarity) {
+      const filtered = available.filter((item) => item.rarity === rarity);
+      if (filtered.length > 0) candidates = filtered;
+    }
+
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    stock.push(applyRandomAura({ ...picked }));
+    usedIds.add(picked.id);
   }
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length)).map(applyRandomAura);
+
+  return stock;
 }
 
 /** Get all equipment definitions */

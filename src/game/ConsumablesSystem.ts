@@ -258,6 +258,14 @@ import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import type { DiceEnhancement } from './types';
 import type { PlayerState } from './PlayerState';
 
+/** Add a medicine supply card with ghost aura (Doctor profession, trail events, etc.). */
+export function grantGhostMedicine(player: PlayerState): boolean {
+  const ghostAura = getItemAuraById('ghost');
+  const def = getSupplyDefById('medicine', ghostAura);
+  if (!def) return false;
+  return player.addConsumable(def);
+}
+
 export interface UseConsumableResult {
   /** Whether the effect was applied successfully */
   success: boolean;

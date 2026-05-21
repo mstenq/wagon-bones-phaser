@@ -179,6 +179,18 @@ describe('Shop stock exclusion', () => {
     }
   });
 
+  test('generateShopStock uses weighted rarity thresholds (5% rare / 25% uncommon / 70% common)', () => {
+    const counts = { common: 0, uncommon: 0, rare: 0 };
+    const trials = 10_000;
+    for (let i = 0; i < trials; i++) {
+      const [item] = generateShopStock(1);
+      counts[item.rarity as keyof typeof counts]++;
+    }
+    expect(counts.rare / trials).toBeCloseTo(0.05, 1);
+    expect(counts.uncommon / trials).toBeCloseTo(0.25, 1);
+    expect(counts.common / trials).toBeCloseTo(0.7, 1);
+  });
+
   test('generateRandomEquipment respects explicit rarity filters before weighted rolls', () => {
     const originalRandom = Math.random;
     const rolls = [0.01, 0, 1, 1, 1, 1, 1];

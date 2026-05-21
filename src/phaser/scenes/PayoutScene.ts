@@ -7,6 +7,7 @@ import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState, PayoutBreakdown } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
+import { grantGhostMedicine } from '../../game/ConsumablesSystem';
 import { processBossPayoutTags, grantTag } from '../../game/TagSystem';
 import { getTrailTagById } from '../../data/trail_tags';
 import { formatScore } from '../../game/formatScore';
@@ -89,6 +90,9 @@ export class PayoutScene extends Scene {
       if (profMods?.doubleTagOnBoss) {
         const twinWagonDef = getTrailTagById('tag_twin_wagon');
         if (twinWagonDef) grantTag(twinWagonDef);
+      }
+      if (profMods?.ghostMedicineOnBoss) {
+        grantGhostMedicine(player);
       }
     }
 

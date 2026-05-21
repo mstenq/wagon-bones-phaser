@@ -16,7 +16,13 @@ import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { acquireRewardEquipmentInstance, getEquipmentPurchasePrice } from './EquipmentModifiers';
 import { isEquipmentCursed } from './ItemsSystem';
-import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
+import {
+  ConsumableDef,
+  ConsumableInstance,
+  createConsumableInstance,
+  getSupplyDefById,
+} from './ConsumablesSystem';
+import { getItemAuraById } from './ItemsSystem';
 import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
 import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers';
 import { GAMEPLAY } from './Constants';
@@ -218,10 +224,13 @@ export class PlayerState {
       this.maxConsumableSlots += m.supplySlots;
     }
 
-    // Starting supply cards → consumables
+    // Starting supply cards → consumables (string id or { id, aura? })
     if (Array.isArray(m.startingSupplyCards)) {
-      for (const cardId of m.startingSupplyCards as string[]) {
-        const def = getSupplyDefById(cardId);
+      for (const entry of m.startingSupplyCards as (string | { id: string; aura?: string })[]) {
+        const cardId = typeof entry === 'string' ? entry : entry.id;
+        const auraId = typeof entry === 'string' ? undefined : entry.aura;
+        const aura = auraId ? getItemAuraById(auraId) : null;
+        const def = getSupplyDefById(cardId, aura);
         if (def) this.addConsumable(def);
       }
     }

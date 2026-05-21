@@ -10,6 +10,7 @@ import {
   getFrontierDefById,
   executeConsumableEffect,
   useConsumableDirectly,
+  grantGhostMedicine,
 } from '../ConsumablesSystem';
 import { isEquipmentCursed } from '../ItemsSystem';
 import { applyDiceSelectionEffect, DiceSelectionConfig } from '../DiceSelectionSystem';
@@ -265,11 +266,19 @@ describe('profession starting consumables', () => {
     expect(player.consumables[1].def.id).toBe('second_helpings');
   });
 
-  test('doctor starts with 2x medicine (skipped if medicine card not yet in data)', () => {
+  test('doctor starts with 2x ghost medicine', () => {
     const { player } = setupGame({ profession: 'doctor' });
-    // Medicine card not yet defined in supply_cards.json — this will be 0 until it's added
-    // When medicine is added, this should be 2
-    expect(player.consumables.length).toBeLessThanOrEqual(2);
+    expect(player.consumables).toHaveLength(2);
+    expect(player.consumables.every((c) => c.def.id === 'medicine')).toBe(true);
+    expect(player.consumables.every((c) => c.def.aura?.id === 'ghost')).toBe(true);
+  });
+
+  test('grantGhostMedicine adds one ghost medicine consumable', () => {
+    const { player } = setupGame({ profession: 'farmer' });
+    expect(grantGhostMedicine(player)).toBe(true);
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0].def.id).toBe('medicine');
+    expect(player.consumables[0].def.aura?.id).toBe('ghost');
   });
 
   test('scout has -1 consumable slot', () => {

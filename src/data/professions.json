@@ -136,7 +136,13 @@
     "title": "Doctor",
     "name": "Dr. Eleanor Sykes",
     "description": "Start with 2 medicine cards with ghost aura, receive 1 free medicine card  with ghost aura after each boss",
-    "modifiers": { "startingSupplyCards": ["medicine", "medicine"]},
+    "modifiers": {
+      "startingSupplyCards": [
+        { "id": "medicine", "aura": "ghost" },
+        { "id": "medicine", "aura": "ghost" }
+      ],
+      "ghostMedicineOnBoss": true
+    },
     "specialEquipment": {
       "name": "Emergency Supplies",
       "effect": "Free supply card when playing a hand at $8 or less"
