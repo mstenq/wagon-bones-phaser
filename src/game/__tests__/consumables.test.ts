@@ -1,15 +1,17 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, die, item } from './testHelpers';
+import { resetDieIds, setupGame, die, item, equipWithModifiers } from './testHelpers';
 import { resetPlayerState } from '../PlayerState';
 import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
   createConsumableInstance,
   getSupplyDefById,
+  getFrontierDefById,
   executeConsumableEffect,
   useConsumableDirectly,
 } from '../ConsumablesSystem';
+import { isEquipmentCursed } from '../ItemsSystem';
 import { applyDiceSelectionEffect, DiceSelectionConfig } from '../DiceSelectionSystem';
 import supplyCardsData from '../../data/supply_cards.json';
 import trailGuidesData from '../../data/trail_guides.json';
@@ -395,5 +397,46 @@ describe('Bless supply card aura weighting', () => {
     for (let i = 0; i < sorted.length - 1; i++) {
       expect(counts[sorted[i].id]).toBeGreaterThan(counts[sorted[i + 1].id]);
     }
+  });
+});
+
+describe('frontier cards and cursed equipment', () => {
+  test("priest's blessing keeps cursed equipment when destroying others", () => {
+    const player = resetPlayerState();
+    player.equipment.push(equipWithModifiers('horseshoe', []));
+    player.equipment.push(equipWithModifiers('war_drums', ['cursed']));
+
+    const def = getFrontierDefById('priests_blessing')!;
+    const result = useConsumableDirectly(def, player);
+
+    expect(result.success).toBe(true);
+    expect(player.equipment).toHaveLength(2);
+    expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
+    expect(player.equipment.some((e) => e.def.aura?.id === 'holy')).toBe(true);
+  });
+
+  test('skin walker copies random item and keeps cursed equipment', () => {
+    const player = resetPlayerState();
+    player.equipment.push(equipWithModifiers('horseshoe', []));
+    player.equipment.push(equipWithModifiers('war_drums', ['cursed']));
+
+    const def = getFrontierDefById('skin_walker')!;
+    const result = useConsumableDirectly(def, player);
+
+    expect(result.success).toBe(true);
+    expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
+    // Non-cursed horseshoe destroyed; cursed lucky_coin + copy remain
+    expect(player.equipment.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('skin walker copy retains curse when source is cursed', () => {
+    const player = resetPlayerState();
+    player.equipment.push(equipWithModifiers('horseshoe', ['cursed']));
+
+    const def = getFrontierDefById('skin_walker')!;
+    useConsumableDirectly(def, player);
+
+    expect(player.equipment.length).toBe(2);
+    expect(player.equipment.every((e) => isEquipmentCursed(e))).toBe(true);
   });
 });

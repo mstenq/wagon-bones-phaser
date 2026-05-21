@@ -3,8 +3,8 @@
 // Consumables are one-time-use cards (supply cards, trail guides, frontier encounters)
 // held in the consumable bar. They can be used, sold, or reordered.
 
-import type { ItemAura } from './ItemsSystem';
-import { getItemAuraById } from './ItemsSystem';
+import type { ItemAura, EquipmentInstance } from './ItemsSystem';
+import { getItemAuraById, isEquipmentCursed } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition } from './types';
@@ -396,14 +396,33 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
       return { success: true };
     }
     case 'priests_blessing': {
-      // Add holy aura to random item, delete all others
+      // Holy aura on random item; destroy non-cursed others (cursed items survive)
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
       const holyAura = getItemAuraById('holy');
       if (!holyAura) return { success: true };
       const chosenIdx = Math.floor(Math.random() * player.equipment.length);
       const chosen = player.equipment[chosenIdx];
       chosen.def = { ...chosen.def, aura: holyAura };
-      player.equipment.splice(0, player.equipment.length, chosen);
+      const survivors = player.equipment.filter((e, i) => i === chosenIdx || isEquipmentCursed(e));
+      player.equipment.splice(0, player.equipment.length, ...survivors);
+      return { success: true };
+    }
+    case 'skin_walker': {
+      // Copy random item; destroy non-cursed others (cursed items survive, copy keeps modifiers)
+      if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
+      const source = player.equipment[Math.floor(Math.random() * player.equipment.length)];
+      const duplicated: EquipmentInstance = {
+        def: source.def.aura?.id === 'ghost' ? { ...source.def, aura: undefined } : { ...source.def },
+        sellValue: source.sellValue,
+        state: { ...source.state },
+        modifiers: [...source.modifiers],
+        perishableRoundsLeft: source.perishableRoundsLeft,
+      };
+      const survivors = player.equipment.filter((e) => isEquipmentCursed(e));
+      const canAdd =
+        player.usedEquipmentSlots < player.maxEquipmentSlots || duplicated.def.aura?.id === 'ghost';
+      if (canAdd) survivors.push(duplicated);
+      player.equipment.splice(0, player.equipment.length, ...survivors);
       return { success: true };
     }
   }
