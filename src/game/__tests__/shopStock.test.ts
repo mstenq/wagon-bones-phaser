@@ -1,11 +1,16 @@
 import './setup';
 import { describe, test, expect } from 'bun:test';
 import itemAurasData from '../../data/item_auras.json';
-import { generateRandomEquipment, generateShopStock, getAllEquipment, getEquipmentDefById } from '../ItemsSystem';
+import {
+  generateRandomEquipment,
+  generateShopStock,
+  getAllEquipment,
+  getEquipmentDefById,
+  isEquipmentUnlocked,
+} from '../ItemsSystem';
 import { getRandomSupplyDef, getRandomTrailGuideDef, getRandomFrontierDef, getShopRandomFrontierDef, generateShopConsumables } from '../ConsumablesSystem';
 import { resetPlayerState } from '../PlayerState';
 import { die } from './testHelpers';
-import { isEquipmentUnlocked } from '../equipmentUnlock';
 
 describe('Shop stock exclusion', () => {
   test('generateShopStock never includes legendary items', () => {

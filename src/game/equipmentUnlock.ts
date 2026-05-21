@@ -1,11 +1,10 @@
 // ─── Equipment unlock conditions (No Phaser imports) ───
 // Gates shop and random equipment pools until prerequisites are met.
+// Keep this module free of ItemsSystem/PlayerState imports to avoid circular init.
 
 import type { GameState } from './GameState';
 import type { PlayerState } from './PlayerState';
 import type { DiceEnhancement } from './types';
-import type { EquipmentDef } from './ItemsSystem';
-import { getPlayerState } from './PlayerState';
 
 export type EquipmentUnlockCondition = (
   game: GameState | null,
@@ -44,12 +43,3 @@ export const unlockTwoEnhancedTypes: EquipmentUnlockCondition = (_game, player) 
 
 export const unlockNitro: EquipmentUnlockCondition = (_game, player) =>
   player.dynamiteSelfDestructed;
-
-export function isEquipmentUnlocked(
-  def: EquipmentDef,
-  game: GameState | null = null,
-  player?: PlayerState,
-): boolean {
-  if (!def.unlockCondition) return true;
-  return def.unlockCondition(game, player ?? getPlayerState());
-}

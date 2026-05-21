@@ -11,9 +11,18 @@ import type { PlayerState } from './PlayerState';
 import type { EquipmentModifier } from './types';
 import { getDiscountedShopPrice } from './PermitsSystem';
 import { CHANCES } from './Constants';
-import { isEquipmentUnlocked } from './equipmentUnlock';
+import { getPlayerState } from './PlayerState';
 
 export type { EquipmentUnlockCondition } from './equipmentUnlock';
+
+export function isEquipmentUnlocked(
+  def: EquipmentDef,
+  game: GameState | null = null,
+  player?: PlayerState,
+): boolean {
+  if (!def.unlockCondition) return true;
+  return def.unlockCondition(game, player ?? getPlayerState());
+}
 
 export interface ItemAura {
   id: string;
