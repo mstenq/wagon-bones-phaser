@@ -143,7 +143,7 @@ export class PayoutScene extends Scene {
         .text(rightX, y, row.amount, {
           fontFamily: FONTS.HEADING,
           fontSize: '18px',
-          color: TEXT_COLORS.MONEY,
+          color: row.amountColor ?? TEXT_COLORS.MONEY,
         })
         .setOrigin(1, 0);
     }
@@ -178,8 +178,8 @@ export class PayoutScene extends Scene {
     payout: PayoutBreakdown,
     data: PayoutData,
     investmentBonus = 0,
-  ): { label: string; amount: string; highlight?: boolean }[] {
-    const rows: { label: string; amount: string; highlight?: boolean }[] = [];
+  ): { label: string; amount: string; highlight?: boolean; amountColor?: string }[] {
+    const rows: { label: string; amount: string; highlight?: boolean; amountColor?: string }[] = [];
     const player = getPlayerState();
 
     // Round reward
@@ -189,7 +189,16 @@ export class PayoutScene extends Scene {
         : data.round === 2
           ? 'Complete Round 2'
           : 'Complete Round 1';
-    rows.push({ label: roundName, amount: `$${payout.roundReward}`, highlight: true });
+    if (payout.roundReward === 0 && player.difficulty >= 2 && data.round === 1) {
+      rows.push({
+        label: 'Thin Supplies',
+        amount: 'No reward',
+        highlight: true,
+        amountColor: TEXT_COLORS.ERROR_RED,
+      });
+    } else {
+      rows.push({ label: roundName, amount: `$${payout.roundReward}`, highlight: true });
+    }
 
     // Days remaining
     if (payout.dayBonus > 0) {

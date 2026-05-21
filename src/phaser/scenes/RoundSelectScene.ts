@@ -112,6 +112,7 @@ export class RoundSelectScene extends Scene {
       },
       currentRound: player.round,
       leg: player.leg,
+      difficulty: player.difficulty,
       permitScoreReduction: player.permitScoreReduction,
       skippedRoundsThisLeg: player.skippedRoundsThisLeg,
       getSkippedTagForRound: (r) => player.getSkippedTagForRound(r),

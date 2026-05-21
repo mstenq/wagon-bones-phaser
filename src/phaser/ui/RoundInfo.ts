@@ -4,7 +4,8 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { GAMEPLAY, TEXT_COLORS, FONTS } from '../../game/Constants';
-import { getPlayerState } from '../../game/PlayerState';
+import { computeRoundReward, computeTargetMiles, getPlayerState } from '../../game/PlayerState';
+import type { DifficultyLevel } from '../../game/types';
 import { formatScore } from '../../game/formatScore';
 import { Button } from './Button';
 import type { TrailTagDef, TagCategory } from '../../game/types';
@@ -34,11 +35,9 @@ export function targetMilesForRound(
   leg: number,
   round: number,
   permitScoreReduction: number,
+  difficulty: DifficultyLevel = 1,
 ): number {
-  const effectiveLegIndex = Math.max(0, leg - 1 - permitScoreReduction);
-  const base = GAMEPLAY.TARGET_MILES_BY_LEG[effectiveLegIndex] ?? GAMEPLAY.TARGET_MILES;
-  const roundMult = GAMEPLAY.ROUND_MULTIPLIERS[round - 1] ?? 1;
-  return Math.ceil(base * roundMult);
+  return computeTargetMiles(leg, round, permitScoreReduction, difficulty);
 }
 
 export function getRoundColumnState(
@@ -56,6 +55,7 @@ export interface RoundInfoConfig {
   round: number;
   state: RoundColumnState;
   leg: number;
+  difficulty: DifficultyLevel;
   permitScoreReduction: number;
   skippedTag?: TrailTagDef;
   /** Skip-reward tag for this round (preview on current/upcoming, earned when skipped). */
@@ -77,6 +77,7 @@ export interface LegRoundPanelsConfig {
   gap?: number;
   currentRound: number;
   leg: number;
+  difficulty: DifficultyLevel;
   permitScoreReduction: number;
   skippedRoundsThisLeg: number[];
   getSkippedTagForRound: (round: number) => TrailTagDef | undefined;
@@ -114,6 +115,7 @@ export function createLegRoundPanels(
       round: r,
       state,
       leg: config.leg,
+      difficulty: config.difficulty,
       permitScoreReduction: config.permitScoreReduction,
       skippedTag: config.getSkippedTagForRound(r),
       skipPreviewTag,
@@ -146,6 +148,7 @@ export function createLegRoundPanelsForPlayer(
     | 'bounds'
     | 'currentRound'
     | 'leg'
+    | 'difficulty'
     | 'permitScoreReduction'
     | 'skippedRoundsThisLeg'
     | 'getSkippedTagForRound'
@@ -157,6 +160,7 @@ export function createLegRoundPanelsForPlayer(
     bounds,
     currentRound: player.round,
     leg: player.leg,
+    difficulty: player.difficulty,
     permitScoreReduction: player.permitScoreReduction,
     skippedRoundsThisLeg: player.skippedRoundsThisLeg,
     getSkippedTagForRound: (r) => player.getSkippedTagForRound(r),
@@ -263,7 +267,7 @@ export class RoundInfoPanel extends GameObjects.Container {
       cy += compact ? 34 : 40;
     }
 
-    const target = targetMilesForRound(config.leg, round, config.permitScoreReduction);
+    const target = targetMilesForRound(config.leg, round, config.permitScoreReduction, config.difficulty);
 
     this.addLabel(cx, cy, 'Score at least', {
       fontSize: compact ? '11px' : '12px',
@@ -278,11 +282,19 @@ export class RoundInfoPanel extends GameObjects.Container {
     });
     cy += compact ? 20 : 24;
 
-    const rewardDollars = '$'.repeat(GAMEPLAY.ROUND_REWARDS[round - 1] ?? 3);
-    this.addLabel(cx, cy, `Reward: ${rewardDollars}+`, {
-      fontSize: compact ? '11px' : '12px',
-      color: TEXT_COLORS.MONEY,
-    });
+    const roundReward = computeRoundReward(round, config.difficulty);
+    if (roundReward === 0) {
+      this.addLabel(cx, cy, 'Thin Supplies: No reward', {
+        fontSize: compact ? '11px' : '12px',
+        color: TEXT_COLORS.ERROR_RED,
+      });
+    } else {
+      const rewardDollars = '$'.repeat(roundReward);
+      this.addLabel(cx, cy, `Reward: ${rewardDollars}+`, {
+        fontSize: compact ? '11px' : '12px',
+        color: TEXT_COLORS.MONEY,
+      });
+    }
 
     if (isSkipped) {
       const stampY = height * 0.52;

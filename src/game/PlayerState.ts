@@ -56,6 +56,34 @@ const DEFAULT_SHOP_SLOTS = GAMEPLAY.SHOP_SLOTS;
 const DEFAULT_STARTING_DICE = GAMEPLAY.STARTING_DICE;
 const SHOP_REROLL_COST = GAMEPLAY.SHOP_REROLL_COST;
 
+/** Target miles for a leg/round (difficulty scaling, permit shortcuts, round multiplier). */
+export function computeTargetMiles(
+  leg: number,
+  round: number,
+  permitScoreReduction: number,
+  difficulty: DifficultyLevel,
+): number {
+  const effectiveLegIndex = Math.max(0, leg - 1 - permitScoreReduction);
+
+  let targets = GAMEPLAY.TARGET_MILES_BY_LEG;
+  if (difficulty >= 6) {
+    targets = GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY;
+  } else if (difficulty >= 3) {
+    targets = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH;
+  }
+
+  const base = targets[effectiveLegIndex] ?? GAMEPLAY.TARGET_MILES;
+  const multiplier = GAMEPLAY.ROUND_MULTIPLIERS[round - 1] ?? 1;
+  return Math.ceil(base * multiplier);
+}
+
+/** Base money reward for completing a round at the given difficulty. */
+export function computeRoundReward(round: number, difficulty: DifficultyLevel): number {
+  const base = GAMEPLAY.ROUND_REWARDS[round - 1] ?? 3;
+  if (difficulty >= 2 && round === 1) return 0; // Thin Supplies
+  return base;
+}
+
 export class PlayerState {
   economy: Economy;
   dice: Die[]; // all dice the player owns
@@ -546,25 +574,12 @@ export class PlayerState {
 
   /** Base money reward for completing the current round */
   get roundReward(): number {
-    const base = GAMEPLAY.ROUND_REWARDS[this.round - 1] ?? 3;
-    if (this.difficulty >= 2 && this.round === 1) return 0; // Thin Supplies
-    return base;
+    return computeRoundReward(this.round, this.difficulty);
   }
 
   /** Target miles for the current round (base × round multiplier, reduced by permit shortcuts) */
   get targetMiles(): number {
-    const effectiveLegIndex = Math.max(0, this.leg - 1 - this.permitScoreReduction);
-
-    let targets = GAMEPLAY.TARGET_MILES_BY_LEG;
-    if (this.difficulty >= 6) {
-      targets = GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY;
-    } else if (this.difficulty >= 3) {
-      targets = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH;
-    }
-
-    const base = targets[effectiveLegIndex] ?? GAMEPLAY.TARGET_MILES;
-    const multiplier = GAMEPLAY.ROUND_MULTIPLIERS[this.round - 1] ?? 1;
-    return Math.ceil(base * multiplier);
+    return computeTargetMiles(this.leg, this.round, this.permitScoreReduction, this.difficulty);
   }
 
   /** Calculate the payout breakdown for winning the current round */
