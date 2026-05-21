@@ -133,14 +133,16 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
 
   const tagStack = new TagStack(scene, pouchX, pouchY);
   const onTagStateChange = () => tagStack.refresh();
-  EventBus.on(Events.TAG_EARNED, onTagStateChange);
-  EventBus.on(Events.ROUND_SKIPPED, onTagStateChange);
-  EventBus.on(Events.TAG_QUEUE_CHANGED, onTagStateChange);
-  scene.events.once('shutdown', () => {
+  const unregisterTagListeners = () => {
     EventBus.off(Events.TAG_EARNED, onTagStateChange);
     EventBus.off(Events.ROUND_SKIPPED, onTagStateChange);
     EventBus.off(Events.TAG_QUEUE_CHANGED, onTagStateChange);
-  });
+  };
+  EventBus.on(Events.TAG_EARNED, onTagStateChange);
+  EventBus.on(Events.ROUND_SKIPPED, onTagStateChange);
+  EventBus.on(Events.TAG_QUEUE_CHANGED, onTagStateChange);
+  tagStack.on('destroy', unregisterTagListeners);
+  scene.events.once('shutdown', unregisterTagListeners);
 
   const contentTop = equipBarH + 16;
   const contentBottom = height - UI.POUCH_MARGIN - UI.POUCH_SIZE - 8;

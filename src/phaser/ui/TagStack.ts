@@ -54,6 +54,8 @@ export class TagStack extends GameObjects.Container {
 
   /** Rebuild the tag stack from current player state */
   refresh(): void {
+    if (!this.scene || !this.active) return;
+
     for (const badge of this.badges) badge.destroy();
     this.badges = [];
     this.hideTooltip();

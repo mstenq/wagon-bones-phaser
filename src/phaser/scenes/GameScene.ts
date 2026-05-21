@@ -36,6 +36,7 @@ import {
   isDiceLockedByBoss,
   revealLandSlideHints,
 } from '../../game/BossEffectsSystem';
+import { isDevMode } from '../../game/DevMode';
 
 const DICE_SPACING = UI.DICE_SPACING;
 
@@ -80,6 +81,7 @@ export class GameScene extends Scene {
   private rerollBtn: Button;
   private scoreBtn: Button;
   private continueBtn: Button;
+  private devWinBtn: Button | null = null;
 
   // Instruction text
   private instructionText: Phaser.GameObjects.Text;
@@ -251,6 +253,16 @@ export class GameScene extends Scene {
       this.onReroll(),
     );
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
+
+    if (isDevMode()) {
+      const devBtnX = this.scale.width - 70;
+      this.devWinBtn = new Button(this, devBtnX, 280, 'Dev Win', 120, 32)
+        .setColor(0x553388, 0x7744aa)
+        .onClick(() => this.onDevWinRound());
+      this.devWinBtn.setDepth(100);
+    } else {
+      this.devWinBtn = null;
+    }
 
     // Sort buttons (small, positioned above the main buttons)
     const sortY = btnY - 50;
@@ -677,6 +689,19 @@ export class GameScene extends Scene {
       this.showFloatingText('Cannot play this hand', 0xff6644);
       this.updateRollButtons();
     }
+  }
+
+  /** Developer profession: instantly win the round for faster testing. */
+  private onDevWinRound(): void {
+    if (!isDevMode() || this.animating) return;
+
+    this.destroyRefreshOverlay();
+    this.hideAllButtons();
+    this.clearSprites();
+    this.gameState.state.totalMiles = 1_000_000;
+    this.gameState.state.phase = 'DAY_END';
+    this.updateHUD();
+    this.onContinue();
   }
 
   private onContinue(): void {
