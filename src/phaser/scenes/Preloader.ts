@@ -80,6 +80,16 @@ export class Preloader extends Scene {
       this.load.image(`boss_${boss.id}`, `assets/bosses/${boss.id}.png`);
     }
 
+    // Load difficulty stake icons
+    for (let level = 1; level <= 8; level++) {
+      this.load.image(`difficulty_${level}`, `assets/difficulty/difficulty_${level}.png`);
+    }
+
+    // Load equipment modifier badges
+    for (const modifier of ['cursed', 'perishable', 'leased'] as const) {
+      this.load.image(`modifier_${modifier}`, `assets/equipment-modifiers/${modifier}.png`);
+    }
+
     // Load sound effects
     this.load.audio('sfx_button', 'assets/sounds/button.ogg');
     this.load.audio('sfx_dice_roll', 'assets/sounds/diceRattleAndRoll.wav');

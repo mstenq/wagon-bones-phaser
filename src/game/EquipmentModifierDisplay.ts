@@ -44,8 +44,7 @@ export function getModifierHintRows(equip: EquipmentInstance): HintSegment[][] {
     rows.push([{ text: '🔒 Cursed', style: 'inactive' }]);
   }
   if (isEquipmentPerishable(equip)) {
-    const rounds = equip.perishableRoundsLeft ?? '?';
-    rows.push([{ text: `⏱ ${rounds}r`, style: 'condition' }]);
+    rows.push([{ text: 'Perishable', style: 'condition' }]);
   }
   if (isEquipmentLeased(equip)) {
     rows.push([{ text: `$${EQUIPMENT_MODIFIER.LEASED_UPKEEP}/r`, style: 'money' }]);

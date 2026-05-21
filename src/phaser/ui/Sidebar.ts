@@ -10,6 +10,8 @@ import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
 import type { BossDef } from '../../game/types';
 import { Button } from './Button';
 import { isDevMode } from '../../game/DevMode';
+import { addDifficultyImage, getDifficultyDef } from './DifficultyAssets';
+import { DifficultyTooltip } from './DifficultyTooltip';
 
 export interface SidebarData {
   /** Title shown at top: "SHOP", "The Inspector", etc. */
@@ -72,6 +74,10 @@ export class Sidebar extends GameObjects.Container {
   private contentStartY: number = 0;
   private bossDescText: GameObjects.Text | null = null;
   private profTooltip: GameObjects.Container | null = null;
+  private difficultyTooltip = new DifficultyTooltip();
+  private difficultyIcon: GameObjects.Image | null = null;
+  private titleSectionY = 0;
+  private titleSectionH = 44;
 
   private onJourneyInfo: (() => void) | null = null;
   private onDevBossTest: (() => void) | null = null;
@@ -111,16 +117,32 @@ export class Sidebar extends GameObjects.Container {
     const cx = w / 2;
     let y = pad;
 
-    // ─── Title Section (scene name) ───
+    // ─── Title Section (scene name + difficulty stake) ───
+    const titleH = this.titleSectionH;
+    this.titleSectionY = y;
     const titleBg = scene.add.graphics();
     titleBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    titleBg.fillRoundedRect(pad, y, w - pad * 2, 44, 6);
+    titleBg.fillRoundedRect(pad, y, w - pad * 2, titleH, 6);
     titleBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    titleBg.strokeRoundedRect(pad, y, w - pad * 2, 44, 6);
+    titleBg.strokeRoundedRect(pad, y, w - pad * 2, titleH, 6);
     this.add(titleBg);
 
+    const titleIconSize = 42;
+    const titleIconX = pad + 18;
+    const titleIconY = y + titleH / 2;
+    const titleBarBottom = y + titleH;
+    const tooltipAnchorY = titleIconY + titleIconSize / 2 + 4;
+    this.difficultyIcon = addDifficultyImage(
+      scene,
+      this,
+      getPlayerState().difficulty,
+      titleIconX,
+      titleIconY,
+      titleIconSize,
+    );
+
     this.titleText = scene.add
-      .text(cx, y + 22, 'SHOP', {
+      .text(cx, titleIconY, 'SHOP', {
         fontFamily: FONTS.HEADING,
         fontSize: '22px',
         color: TEXT_COLORS.GOLD,
@@ -128,7 +150,24 @@ export class Sidebar extends GameObjects.Container {
       })
       .setOrigin(0.5);
     this.add(this.titleText);
-    y += 52;
+
+    if (this.difficultyIcon) {
+      const iconHit = scene.add
+        .zone(titleIconX, titleIconY, titleIconSize + 8, titleIconSize + 8)
+        .setInteractive({ useHandCursor: true });
+      this.add(iconHit);
+      iconHit.on('pointerover', () => {
+        const def = getDifficultyDef(getPlayerState().difficulty);
+        this.difficultyTooltip.show(this.scene, def, titleIconX, tooltipAnchorY, {
+          minX: pad,
+          maxX: w - pad,
+          minY: titleBarBottom + 4,
+        }, 400, this);
+      });
+      iconHit.on('pointerout', () => this.difficultyTooltip.hide());
+    }
+
+    y += titleH + 8;
 
     this.contentStartY = y;
 

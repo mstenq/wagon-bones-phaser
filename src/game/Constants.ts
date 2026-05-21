@@ -267,7 +267,7 @@ export const UI = {
 
   // Cards
   /** Equipment modifier badges (cursed / perishable / leased) */
-  MODIFIER_BADGE_SIZE: 20,
+  MODIFIER_BADGE_SIZE: 30,
   MODIFIER_BADGE_GAP: 2,
   MODIFIER_BADGE_OFFSET: 4,
 

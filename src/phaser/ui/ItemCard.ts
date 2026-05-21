@@ -10,6 +10,8 @@ import type { ItemAura, EquipmentInstance } from '../../game/ItemsSystem';
 import type { HintSegment } from '../../game/ItemsSystem';
 import { isEquipmentCursed, isEquipmentLeased, isEquipmentPerishable } from '../../game/ItemsSystem';
 import { getModifierTooltipLines } from '../../game/EquipmentModifierDisplay';
+import { addModifierBadgeImage } from './ModifierAssets';
+import type { EquipmentModifier } from '../../game/types';
 import type { CardTemplate } from '../../data/items';
 import type { GameState } from '../../game/GameState';
 import type { PlayerState } from '../../game/PlayerState';
@@ -535,59 +537,27 @@ export class ItemCard extends GameObjects.Container {
     const offset = UI.MODIFIER_BADGE_OFFSET * scale;
     const hw = this._cardW / 2;
     const hh = this._cardH / 2;
-    const radius = Math.round(4 * scale);
-    const fontSize = Math.round(11 * scale);
 
-    const specs: { icon: string; bg: number; text?: string; kind: 'cursed' | 'perishable' | 'leased' }[] = [];
-    if (isEquipmentCursed(this._equipment)) specs.push({ icon: '🔒', bg: 0x333333, kind: 'cursed' });
-    if (isEquipmentPerishable(this._equipment)) {
-      specs.push({
-        icon: '⏱',
-        bg: 0xff8800,
-        text: `${this._equipment.perishableRoundsLeft ?? '?'}`,
-        kind: 'perishable',
-      });
-    }
-    if (isEquipmentLeased(this._equipment)) specs.push({ icon: '$', bg: 0xffd700, kind: 'leased' });
+    const kinds: EquipmentModifier[] = [];
+    if (isEquipmentCursed(this._equipment)) kinds.push('cursed');
+    if (isEquipmentPerishable(this._equipment)) kinds.push('perishable');
+    if (isEquipmentLeased(this._equipment)) kinds.push('leased');
 
-    for (let i = 0; i < specs.length; i++) {
-      const spec = specs[i];
-      const badgeW = spec.text ? size + 8 * scale : size;
-      const x = hw - offset - badgeW / 2;
+    for (let i = 0; i < kinds.length; i++) {
+      const kind = kinds[i];
+      const x = hw - offset - size / 2;
       const y = -hh + offset + size / 2 + i * (size + gap);
 
       const container = this.scene.add.container(x, y);
-      const bg = this.scene.add.graphics();
-      bg.fillStyle(spec.bg, 0.95);
-      bg.fillRoundedRect(-badgeW / 2, -size / 2, badgeW, size, radius);
-      bg.lineStyle(1, 0xffffff, 0.35);
-      bg.strokeRoundedRect(-badgeW / 2, -size / 2, badgeW, size, radius);
-      container.add(bg);
-
-      const iconX = spec.text ? -badgeW / 2 + 8 * scale : 0;
-      const icon = this.scene.add
-        .text(iconX, 0, spec.icon, { fontSize: `${fontSize}px`, color: '#ffffff' })
-        .setOrigin(0.5);
-      container.add(icon);
-
-      if (spec.text) {
-        const count = this.scene.add
-          .text(badgeW / 2 - 7 * scale, 0, spec.text, {
-            fontFamily: 'Arial Black',
-            fontSize: `${Math.round(10 * scale)}px`,
-            color: '#ffffff',
-          })
-          .setOrigin(0.5);
-        container.add(count);
-      }
+      addModifierBadgeImage(this.scene, container, kind, size);
 
       container.setDepth(25);
       this.add(container);
       this.bringToTop(container);
       this.modifierBadgeContainers.push(container);
 
-      if (spec.kind === 'perishable') this.perishableBadgeContainer = container;
-      if (spec.kind === 'leased') this.leasedBadgeContainer = container;
+      if (kind === 'perishable') this.perishableBadgeContainer = container;
+      if (kind === 'leased') this.leasedBadgeContainer = container;
     }
   }
 

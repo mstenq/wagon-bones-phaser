@@ -8,12 +8,16 @@ import { getPlayerState } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS, DIFFICULTIES } from '../../game/Constants';
 import { DifficultyLevel } from '../../game/types';
 import { Button } from '../ui/Button';
+import { addDifficultyImage } from '../ui/DifficultyAssets';
 
 const CARD_W = 230;
-const CARD_H = 248;
+const CARD_H = 288;
 const CARD_GAP = 14;
 const COLS = 4;
-const BADGE_R = 8;
+const ICON_SIZE = 72;
+const ICON_TOP_PAD = 14;
+const EFFECTS_PAD = 26;
+const EFFECTS_TEXT_W = CARD_W - EFFECTS_PAD * 2;
 
 export class DifficultySelectScene extends Scene {
   private selectedLevel: DifficultyLevel = 1;
@@ -83,7 +87,7 @@ export class DifficultySelectScene extends Scene {
       const row = Math.floor(i / COLS);
       const cx = startX + col * (CARD_W + CARD_GAP);
       const cy = startY + row * (CARD_H + CARD_GAP);
-      const card = this.createDifficultyCard(diff.level, diff.name, diff.description, diff.color, diff.effects, cx, cy);
+      const card = this.createDifficultyCard(diff.level, diff.name, diff.description, diff.effects, cx, cy);
       this.cards.push(card);
     });
   }
@@ -92,7 +96,6 @@ export class DifficultySelectScene extends Scene {
     level: DifficultyLevel,
     name: string,
     description: string,
-    badgeColor: number,
     effects: string[],
     cx: number,
     cy: number,
@@ -106,28 +109,23 @@ export class DifficultySelectScene extends Scene {
     cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
     container.add(cardBg);
 
-    const headerY = -CARD_H / 2 + 22;
-    const badgeGfx = this.add.graphics();
-    badgeGfx.fillStyle(badgeColor, 1);
-    badgeGfx.fillCircle(-CARD_W / 2 + 24, headerY, BADGE_R);
-    if (badgeColor <= 0x444444) {
-      badgeGfx.lineStyle(2, 0xaaaaaa, 1);
-      badgeGfx.strokeCircle(-CARD_W / 2 + 24, headerY, BADGE_R);
-    }
-    container.add(badgeGfx);
+    const cardTop = -CARD_H / 2;
+    const iconY = cardTop + ICON_TOP_PAD + ICON_SIZE / 2;
+    addDifficultyImage(this, container, level, 0, iconY, ICON_SIZE);
 
+    const titleY = iconY + ICON_SIZE / 2 + 10;
     const levelLabel = this.add
-      .text(-CARD_W / 2 + 42, headerY, `${level}. ${name}`, {
+      .text(0, titleY, `${level}. ${name}`, {
         fontFamily: FONTS.HEADING,
         fontSize: '15px',
         color: TEXT_COLORS.GOLD,
-        align: 'left',
+        align: 'center',
       })
-      .setOrigin(0, 0.5);
+      .setOrigin(0.5, 0);
     container.add(levelLabel);
 
     const desc = this.add
-      .text(0, headerY + 28, description, {
+      .text(0, titleY + levelLabel.height + 8, description, {
         fontFamily: FONTS.PRIMARY,
         fontSize: '14px',
         color: TEXT_COLORS.MUTED,
@@ -140,7 +138,7 @@ export class DifficultySelectScene extends Scene {
 
     const effectsY = desc.y + desc.height + 10;
     const effectsBlock = this.buildEffectsText(effects);
-    effectsBlock.setPosition(0, effectsY);
+    effectsBlock.setPosition(-CARD_W / 2 + EFFECTS_PAD, effectsY);
     container.add(effectsBlock);
 
     const hitZone = this.add.rectangle(0, 0, CARD_W, CARD_H, 0x000000, 0);
@@ -174,10 +172,10 @@ export class DifficultySelectScene extends Scene {
         fontFamily: FONTS.PRIMARY,
         fontSize: '14px',
         color: TEXT_COLORS.DISABLED,
-        align: 'center',
-        wordWrap: { width: CARD_W - 28 },
+        align: 'left',
+        wordWrap: { width: EFFECTS_TEXT_W },
       });
-      line.setOrigin(0.5, 0);
+      line.setOrigin(0, 0);
       block.add(line);
       return block;
     }
@@ -189,11 +187,11 @@ export class DifficultySelectScene extends Scene {
         fontFamily: FONTS.PRIMARY,
         fontSize: '14px',
         color: isNew ? TEXT_COLORS.PRIMARY : TEXT_COLORS.DISABLED,
-        align: 'center',
-        wordWrap: { width: CARD_W - 28 },
+        align: 'left',
+        wordWrap: { width: EFFECTS_TEXT_W },
         lineSpacing: 1,
       });
-      line.setOrigin(0.5, 0);
+      line.setOrigin(0, 0);
       block.add(line);
       y += line.height + 3;
     });
