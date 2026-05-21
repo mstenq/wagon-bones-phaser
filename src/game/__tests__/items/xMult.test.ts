@@ -719,8 +719,8 @@ describe('HAND_CONTAINS_XMULT: Snake River (5 straight, x3)', () => {
       scoredDice: diceFromValues([3, 4, 5, 6, 7]),
       equipment: [item('snake_river')],
     });
-    // FIVE_STRAIGHT: baseMult=6, x3 = 18
-    expect(result.mult).toBe(18);
+    // FIVE_STRAIGHT: baseMult=4, x3 = 12
+    expect(result.mult).toBe(12);
   });
 
   test('does not activate on 4 straight', () => {

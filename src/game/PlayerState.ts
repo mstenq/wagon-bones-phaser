@@ -136,6 +136,11 @@ export class PlayerState {
     this.startingDiceCount = this.dice.length;
   }
 
+  /** First shop visit — after completing leg 1 round 1 (round advances to 2 before shop). */
+  isFirstShopVisit(): boolean {
+    return this.leg === 1 && this.round === 2;
+  }
+
   /** Apply profession modifiers after selection */
   applyProfession(professionId: string): void {
     const prof = professionsData.find((p) => p.id === professionId);

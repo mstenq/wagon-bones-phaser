@@ -106,8 +106,13 @@ function getEffectiveWeight(def: PackDefinition): number {
   return def.weight * catMult * tierMult;
 }
 
+export interface GenerateShopPacksOptions {
+  /** Force at least one shop pack slot to use this pack id (e.g. first-shop equipment pack). */
+  guaranteePackId?: string;
+}
+
 /** Pick N random packs using weighted selection */
-export function generateShopPacks(count: number = 2): PackInstance[] {
+export function generateShopPacks(count: number = 2, options?: GenerateShopPacksOptions): PackInstance[] {
   const effectiveWeights = PACK_DEFS.map((d) => getEffectiveWeight(d));
   const totalWeight = effectiveWeights.reduce((sum, w) => sum + w, 0);
   const packs: PackInstance[] = [];
@@ -123,6 +128,14 @@ export function generateShopPacks(count: number = 2): PackInstance[] {
       }
     }
     packs.push({ def: picked, id: `pack_${nextPackId++}` });
+  }
+
+  const guaranteeId = options?.guaranteePackId;
+  if (guaranteeId) {
+    const guaranteed = PACK_DEFS.find((p) => p.id === guaranteeId);
+    if (guaranteed && !packs.some((p) => p.def.id === guaranteeId)) {
+      packs[0] = { def: guaranteed, id: `pack_${nextPackId++}` };
+    }
   }
 
   return packs;

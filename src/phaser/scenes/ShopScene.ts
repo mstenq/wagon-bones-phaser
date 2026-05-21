@@ -139,7 +139,9 @@ export class ShopScene extends Scene {
     if (!this.stockItems) {
       this.stockItems = this.generateMixedStock(player);
       if (!this.packs) {
-        this.packs = generateShopPacks(2);
+        this.packs = generateShopPacks(2, player.isFirstShopVisit()
+          ? { guaranteePackId: 'equipment_standard' }
+          : undefined);
       }
       const tagMods = processShopTags(player);
       this.applyShopTagMods(tagMods, player);
@@ -152,7 +154,9 @@ export class ShopScene extends Scene {
         player.bonusShopPermit = generateShopPermit(player.purchasedPermits);
       }
     } else if (!this.packs) {
-      this.packs = generateShopPacks(2);
+      this.packs = generateShopPacks(2, player.isFirstShopVisit()
+        ? { guaranteePackId: 'equipment_standard' }
+        : undefined);
     }
 
     this.scale.on('resize', this.onResize, this);

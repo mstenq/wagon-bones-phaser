@@ -42,19 +42,19 @@
     "rank": 7
   },
   {
+    "type": "FIVE_STRAIGHT",
+    "name": "5 Straight",
+    "baseMiles": 30,
+    "baseMult": 4,
+    "rank": 8
+  },
+  {
     "type": "FOUR_OF_A_KIND",
     "name": "Four of a Kind",
     "baseMiles": 40,
     "baseMult": 5,
-    "rank": 8
-  },
-  {
-    "type": "FIVE_STRAIGHT",
-    "name": "5 Straight",
-    "baseMiles": 40,
-    "baseMult": 6,
     "rank": 9
-  },
+  },  
   {
     "type": "FIVE_OF_A_KIND",
     "name": "Five of a Kind",

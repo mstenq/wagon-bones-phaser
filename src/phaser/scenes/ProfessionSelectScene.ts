@@ -75,7 +75,7 @@ export class ProfessionSelectScene extends Scene {
       const player = getPlayerState();
       player.applyProfession(this.selectedId);
       player.finalizeRunSetup();
-      this.scene.start('Shop');
+      this.scene.start('RoundSelect');
     });
 
     // Build scrollable grid

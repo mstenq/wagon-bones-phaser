@@ -79,11 +79,11 @@ describe('basic scoring (no equipment)', () => {
     const { result } = calculateTestScore({
       scoredDice: diceFromValues([8, 9, 10, 11, 12]),
     });
-    // FIVE_STRAIGHT: baseMiles=40, baseMult=6
+    // FIVE_STRAIGHT: baseMiles=30, baseMult=4
     // totalValue = 50
-    // miles = (40 + 50) * 6 = 540
+    // miles = (30 + 50) * 4 = 320
     expect(result.handResult.type).toBe(HandType.FIVE_STRAIGHT);
-    expect(result.miles).toBe(540);
+    expect(result.miles).toBe(320);
   });
 });
 

@@ -296,9 +296,9 @@ describe('HAND_MILES: Long Haul (FIVE_STRAIGHT, +100 miles)', () => {
       scoredDice: diceFromValues([2, 3, 4, 5, 6]),
       equipment: [item('long_haul')],
     });
-    // FIVE_STRAIGHT: baseMiles=40, +100 = 140, baseMult=6
-    // totalValue = 20, miles = (140 + 20) * 6 = 960
-    expect(result.miles).toBe(960);
+    // FIVE_STRAIGHT: baseMiles=30, +100 = 130, baseMult=4
+    // totalValue = 20, miles = (130 + 20) * 4 = 600
+    expect(result.miles).toBe(600);
   });
 });
 
@@ -453,8 +453,8 @@ describe('HAND_MULT: Rail Splitter (4 straight, +8)', () => {
       scoredDice: diceFromValues([3, 4, 5, 6, 7]),
       equipment: [item('rail_splitter')],
     });
-    // FIVE_STRAIGHT: baseMult=6, +8 = 14
-    expect(result.mult).toBe(14);
+    // FIVE_STRAIGHT: baseMult=4, +8 = 12
+    expect(result.mult).toBe(12);
   });
 
   test('does not activate on pair', () => {
@@ -474,8 +474,8 @@ describe('HAND_MULT: Open Range (5 straight, +12)', () => {
       scoredDice: diceFromValues([3, 4, 5, 6, 7]),
       equipment: [item('open_range')],
     });
-    // FIVE_STRAIGHT: baseMult=6, +12 = 18
-    expect(result.mult).toBe(18);
+    // FIVE_STRAIGHT: baseMult=4, +12 = 16
+    expect(result.mult).toBe(16);
   });
 
   test('does not activate on 4 straight', () => {

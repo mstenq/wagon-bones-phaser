@@ -1,6 +1,11 @@
 import './setup';
 import { describe, test, expect, afterEach } from 'bun:test';
-import { generatePackContents, tryRollRarePackCard, type PackDefinition } from '../BoosterPackSystem';
+import {
+  generatePackContents,
+  generateShopPacks,
+  tryRollRarePackCard,
+  type PackDefinition,
+} from '../BoosterPackSystem';
 import { CHANCES } from '../Constants';
 
 const frontierPack: PackDefinition = {
@@ -14,6 +19,15 @@ const frontierPack: PackDefinition = {
   weight: 0.6,
   color: 0x8b008b,
 };
+
+describe('generateShopPacks', () => {
+  test('guarantees equipment_standard when requested', () => {
+    for (let i = 0; i < 30; i++) {
+      const packs = generateShopPacks(2, { guaranteePackId: 'equipment_standard' });
+      expect(packs.some((p) => p.def.id === 'equipment_standard')).toBe(true);
+    }
+  });
+});
 
 describe('Rare pack card spawning', () => {
   const originalRandom = Math.random;
