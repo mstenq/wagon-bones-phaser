@@ -8,6 +8,7 @@ export type { HintSegment, HintStyle } from '../data/items';
 
 import type { GameState } from './GameState';
 import type { PlayerState } from './PlayerState';
+import type { EquipmentModifier } from './types';
 import { getDiscountedShopPrice } from './PermitsSystem';
 import { CHANCES } from './Constants';
 
@@ -36,6 +37,8 @@ export interface EquipmentInstance {
   def: EquipmentDef;
   sellValue: number;
   state: Record<string, number>;
+  modifiers: EquipmentModifier[];
+  perishableRounds?: number;
 }
 
 const ITEMS_POOL: EquipmentDef[] = allItems as EquipmentDef[];
@@ -157,6 +160,7 @@ export function createEquipmentInstance(
     def,
     sellValue: getEquipmentSellValue(def, purchasedPermitIds),
     state: def.initialState ? { ...def.initialState } : {},
+    modifiers: [],
   };
 }
 

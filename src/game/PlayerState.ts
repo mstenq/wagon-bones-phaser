@@ -1,7 +1,16 @@
 // ─── PlayerState (No Phaser imports) ───
 // Persistent state that carries across scenes (shop, rounds, etc).
 
-import { Die, HandType, HandStats, BossDef, TrailTagDef, TrailTagInstance, TagCategory } from './types';
+import {
+  Die,
+  HandType,
+  HandStats,
+  BossDef,
+  TrailTagDef,
+  TrailTagInstance,
+  TagCategory,
+  DifficultyLevel,
+} from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance, createEquipmentInstance } from './ItemsSystem';
@@ -63,6 +72,7 @@ export class PlayerState {
   interestCap: number; // max money counted for interest (default $25, vouchers can raise to $50)
   handStats: Map<HandType, HandStats>; // level & play count per hand type
   profession: ProfessionDef | null = null; // selected profession
+  difficulty: DifficultyLevel = 1;
   handSize: number = GAMEPLAY.ROLL_SIZE; // dice selected for rolling
   shopRerollCount: number = 0; // number of rerolls this shop visit (resets each visit)
   purchasedPermits: string[] = []; // IDs of purchased permits
@@ -116,11 +126,18 @@ export class PlayerState {
     this.assignBosses();
   }
 
-  /** Effective days for the next round (base + permits + profession - trail penalties) */
+  setDifficulty(level: DifficultyLevel): void {
+    this.difficulty = level;
+  }
+
+  /** Effective days for the next round (base + permits + profession - trail penalties - difficulty) */
   get effectiveDays(): number {
     const profMods = this.profession?.modifiers as Record<string, unknown> | undefined;
     const profDays = typeof profMods?.days === 'number' ? profMods.days : 0;
-    return GAMEPLAY.MAX_DAYS + this.permitDayBonus - this.permitDayPenalty + profDays - this.trailEventModifiers.dayPenalty;
+    let days =
+      GAMEPLAY.MAX_DAYS + this.permitDayBonus - this.permitDayPenalty + profDays - this.trailEventModifiers.dayPenalty;
+    if (this.difficulty >= 5) days -= 1; // Harsh Rations
+    return Math.max(1, days);
   }
 
   /** Effective rerolls for the next round (base + permits + profession - trail penalties) */
@@ -392,6 +409,8 @@ export class PlayerState {
               : { ...source.def },
             sellValue: source.sellValue,
             state: { ...source.state },
+            modifiers: [...source.modifiers],
+            perishableRounds: source.perishableRounds,
           };
           // Add the duplicate after splicing the phantom wagon
           this.equipment.splice(index, 1);
@@ -523,18 +542,32 @@ export class PlayerState {
     return (this.leg - 1) * GAMEPLAY.ROUNDS_PER_LEG + this.round;
   }
 
+  /** Base money reward for completing the current round */
+  get roundReward(): number {
+    const base = GAMEPLAY.ROUND_REWARDS[this.round - 1] ?? 3;
+    if (this.difficulty >= 2 && this.round === 1) return 0; // Thin Supplies
+    return base;
+  }
+
   /** Target miles for the current round (base × round multiplier, reduced by permit shortcuts) */
   get targetMiles(): number {
-    // Use a lower leg index if player has score reduction permits
     const effectiveLegIndex = Math.max(0, this.leg - 1 - this.permitScoreReduction);
-    const base = GAMEPLAY.TARGET_MILES_BY_LEG[effectiveLegIndex] ?? GAMEPLAY.TARGET_MILES;
+
+    let targets = GAMEPLAY.TARGET_MILES_BY_LEG;
+    if (this.difficulty >= 6) {
+      targets = GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY;
+    } else if (this.difficulty >= 3) {
+      targets = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH;
+    }
+
+    const base = targets[effectiveLegIndex] ?? GAMEPLAY.TARGET_MILES;
     const multiplier = GAMEPLAY.ROUND_MULTIPLIERS[this.round - 1] ?? 1;
     return Math.ceil(base * multiplier);
   }
 
   /** Calculate the payout breakdown for winning the current round */
   calculatePayout(daysRemaining: number, rerollsRemaining: number = 0): PayoutBreakdown {
-    const roundReward = GAMEPLAY.ROUND_REWARDS[this.round - 1] ?? 3;
+    const roundReward = this.roundReward;
     const dayBonus = daysRemaining;
 
     // Outlaw: no interest, gets reroll bonus instead
@@ -708,6 +741,7 @@ export class PlayerState {
     this.interestCap = GAMEPLAY.INTEREST_CAP;
     this.handStats = PlayerState.createDefaultHandStats();
     this.profession = null;
+    this.difficulty = 1;
     this.handSize = GAMEPLAY.ROLL_SIZE;
     this.purchasedPermits = [];
     this.currentLegPermit = null;

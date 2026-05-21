@@ -166,5 +166,20 @@ export interface BossDef {
   minimumLeg?: number;
 }
 
+// ─── Difficulty ───
+export type DifficultyLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+export interface DifficultyDef {
+  level: DifficultyLevel;
+  id: string;
+  name: string;
+  description: string;
+  color: number; // Hex color for UI badge/icon
+  effects: string[]; // Human-readable list of cumulative effects
+}
+
+// ─── Equipment Modifiers ───
+export type EquipmentModifier = 'cursed' | 'perishable' | 'leased';
+
 // ─── Trail Tags (re-export from data layer) ───
 export type { TagCategory, TrailTagDef, TrailTagInstance } from '../data/trail_tags';

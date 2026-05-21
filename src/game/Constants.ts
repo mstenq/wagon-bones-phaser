@@ -2,6 +2,8 @@
 // All magic numbers, colors, sizing, and config values in one file.
 // When tuning gameplay or visuals, change values here — not in game logic.
 
+import type { DifficultyDef } from './types';
+
 // ─── Game Canvas ───
 export const GAME = {
   WIDTH: 1024,
@@ -39,6 +41,94 @@ export const GAMEPLAY = {
   /** Miles/score at or above this use Balatro-style scientific notation (e.g. 1.27e9) */
   SCORE_SCIENTIFIC_THRESHOLD: 1_000_000_000_000,
 };
+
+export const DIFFICULTIES: DifficultyDef[] = [
+  {
+    level: 1,
+    id: 'clear_skies',
+    name: 'Clear Skies',
+    description: 'Base difficulty. The trail is calm.',
+    color: 0xffffff,
+    effects: [],
+  },
+  {
+    level: 2,
+    id: 'thin_supplies',
+    name: 'Thin Supplies',
+    description: 'Round 1 of each leg gives no money reward.',
+    color: 0xff6666,
+    effects: ['No reward for Round 1'],
+  },
+  {
+    level: 3,
+    id: 'rough_trail',
+    name: 'Rough Trail',
+    description: 'Target miles escalate faster each leg.',
+    color: 0x66cc66,
+    effects: ['No reward for Round 1', 'Increased mile targets'],
+  },
+  {
+    level: 4,
+    id: 'cursed_relics',
+    name: 'Cursed Relics',
+    description: '30% of equipment spawns Cursed (cannot sell).',
+    color: 0x333333,
+    effects: ['No reward for Round 1', 'Increased mile targets', '30% Cursed equipment'],
+  },
+  {
+    level: 5,
+    id: 'harsh_rations',
+    name: 'Harsh Rations',
+    description: 'Lose 1 day per round.',
+    color: 0x6688ff,
+    effects: ['No reward for Round 1', 'Increased mile targets', '30% Cursed equipment', '-1 Day'],
+  },
+  {
+    level: 6,
+    id: 'deadly_frontier',
+    name: 'Deadly Frontier',
+    description: 'Mile targets become brutal.',
+    color: 0xaa44ff,
+    effects: ['No reward for Round 1', 'Brutal mile targets', '30% Cursed equipment', '-1 Day'],
+  },
+  {
+    level: 7,
+    id: 'spoiled_goods',
+    name: 'Spoiled Goods',
+    description: '30% of equipment spawns Perishable (destroyed after 5 rounds).',
+    color: 0xff8800,
+    effects: [
+      'No reward for Round 1',
+      'Brutal mile targets',
+      '30% Cursed equipment',
+      '-1 Day',
+      '30% Perishable equipment',
+    ],
+  },
+  {
+    level: 8,
+    id: 'debt_to_company_store',
+    name: 'Debt to the Company Store',
+    description: '30% of equipment spawns Leased ($3/round upkeep).',
+    color: 0xffd700,
+    effects: [
+      'No reward for Round 1',
+      'Brutal mile targets',
+      '30% Cursed equipment',
+      '-1 Day',
+      '30% Perishable equipment',
+      '30% Leased equipment',
+    ],
+  },
+];
+
+export const EQUIPMENT_MODIFIER = {
+  CURSED_RATE: 0.3,
+  PERISHABLE_RATE: 0.3,
+  PERISHABLE_ROUNDS: 5,
+  LEASED_RATE: 0.3,
+  LEASED_UPKEEP: 3,
+} as const;
 
 // ─── RNG / Chance Tuning ───
 export const CHANCES = {
