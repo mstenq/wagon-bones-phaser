@@ -26,9 +26,9 @@ describe('Difficulty System', () => {
   });
   
   describe('Harsh Rations (Level 5+)', () => {
-    it('reduces max days by 1 at difficulty 5+', () => { ... });
-    it('stacks with profession day modifiers', () => { ... });
-    it('never goes below 1 day', () => { ... });
+    it('reduces max rerolls by 1 at difficulty 5+', () => { ... });
+    it('stacks with profession reroll modifiers', () => { ... });
+    it('never goes below 0 rerolls', () => { ... });
   });
 });
 ```

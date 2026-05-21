@@ -12,7 +12,7 @@ Inspired by Balatro's colored stakes, difficulty levels are themed around the pe
 | 2     | **Thin Supplies**             | Round 1 of each leg gives no money reward.                                                  | Red Stake          |
 | 3     | **Rough Trail**               | Target miles use escalated scaling (`TARGET_MILES_BY_LEG_ROUGH`).                           | Green Stake        |
 | 4     | **Cursed Relics**             | 30% of shop/pack equipment spawns **Cursed** (cannot be sold).                              | Black Stake        |
-| 5     | **Harsh Rations**             | Lose 1 day (MAX_DAYS: 4 → 3).                                                              | Blue Stake         |
+| 5     | **Harsh Rations**             | Lose 1 reroll (MAX_REROLLS: 4 → 3).                                                        | Blue Stake         |
 | 6     | **Deadly Frontier**           | Target miles use brutal scaling (`TARGET_MILES_BY_LEG_DEADLY`). Overrides Rough Trail.      | Purple Stake       |
 | 7     | **Spoiled Goods**             | 30% of shop/pack equipment spawns **Perishable** (destroyed after 5 rounds).                | Orange Stake       |
 | 8     | **Debt to the Company Store** | 30% of shop/pack equipment spawns **Leased** (costs $3 upkeep each round, sold if unpaid).  | Gold Stake         |

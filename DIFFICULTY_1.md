@@ -65,9 +65,9 @@ export const DIFFICULTIES: DifficultyDef[] = [
     level: 5,
     id: 'harsh_rations',
     name: 'Harsh Rations',
-    description: 'Lose 1 day per round.',
+    description: 'Lose 1 reroll per round.',
     color: 0x6688ff,
-    effects: ['No reward for Round 1', 'Increased mile targets', '30% Cursed equipment', '-1 Day'],
+    effects: ['No reward for Round 1', 'Increased mile targets', '30% Cursed equipment', '-1 Reroll'],
   },
   {
     level: 6,
@@ -75,7 +75,7 @@ export const DIFFICULTIES: DifficultyDef[] = [
     name: 'Deadly Frontier',
     description: 'Mile targets become brutal.',
     color: 0xaa44ff,
-    effects: ['No reward for Round 1', 'Brutal mile targets', '30% Cursed equipment', '-1 Day'],
+    effects: ['No reward for Round 1', 'Brutal mile targets', '30% Cursed equipment', '-1 Reroll'],
   },
   {
     level: 7,
@@ -83,7 +83,7 @@ export const DIFFICULTIES: DifficultyDef[] = [
     name: 'Spoiled Goods',
     description: '30% of equipment spawns Perishable (destroyed after 5 rounds).',
     color: 0xff8800,
-    effects: ['No reward for Round 1', 'Brutal mile targets', '30% Cursed equipment', '-1 Day', '30% Perishable equipment'],
+    effects: ['No reward for Round 1', 'Brutal mile targets', '30% Cursed equipment', '-1 Reroll', '30% Perishable equipment'],
   },
   {
     level: 8,
@@ -91,7 +91,7 @@ export const DIFFICULTIES: DifficultyDef[] = [
     name: 'Debt to the Company Store',
     description: '30% of equipment spawns Leased ($3/round upkeep).',
     color: 0xffd700,
-    effects: ['No reward for Round 1', 'Brutal mile targets', '30% Cursed equipment', '-1 Day', '30% Perishable equipment', '30% Leased equipment'],
+    effects: ['No reward for Round 1', 'Brutal mile targets', '30% Cursed equipment', '-1 Reroll', '30% Perishable equipment', '30% Leased equipment'],
   },
 ];
 
@@ -136,13 +136,13 @@ get targetMiles(): number {
 }
 ```
 
-Modify `maxDays` getter (or add one):
+Apply Harsh Rations in `effectiveRerolls`:
 
 ```typescript
-get maxDays(): number {
-  let days = GAMEPLAY.MAX_DAYS + (this.professionModifiers.days ?? 0);
-  if (this.difficulty >= 5) days -= 1; // Harsh Rations
-  return Math.max(1, days);
+get effectiveRerolls(): number {
+  // ... base + permits + profession - trail penalties ...
+  if (this.difficulty >= 5) rerolls -= 1; // Harsh Rations
+  return Math.max(0, rerolls);
 }
 ```
 
@@ -176,7 +176,7 @@ interface EquipmentInstance {
 - `DifficultyLevel` type is importable across game logic
 - `PlayerState.difficulty` defaults to 1
 - `targetMiles` switches array based on difficulty
-- `maxDays` subtracts 1 at level 5+
+- `effectiveRerolls` subtracts 1 at level 5+
 - Round 1 reward is 0 at level 2+
 - `EquipmentInstance` has `modifiers` array
 - All existing tests still pass (no behavior change at difficulty 1)

@@ -1,4 +1,4 @@
-# Step 3: Gameplay Effects (Target Miles, Rewards, Days)
+# Step 3: Gameplay Effects (Target Miles, Rewards, Rerolls)
 
 ## Goal
 
@@ -10,7 +10,7 @@ Wire the first 6 difficulty levels' gameplay effects into the game logic. These 
 |-------|--------|---------------|
 | 2 | No Round 1 reward | `roundReward` returns 0 when `round === 1` |
 | 3 | Rough Trail scaling | `targetMiles` uses `TARGET_MILES_BY_LEG_ROUGH` |
-| 5 | -1 Day | `maxDays` reduced by 1 |
+| 5 | -1 Reroll | `maxRerolls` reduced by 1 |
 | 6 | Deadly Frontier scaling | `targetMiles` uses `TARGET_MILES_BY_LEG_DEADLY` (overrides level 3) |
 
 ## Files to Modify
@@ -34,19 +34,17 @@ get targetMiles(): number {
 }
 ```
 
-### 2. `src/game/PlayerState.ts` — maxDays
+### 2. `src/game/PlayerState.ts` — effectiveRerolls
 
-Find where `MAX_DAYS` is used to determine available days per round. Apply the -1 penalty:
+Apply the -1 reroll penalty in `effectiveRerolls` (used by `GameState` when starting a round):
 
 ```typescript
-get effectiveMaxDays(): number {
-  let days = GAMEPLAY.MAX_DAYS + (this.professionModifiers.days ?? 0);
-  if (this.difficulty >= 5) days -= 1;
-  return Math.max(1, days);
+get effectiveRerolls(): number {
+  // ... base + permits + profession - trail penalties ...
+  if (this.difficulty >= 5) rerolls -= 1; // Harsh Rations
+  return Math.max(0, rerolls);
 }
 ```
-
-Update all references to `MAX_DAYS` in `GameState.ts` to use the player's `effectiveMaxDays`.
 
 ### 3. `src/game/GameState.ts` — Round Reward
 
@@ -66,8 +64,8 @@ When showing round rewards on the payout screen, if reward is 0 due to Thin Supp
 
 ## Edge Cases
 
-- Profession "Trapper" gives +1 day. At difficulty 5, the -1 and +1 cancel out (back to 4 days).
-- If a profession already reduces days, difficulty 5 could theoretically go to 2 days. `Math.max(1, days)` prevents going below 1.
+- Profession reroll bonuses stack with the -1 penalty (e.g. +1 reroll profession at difficulty 5 stays at base 4).
+- `Math.max(0, rerolls)` prevents going below 0 rerolls.
 - Difficulty 6 completely overrides difficulty 3 (Deadly replaces Rough), they don't stack.
 
 ## Verification
@@ -75,6 +73,6 @@ When showing round rewards on the payout screen, if reward is 0 due to Thin Supp
 - At difficulty 1: all values unchanged from current behavior
 - At difficulty 2: Round 1 gives $0, rounds 2/3 give normal rewards
 - At difficulty 3: targetMiles uses ROUGH array
-- At difficulty 5: one fewer day available
+- At difficulty 5: one fewer reroll available
 - At difficulty 6: targetMiles uses DEADLY array
 - All existing tests pass (they run at default difficulty 1)

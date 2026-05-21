@@ -130,22 +130,24 @@ export class PlayerState {
     this.difficulty = level;
   }
 
-  /** Effective days for the next round (base + permits + profession - trail penalties - difficulty) */
+  /** Effective days for the next round (base + permits + profession - trail penalties) */
   get effectiveDays(): number {
     const profMods = this.profession?.modifiers as Record<string, unknown> | undefined;
     const profDays = typeof profMods?.days === 'number' ? profMods.days : 0;
-    let days =
+    const days =
       GAMEPLAY.MAX_DAYS + this.permitDayBonus - this.permitDayPenalty + profDays - this.trailEventModifiers.dayPenalty;
-    if (this.difficulty >= 5) days -= 1; // Harsh Rations
     return Math.max(1, days);
   }
 
-  /** Effective rerolls for the next round (base + permits + profession - trail penalties) */
+  /** Effective rerolls for the next round (base + permits + profession - trail penalties - difficulty) */
   get effectiveRerolls(): number {
     if (this.trailEventModifiers.loseAllRerolls) return 0;
     const profMods = this.profession?.modifiers as Record<string, unknown> | undefined;
     const profRerolls = typeof profMods?.rerolls === 'number' ? profMods.rerolls : 0;
-    return GAMEPLAY.MAX_REROLLS + this.permitRerollBonus - this.permitRerollPenalty + profRerolls - this.trailEventModifiers.rerollPenalty;
+    let rerolls =
+      GAMEPLAY.MAX_REROLLS + this.permitRerollBonus - this.permitRerollPenalty + profRerolls - this.trailEventModifiers.rerollPenalty;
+    if (this.difficulty >= 5) rerolls -= 1; // Harsh Rations
+    return Math.max(0, rerolls);
   }
 
   /** Snapshot dice count after run setup (profession, etc.) for Ghost Town. */

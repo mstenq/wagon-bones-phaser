@@ -9,6 +9,7 @@ import { Boot } from '../phaser/scenes/Boot';
 import { Preloader } from '../phaser/scenes/Preloader';
 import { MainMenu } from '../phaser/scenes/MainMenu';
 import { ProfessionSelectScene } from '../phaser/scenes/ProfessionSelectScene';
+import { DifficultySelectScene } from '../phaser/scenes/DifficultySelectScene';
 import { ShopScene } from '../phaser/scenes/ShopScene';
 import { RoundSelectScene } from '../phaser/scenes/RoundSelectScene';
 import { BoosterPackScene } from '../phaser/scenes/BoosterPackScene';
@@ -33,6 +34,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     Preloader,
     MainMenu,
     ProfessionSelectScene,
+    DifficultySelectScene,
     ShopScene,
     RoundSelectScene,
     BoosterPackScene,

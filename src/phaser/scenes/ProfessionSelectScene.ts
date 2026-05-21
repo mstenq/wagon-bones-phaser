@@ -67,7 +67,7 @@ export class ProfessionSelectScene extends Scene {
       .setDepth(60);
 
     // Confirm button (bottom)
-    this.confirmBtn = new Button(this, width / 2, height - 40, 'Begin Journey', 220, 48);
+    this.confirmBtn = new Button(this, width / 2, height - 40, 'Select Difficulty', 220, 48);
     this.confirmBtn.setEnabled(false);
     this.confirmBtn.setDepth(100);
     this.confirmBtn.onClick(() => {
@@ -75,7 +75,7 @@ export class ProfessionSelectScene extends Scene {
       const player = getPlayerState();
       player.applyProfession(this.selectedId);
       player.finalizeRunSetup();
-      this.scene.start('RoundSelect');
+      this.scene.start('DifficultySelect');
     });
 
     // Build scrollable grid
