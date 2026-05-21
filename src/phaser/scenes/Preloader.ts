@@ -15,12 +15,24 @@ const STICKER_FILE_MAP: Record<string, string> = {
   golden_dollar: 'gold_dollar',
 };
 
+function hideLoadingOverlay(): void {
+  document.getElementById('loading-overlay')?.remove();
+}
+
 export class Preloader extends Scene {
   constructor() {
     super('Preloader');
   }
 
   preload() {
+    const progressEl = document.getElementById('loading-progress');
+    this.load.on('progress', (value: number) => {
+      if (progressEl) {
+        progressEl.textContent = `${Math.round(value * 100)}%`;
+      }
+    });
+    this.load.once('complete', hideLoadingOverlay);
+
     // Load backgrounds
     this.load.image('bg_1', 'assets/backgrounds/1.png');
     this.load.image('bg_shop', 'assets/backgrounds/shop.png');
@@ -132,13 +144,15 @@ export class Preloader extends Scene {
   }
 
   create() {
+    hideLoadingOverlay();
+
     const { width, height } = this.scale;
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 1);
     bg.fillRect(0, 0, width, height);
 
     this.add
-      .text(width / 2, height / 2, 'Loading...', {
+      .text(width / 2, height / 2, 'Starting...', {
         fontFamily: 'Arial',
         fontSize: '24px',
         color: '#ffffff',
