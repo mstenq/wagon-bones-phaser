@@ -91,6 +91,9 @@ export class PlayerState {
   unusedRerollsTotal: number = 0; // cumulative unused rerolls at round-end (for Pack Rat)
   twinWagonCount: number = 0; // pending Twin Wagon multipliers
   wideSaddleBonus: number = 0; // temporary +handSize for next round only
+  skippedRoundsThisLeg: number[] = []; // round numbers skipped this leg (for RoundSelect UI)
+  skippedRoundTags: Partial<Record<number, TrailTagDef>> = {}; // tag earned per skipped round
+  roundSkipPreviewTags: Partial<Record<number, TrailTagDef>> = {}; // tag offered if each round is skipped
 
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
@@ -626,6 +629,23 @@ export class PlayerState {
     return this.pendingTags.filter((t) => t.def.category === category);
   }
 
+  /** Record that the current round was skipped and which tag was earned. */
+  recordRoundSkipped(tag: TrailTagDef): void {
+    this.skippedRoundsThisLeg.push(this.round);
+    this.skippedRoundTags[this.round] = tag;
+    delete this.roundSkipPreviewTags[this.round];
+  }
+
+  /** Tag earned by skipping a specific round this leg (if any). */
+  getSkippedTagForRound(round: number): TrailTagDef | undefined {
+    return this.skippedRoundTags[round];
+  }
+
+  /** Tag that would be earned by skipping a round (if still skippable). */
+  getSkipPreviewTagForRound(round: number): TrailTagDef | undefined {
+    return this.roundSkipPreviewTags[round];
+  }
+
   /** Advance to next round after a win. Returns true if the journey is complete. */
   advanceRound(skipped: boolean = false): boolean {
     if (skipped) {
@@ -635,6 +655,9 @@ export class PlayerState {
     if (this.round > GAMEPLAY.ROUNDS_PER_LEG) {
       this.round = 1;
       this.leg++;
+      this.skippedRoundsThisLeg = [];
+      this.skippedRoundTags = {};
+      this.roundSkipPreviewTags = {};
       // New leg — clear the current permit so a new one generates
       this.currentLegPermit = null;
       this.permitPurchasedThisLeg = false;
@@ -692,6 +715,9 @@ export class PlayerState {
     this.unusedRerollsTotal = 0;
     this.twinWagonCount = 0;
     this.wideSaddleBonus = 0;
+    this.skippedRoundsThisLeg = [];
+    this.skippedRoundTags = {};
+    this.roundSkipPreviewTags = {};
     this.assignBosses();
   }
 }

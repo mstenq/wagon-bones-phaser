@@ -209,7 +209,7 @@ export class ShopScene extends Scene {
         processEquipmentOnShopEnd(getPlayerState().equipment);
         this.stockItems = null!;
         this.packs = null!;
-        this.scene.start('Game');
+        this.scene.start('RoundSelect');
       });
 
     this.rerollBtn = new Button(this, btnColX, cardCY1 + btnH / 2 + 8, `Reroll\n$${player.shopRerollCost}`, btnW, btnH);

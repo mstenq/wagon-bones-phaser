@@ -26,6 +26,31 @@ export function selectRandomTag(leg: number): TrailTagDef {
   return pool[pool.length - 1];
 }
 
+/** Roll skip-reward tags for each remaining skippable round (1–2) this leg. */
+export function refreshRoundSkipPreviewTags(player = getPlayerState()): void {
+  player.roundSkipPreviewTags = {};
+  for (let r = player.round; r <= 2; r++) {
+    if (!player.skippedRoundsThisLeg.includes(r)) {
+      player.roundSkipPreviewTags[r] = selectRandomTag(player.leg);
+    }
+  }
+}
+
+/** Fill in any missing skip previews (e.g. opening Journey Info mid-leg). */
+export function ensureRoundSkipPreviewTags(player = getPlayerState()): void {
+  for (let r = player.round; r <= 2; r++) {
+    if (!player.skippedRoundsThisLeg.includes(r) && !player.roundSkipPreviewTags[r]) {
+      player.roundSkipPreviewTags[r] = selectRandomTag(player.leg);
+    }
+  }
+  for (const key of Object.keys(player.roundSkipPreviewTags)) {
+    const r = Number(key);
+    if (r < player.round || player.skippedRoundsThisLeg.includes(r)) {
+      delete player.roundSkipPreviewTags[r];
+    }
+  }
+}
+
 /** Grant a tag to the player. Handles Twin Wagon stacking.
  *  Returns the granted tag instance (with copies reflecting Twin Wagon).
  *  Immediate tags are NOT auto-fired here — caller must dispatch them. */

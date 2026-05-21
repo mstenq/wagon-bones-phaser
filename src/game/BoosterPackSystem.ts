@@ -92,6 +92,11 @@ const PACK_DEFS: PackDefinition[] = packsData.map((p) => ({
 
 let nextPackId = 0;
 
+/** Look up a pack definition by id (e.g. tag-granted mega packs). */
+export function getPackDefById(id: string): PackDefinition | undefined {
+  return PACK_DEFS.find((p) => p.id === id);
+}
+
 // ─── Shop Generation ───
 
 /** Get effective weight for a pack def, applying category & tier multipliers */

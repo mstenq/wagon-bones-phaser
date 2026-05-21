@@ -30,6 +30,10 @@ export interface LayoutResult {
   contentCX: number;
   /** Sidebar width */
   sidebarW: number;
+  /** Y where main content begins (below equipment + consumable bars) */
+  contentTop: number;
+  /** Y where main content ends (above dice pouch) */
+  contentBottom: number;
 }
 
 export interface LayoutOptions {
@@ -126,5 +130,19 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
     });
   });
 
-  return { sidebar, equipBar, consumableBar, dicePouch, contentX, contentW, contentCX, sidebarW };
+  const contentTop = equipBarH + 16;
+  const contentBottom = height - UI.POUCH_MARGIN - UI.POUCH_SIZE - 8;
+
+  return {
+    sidebar,
+    equipBar,
+    consumableBar,
+    dicePouch,
+    contentX,
+    contentW,
+    contentCX,
+    sidebarW,
+    contentTop,
+    contentBottom,
+  };
 }

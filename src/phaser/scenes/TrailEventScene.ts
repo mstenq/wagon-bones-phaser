@@ -729,7 +729,7 @@ export class TrailEventScene extends Scene {
     this.resolved = false;
     if (player.skipNextShop) {
       player.skipNextShop = false;
-      this.scene.start('Game');
+      this.scene.start('RoundSelect');
     } else {
       this.scene.start('Shop');
     }

@@ -5,7 +5,13 @@
 
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
-import { PackDefinition, PackItem, InstantEffect, generatePackContents } from '../../game/BoosterPackSystem';
+import {
+  PackDefinition,
+  PackItem,
+  InstantEffect,
+  generatePackContents,
+  getPackDefById,
+} from '../../game/BoosterPackSystem';
 import { getPlayerState } from '../../game/PlayerState';
 import { generateRandomEquipment } from '../../game/ItemsSystem';
 import {
@@ -67,7 +73,8 @@ interface CardSprite {
 }
 
 export class BoosterPackScene extends Scene {
-  private packDef: PackDefinition;
+  private packDef!: PackDefinition;
+  private returnScene = 'Shop';
   private contents: PackItem[];
   private cardSprites: CardSprite[] = [];
   private picksRemaining: number;
@@ -100,8 +107,22 @@ export class BoosterPackScene extends Scene {
     super('BoosterPack');
   }
 
-  init(data: { packDef: PackDefinition }) {
-    this.packDef = data.packDef;
+  init(data: {
+    packDef?: PackDefinition;
+    packDefId?: string;
+    returnScene?: string;
+    free?: boolean;
+  } = {}) {
+    if (data.packDef) {
+      this.packDef = data.packDef;
+    } else if (data.packDefId) {
+      const def = getPackDefById(data.packDefId);
+      if (!def) {
+        throw new Error(`Unknown pack id: ${data.packDefId}`);
+      }
+      this.packDef = def;
+    }
+    this.returnScene = data.returnScene ?? 'Shop';
   }
 
   create() {
@@ -957,7 +978,7 @@ export class BoosterPackScene extends Scene {
     if (this.picksRemaining <= 0) {
       this.clearDiceLineup();
       this.time.delayedCall(800, () => {
-        this.scene.start('Shop');
+        this.scene.start(this.returnScene);
       });
     } else {
       this.refreshDiceLineup();
@@ -1104,7 +1125,7 @@ export class BoosterPackScene extends Scene {
   private onSkip(): void {
     const player = getPlayerState();
     processEquipmentOnPackSkipped(player.equipment);
-    this.scene.start('Shop');
+    this.scene.start(this.returnScene);
   }
 
   private onResize(): void {

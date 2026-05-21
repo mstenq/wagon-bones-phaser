@@ -9,6 +9,9 @@ import { getPlayerState } from '../../game/PlayerState';
 import { HandType } from '../../game/types';
 import { Button } from './Button';
 import { getPermitById } from '../../game/PermitsSystem';
+import { createLegRoundPanelsForPlayer } from './RoundInfo';
+import { ensureRoundSkipPreviewTags } from '../../game/TagSystem';
+import { TagTooltip } from './TagTooltip';
 import handsData from '../../data/hands.json';
 
 export class JourneyInfoModal extends GameObjects.Container {
@@ -19,7 +22,25 @@ export class JourneyInfoModal extends GameObjects.Container {
   private panelH: number;
   private tabContent: GameObjects.Container;
   private tabButtons: GameObjects.Container[] = [];
+  private closeBtn: Button;
   private activeTab: string = 'knowledge';
+  private tagTooltip = new TagTooltip();
+
+  /** Layout below tab row — shared by all tabs */
+  private getContentArea(): { top: number; bottom: number } {
+    const tabBottom = this.panelY + 58 + 14;
+    return {
+      top: tabBottom + 18,
+      bottom: this.panelY + this.panelH - 52,
+    };
+  }
+
+  private bringTabsToFront(): void {
+    for (const tab of this.tabButtons) {
+      this.bringToTop(tab);
+    }
+    this.bringToTop(this.closeBtn);
+  }
 
   constructor(scene: Scene, contentX: number, width: number, height: number) {
     super(scene, 0, 0);
@@ -32,9 +53,9 @@ export class JourneyInfoModal extends GameObjects.Container {
     dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
     this.add(dim);
 
-    // Modal panel
-    this.panelW = Math.min(width - 40, 600);
-    this.panelH = Math.min(height - 80, 520);
+    // Modal panel (wider to fit three round columns on the Rounds tab)
+    this.panelW = Math.min(width - 40, 680);
+    this.panelH = Math.min(height - 80, 560);
     this.panelX = contentX + (width - this.panelW) / 2;
     this.panelY = (height - this.panelH) / 2;
 
@@ -47,7 +68,7 @@ export class JourneyInfoModal extends GameObjects.Container {
 
     // Title
     const title = scene.add
-      .text(this.panelX + this.panelW / 2, this.panelY + 24, 'Journey Info', {
+      .text(this.panelX + this.panelW / 2, this.panelY + 28, 'Journey Info', {
         fontFamily: FONTS.HEADING,
         fontSize: '24px',
         color: TEXT_COLORS.GOLD,
@@ -66,22 +87,33 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.showKnowledgeTab();
 
     // Close button
-    const closeBtn = new Button(scene, this.panelX + this.panelW / 2, this.panelY + this.panelH - 30, 'Close', 120, 34);
-    closeBtn.onClick(() => this.destroy());
-    this.add(closeBtn);
+    this.closeBtn = new Button(scene, this.panelX + this.panelW / 2, this.panelY + this.panelH - 38, 'Close', 120, 34);
+    this.closeBtn.onClick(() => {
+      this.tagTooltip.hide();
+      this.destroy();
+    });
+    this.add(this.closeBtn);
+
+    this.bringTabsToFront();
 
     this.setDepth(500);
     scene.add.existing(this);
   }
 
+  destroy(fromScene?: boolean): void {
+    this.tagTooltip.hide();
+    super.destroy(fromScene);
+  }
+
   private buildTabButtons(): void {
     const tabs = [
       { id: 'knowledge', label: 'Trail Knowledge' },
+      { id: 'rounds', label: 'Rounds' },
       { id: 'permits', label: 'Permits' },
     ];
 
-    const tabY = this.panelY + 52;
-    const tabW = 140;
+    const tabY = this.panelY + 58;
+    const tabW = 120;
     const tabH = 28;
     const tabGap = 8;
     const totalW = tabs.length * tabW + (tabs.length - 1) * tabGap;
@@ -89,19 +121,20 @@ export class JourneyInfoModal extends GameObjects.Container {
 
     for (let i = 0; i < tabs.length; i++) {
       const tab = tabs[i];
-      const x = startX + i * (tabW + tabGap) + tabW / 2;
+      const x = startX + i * (tabW + tabGap);
+      const y = tabY - tabH / 2;
 
-      const container = this.scene.add.container(x, tabY);
+      const container = this.scene.add.container(x, y);
 
       const bg = this.scene.add.graphics();
       bg.fillStyle(tab.id === this.activeTab ? 0x333366 : 0x1a1a30, 1);
-      bg.fillRoundedRect(-tabW / 2, -tabH / 2, tabW, tabH, 6);
+      bg.fillRoundedRect(0, 0, tabW, tabH, 6);
       bg.lineStyle(1, 0x555588, 0.6);
-      bg.strokeRoundedRect(-tabW / 2, -tabH / 2, tabW, tabH, 6);
+      bg.strokeRoundedRect(0, 0, tabW, tabH, 6);
       container.add(bg);
 
       const label = this.scene.add
-        .text(0, 0, tab.label, {
+        .text(tabW / 2, tabH / 2, tab.label, {
           fontFamily: FONTS.PRIMARY,
           fontSize: '12px',
           color: tab.id === this.activeTab ? TEXT_COLORS.PRIMARY : TEXT_COLORS.MUTED,
@@ -109,9 +142,11 @@ export class JourneyInfoModal extends GameObjects.Container {
         .setOrigin(0.5);
       container.add(label);
 
-      container.setSize(tabW, tabH);
-      container.setInteractive(new Phaser.Geom.Rectangle(-tabW / 2, -tabH / 2, tabW, tabH), Phaser.Geom.Rectangle.Contains);
-      container.on('pointerup', () => this.switchTab(tab.id));
+      // Transparent zone on top — Text blocks container hits on glyph pixels otherwise
+      const hitZone = this.scene.add.zone(tabW / 2, tabH / 2, tabW, tabH);
+      hitZone.setInteractive({ useHandCursor: true });
+      hitZone.on('pointerup', () => this.switchTab(tab.id));
+      container.add(hitZone);
 
       this.add(container);
       this.tabButtons.push(container);
@@ -123,28 +158,74 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.activeTab = tabId;
 
     // Rebuild tab button styling
-    const tabs = ['knowledge', 'permits'];
+    const tabs = ['knowledge', 'rounds', 'permits'];
+    const tabW = 120;
+    const tabH = 28;
     for (let i = 0; i < this.tabButtons.length; i++) {
       const container = this.tabButtons[i];
       const isActive = tabs[i] === tabId;
-      // Update bg and label colors
       const bg = container.list[0] as GameObjects.Graphics;
       const label = container.list[1] as GameObjects.Text;
       bg.clear();
       bg.fillStyle(isActive ? 0x333366 : 0x1a1a30, 1);
-      bg.fillRoundedRect(-70, -14, 140, 28, 6);
+      bg.fillRoundedRect(0, 0, tabW, tabH, 6);
       bg.lineStyle(1, 0x555588, 0.6);
-      bg.strokeRoundedRect(-70, -14, 140, 28, 6);
+      bg.strokeRoundedRect(0, 0, tabW, tabH, 6);
       label.setColor(isActive ? TEXT_COLORS.PRIMARY : TEXT_COLORS.MUTED);
     }
 
-    // Clear and rebuild content
+    this.tagTooltip.hide();
     this.tabContent.removeAll(true);
     if (tabId === 'knowledge') {
       this.showKnowledgeTab();
+    } else if (tabId === 'rounds') {
+      this.showRoundsTab();
     } else {
       this.showPermitsTab();
     }
+
+    this.bringTabsToFront();
+  }
+
+  private showRoundsTab(): void {
+    ensureRoundSkipPreviewTags();
+
+    const { top, bottom } = this.getContentArea();
+    const labelY = top + 4;
+    const panelsY = top + 26;
+
+    const legLabel = this.scene.add
+      .text(this.panelX + this.panelW / 2, labelY, `Leg ${getPlayerState().leg} — Current Leg Rounds`, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '12px',
+        color: TEXT_COLORS.MUTED,
+      })
+      .setOrigin(0.5, 0);
+    this.tabContent.add(legLabel);
+
+    createLegRoundPanelsForPlayer(
+      this.scene,
+      {
+        x: this.panelX + 12,
+        y: panelsY,
+        width: this.panelW - 24,
+        height: bottom - panelsY - 8,
+      },
+      {
+        parent: this.tabContent,
+        compact: true,
+        showActions: false,
+        depth: 510,
+        onTagHover: (tag, ax, ay) => {
+          this.tagTooltip.show(this.scene, tag, ax, ay, {
+            minX: this.panelX + 8,
+            maxX: this.panelX + this.panelW - 8,
+            minY: this.getContentArea().top,
+          }, 600);
+        },
+        onTagHoverEnd: () => this.tagTooltip.hide(),
+      },
+    );
   }
 
   private showKnowledgeTab(): void {
@@ -153,7 +234,8 @@ export class JourneyInfoModal extends GameObjects.Container {
     const panelW = this.panelW;
     const panelY = this.panelY;
 
-    let rowY = panelY + 88;
+    const { top } = this.getContentArea();
+    let rowY = top + 4;
     const rowH = 32;
 
     // Column positions
@@ -268,7 +350,8 @@ export class JourneyInfoModal extends GameObjects.Container {
     const panelY = this.panelY;
     const player = getPlayerState();
 
-    let rowY = panelY + 88;
+    const { top } = this.getContentArea();
+    let rowY = top + 4;
     const rowH = 44;
 
     if (player.purchasedPermits.length === 0) {
