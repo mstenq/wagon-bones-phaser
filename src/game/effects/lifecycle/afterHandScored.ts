@@ -7,9 +7,9 @@ import { getPlayerState } from '../../PlayerState';
 import { checkLoadedChance } from '../../Constants';
 import { resolveChance, resolveEffectParam } from '../helpers';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
-import handsData from '../../../data/hands.json';
+import hands from '../../../data/hands';
 
-const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
+const HAND_TABLE: HandDefinition[] = hands;
 
 effectRegistry.registerLifecycle('after-hand-scored', (equip, handType, _scoringDice) => {
   switch (equip.def.effectType) {

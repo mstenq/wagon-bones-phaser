@@ -7,14 +7,14 @@ import { GameObjects, Scene } from 'phaser';
 import { Die } from '../../game/types';
 import { DICE, COLORS } from '../../game/Constants';
 import { applyAuraGlow, createAuraParticles, getAuraPrimary } from './AuraFX';
-import diceEnhancementsData from '../../data/dice_enhancements.json';
-import diceAurasData from '../../data/dice_auras.json';
-import stickerData from '../../data/pip_enhancements.json';
+import diceEnhancements from '../../data/dice_enhancements';
+import diceAuras from '../../data/dice_auras';
+import pipEnhancements from '../../data/pip_enhancements';
 
 // Lookup maps for descriptions
-const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map((e) => [e.id, e]));
-const AURA_INFO = new Map(diceAurasData.map((a) => [a.id, a]));
-const STICKER_INFO = new Map(stickerData.map((s) => [s.id, s]));
+const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
+const AURA_INFO = new Map(diceAuras.map((a) => [a.id, a]));
+const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
 
 const DICE_SIZE = DICE.SIZE;
 const BG_COLOR = DICE.BG_COLOR;

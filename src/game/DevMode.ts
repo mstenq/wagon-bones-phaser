@@ -11,7 +11,7 @@ import { getAllEquipment, EquipmentDef, ItemAura } from './ItemsSystem';
 import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableDef } from './ConsumablesSystem';
 import { applyPermitEffect, getPermitById, PermitDef } from './PermitsSystem';
 import packsData from '../data/packs.json';
-import itemAurasData from '../data/item_auras.json';
+import itemAuras from '../data/item_auras';
 
 export type PackCategory = 'dice' | 'supply' | 'trail_guide' | 'frontier' | 'equipment';
 export type PackTier = 'normal' | 'jumbo' | 'mega';
@@ -111,7 +111,7 @@ export function devGrantPermit(id: string): { ok: true; added: string[] } | { ok
 
 /** Get all available item auras (for the equipment aura swap dropdown) */
 export function devGetAllAuras(): ItemAura[] {
-  return itemAurasData as ItemAura[];
+  return itemAuras;
 }
 
 /** All boss definitions (for dev boss picker) */

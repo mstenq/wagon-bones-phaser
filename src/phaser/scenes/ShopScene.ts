@@ -52,8 +52,8 @@ import {
 } from '../../game/EquipmentModifiers';
 import { createDie } from '../../game/DiceSystem';
 import { Die } from '../../game/types';
-import diceEnhancementsData from '../../data/dice_enhancements.json';
-import stickerData from '../../data/pip_enhancements.json';
+import diceEnhancements from '../../data/dice_enhancements';
+import pipEnhancements from '../../data/pip_enhancements';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
 
 const CARD_SPACING = 185;
@@ -82,8 +82,8 @@ type ShopItem =
   | { type: 'consumable'; def: ConsumableDef; sold?: boolean }
   | { type: 'dice'; die: Die; displayDef: EquipmentDef; sold?: boolean };
 
-const ENHANCEMENT_INFO = new Map(diceEnhancementsData.map((e) => [e.id, e]));
-const STICKER_INFO = new Map(stickerData.map((s) => [s.id, s]));
+const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
+const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
 const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded'];
 const ALL_STICKERS: Die['sticker'][] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
 const DICE_SHOP_COST = 5;

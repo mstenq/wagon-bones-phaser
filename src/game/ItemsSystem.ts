@@ -2,7 +2,7 @@
 // Equipment definitions, shop stock generation, aura system.
 
 import allItems from '../data/items';
-import itemAurasData from '../data/item_auras.json';
+import itemAuras, { type ItemAura } from '../data/item_auras';
 
 export type { HintSegment, HintStyle } from '../data/items';
 
@@ -24,13 +24,7 @@ export function isEquipmentUnlocked(
   return def.unlockCondition(game, player ?? getPlayerState());
 }
 
-export interface ItemAura {
-  id: string;
-  name: string;
-  description: string;
-  costIncrease: number;
-  chance: number;
-}
+export type { ItemAura };
 
 export interface EquipmentDef {
   id: string;
@@ -75,7 +69,7 @@ export function isEquipmentLeased(instance: EquipmentInstance): boolean {
 }
 
 const ITEMS_POOL: EquipmentDef[] = allItems as EquipmentDef[];
-const ITEM_AURAS: ItemAura[] = itemAurasData as ItemAura[];
+const ITEM_AURAS: ItemAura[] = itemAuras;
 
 const SHOP_SIZE = 5;
 const LEGENDARY_RARITY = 'legendary';

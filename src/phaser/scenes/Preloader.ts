@@ -8,7 +8,7 @@ import permitsData from '../../data/permits.json';
 import professionsData from '../../data/professions.json';
 import bosses from '../../data/bosses';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
-import stickerData from '../../data/pip_enhancements.json';
+import pipEnhancements from '../../data/pip_enhancements';
 
 // Map sticker IDs to their PNG filenames (when they differ)
 const STICKER_FILE_MAP: Record<string, string> = {
@@ -38,7 +38,7 @@ export class Preloader extends Scene {
     this.load.image('bg_shop', 'assets/backgrounds/shop.png');
 
     // Load sticker images
-    for (const sticker of stickerData) {
+    for (const sticker of pipEnhancements) {
       const filename = STICKER_FILE_MAP[sticker.id] ?? sticker.id;
       this.load.image(`sticker_${sticker.id}`, `assets/stickers/${filename}.png`);
     }

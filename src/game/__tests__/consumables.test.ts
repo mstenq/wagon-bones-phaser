@@ -390,12 +390,12 @@ describe('pre-roll consumable targeting regression', () => {
 
 // ─── Bless Aura Weighting ───
 
-import itemAurasData from '../../data/item_auras.json';
+import itemAuras from '../../data/item_auras';
 
 describe('Bless supply card aura weighting', () => {
-  test('bless applies weighted aura distribution matching item_auras.json', () => {
+  test('bless applies weighted aura distribution matching item_auras data', () => {
     const blessableIds = ['fire', 'icy', 'holy'] as const;
-    const blessableAuras = blessableIds.map((id) => itemAurasData.find((a) => a.id === id)!);
+    const blessableAuras = blessableIds.map((id) => itemAuras.find((a) => a.id === id)!);
     const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
     const expectedRates = Object.fromEntries(blessableAuras.map((a) => [a.id, a.chance / totalWeight]));
 

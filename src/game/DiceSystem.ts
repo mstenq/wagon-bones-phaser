@@ -2,7 +2,7 @@
 // Handles dice creation, rolling, pouch management, hand detection, and scoring.
 
 import { Die, HandType, HandResult, HandDefinition, ScoreResult, ScoreAnimEvent } from './types';
-import handsData from '../data/hands.json';
+import hands from '../data/hands';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
 import { effectRegistry, getScoredRetriggerCount } from './effects';
@@ -14,7 +14,7 @@ import { dieMatchesPip, hasStackedDeck } from './effects/helpers';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
 
-const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
+const HAND_TABLE: HandDefinition[] = hands;
 
 let nextDieId = 0;
 

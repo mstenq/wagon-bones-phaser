@@ -47,13 +47,7 @@ export interface Die {
   bonusMiles: number; // permanent miles bonus (e.g. from Cowboy Boots)
 }
 
-export interface HandDefinition {
-  type: string;
-  name: string;
-  baseMiles: number;
-  baseMult: number;
-  rank: number;
-}
+export type { HandDef as HandDefinition } from '../data/hands';
 
 export interface HandResult {
   type: HandType;
@@ -178,3 +172,10 @@ export type { TagCategory, TrailTagDef, TrailTagInstance } from '../data/trail_t
 
 // ─── Bosses (re-export from data layer) ───
 export type { BossDef, BossEffectType } from '../data/bosses';
+
+// ─── Data definitions (re-export from data layer) ───
+export type { HandDef } from '../data/hands';
+export type { ItemAura } from '../data/item_auras';
+export type { DiceAuraDef } from '../data/dice_auras';
+export type { DiceEnhancementDef } from '../data/dice_enhancements';
+export type { PipEnhancementDef } from '../data/pip_enhancements';

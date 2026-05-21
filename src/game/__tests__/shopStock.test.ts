@@ -1,6 +1,6 @@
 import './setup';
 import { describe, test, expect } from 'bun:test';
-import itemAurasData from '../../data/item_auras.json';
+import itemAuras from '../../data/item_auras';
 import {
   generateRandomEquipment,
   generateShopStock,
@@ -155,7 +155,7 @@ describe('Shop stock exclusion', () => {
   test('generateRandomEquipment uses weighted rarity thresholds when no rarity is provided', () => {
     const originalRandom = Math.random;
     const rarityRolls = [0.01, 0.2, 0.9];
-    const auraRollCount = itemAurasData.length;
+    const auraRollCount = itemAuras.length;
     let rarityIndex = 0;
     let callStep = 0;
 

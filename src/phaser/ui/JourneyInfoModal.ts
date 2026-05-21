@@ -14,7 +14,7 @@ import { devGrantPermit, isDevMode } from '../../game/DevMode';
 import { createLegRoundPanelsForPlayer } from './RoundInfo';
 import { ensureRoundSkipPreviewTags } from '../../game/TagSystem';
 import { TagTooltip } from './TagTooltip';
-import handsData from '../../data/hands.json';
+import hands from '../../data/hands';
 
 export class JourneyInfoModal extends GameObjects.Container {
   private scene: Scene;
@@ -281,8 +281,8 @@ export class JourneyInfoModal extends GameObjects.Container {
 
     const player = getPlayerState();
 
-    for (let i = 0; i < handsData.length; i++) {
-      const hand = handsData[i];
+    for (let i = 0; i < hands.length; i++) {
+      const hand = hands[i];
       const handType = hand.type as HandType;
       const stats = player.getHandStats(handType);
 

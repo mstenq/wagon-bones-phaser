@@ -6,7 +6,7 @@
 import { Scene } from 'phaser';
 import { DiceSprite } from '../ui/DiceSprite';
 import { ScoreResult, ScoreAnimPopupType } from '../../game/types';
-import diceEnhancementsData from '../../data/dice_enhancements.json';
+import diceEnhancements from '../../data/dice_enhancements';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
@@ -22,7 +22,7 @@ const POPUP_MONEY_COLOR = '#ffd700';
 const POPUP_SUPPLY_COLOR = '#9c27b0';
 const POPUP_ENHANCE_COLOR = '#55ddff';
 
-const ENHANCEMENT_NAMES = new Map(diceEnhancementsData.map((e) => [e.id, e.name]));
+const ENHANCEMENT_NAMES = new Map(diceEnhancements.map((e) => [e.id, e.name]));
 
 /**
  * Spawn a short-lived text popup that scales up, shakes, and fades out.

@@ -6,7 +6,7 @@ import { Die, DiceAura, DiceEnhancement, DiceSticker } from './types';
 import { getPlayerState } from './PlayerState';
 import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 import { CHANCES } from './Constants';
-import diceAurasData from '../data/dice_auras.json';
+import diceAuras from '../data/dice_auras';
 
 // ─── Effect Types ───
 
@@ -159,7 +159,7 @@ function applyAura(player: ReturnType<typeof getPlayerState>, selectedDice: Die[
   const chosenAura = aura ?? pickRandomAura();
   original.aura = chosenAura;
 
-  const info = diceAurasData.find((a) => a.id === chosenAura);
+  const info = diceAuras.find((a) => a.id === chosenAura);
   const auraName = info ? info.name : chosenAura;
   return `Applied ${auraName} aura`;
 }

@@ -8,11 +8,11 @@ import { getItemAuraById, isEquipmentCursed } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition, HandUpgradeInfo } from './types';
-import handsData from '../data/hands.json';
+import hands from '../data/hands';
 import { checkLoadedChance, PACK_ONLY_FRONTIER_IDS } from './Constants';
 import { resolveEffectParam } from './effects/helpers';
 
-const HAND_TABLE: HandDefinition[] = handsData as HandDefinition[];
+const HAND_TABLE: HandDefinition[] = hands;
 
 export type ConsumableCategory = 'supply' | 'trail_guide' | 'frontier';
 
