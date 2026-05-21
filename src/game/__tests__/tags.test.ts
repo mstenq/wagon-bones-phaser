@@ -9,6 +9,7 @@ import {
   applyAuraTagsToShopStock,
   processJunkPileTag,
   processBossPayoutTags,
+  processChangeOfGuardTags,
 } from '../TagSystem';
 import {
   createEquipmentInstance,
@@ -237,6 +238,17 @@ describe('TagSystem', () => {
       expect(bonus).toBe(0);
       expect(player.pendingTags.length).toBe(1);
       expect(player.pendingTags[0].def.id).toBe('tag_boss');
+    });
+
+    it('Change of Guard immediately rerolls boss and is consumed', () => {
+      const player = getPlayerState();
+      const before = player.getBossForLeg(player.leg)!.id;
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_boss')!;
+      player.addTag(tag);
+      const rerolls = processChangeOfGuardTags(player);
+      expect(rerolls).toBe(1);
+      expect(player.pendingTags.length).toBe(0);
+      expect(player.getBossForLeg(player.leg)!.id).not.toBe(before);
     });
   });
 

@@ -21,6 +21,7 @@ export const Events = {
   TAG_EARNED: 'game:tag-earned',
   ROUND_SKIPPED: 'game:round-skipped',
   TAG_QUEUE_CHANGED: 'game:tag-queue-changed',
+  PERMITS_CHANGED: 'player:permits-changed',
 
   // Equipment modifier domain
   EQUIPMENT_DESTROYED: 'equipment:destroyed',

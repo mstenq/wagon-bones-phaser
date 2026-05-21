@@ -20,7 +20,7 @@ import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyD
 import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
 import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers';
 import { GAMEPLAY } from './Constants';
-import { PermitDef, applyPermitEffect, getPermitShopRerollDiscount } from './PermitsSystem';
+import { PermitDef, applyPermitEffect, getPermitBossRerollLimit, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
@@ -136,6 +136,7 @@ export class PlayerState {
   skippedRoundsThisLeg: number[] = []; // round numbers skipped this leg (for RoundSelect UI)
   skippedRoundTags: Partial<Record<number, TrailTagDef>> = {}; // tag earned per skipped round
   roundSkipPreviewTags: Partial<Record<number, TrailTagDef>> = {}; // tag offered if each round is skipped
+  bossRerollsUsedThisLeg: number = 0; // permit boss rerolls consumed this leg
 
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
@@ -565,6 +566,51 @@ export class PlayerState {
     this.bossAssignments[this.leg - 1] = boss;
   }
 
+  /** Pick a different boss for a leg. Returns true if the assignment changed. */
+  rerollBossForLeg(leg: number = this.leg): boolean {
+    const allBosses = bossesData as BossDef[];
+    const current = this.bossAssignments[leg - 1];
+    let eligible = allBosses.filter(
+      (b) => (b.minimumLeg ?? 1) <= leg && b.id !== current?.id,
+    );
+
+    if (leg <= 8) {
+      const usedElsewhere = new Set(
+        this.bossAssignments
+          .map((b, i) => (i !== leg - 1 ? b?.id : undefined))
+          .filter((id): id is string => !!id),
+      );
+      const unused = eligible.filter((b) => !usedElsewhere.has(b.id));
+      if (unused.length > 0) eligible = unused;
+    }
+
+    if (eligible.length === 0) return false;
+    this.bossAssignments[leg - 1] = eligible[Math.floor(Math.random() * eligible.length)];
+    return true;
+  }
+
+  /** Permit boss reroll limit (-1 = unlimited, 0 = none). */
+  get bossPermitRerollLimit(): number {
+    return getPermitBossRerollLimit(this.purchasedPermits);
+  }
+
+  canBossPermitReroll(): boolean {
+    const limit = this.bossPermitRerollLimit;
+    if (limit === 0) return false;
+    if (limit === -1) return true;
+    return this.bossRerollsUsedThisLeg < limit;
+  }
+
+  /** Spend $10 and reroll the current leg's boss via permit. */
+  tryBossPermitReroll(): boolean {
+    if (!this.canBossPermitReroll()) return false;
+    if (!this.canAfford(GAMEPLAY.BOSS_REROLL_COST)) return false;
+    if (!this.rerollBossForLeg()) return false;
+    this.trySpend(GAMEPLAY.BOSS_REROLL_COST);
+    if (this.bossPermitRerollLimit !== -1) this.bossRerollsUsedThisLeg++;
+    return true;
+  }
+
   /** Get the boss for the current leg (only active on round 3) */
   get currentBoss(): BossDef | null {
     if (this.round !== GAMEPLAY.ROUNDS_PER_LEG) return null;
@@ -731,6 +777,7 @@ export class PlayerState {
       this.skippedRoundsThisLeg = [];
       this.skippedRoundTags = {};
       this.roundSkipPreviewTags = {};
+      this.bossRerollsUsedThisLeg = 0;
       // New leg — clear the current permit so a new one generates
       this.currentLegPermit = null;
       this.permitPurchasedThisLeg = false;
@@ -794,6 +841,7 @@ export class PlayerState {
     this.skippedRoundsThisLeg = [];
     this.skippedRoundTags = {};
     this.roundSkipPreviewTags = {};
+    this.bossRerollsUsedThisLeg = 0;
     this.assignBosses();
   }
 }

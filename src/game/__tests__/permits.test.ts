@@ -21,6 +21,7 @@ import {
   PermitDef,
 } from '../PermitsSystem';
 import { GAMEPLAY } from '../Constants';
+import { devGrantPermit } from '../DevMode';
 
 beforeEach(() => {
   resetDieIds();
@@ -558,6 +559,62 @@ describe('Permit queries: BOSS_REROLL', () => {
 
   test('Wanted Dead or Alive gives unlimited (-1)', () => {
     expect(getPermitBossRerollLimit(['bounty_board', 'wanted_dead_or_alive'])).toBe(-1);
+  });
+});
+
+describe('Permit boss reroll', () => {
+  test('Bounty Board: one $10 reroll per leg', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(30);
+    player.buyPermit(getPermitById('bounty_board')!);
+    const before = player.getBossForLeg(player.leg)!.id;
+
+    expect(player.tryBossPermitReroll()).toBe(true);
+    expect(player.getBossForLeg(player.leg)!.id).not.toBe(before);
+    expect(player.economy.balance).toBe(10);
+    expect(player.bossRerollsUsedThisLeg).toBe(1);
+    expect(player.tryBossPermitReroll()).toBe(false);
+  });
+
+  test('Wanted Dead or Alive: unlimited rerolls for $10 each', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(50);
+    player.buyPermit(getPermitById('bounty_board')!);
+    player.buyPermit(getPermitById('wanted_dead_or_alive')!);
+
+    expect(player.tryBossPermitReroll()).toBe(true);
+    expect(player.tryBossPermitReroll()).toBe(true);
+    expect(player.economy.balance).toBe(10);
+    expect(player.bossRerollsUsedThisLeg).toBe(0);
+  });
+
+  test('boss reroll count resets on new leg', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(50);
+    player.buyPermit(getPermitById('bounty_board')!);
+    player.tryBossPermitReroll();
+    expect(player.bossRerollsUsedThisLeg).toBe(1);
+
+    player.round = 3;
+    player.advanceRound();
+    expect(player.leg).toBe(2);
+    expect(player.bossRerollsUsedThisLeg).toBe(0);
+    expect(player.canBossPermitReroll()).toBe(true);
+  });
+});
+
+describe('devGrantPermit', () => {
+  test('stage 2 permit also grants stage 1 prerequisite', () => {
+    const player = resetPlayerState();
+    player.applyProfession('developer');
+
+    const result = devGrantPermit('wanted_dead_or_alive');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.added).toEqual(['bounty_board', 'wanted_dead_or_alive']);
+    }
+    expect(player.hasPermit('bounty_board')).toBe(true);
+    expect(player.hasPermit('wanted_dead_or_alive')).toBe(true);
   });
 });
 

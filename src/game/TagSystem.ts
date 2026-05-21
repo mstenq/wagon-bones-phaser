@@ -411,6 +411,22 @@ export function consumeNextRoundTags(player = getPlayerState()): void {
   }
 }
 
+/** Change of Guard: immediately reroll this leg's boss and consume tag_boss copies. */
+export function processChangeOfGuardTags(player = getPlayerState()): number {
+  const tags = player.pendingTags.filter((t) => t.def.id === 'tag_boss');
+  if (tags.length === 0) return 0;
+
+  player.pendingTags = player.pendingTags.filter((t) => t.def.id !== 'tag_boss');
+
+  let rerolls = 0;
+  for (const tag of tags) {
+    for (let c = 0; c < tag.copies; c++) {
+      if (player.rerollBossForLeg()) rerolls++;
+    }
+  }
+  return rerolls;
+}
+
 /** Bounty Payout: consume investment boss tags and return bonus money. */
 export function processBossPayoutTags(player = getPlayerState()): number {
   let bonus = 0;

@@ -9,7 +9,7 @@ import bossesData from '../data/bosses.json';
 import type { BossDef } from './types';
 import { getAllEquipment, EquipmentDef, ItemAura } from './ItemsSystem';
 import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableDef } from './ConsumablesSystem';
-import { getPermitById, PermitDef } from './PermitsSystem';
+import { applyPermitEffect, getPermitById, PermitDef } from './PermitsSystem';
 import packsData from '../data/packs.json';
 import itemAurasData from '../data/item_auras.json';
 
@@ -80,6 +80,33 @@ export function devLookupPack(id: string): PackDefinition | null {
 /** Look up a permit by ID */
 export function devLookupPermit(id: string): PermitDef | null {
   return getPermitById(id);
+}
+
+/** Grant a permit without cost (dev only). Stage 2 auto-grants its stage 1 prerequisite. */
+export function devGrantPermit(id: string): { ok: true; added: string[] } | { ok: false; error: string } {
+  const permit = getPermitById(id.trim());
+  if (!permit) return { ok: false, error: `Permit not found: ${id}` };
+
+  const player = getPlayerState();
+  const toGrant: PermitDef[] = [];
+
+  if (permit.stage === 2 && permit.prerequisiteId) {
+    const prereq = getPermitById(permit.prerequisiteId);
+    if (prereq && !player.hasPermit(prereq.id)) toGrant.push(prereq);
+  }
+
+  if (!player.hasPermit(permit.id)) toGrant.push(permit);
+
+  if (toGrant.length === 0) return { ok: false, error: 'Permit already owned' };
+
+  const added: string[] = [];
+  for (const p of toGrant) {
+    player.purchasedPermits.push(p.id);
+    applyPermitEffect(p, player);
+    added.push(p.id);
+  }
+
+  return { ok: true, added };
 }
 
 /** Get all available item auras (for the equipment aura swap dropdown) */

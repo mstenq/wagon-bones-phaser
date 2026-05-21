@@ -5,10 +5,12 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
 import { HandType } from '../../game/types';
 import { Button } from './Button';
 import { getPermitById } from '../../game/PermitsSystem';
+import { devGrantPermit, isDevMode } from '../../game/DevMode';
 import { createLegRoundPanelsForPlayer } from './RoundInfo';
 import { ensureRoundSkipPreviewTags } from '../../game/TagSystem';
 import { TagTooltip } from './TagTooltip';
@@ -25,6 +27,7 @@ export class JourneyInfoModal extends GameObjects.Container {
   private closeBtn: Button;
   private activeTab: string = 'knowledge';
   private tagTooltip = new TagTooltip();
+  private permitsDirty = false;
 
   /** Layout below tab row — shared by all tabs */
   private getContentArea(): { top: number; bottom: number } {
@@ -90,7 +93,10 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.closeBtn = new Button(scene, this.panelX + this.panelW / 2, this.panelY + this.panelH - 38, 'Close', 120, 34);
     this.closeBtn.onClick(() => {
       this.tagTooltip.hide();
+      const dirty = this.permitsDirty;
+      this.permitsDirty = false;
       this.destroy();
+      if (dirty) EventBus.emit(Events.PERMITS_CHANGED);
     });
     this.add(this.closeBtn);
 
@@ -174,17 +180,7 @@ export class JourneyInfoModal extends GameObjects.Container {
       label.setColor(isActive ? TEXT_COLORS.PRIMARY : TEXT_COLORS.MUTED);
     }
 
-    this.tagTooltip.hide();
-    this.tabContent.removeAll(true);
-    if (tabId === 'knowledge') {
-      this.showKnowledgeTab();
-    } else if (tabId === 'rounds') {
-      this.showRoundsTab();
-    } else {
-      this.showPermitsTab();
-    }
-
-    this.bringTabsToFront();
+    this.refreshActiveTab();
   }
 
   private showRoundsTab(): void {
@@ -343,6 +339,33 @@ export class JourneyInfoModal extends GameObjects.Container {
     }
   }
 
+  private refreshActiveTab(): void {
+    this.tagTooltip.hide();
+    this.tabContent.removeAll(true);
+    if (this.activeTab === 'knowledge') {
+      this.showKnowledgeTab();
+    } else if (this.activeTab === 'rounds') {
+      this.showRoundsTab();
+    } else {
+      this.showPermitsTab();
+    }
+    this.bringTabsToFront();
+  }
+
+  private devAddPermit(): void {
+    const id = window.prompt('Enter permit ID:');
+    if (!id?.trim()) return;
+
+    const result = devGrantPermit(id.trim());
+    if (!result.ok) {
+      window.alert(result.error);
+      return;
+    }
+
+    this.permitsDirty = true;
+    this.refreshActiveTab();
+  }
+
   private showPermitsTab(): void {
     const scene = this.scene;
     const panelX = this.panelX;
@@ -363,10 +386,7 @@ export class JourneyInfoModal extends GameObjects.Container {
         })
         .setOrigin(0.5);
       this.tabContent.add(emptyText);
-      return;
-    }
-
-    for (let i = 0; i < player.purchasedPermits.length; i++) {
+    } else for (let i = 0; i < player.purchasedPermits.length; i++) {
       const permitId = player.purchasedPermits[i];
       const permit = getPermitById(permitId);
       if (!permit) continue;
@@ -407,6 +427,21 @@ export class JourneyInfoModal extends GameObjects.Container {
 
       this.tabContent.add([stageText, nameText, descText]);
       rowY += rowH;
+    }
+
+    if (isDevMode()) {
+      const addBtn = new Button(
+        scene,
+        panelX + panelW / 2,
+        this.panelY + this.panelH - 78,
+        'Add Permit',
+        140,
+        32,
+      )
+        .setColor(0x4a3a6b, 0x6a4a8b)
+        .setDepth(510);
+      addBtn.onClick(() => this.devAddPermit());
+      this.tabContent.add(addBtn);
     }
   }
 }

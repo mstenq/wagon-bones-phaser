@@ -66,6 +66,7 @@ export interface RoundInfoConfig {
   onPlay?: () => void;
   onSkip?: () => void;
   onRerollBoss?: () => void;
+  canRerollBoss?: () => boolean;
   onTagHover?: (tag: TrailTagDef, anchorX: number, anchorY: number) => void;
   onTagHoverEnd?: () => void;
 }
@@ -88,6 +89,7 @@ export interface LegRoundPanelsConfig {
   onPlay?: () => void;
   onSkip?: () => void;
   onRerollBoss?: () => void;
+  canRerollBoss?: () => boolean;
   onTagHover?: (tag: TrailTagDef, anchorX: number, anchorY: number) => void;
   onTagHoverEnd?: () => void;
 }
@@ -125,6 +127,7 @@ export function createLegRoundPanels(
       onPlay: config.onPlay,
       onSkip: config.onSkip,
       onRerollBoss: config.onRerollBoss,
+      canRerollBoss: config.canRerollBoss,
       onTagHover: config.onTagHover,
       onTagHoverEnd: config.onTagHoverEnd,
     });
@@ -188,7 +191,14 @@ export class RoundInfoPanel extends GameObjects.Container {
     const isSkipped = config.state === 'skipped';
     const isActive = config.state === 'select';
     const isUpcoming = config.state === 'upcoming';
-    const showActions = config.showActions && isActive;
+    const showRoundActions = (config.showActions ?? false) && isActive;
+    const showBossReroll =
+      (config.showActions ?? false) &&
+      isBoss &&
+      !isSkipped &&
+      config.state !== 'complete' &&
+      !!config.onRerollBoss &&
+      getPlayerState().bossPermitRerollLimit !== 0;
 
     const bg = scene.add.graphics();
     const bgColor = isActive ? 0x1a2a1a : isSkipped ? 0x151520 : 0x0d0d1a;
@@ -313,56 +323,62 @@ export class RoundInfoPanel extends GameObjects.Container {
         .setRotation(-0.25)
         .setAlpha(0.75);
       this.add(stamp);
-    } else if (!showActions && !isBoss && config.skipPreviewTag) {
+    } else if (!showRoundActions && !showBossReroll && !isBoss && config.skipPreviewTag) {
       const footerY = height - (compact ? 48 : 56);
       this.addRoundTagDisplay(config.skipPreviewTag, config, footerY, compact);
     }
 
-    if (showActions) {
+    if (showBossReroll || showRoundActions) {
       const bottomY = height - COL_PAD;
-      const hasSkip = !isBoss && !!config.skipPreviewTag;
-      const hasBossReroll = isBoss && !!config.onRerollBoss;
+      const hasSkip = showRoundActions && !isBoss && !!config.skipPreviewTag;
       let actionY = bottomY - BTN_H / 2;
       const absX = x + cx;
 
-      if (hasBossReroll) {
-        const rerollBtn = new Button(scene, absX, y + actionY, 'Re-roll Boss', width - 30, BTN_H)
-          .setColor(0x6b2d6b, 0x8b3d8b)
+      if (showRoundActions) {
+        const playY = hasSkip ? actionY - BTN_H - BTN_GAP : actionY;
+
+        const playBtn = new Button(scene, absX, y + playY, 'Play Round', width - 30, BTN_H)
+          .setColor(0x2d6b2d, 0x3d8b3d)
           .setDepth(depth + 5);
-        rerollBtn.onClick(config.onRerollBoss!);
-        this.registerButton(rerollBtn);
-        actionY -= BTN_H + BTN_GAP;
+        if (config.onPlay) playBtn.onClick(config.onPlay);
+        this.registerButton(playBtn);
+
+        if (hasSkip && config.skipPreviewTag) {
+          const skipY = actionY;
+          const tag = config.skipPreviewTag;
+          const tagX = 14;
+          const tagY = skipY - TAG_SIZE / 2;
+          const skipBtnW = width - 30 - TAG_SIZE - 10;
+          const skipBtnX = x + tagX + TAG_SIZE + 10 + skipBtnW / 2;
+
+          this.addTagBadge(tagX, tagY, tag, TAG_SIZE, config);
+          const skipBtn = new Button(scene, skipBtnX, y + skipY, 'Skip Round', skipBtnW, BTN_H)
+            .setColor(0x8b2020, 0xb03030)
+            .setDepth(depth + 5);
+          if (config.onSkip) skipBtn.onClick(config.onSkip);
+          this.registerButton(skipBtn);
+
+          if (config.onTagHover) {
+            const ax = x + tagX + TAG_SIZE / 2;
+            const ay = y + tagY;
+            skipBtn.on('pointerover', () => config.onTagHover!(tag, ax, ay));
+            skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
+          }
+        }
+
+        if (showBossReroll) {
+          actionY = (hasSkip ? actionY : playY) - BTN_H - BTN_GAP;
+        }
       }
 
-      const playY = hasSkip ? actionY - BTN_H - BTN_GAP : actionY;
-
-      const playBtn = new Button(scene, absX, y + playY, 'Play Round', width - 30, BTN_H)
-        .setColor(0x2d6b2d, 0x3d8b3d)
-        .setDepth(depth + 5);
-      if (config.onPlay) playBtn.onClick(config.onPlay);
-      this.registerButton(playBtn);
-
-      if (hasSkip && config.skipPreviewTag) {
-        const skipY = actionY;
-        const tag = config.skipPreviewTag;
-        const tagX = 14;
-        const tagY = skipY - TAG_SIZE / 2;
-        const skipBtnW = width - 30 - TAG_SIZE - 10;
-        const skipBtnX = x + tagX + TAG_SIZE + 10 + skipBtnW / 2;
-
-        this.addTagBadge(tagX, tagY, tag, TAG_SIZE, config);
-        const skipBtn = new Button(scene, skipBtnX, y + skipY, 'Skip Round', skipBtnW, BTN_H)
-          .setColor(0x8b2020, 0xb03030)
+      if (showBossReroll) {
+        const rerollBtn = new Button(scene, absX, y + actionY, 'Reroll $10', width - 30, BTN_H)
+          .setColor(0x6b2d6b, 0x8b3d8b)
           .setDepth(depth + 5);
-        if (config.onSkip) skipBtn.onClick(config.onSkip);
-        this.registerButton(skipBtn);
-
-        if (config.onTagHover) {
-          const ax = x + tagX + TAG_SIZE / 2;
-          const ay = y + tagY;
-          skipBtn.on('pointerover', () => config.onTagHover!(tag, ax, ay));
-          skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
-        }
+        const rerollEnabled = config.canRerollBoss?.() ?? true;
+        rerollBtn.setEnabled(rerollEnabled);
+        rerollBtn.onClick(config.onRerollBoss!);
+        this.registerButton(rerollBtn);
       }
     }
   }

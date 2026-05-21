@@ -4,14 +4,15 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
-import { TEXT_COLORS, FONTS, TAG_STACK } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, TAG_STACK, GAMEPLAY } from '../../game/Constants';
 import { createLayout, LayoutResult } from '../ui/SceneLayout';
 import { createLegRoundPanels, type RoundInfoPanel } from '../ui/RoundInfo';
 import { TagTooltip } from '../ui/TagTooltip';
 import {
-  refreshRoundSkipPreviewTags,
+  ensureRoundSkipPreviewTags,
   grantTag,
   processImmediateTags,
+  processChangeOfGuardTags,
   processJunkPileTag,
   getPackDefIdForTag,
   isImmediateTag,
@@ -19,8 +20,6 @@ import {
 } from '../../game/TagSystem';
 import type { TrailTagInstance } from '../../game/types';
 import { getPackDefById } from '../../game/BoosterPackSystem';
-import bossesData from '../../data/bosses.json';
-import type { BossDef } from '../../game/types';
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
 
@@ -36,6 +35,7 @@ export class RoundSelectScene extends Scene {
   private layout!: LayoutResult;
   private tagTooltip = new TagTooltip();
   private roundPanels: RoundInfoPanel[] = [];
+  private readonly onPermitsChanged = () => this.scene.restart();
 
   constructor() {
     super('RoundSelect');
@@ -45,8 +45,10 @@ export class RoundSelectScene extends Scene {
     const player = getPlayerState();
 
     this.scale.on('resize', this.onResize, this);
+    EventBus.on(Events.PERMITS_CHANGED, this.onPermitsChanged);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
+      EventBus.off(Events.PERMITS_CHANGED, this.onPermitsChanged);
       this.tagTooltip.hide();
     });
 
@@ -56,29 +58,16 @@ export class RoundSelectScene extends Scene {
       sidebarTitle: 'TRAIL MAP',
     });
 
-    refreshRoundSkipPreviewTags(player);
+    ensureRoundSkipPreviewTags(player);
 
     this.buildRoundColumns();
 
     EventBus.emit(Events.SCENE_READY, this);
   }
 
-  private onRerollBoss(): void {
+  private onPermitBossReroll(): void {
     const player = getPlayerState();
-    const idx = player.pendingTags.findIndex((t) => t.def.id === 'tag_boss');
-    if (idx < 0) return;
-    player.consumeTag(idx);
-
-    const allBosses = bossesData as BossDef[];
-    const currentBoss = player.getBossForLeg(player.leg);
-    const others = allBosses.filter(
-      (b) => b.id !== currentBoss?.id && (b.minimumLeg ?? 1) <= player.leg,
-    );
-    if (others.length > 0) {
-      const newBoss = others[Math.floor(Math.random() * others.length)];
-      player.setBossForCurrentLeg(newBoss);
-    }
-
+    if (!player.tryBossPermitReroll()) return;
     this.tagTooltip.hide();
     this.scene.restart();
   }
@@ -86,10 +75,6 @@ export class RoundSelectScene extends Scene {
   private buildRoundColumns(): void {
     const player = getPlayerState();
     const { contentCX, contentW, contentTop, contentBottom, contentX } = this.layout;
-    const hasChangeOfGuard = player
-      .getTagsByCategory('boss')
-      .some((t) => t.def.id === 'tag_boss');
-
     const titleY = contentTop + 28;
     this.add
       .text(contentCX, titleY, 'Choose Your Next Round', {
@@ -121,7 +106,11 @@ export class RoundSelectScene extends Scene {
       depth: COL_DEPTH,
       onPlay: () => this.onPlay(),
       onSkip: () => this.onSkip(),
-      onRerollBoss: hasChangeOfGuard ? () => this.onRerollBoss() : undefined,
+      onRerollBoss: () => this.onPermitBossReroll(),
+      canRerollBoss: () => {
+        const p = getPlayerState();
+        return p.bossPermitRerollLimit !== 0 && p.canBossPermitReroll() && p.canAfford(GAMEPLAY.BOSS_REROLL_COST);
+      },
       onTagHover: (tag, ax, ay) => {
         this.tagTooltip.show(this, tag, ax, ay, {
           minX: contentX + 4,
@@ -163,6 +152,8 @@ export class RoundSelectScene extends Scene {
   }
 
   private finishAfterSkip(player = getPlayerState()): void {
+    processChangeOfGuardTags(player);
+
     const immediateResults = processImmediateTags(player);
     for (const result of immediateResults) {
       this.showImmediateResult(result);

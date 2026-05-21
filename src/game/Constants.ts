@@ -25,6 +25,7 @@ export const GAMEPLAY = {
   MAX_CONSUMABLE_SLOTS: 2,
   SHOP_SLOTS: 2,
   SHOP_REROLL_COST: 5,
+  BOSS_REROLL_COST: 10,
   LEGS: 8,
   ROUNDS_PER_LEG: 3,
   // Target miles per leg (index 0 = leg 1). Base value — multiplied by round multiplier.
