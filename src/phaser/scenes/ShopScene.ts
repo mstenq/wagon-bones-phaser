@@ -25,6 +25,7 @@ import {
   getRandomSupplyDef,
   getRandomTrailGuideDef,
   getShopRandomFrontierDef,
+  canUseConsumableInShop,
 } from '../../game/ConsumablesSystem';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
@@ -180,6 +181,7 @@ export class ShopScene extends Scene {
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
+    this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
     this.dicePouch = layout.dicePouch;
     const contentL = layout.contentX;
     const contentW = layout.contentW;
@@ -748,12 +750,13 @@ export class ShopScene extends Scene {
       });
     }
 
-    // Play hand upgrade animation for trail guides
-    if (result.handUpgrade) {
+    // Play hand upgrade animation for trail guides / Spiritual Journey
+    const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
+    if (upgrades.length > 0) {
       playHandUpgradeAnimation({
         scene: this,
         sidebar: this.sidebar,
-        upgrades: [result.handUpgrade],
+        upgrades,
         onComplete: () => {},
       });
     }

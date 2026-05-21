@@ -105,4 +105,28 @@ describe('spent dice persistence', () => {
     expect(player.spentDiceIds.size).toBe(0);
     expect(player.availableDice.length).toBe(player.dice.length);
   });
+
+  test('next day keeps unscored rolled dice and only refills missing count', () => {
+    const testDice = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    const { game } = setupGame({ dice: testDice, handSize: 8 });
+
+    game.startRound();
+    game.config.targetMiles = 999999;
+    const rolledIds = game.state.hand.map((d) => d.id);
+    expect(game.selectForRoll(rolledIds)).toBe(true);
+    expect(game.selectForScore([rolledIds[0]])).toBe(true);
+    expect(game.calculateScore()).not.toBeNull();
+
+    const unscoredRolled = new Set(rolledIds.slice(1));
+    const result = game.endDay();
+    expect(result.outcome).toBe('next-day');
+    expect(game.state.hand).toHaveLength(8);
+
+    const newHandIds = new Set(game.state.hand.map((d) => d.id));
+    let carried = 0;
+    for (const id of unscoredRolled) {
+      if (newHandIds.has(id)) carried++;
+    }
+    expect(carried).toBe(7);
+  });
 });

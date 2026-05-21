@@ -22,7 +22,12 @@ import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import { ConsumableInstance, executeConsumableEffect } from '../../game/ConsumablesSystem';
+import {
+  ConsumableAnimEvent,
+  ConsumableDef,
+  ConsumableInstance,
+  executeConsumableEffect,
+} from '../../game/ConsumablesSystem';
 import { DiceSelectionConfig, applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
@@ -189,6 +194,7 @@ export class GameScene extends Scene {
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
+    this.consumableBar.setCanUsePredicate((def) => this.canUseConsumable(def));
     this.dicePouch = layout.dicePouch;
     this.sidebarW = layout.sidebarW;
     this.contentCX = layout.contentCX;
@@ -292,17 +298,23 @@ export class GameScene extends Scene {
 
   // ─── Phase Rendering ───
 
-  private enterDrawPhase(): void {
+  private enterDrawPhase(
+    animateFromPouch: boolean = false,
+    carryoverPositions: Map<string, { x: number; y: number; rotation: number }> | null = null,
+  ): void {
     this.clearSprites();
     this.selectedHandIds = new Set(this.gameState.state.hand.map((die) => die.id));
     this.hideAllButtons();
     this.sidebar.clearHandDisplay();
     this.sidebar.updateData({ milesBase: 0, mult: 0 });
-    this.enterDrawPhaseLayout();
+    this.enterDrawPhaseLayout(animateFromPouch, carryoverPositions);
   }
 
   /** Show the actual SELECT phase UI (called after refresh prompt is resolved or not needed) */
-  private enterDrawPhaseLayout(): void {
+  private enterDrawPhaseLayout(
+    animateFromPouch: boolean = false,
+    carryoverPositions: Map<string, { x: number; y: number; rotation: number }> | null = null,
+  ): void {
     const { height } = this.scale;
     this.playAreaY = height * UI.ROLL_Y_RATIO;
     this.availableY = height * UI.HAND_Y_RATIO;
@@ -313,6 +325,54 @@ export class GameScene extends Scene {
     for (const sprite of this.playAreaSprites) {
       this.setupPlayAreaSprite(sprite);
       sprite.disableInteractive();
+    }
+
+    if (animateFromPouch && this.playAreaSprites.length > 0) {
+      const launch = this.getDicePouchLaunchPoint();
+      this.animating = true;
+      let completed = 0;
+      let newDiceIndex = 0;
+      for (let i = 0; i < this.playAreaSprites.length; i++) {
+        const sprite = this.playAreaSprites[i];
+        const finalX = sprite.x;
+        const finalY = sprite.y;
+        const finalRot = sprite.rotation;
+        const carry = carryoverPositions?.get(sprite.dieData.id);
+        const isCarryover = Boolean(carry);
+        if (carry) {
+          sprite.setPosition(carry.x, carry.y);
+          sprite.rotation = carry.rotation;
+          sprite.setAlpha(1);
+          sprite.setScale(1);
+        } else {
+          sprite.setPosition(launch.x, launch.y);
+          sprite.rotation = 0;
+          sprite.setAlpha(0);
+          sprite.setScale(0.2);
+        }
+
+        this.tweens.add({
+          targets: sprite,
+          x: finalX,
+          y: finalY,
+          rotation: finalRot,
+          alpha: 1,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 320,
+          delay: isCarryover ? 0 : newDiceIndex++ * 90,
+          ease: 'Back.easeOut',
+          onStart: () => {
+            if (!isCarryover) this.sound.play('sfx_card1', { volume: 0.35 });
+          },
+          onComplete: () => {
+            completed++;
+            if (completed >= this.playAreaSprites.length) {
+              this.animating = false;
+            }
+          },
+        });
+      }
     }
 
     // Animate mystery crate dice appearing
@@ -695,7 +755,11 @@ export class GameScene extends Scene {
         round: player.round,
       });
     } else {
-      this.enterDrawPhase();
+      const carryover = new Map<string, { x: number; y: number; rotation: number }>();
+      for (const sprite of this.rollSprites) {
+        carryover.set(sprite.dieData.id, { x: sprite.x, y: sprite.y, rotation: sprite.rotation });
+      }
+      this.enterDrawPhase(true, carryover);
     }
   }
 
@@ -1945,9 +2009,13 @@ export class GameScene extends Scene {
     });
   }
 
-  private handleConsumableUsed(consumed: ConsumableInstance): void {
+  private async handleConsumableUsed(consumed: ConsumableInstance): Promise<void> {
     const player = getPlayerState();
-    const result = executeConsumableEffect(consumed, player);
+    const result = executeConsumableEffect(consumed, player, {
+      visibleDiceIds: this.getVisibleConsumableDiceIds(),
+    });
+
+    await this.applyConsumableAnimEvents(result.consumableAnimEvents ?? []);
 
     this.sidebar.refreshMoney();
     this.equipBar.refresh();
@@ -1980,18 +2048,241 @@ export class GameScene extends Scene {
       this.enterConsumableTargeting(result.diceSelection);
     }
 
-    // Play hand upgrade animation for trail guides
-    if (result.handUpgrade) {
+    // Play hand upgrade animation for trail guides / Spiritual Journey
+    const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
+    if (upgrades.length > 0) {
       this.animating = true;
       playHandUpgradeAnimation({
         scene: this,
         sidebar: this.sidebar,
-        upgrades: [result.handUpgrade],
+        upgrades,
         onComplete: () => {
           this.animating = false;
         },
       });
     }
+  }
+
+  private canUseConsumable(def: ConsumableDef): boolean {
+    if (def.id !== 'raid') return true;
+    return this.getVisibleConsumableDiceIds().length > 0;
+  }
+
+  private getVisibleConsumableDiceIds(): string[] {
+    return this.getTargetableDice().dice.map((d) => d.id);
+  }
+
+  private async applyConsumableAnimEvents(events: ConsumableAnimEvent[]): Promise<void> {
+    for (const event of events) {
+      if (event.type !== 'destroy_dice') continue;
+      await this.animateConsumableDiceDestruction(event.diceIds, {
+        refillSelectHand: true,
+        floatingText: `Raid destroyed ${event.diceIds.length} dice`,
+      });
+    }
+  }
+
+  private animateConsumableDiceDestruction(
+    destroyedIds: string[],
+    options: { refillSelectHand?: boolean; floatingText?: string } = {},
+  ): Promise<void> {
+    const destroyedSet = new Set(destroyedIds);
+    const phase = this.gameState.state.phase;
+
+    this.removeDestroyedDiceFromRoundState(destroyedSet);
+
+    const targetSprites = (phase === 'SELECT' ? this.playAreaSprites : this.rollSprites).filter((sprite) =>
+      destroyedSet.has(sprite.dieData.id),
+    );
+
+    return new Promise((resolve) => {
+      if (targetSprites.length === 0) {
+        if (phase === 'SELECT' && options.refillSelectHand) {
+          void this.refillSelectHandAfterRaid();
+        }
+        resolve();
+        return;
+      }
+
+      ensureAuraTextures(this);
+      this.animating = true;
+      const fireSound = this.sound.add('sfx_ambient_fire', { volume: 1.2 });
+      fireSound.play();
+      let finished = 0;
+      for (const sprite of targetSprites) {
+        const fireEmitter = this.add.particles(sprite.x, sprite.y, 'aura_soft', {
+          speed: { min: 20, max: 60 },
+          angle: { min: -110, max: -70 },
+          scale: { start: 0.55, end: 0 },
+          alpha: { start: 0.85, end: 0 },
+          lifespan: { min: 350, max: 700 },
+          frequency: 24,
+          quantity: 2,
+          tint: [0xff2200, 0xff4500, 0xff6600, 0xffaa00, 0xffdd00],
+          blendMode: 'ADD',
+          maxAliveParticles: 20,
+        });
+        fireEmitter.setDepth(500);
+
+        this.time.delayedCall(260, () => {
+          const sparkEmitter = this.add.particles(sprite.x, sprite.y, 'aura_soft', {
+            speed: { min: 70, max: 150 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.35, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: { min: 220, max: 500 },
+            frequency: -1,
+            quantity: 10,
+            tint: [0xff4400, 0xffaa00, 0xffdd00],
+            blendMode: 'ADD',
+          });
+          sparkEmitter.setDepth(500);
+          sparkEmitter.explode(10);
+          this.time.delayedCall(500, () => sparkEmitter.destroy());
+        });
+
+        this.tweens.add({
+          targets: sprite,
+          delay: 260,
+          y: sprite.y - 45,
+          angle: sprite.angle + 16,
+          scaleX: 0.2,
+          scaleY: 0.2,
+          alpha: 0,
+          duration: 280,
+          ease: 'Back.easeIn',
+          onComplete: () => {
+            fireEmitter.stop();
+            this.time.delayedCall(400, () => fireEmitter.destroy());
+            const idxPlay = this.playAreaSprites.indexOf(sprite);
+            if (idxPlay >= 0) this.playAreaSprites.splice(idxPlay, 1);
+            const idxRoll = this.rollSprites.indexOf(sprite);
+            if (idxRoll >= 0) this.rollSprites.splice(idxRoll, 1);
+            sprite.destroy();
+            finished++;
+            if (finished >= targetSprites.length) {
+              this.animating = false;
+              this.tweens.add({
+                targets: fireSound,
+                volume: 0,
+                duration: 250,
+                onComplete: () => fireSound.destroy(),
+              });
+              this.sound.play('sfx_slice1', { volume: 0.65 });
+              if (options.floatingText) {
+                this.showFloatingText(options.floatingText, 0xff6666);
+              }
+              if (phase === 'SELECT' && options.refillSelectHand) {
+                void this.refillSelectHandAfterRaid().then(resolve);
+                return;
+              }
+              if (phase === 'ROLL') {
+                this.enterRollPhaseLayout();
+              }
+              resolve();
+            }
+          },
+        });
+      }
+    });
+  }
+
+  private removeDestroyedDiceFromRoundState(destroyedSet: Set<string>): void {
+    const phase = this.gameState.state.phase;
+    if (phase === 'SELECT') {
+      this.gameState.state.hand = this.gameState.state.hand.filter((d) => !destroyedSet.has(d.id));
+      this.selectedHandIds = new Set([...this.selectedHandIds].filter((id) => !destroyedSet.has(id)));
+      return;
+    }
+    if (phase === 'ROLL') {
+      this.gameState.state.rolledDice = this.gameState.state.rolledDice.filter((d) => !destroyedSet.has(d.id));
+      this.gameState.state.selectedForScore = this.gameState.state.selectedForScore.filter((d) => !destroyedSet.has(d.id));
+      this.lockedDiceIds = new Set([...this.lockedDiceIds].filter((id) => !destroyedSet.has(id)));
+    }
+  }
+
+  private getDicePouchLaunchPoint(): { x: number; y: number } {
+    const matrix = this.dicePouch.getWorldTransformMatrix();
+    return {
+      x: matrix.tx + UI.POUCH_SIZE * 0.5,
+      y: matrix.ty + UI.POUCH_SIZE * 0.5,
+    };
+  }
+
+  private refillSelectHandAfterRaid(): Promise<void> {
+    if (this.gameState.state.phase !== 'SELECT') return Promise.resolve();
+
+    const player = getPlayerState();
+    const currentIds = new Set(this.gameState.state.hand.map((d) => d.id));
+    const needed = Math.max(0, this.gameState.config.rollSize - this.gameState.state.hand.length);
+    if (needed <= 0) {
+      this.repositionPlayArea(true);
+      this.updateDrawButtons();
+      return Promise.resolve();
+    }
+
+    const refillPool = player.availableDice.filter((d) => !currentIds.has(d.id)).sort(() => Math.random() - 0.5);
+    const toAdd = refillPool.slice(0, needed);
+    if (toAdd.length === 0) return Promise.resolve();
+
+    const launch = this.getDicePouchLaunchPoint();
+    const startingLength = this.playAreaSprites.length;
+    for (const die of toAdd) {
+      this.gameState.state.hand.push(die);
+      this.selectedHandIds.add(die.id);
+      const sprite = new DiceSprite(this, launch.x, launch.y, die);
+      sprite.setDepth(20);
+      sprite.setAlpha(0);
+      sprite.setScale(0.2);
+      this.setupPlayAreaSprite(sprite);
+      sprite.disableInteractive();
+      this.playAreaSprites.push(sprite);
+    }
+    this.gameState.state.hand = this.gameState.state.hand.slice(0, this.gameState.config.rollSize);
+
+    const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
+    for (let i = 0; i < startingLength; i++) {
+      const arc = this.getArcOffset(i, this.playAreaSprites.length);
+      this.tweens.add({
+        targets: this.playAreaSprites[i],
+        x: positions[i],
+        y: this.playAreaY + arc.y,
+        rotation: arc.rotation,
+        duration: 220,
+        ease: 'Power2',
+      });
+    }
+
+    return new Promise((resolve) => {
+      let completed = 0;
+      for (let i = 0; i < toAdd.length; i++) {
+        const sprite = this.playAreaSprites[startingLength + i];
+        const idx = startingLength + i;
+        const arc = this.getArcOffset(idx, this.playAreaSprites.length);
+        this.tweens.add({
+          targets: sprite,
+          x: positions[idx],
+          y: this.playAreaY + arc.y,
+          rotation: arc.rotation,
+          alpha: 1,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 320,
+          delay: i * 90,
+          ease: 'Back.easeOut',
+          onStart: () => this.sound.play('sfx_card1', { volume: 0.35 }),
+          onComplete: () => {
+            completed++;
+            if (completed >= toAdd.length) {
+              this.updateDrawButtons();
+              this.dicePouch.refresh();
+              this.showFloatingText('Refilled from pouch', 0xffd700);
+              resolve();
+            }
+          },
+        });
+      }
+    });
   }
 
   // ─── Consumable Targeting Mode ───
@@ -2119,10 +2410,11 @@ export class GameScene extends Scene {
     }
   }
 
-  private applyConsumableTargeting(): void {
+  private async applyConsumableTargeting(): Promise<void> {
     if (!this.consumableTargeting) return;
     const required = this.consumableTargeting.pickCount;
     if (this.consumableTargetIds.size !== required) return;
+    const effectType = this.consumableTargeting.effectType;
 
     // Get the actual dice objects from the targetable set
     const { dice } = this.getTargetableDice();
@@ -2156,8 +2448,16 @@ export class GameScene extends Scene {
 
     this.exitConsumableTargeting();
 
+    if (effectType === 'DESTROY') {
+      await this.animateConsumableDiceDestruction([...affectedIds], {
+        refillSelectHand: false,
+        floatingText: `Destroyed ${affectedIds.size} dice`,
+      });
+      return;
+    }
+
     // Refresh dice visuals — update only affected sprites to reflect changes
-    this.refreshDiceSpritesAfterEffect(affectedIds);
+    this.refreshDiceSpritesAfterEffect(affectedIds, effectType);
   }
 
   private cancelConsumableTargeting(): void {
@@ -2219,16 +2519,21 @@ export class GameScene extends Scene {
   }
 
   /** Refresh dice sprites in-place after a consumable effect changes dice data */
-  private refreshDiceSpritesAfterEffect(affectedIds: Set<string>): void {
+  private refreshDiceSpritesAfterEffect(affectedIds: Set<string>, effectType: DiceSelectionConfig['effectType']): void {
     const player = getPlayerState();
+    const shouldUpdateVisibleValue = effectType === 'BUMP_VALUE';
 
     // Update roll sprites if in ROLL phase — only update affected dice
     for (const sprite of this.rollSprites) {
       if (!affectedIds.has(sprite.dieData.id)) continue;
       const updated = player.dice.find((d) => d.id === sprite.dieData.id);
       if (updated) {
-        // Preserve rolled value for non-value effects; for BUMP_VALUE, use the new value from player.dice
-        sprite.setDieData({ ...sprite.dieData, ...updated, value: updated.value });
+        // Keep rolled face value stable unless the effect explicitly changes values.
+        sprite.setDieData({
+          ...sprite.dieData,
+          ...updated,
+          value: shouldUpdateVisibleValue ? updated.value : sprite.dieData.value,
+        });
       }
     }
 
@@ -2238,7 +2543,11 @@ export class GameScene extends Scene {
       if (!affectedIds.has(rd.id)) continue;
       const updated = player.dice.find((d) => d.id === rd.id);
       if (updated) {
-        this.gameState.state.rolledDice[i] = { ...rd, ...updated, value: updated.value };
+        this.gameState.state.rolledDice[i] = {
+          ...rd,
+          ...updated,
+          value: shouldUpdateVisibleValue ? updated.value : rd.value,
+        };
       }
     }
 
@@ -2247,7 +2556,11 @@ export class GameScene extends Scene {
       if (!affectedIds.has(sprite.dieData.id)) continue;
       const updated = player.dice.find((d) => d.id === sprite.dieData.id);
       if (updated) {
-        sprite.setDieData({ ...sprite.dieData, ...updated, value: updated.value });
+        sprite.setDieData({
+          ...sprite.dieData,
+          ...updated,
+          value: shouldUpdateVisibleValue ? updated.value : sprite.dieData.value,
+        });
       }
     }
 

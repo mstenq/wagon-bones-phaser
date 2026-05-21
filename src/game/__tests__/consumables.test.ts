@@ -11,11 +11,14 @@ import {
   executeConsumableEffect,
   useConsumableDirectly,
   grantGhostMedicine,
+  canUseConsumableInShop,
 } from '../ConsumablesSystem';
 import { isEquipmentCursed } from '../ItemsSystem';
 import { applyDiceSelectionEffect, DiceSelectionConfig } from '../DiceSelectionSystem';
+import { HandType } from '../types';
 import supplyCardsData from '../../data/supply_cards.json';
 import trailGuidesData from '../../data/trail_guides.json';
+import frontierEncountersData from '../../data/frontier_encounters.json';
 
 beforeEach(() => {
   resetDieIds();
@@ -477,5 +480,178 @@ describe('frontier cards and cursed equipment', () => {
 
     expect(player.equipment.length).toBe(2);
     expect(player.equipment.every((e) => isEquipmentCursed(e))).toBe(true);
+  });
+});
+
+describe('frontier encounter wiring and raid rules', () => {
+  test('raid fails when no dice are visible', () => {
+    const player = resetPlayerState();
+    player.dice = [die({ value: 2 }), die({ value: 4 }), die({ value: 6 })];
+    player.economy.setBalance(0);
+    const def = getFrontierDefById('raid')!;
+
+    const result = executeConsumableEffect(createConsumableInstance(def), player);
+
+    expect(result.success).toBe(false);
+    expect(result.failReason).toContain('visible');
+    expect(player.dice).toHaveLength(3);
+    expect(player.economy.balance).toBe(0);
+  });
+
+  test('raid destroys 5 random dice from the visible pool only and grants $20', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(0);
+    const visible = [
+      die({ value: 1 }),
+      die({ value: 2, enhancement: 'loaded' }),
+      die({ value: 3 }),
+      die({ value: 4 }),
+      die({ value: 5, enhancement: 'gold' }),
+      die({ value: 6 }),
+      die({ value: 7 }),
+      die({ value: 8 }),
+    ];
+    const hidden = [die({ value: 9 }), die({ value: 10 })];
+    player.dice = [...visible, ...hidden];
+    player.equipment = [item('six_feet_under'), item('book_of_the_dead')];
+
+    const def = getFrontierDefById('raid')!;
+    const result = executeConsumableEffect(createConsumableInstance(def), player, {
+      visibleDiceIds: visible.map((d) => d.id),
+    });
+
+    const remainingIds = new Set(player.dice.map((d) => d.id));
+    const removedVisibleCount = visible.filter((d) => !remainingIds.has(d.id)).length;
+    const removedEnhancedCount = visible.filter((d) => !remainingIds.has(d.id) && d.enhancement !== null).length;
+    const removedHiddenCount = hidden.filter((d) => !remainingIds.has(d.id)).length;
+    const sixFeetUnder = player.equipment.find((e) => e.def.id === 'six_feet_under');
+    const bookOfTheDead = player.equipment.find((e) => e.def.id === 'book_of_the_dead');
+
+    expect(result.success).toBe(true);
+    expect(result.consumableAnimEvents).toBeDefined();
+    expect(result.consumableAnimEvents?.[0]?.type).toBe('destroy_dice');
+    expect(result.consumableAnimEvents?.[0]?.diceIds.length).toBe(5);
+    expect(removedVisibleCount).toBe(5);
+    expect(removedHiddenCount).toBe(0);
+    expect(player.economy.balance).toBe(20);
+    expect(sixFeetUnder?.state.miles).toBe(330);
+    expect(bookOfTheDead?.state.xMult).toBe(1 + removedEnhancedCount);
+  });
+
+  test('blood moon fails with no equipment', () => {
+    const player = resetPlayerState();
+    const def = getFrontierDefById('blood_moon')!;
+
+    const result = executeConsumableEffect(createConsumableInstance(def), player);
+
+    expect(result.success).toBe(false);
+    expect(result.failReason).toBe('No equipment!');
+  });
+
+  test('blood moon applies ghost aura and reroll penalty', () => {
+    const player = resetPlayerState();
+    player.equipment = [item('horseshoe'), item('war_drums')];
+    player.trailEventModifiers.rerollPenalty = 0;
+    const def = getFrontierDefById('blood_moon')!;
+    const originalRandom = Math.random;
+    Math.random = () => 0;
+    try {
+      const result = executeConsumableEffect(createConsumableInstance(def), player);
+      expect(result.success).toBe(true);
+      expect(player.equipment[0].def.aura?.id).toBe('ghost');
+      expect(player.trailEventModifiers.rerollPenalty).toBe(1);
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
+  test('spiritual journey upgrades all hands via consumable execution path', () => {
+    const player = resetPlayerState();
+    const beforeLevels = new Map(Object.values(HandType).map((handType) => [handType, player.getHandStats(handType).level]));
+    const def = getFrontierDefById('spiritual_journey')!;
+
+    const result = executeConsumableEffect(createConsumableInstance(def), player);
+
+    expect(result.success).toBe(true);
+    expect(result.handUpgrades?.length).toBe(Object.values(HandType).length);
+    for (const handType of Object.values(HandType)) {
+      expect(player.getHandStats(handType).level).toBe((beforeLevels.get(handType) ?? 0) + 1);
+    }
+  });
+
+  test('all frontier cards are wired to diceSelection, instantEffect, or explicit handlers', () => {
+    const explicitHandlers = new Set(['priests_blessing', 'skin_walker', 'blood_moon', 'raid']);
+    const supportedInstantEffects = new Set([
+      'CREATE_DICE',
+      'DOUBLE_MONEY',
+      'TRADE_EQUIPMENT',
+      'CREATE_EQUIPMENT',
+      'UPGRADE_ALL_HANDS',
+    ]);
+
+    for (const encounter of frontierEncountersData) {
+      const hasDiceSelection = 'diceSelection' in encounter && Boolean(encounter.diceSelection);
+      const hasInstantEffect = 'instantEffect' in encounter && Boolean(encounter.instantEffect);
+      const isExplicit = explicitHandlers.has(encounter.id);
+      expect(hasDiceSelection || hasInstantEffect || isExplicit).toBe(true);
+
+      if (hasInstantEffect) {
+        const instantType = (encounter.instantEffect as { type?: string }).type;
+        expect(supportedInstantEffects.has(instantType ?? '')).toBe(true);
+      }
+    }
+  });
+});
+
+describe('supply/frontier execution parity for shared effect engines', () => {
+  test('both supply and frontier diceSelection cards return targeting configs before applying effects', () => {
+    const player = resetPlayerState();
+    player.dice = [die({ value: 2 }), die({ value: 4 }), die({ value: 6 }), die({ value: 8 }), die({ value: 10 })];
+    const supplyDef = getSupplyDefById('shallow_grave')!;
+    const frontierDef = getFrontierDefById('gold_rush')!;
+
+    const supplyResult = executeConsumableEffect(createConsumableInstance(supplyDef), player);
+    const frontierResult = executeConsumableEffect(createConsumableInstance(frontierDef), player);
+
+    expect(supplyResult.success).toBe(true);
+    expect(frontierResult.success).toBe(true);
+    expect(supplyResult.diceSelection).toBeDefined();
+    expect(frontierResult.diceSelection).toBeDefined();
+    expect(player.dice).toHaveLength(5);
+  });
+
+  test('both supply and frontier instant effects resolve through core consumable execution', () => {
+    const supplyPlayer = resetPlayerState();
+    supplyPlayer.economy.setBalance(10);
+    const frontierPlayer = resetPlayerState();
+    frontierPlayer.economy.setBalance(10);
+    const supplyDef = getSupplyDefById('treasure_map')!;
+    const frontierDef = getFrontierDefById('magic_beans')!;
+
+    const supplyResult = executeConsumableEffect(createConsumableInstance(supplyDef), supplyPlayer);
+    const frontierResult = executeConsumableEffect(createConsumableInstance(frontierDef), frontierPlayer);
+
+    expect(supplyResult.success).toBe(true);
+    expect(frontierResult.success).toBe(true);
+    expect(supplyPlayer.economy.balance).toBe(20);
+    expect(frontierPlayer.economy.balance).toBe(0);
+  });
+});
+
+describe('shop consumable use gating', () => {
+  test('shop blocks ENHANCE and ADD_STICKER dice selection cards', () => {
+    const enhanceDef = getSupplyDefById('loaded')!;
+    const stickerDef = getFrontierDefById('gold_rush')!;
+
+    expect(canUseConsumableInShop(enhanceDef)).toBe(false);
+    expect(canUseConsumableInShop(stickerDef)).toBe(false);
+  });
+
+  test('shop allows non-dice-edit cards and non-blocked dice selection effects', () => {
+    const destroyDef = getSupplyDefById('shallow_grave')!;
+    const instantDef = getSupplyDefById('treasure_map')!;
+
+    expect(canUseConsumableInShop(destroyDef)).toBe(true);
+    expect(canUseConsumableInShop(instantDef)).toBe(true);
   });
 });

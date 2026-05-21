@@ -552,10 +552,16 @@ export class GameState {
       return { outcome: 'lost', destroyedEquipment };
     }
 
-    // Next day — draw random hand from remaining pouch dice
+    // Next day — keep unscored rolled dice on hand, fill the rest from pouch
     this.state.day++;
     applyBossOnDayStart(this.state.day);
-    this.state.hand = this.drawRandomHand(player);
+    const scoredSet = new Set(scoredIds);
+    const carryover = this.state.rolledDice.filter((d) => !scoredSet.has(d.id));
+    const carryoverIds = new Set(carryover.map((d) => d.id));
+    const needed = Math.max(0, this.config.rollSize - carryover.length);
+    const refillPool = player.availableDice.filter((d) => !carryoverIds.has(d.id));
+    const refill = needed > 0 ? drawFromPouch(refillPool, Math.min(needed, refillPool.length)).drawn : [];
+    this.state.hand = [...carryover, ...refill];
     this.state.spent = [...player.spentDice];
     this.state.selectedForRoll = [];
     this.state.rolledDice = [];

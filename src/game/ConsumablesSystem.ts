@@ -7,7 +7,7 @@ import type { ItemAura, EquipmentInstance } from './ItemsSystem';
 import { getItemAuraById, isEquipmentCursed } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
-import { HandType, HandDefinition } from './types';
+import { HandType, HandDefinition, HandUpgradeInfo } from './types';
 import handsData from '../data/hands.json';
 import { checkLoadedChance, PACK_ONLY_FRONTIER_IDS } from './Constants';
 import { resolveEffectParam } from './effects/helpers';
@@ -221,6 +221,15 @@ export function getConsumableDefById(id: string, aura?: ItemAura | null): Consum
   return getSupplyDefById(id, aura) ?? getTrailGuideDefById(id, aura) ?? getFrontierDefById(id, aura);
 }
 
+/** Shop context has no natural dice board; block dice-edit cards there. */
+export function canUseConsumableInShop(def: ConsumableDef): boolean {
+  if (def.id === 'raid') return false;
+  const effectType = def.diceSelection?.effectType;
+  if (!effectType) return true;
+  if (effectType === 'ENHANCE' || effectType === 'ADD_STICKER') return false;
+  return true;
+}
+
 // ─── Shop Generation ───
 
 /** Generate random consumable cards for the shop.
@@ -257,6 +266,7 @@ import { generateRandomEquipment } from './ItemsSystem';
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import type { DiceEnhancement } from './types';
 import type { PlayerState } from './PlayerState';
+import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 
 /** Add a medicine supply card with ghost aura (Doctor profession, trail events, etc.). */
 export function grantGhostMedicine(player: PlayerState): boolean {
@@ -277,13 +287,31 @@ export interface UseConsumableResult {
   failReason?: string;
   /** Hand upgrade info for animation (trail guides, etc.) */
   handUpgrade?: import('./types').HandUpgradeInfo;
+  /** Multi-hand upgrade info for effects like Spiritual Journey */
+  handUpgrades?: import('./types').HandUpgradeInfo[];
+  /** Optional animation events for non-scoring consumable effects */
+  consumableAnimEvents?: ConsumableAnimEvent[];
+}
+
+export interface UseConsumableContext {
+  /** Dice IDs currently visible/targetable in the active scene */
+  visibleDiceIds?: string[];
+}
+
+export interface ConsumableAnimEvent {
+  type: 'destroy_dice';
+  diceIds: string[];
 }
 
 /**
  * Execute a consumable's game-logic effect (non-Phaser).
  * Returns a result indicating what happened so the scene can animate/chain appropriately.
  */
-export function executeConsumableEffect(consumed: ConsumableInstance, player: PlayerState): UseConsumableResult {
+export function executeConsumableEffect(
+  consumed: ConsumableInstance,
+  player: PlayerState,
+  context: UseConsumableContext = {},
+): UseConsumableResult {
   const def = consumed.def;
 
   // Update Campfire Stories: +mult per supply card used
@@ -415,6 +443,44 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
       player.equipment.splice(0, player.equipment.length, ...survivors);
       return { success: true };
     }
+    case 'blood_moon': {
+      if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
+      const ghostAura = getItemAuraById('ghost');
+      if (!ghostAura) return { success: true };
+      const chosenIdx = Math.floor(Math.random() * player.equipment.length);
+      const chosen = player.equipment[chosenIdx];
+      chosen.def = { ...chosen.def, aura: ghostAura };
+      player.trailEventModifiers.rerollPenalty += 1;
+      return { success: true };
+    }
+    case 'raid': {
+      const visibleIds = new Set(context.visibleDiceIds ?? []);
+      if (visibleIds.size === 0) {
+        return { success: false, failReason: 'Raid can only be used when dice are visible!' };
+      }
+      const visibleDice = player.dice.filter((d) => visibleIds.has(d.id));
+      if (visibleDice.length === 0) {
+        return { success: false, failReason: 'No visible dice available for Raid!' };
+      }
+
+      const toDestroy = [...visibleDice].sort(() => Math.random() - 0.5).slice(0, Math.min(5, visibleDice.length));
+      const destroyIds = new Set(toDestroy.map((d) => d.id));
+      const enhancedCount = toDestroy.filter((d) => d.enhancement !== null).length;
+      const before = player.dice.length;
+      player.dice = player.dice.filter((d) => !destroyIds.has(d.id));
+      for (const id of destroyIds) {
+        player.spentDiceIds.delete(id);
+      }
+      const removed = before - player.dice.length;
+      if (removed > 0) {
+        processEquipmentOnDiceDestroyed(player.equipment, removed, enhancedCount);
+      }
+      player.economy.earn(20);
+      return {
+        success: true,
+        consumableAnimEvents: [{ type: 'destroy_dice', diceIds: [...destroyIds] }],
+      };
+    }
     case 'skin_walker': {
       // Copy random item; destroy non-cursed others (cursed items survive, copy keeps modifiers)
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
@@ -444,12 +510,16 @@ export function executeConsumableEffect(consumed: ConsumableInstance, player: Pl
  * Handles lastUsedConsumable tracking (skips for second_helpings which reads the previous value).
  * Use this instead of manually setting lastUsedConsumable + calling executeConsumableEffect.
  */
-export function useConsumableDirectly(def: ConsumableDef, player: PlayerState): UseConsumableResult {
+export function useConsumableDirectly(
+  def: ConsumableDef,
+  player: PlayerState,
+  context: UseConsumableContext = {},
+): UseConsumableResult {
   const consumed = createConsumableInstance(def);
   if (def.id !== 'second_helpings') {
     player.lastUsedConsumable = def;
   }
-  return executeConsumableEffect(consumed, player);
+  return executeConsumableEffect(consumed, player, context);
 }
 
 function applyConsumableInstantEffect(effect: InstantEffect, player: PlayerState): UseConsumableResult {
@@ -486,7 +556,34 @@ function applyConsumableInstantEffect(effect: InstantEffect, player: PlayerState
       }
       return { success: true };
     }
+    case 'UPGRADE_ALL_HANDS': {
+      return { success: true, handUpgrades: createAllHandUpgrades(player) };
+    }
     default:
       return { success: true };
   }
+}
+
+function createAllHandUpgrades(player: PlayerState): HandUpgradeInfo[] {
+  const upgrades: HandUpgradeInfo[] = [];
+  for (const type of Object.values(HandType)) {
+    const stats = player.getHandStats(type);
+    const handDef = HAND_TABLE.find((h) => h.type === type)!;
+    const oldLevel = stats.level;
+    const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
+    const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
+    player.upgradeHandLevel(type);
+    const newLevel = stats.level;
+    upgrades.push({
+      handType: type,
+      handName: handDef.name,
+      oldLevel,
+      newLevel,
+      oldBaseMiles,
+      newBaseMiles: handDef.baseMiles + stats.milesPerLevel * (newLevel - 1),
+      oldBaseMult,
+      newBaseMult: handDef.baseMult + stats.multPerLevel * (newLevel - 1),
+    });
+  }
+  return upgrades;
 }

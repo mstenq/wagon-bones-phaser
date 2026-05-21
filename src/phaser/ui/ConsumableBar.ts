@@ -7,15 +7,21 @@ import { UI } from '../../game/Constants';
 import { getPlayerState } from '../../game/PlayerState';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { CardBar } from './CardBar';
-import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
+import { ConsumableDef, getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 
 export class ConsumableBar extends CardBar {
   protected readonly cardScale = UI.CONSUMABLE_CARD_SCALE;
   protected readonly preferredSpacing = UI.CONSUMABLE_CARD_SPACING;
   protected readonly barPadding = 16;
+  private canUsePredicate: ((def: ConsumableDef) => boolean) | null = null;
 
   constructor(scene: Scene, x: number, y: number, width: number, height: number) {
     super(scene, x, y, width, height);
+    this.refresh();
+  }
+
+  setCanUsePredicate(predicate: ((def: ConsumableDef) => boolean) | null): void {
+    this.canUsePredicate = predicate;
     this.refresh();
   }
 
@@ -51,8 +57,9 @@ export class ConsumableBar extends CardBar {
     const canUse =
       consumable.def.id !== 'second_helpings' ||
       (player.lastUsedConsumable != null && player.lastUsedConsumable.id !== 'second_helpings');
+    const canUseInScene = this.canUsePredicate ? this.canUsePredicate(consumable.def) : true;
 
-    if (canUse) {
+    if (canUse && canUseInScene) {
       tabs.push({
         label: 'USE',
         color: 0x2255aa,

@@ -154,6 +154,7 @@ export class BoosterPackScene extends Scene {
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
+    this.consumableBar.setCanUsePredicate((def) => def.id !== 'raid');
     this.dicePouch = layout.dicePouch;
     this.contentCX = layout.contentCX;
 
@@ -931,11 +932,12 @@ export class BoosterPackScene extends Scene {
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
-        if (result.handUpgrade) {
+        const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
+        if (upgrades.length > 0) {
           playHandUpgradeAnimation({
             scene: this,
             sidebar: this.sidebar,
-            upgrades: [result.handUpgrade],
+            upgrades,
             onComplete: () => {},
           });
         }
@@ -1164,12 +1166,13 @@ export class BoosterPackScene extends Scene {
       });
     }
 
-    // Play hand upgrade animation for trail guides
-    if (result.handUpgrade) {
+    // Play hand upgrade animation for trail guides / Spiritual Journey
+    const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
+    if (upgrades.length > 0) {
       playHandUpgradeAnimation({
         scene: this,
         sidebar: this.sidebar,
-        upgrades: [result.handUpgrade],
+        upgrades,
         onComplete: () => {},
       });
     }
