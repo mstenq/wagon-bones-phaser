@@ -28,7 +28,11 @@ import {
   ConsumableInstance,
   executeConsumableEffect,
 } from '../../game/ConsumablesSystem';
-import { DiceSelectionConfig, applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
+import {
+  DiceSelectionConfig,
+  applyDiceSelectionEffect,
+  shouldUpdateDisplayedDiceValue,
+} from '../../game/DiceSelectionSystem';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playRollAnimation } from '../animations/RollAnimation';
@@ -2521,7 +2525,7 @@ export class GameScene extends Scene {
   /** Refresh dice sprites in-place after a consumable effect changes dice data */
   private refreshDiceSpritesAfterEffect(affectedIds: Set<string>, effectType: DiceSelectionConfig['effectType']): void {
     const player = getPlayerState();
-    const shouldUpdateVisibleValue = effectType === 'BUMP_VALUE';
+    const shouldUpdateVisibleValue = shouldUpdateDisplayedDiceValue(effectType);
 
     // Update roll sprites if in ROLL phase — only update affected dice
     for (const sprite of this.rollSprites) {

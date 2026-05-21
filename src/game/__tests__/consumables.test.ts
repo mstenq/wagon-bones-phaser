@@ -14,7 +14,7 @@ import {
   canUseConsumableInShop,
 } from '../ConsumablesSystem';
 import { isEquipmentCursed } from '../ItemsSystem';
-import { applyDiceSelectionEffect, DiceSelectionConfig } from '../DiceSelectionSystem';
+import { applyDiceSelectionEffect, DiceSelectionConfig, shouldUpdateDisplayedDiceValue } from '../DiceSelectionSystem';
 import { HandType } from '../types';
 import supplyCardsData from '../../data/supply_cards.json';
 import trailGuidesData from '../../data/trail_guides.json';
@@ -653,5 +653,16 @@ describe('shop consumable use gating', () => {
 
     expect(canUseConsumableInShop(destroyDef)).toBe(true);
     expect(canUseConsumableInShop(instantDef)).toBe(true);
+  });
+});
+
+describe('roll phase value preservation policy', () => {
+  test('ENHANCE and ADD_STICKER do not change displayed rolled face value', () => {
+    expect(shouldUpdateDisplayedDiceValue('ENHANCE')).toBe(false);
+    expect(shouldUpdateDisplayedDiceValue('ADD_STICKER')).toBe(false);
+  });
+
+  test('BUMP_VALUE is allowed to change displayed rolled face value', () => {
+    expect(shouldUpdateDisplayedDiceValue('BUMP_VALUE')).toBe(true);
   });
 });

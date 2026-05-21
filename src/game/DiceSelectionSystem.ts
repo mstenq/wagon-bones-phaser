@@ -43,6 +43,11 @@ export interface DiceSelectionState {
   selectedIds: string[]; // currently selected dice IDs
 }
 
+/** Only BUMP_VALUE is allowed to change the displayed face value in-roll. */
+export function shouldUpdateDisplayedDiceValue(effectType: DiceSelectionEffectType): boolean {
+  return effectType === 'BUMP_VALUE';
+}
+
 // ─── Drawing Dice ───
 
 /**
