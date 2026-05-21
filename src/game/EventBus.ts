@@ -20,4 +20,5 @@ export const Events = {
   SPENT_REFRESHED: 'game:spent-refreshed',
   TAG_EARNED: 'game:tag-earned',
   ROUND_SKIPPED: 'game:round-skipped',
+  TAG_QUEUE_CHANGED: 'game:tag-queue-changed',
 } as const;

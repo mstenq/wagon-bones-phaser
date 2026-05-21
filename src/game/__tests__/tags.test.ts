@@ -1,7 +1,21 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import trailTags, { getTrailTagById } from '../../data/trail_tags';
 import type { TrailTagDef } from '../../data/trail_tags';
-import { getTagPool, processImmediateTags } from '../TagSystem';
+import {
+  getTagPool,
+  processImmediateTags,
+  processShopTags,
+  applyInjectTagsToShopStock,
+  applyAuraTagsToShopStock,
+  processJunkPileTag,
+  processBossPayoutTags,
+} from '../TagSystem';
+import {
+  createEquipmentInstance,
+  getEquipmentListPrice,
+  getEquipmentSellValue,
+  getItemAuraById,
+} from '../ItemsSystem';
 import { getPlayerState, resetPlayerState } from '../PlayerState';
 
 const ALL_TAGS = trailTags;
@@ -117,6 +131,171 @@ describe('TagSystem', () => {
       expect(results[0].levelsGained).toBe(3);
       const stats = player.getHandStats(results[0].handType!);
       expect(stats.level).toBe(4);
+    });
+  });
+
+  describe('Shop Tags', () => {
+    it('On the House marks shop as free', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_company_store')!;
+      player.addTag(tag);
+      const mods = processShopTags(player);
+      expect(mods.freeShop).toBe(true);
+      expect(player.pendingTags.length).toBe(0);
+    });
+
+    it("Outfitter's Pick replaces a shop slot with free uncommon equipment", () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_uncommon')!;
+      player.addTag(tag);
+      processShopTags(player);
+      expect(player.pendingTags.length).toBe(1);
+
+      const stock = [
+        { type: 'consumable', def: { id: 'a', cost: 3 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+      ];
+      applyInjectTagsToShopStock(stock, player);
+      expect(stock[0].type).toBe('equipment');
+      expect(stock[0].def.cost).toBe(0);
+      expect(stock[0].def.rarity).toBe('uncommon');
+      expect(player.pendingTags.length).toBe(0);
+    });
+
+    it('Inject tags only fill up to shopSlots per visit', () => {
+      const player = getPlayerState();
+      player.shopSlots = 2;
+      const uncommon = ALL_TAGS.find((t) => t.id === 'tag_uncommon')!;
+      const rare = ALL_TAGS.find((t) => t.id === 'tag_rare')!;
+      player.pendingTags.push({ def: uncommon, copies: 3 });
+      player.pendingTags.push({ def: rare, copies: 2 });
+
+      const stock = [
+        { type: 'equipment', def: { id: 'a', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+      ];
+      applyInjectTagsToShopStock(stock, player);
+      expect(stock.every((s) => s.def.cost === 0)).toBe(true);
+      expect(player.pendingTags.reduce((sum, t) => sum + t.copies, 0)).toBe(3);
+    });
+
+    it('Aura tags stay pending until applied to shop stock', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_fire')!;
+      player.addTag(tag);
+      processShopTags(player);
+      expect(player.pendingTags.length).toBe(1);
+      expect(player.pendingTags[0].copies).toBe(1);
+
+      const stock = [
+        { type: 'equipment', def: { id: 'a', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+      ];
+      applyAuraTagsToShopStock(stock, player);
+      expect(stock[0].def.aura?.id).toBe('fire');
+      expect(stock[0].def.cost).toBe(0);
+      expect(player.pendingTags.length).toBe(0);
+    });
+
+    it('Aura tags only consume copies matching base equipment slots', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_fire')!;
+      player.pendingTags.push({ def: tag, copies: 4 });
+      const stock = [
+        { type: 'equipment', def: { id: 'a', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+      ];
+      applyAuraTagsToShopStock(stock, player);
+      expect(stock.filter((s) => s.def.aura?.id === 'fire').length).toBe(2);
+      expect(player.pendingTags[0]?.copies).toBe(2);
+    });
+
+    it('Coupon Book enables free first reroll', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_free_reroll')!;
+      player.addTag(tag);
+      const mods = processShopTags(player);
+      expect(mods.freeFirstReroll).toBe(true);
+    });
+  });
+
+  describe('Boss Tags', () => {
+    it('Bounty Payout grants $25 per copy after boss', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_investment')!;
+      player.addTag(tag);
+      const bonus = processBossPayoutTags(player);
+      expect(bonus).toBe(25);
+      expect(player.pendingTags.length).toBe(0);
+    });
+
+    it('Change of Guard tag is not consumed by payout processing', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_boss')!;
+      player.addTag(tag);
+      const bonus = processBossPayoutTags(player);
+      expect(bonus).toBe(0);
+      expect(player.pendingTags.length).toBe(1);
+      expect(player.pendingTags[0].def.id).toBe('tag_boss');
+    });
+  });
+
+  describe('Equipment sell value', () => {
+    it('free shop equipment sells for half list price, not $1', () => {
+      const def = {
+        id: 'bargain_bin',
+        name: 'Bargain Bin',
+        cost: 0,
+        rarity: 'uncommon',
+        description: '',
+        effectType: 'SHOP_REROLL_MULT_GAIN',
+        effectParams: {},
+      };
+      expect(getEquipmentListPrice(def)).toBe(6);
+      expect(getEquipmentSellValue(def)).toBe(3);
+    });
+
+    it('free equipment with aura includes aura cost in sell value', () => {
+      const fire = getItemAuraById('fire')!;
+      const def = {
+        id: 'bargain_bin',
+        name: 'Bargain Bin',
+        cost: 0,
+        rarity: 'uncommon',
+        description: '',
+        effectType: 'SHOP_REROLL_MULT_GAIN',
+        effectParams: {},
+        aura: fire,
+      };
+      expect(getEquipmentListPrice(def)).toBe(10);
+      expect(getEquipmentSellValue(def)).toBe(5);
+    });
+
+    it('bargain_bin permit lowers sell value like discounted shop price', () => {
+      const def = {
+        id: 'bargain_bin',
+        name: 'Bargain Bin',
+        cost: 0,
+        rarity: 'uncommon',
+        description: '',
+        effectType: 'SHOP_REROLL_MULT_GAIN',
+        effectParams: {},
+      };
+      const inst = createEquipmentInstance(def, ['bargain_bin']);
+      expect(inst.sellValue).toBe(2);
+    });
+  });
+
+  describe('Junk Pile', () => {
+    it('creates up to 2 common equipment', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_top_up')!;
+      const instance = { def: tag, copies: 1 };
+      const before = player.equipment.length;
+      const created = processJunkPileTag(instance, player);
+      expect(player.equipment.length).toBeLessThanOrEqual(before + 2);
+      expect(created.length).toBeGreaterThan(0);
+      expect(created.every((c) => c.rarity === 'common')).toBe(true);
     });
   });
 });

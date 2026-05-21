@@ -6,11 +6,13 @@
 
 import { Scene } from 'phaser';
 import { COLORS, UI, GAMEPLAY } from '../../game/Constants';
+import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
 import { Sidebar } from './Sidebar';
 import { EquipmentBar } from './EquipmentBar';
 import { ConsumableBar } from './ConsumableBar';
 import { DicePouch } from './DicePouch';
+import { TagStack } from './TagStack';
 import { DicePouchModal } from './DicePouchModal';
 import { JourneyInfoModal } from './JourneyInfoModal';
 import { OptionsModal } from './OptionsModal';
@@ -22,6 +24,7 @@ export interface LayoutResult {
   equipBar: EquipmentBar;
   consumableBar: ConsumableBar;
   dicePouch: DicePouch;
+  tagStack: TagStack;
   /** Left edge of content area */
   contentX: number;
   /** Width of content area */
@@ -118,16 +121,25 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   const consumableBar = new ConsumableBar(scene, consumableX, 8, consumableW, equipBarH);
 
   // ─── Dice Pouch (bottom-right) ───
-  const dicePouch = new DicePouch(
-    scene,
-    width - UI.POUCH_MARGIN - UI.POUCH_SIZE,
-    height - UI.POUCH_MARGIN - UI.POUCH_SIZE,
-  );
+  const pouchX = width - UI.POUCH_MARGIN - UI.POUCH_SIZE;
+  const pouchY = height - UI.POUCH_MARGIN - UI.POUCH_SIZE;
+  const dicePouch = new DicePouch(scene, pouchX, pouchY);
   dicePouch.setClickCallback(() => {
     new DicePouchModal(scene, sidebarW, width - sidebarW, height).onRefresh(() => {
       dicePouch.refresh();
       dicePouch.emit('dice-refreshed');
     });
+  });
+
+  const tagStack = new TagStack(scene, pouchX, pouchY);
+  const onTagStateChange = () => tagStack.refresh();
+  EventBus.on(Events.TAG_EARNED, onTagStateChange);
+  EventBus.on(Events.ROUND_SKIPPED, onTagStateChange);
+  EventBus.on(Events.TAG_QUEUE_CHANGED, onTagStateChange);
+  scene.events.once('shutdown', () => {
+    EventBus.off(Events.TAG_EARNED, onTagStateChange);
+    EventBus.off(Events.ROUND_SKIPPED, onTagStateChange);
+    EventBus.off(Events.TAG_QUEUE_CHANGED, onTagStateChange);
   });
 
   const contentTop = equipBarH + 16;
@@ -138,6 +150,7 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
     equipBar,
     consumableBar,
     dicePouch,
+    tagStack,
     contentX,
     contentW,
     contentCX,

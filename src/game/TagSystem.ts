@@ -3,6 +3,13 @@
 
 import { HandType } from './types';
 import { getPlayerState } from './PlayerState';
+import {
+  generateRandomEquipment,
+  createEquipmentInstance,
+  EquipmentDef,
+  getItemAuraById,
+} from './ItemsSystem';
+import { getTrailTagById } from '../data/trail_tags';
 import trailTags, { TrailTagDef, TrailTagInstance, TagCategory } from '../data/trail_tags';
 
 const ALL_TAGS: TrailTagDef[] = trailTags;
@@ -169,10 +176,258 @@ export function getPackDefIdForTag(tagId: string): string | null {
 
 /** Check if a tag fires immediately (no shop/boss wait) */
 export function isImmediateTag(category: TagCategory): boolean {
-  return category.startsWith('immediate_') || category === 'next_round';
+  return category.startsWith('immediate_');
 }
 
 /** Check if a tag is pending for the shop */
 export function isShopTag(category: TagCategory): boolean {
   return category === 'shop' || category === 'shop_aura';
+}
+
+export interface ShopTagModifications {
+  /** Whether all initial stock should be $0 */
+  freeShop: boolean;
+  /** Whether first shop reroll is free */
+  freeFirstReroll: boolean;
+  /** Extra permit count to add */
+  extraPermits: number;
+}
+
+const INJECT_TAG_RARITY: Record<string, 'uncommon' | 'rare'> = {
+  tag_uncommon: 'uncommon',
+  tag_rare: 'rare',
+};
+
+/** Remove up to `copies` from pending shop tags with a given id. */
+export function consumeShopTagCopies(
+  tagId: string,
+  copies: number,
+  player = getPlayerState(),
+): number {
+  let remaining = copies;
+
+  player.pendingTags = player.pendingTags.flatMap((t) => {
+    if (remaining <= 0 || t.def.id !== tagId || t.def.category !== 'shop') return [t];
+    const take = Math.min(remaining, t.copies);
+    remaining -= take;
+    const left = t.copies - take;
+    return left > 0 ? [{ def: t.def, copies: left }] : [];
+  });
+
+  return copies - remaining;
+}
+
+/** Shop stock row used when applying aura tags */
+export interface ShopStockRow {
+  type: string;
+  def: EquipmentDef;
+}
+
+/** Remove up to `copies` from stored aura tags and/or pending shop_aura tags. */
+export function consumeShopAuraTagCopies(
+  tagId: string,
+  copies: number,
+  player = getPlayerState(),
+): number {
+  let remaining = copies;
+
+  player.storedAuraTags = player.storedAuraTags.flatMap((t) => {
+    if (remaining <= 0 || t.def.id !== tagId) return [t];
+    const take = Math.min(remaining, t.copies);
+    remaining -= take;
+    const left = t.copies - take;
+    return left > 0 ? [{ def: t.def, copies: left }] : [];
+  });
+
+  player.pendingTags = player.pendingTags.flatMap((t) => {
+    if (remaining <= 0 || t.def.id !== tagId || t.def.category !== 'shop_aura') return [t];
+    const take = Math.min(remaining, t.copies);
+    remaining -= take;
+    const left = t.copies - take;
+    return left > 0 ? [{ def: t.def, copies: left }] : [];
+  });
+
+  return copies - remaining;
+}
+
+/** Collect pending + stored aura tags for display (grouped by id). */
+export function getQueuedAuraTags(player = getPlayerState()): TrailTagInstance[] {
+  const grouped = new Map<string, TrailTagInstance>();
+  for (const tag of [...player.storedAuraTags, ...player.getTagsByCategory('shop_aura')]) {
+    const existing = grouped.get(tag.def.id);
+    if (existing) {
+      existing.copies += tag.copies;
+    } else {
+      grouped.set(tag.def.id, { def: tag.def, copies: tag.copies });
+    }
+  }
+  return [...grouped.values()];
+}
+
+/** Replace shop stock slots with free uncommon/rare equipment, up to shopSlots per visit. */
+export function applyInjectTagsToShopStock(
+  stockItems: ShopStockRow[],
+  player = getPlayerState(),
+): number {
+  const maxSlots = Math.max(1, Math.min(player.shopSlots, stockItems.length));
+  let applied = 0;
+
+  while (applied < maxSlots) {
+    const injectTags = player
+      .getTagsByCategory('shop')
+      .filter((t) => t.def.id in INJECT_TAG_RARITY);
+    if (injectTags.length === 0) break;
+
+    const tag = injectTags[0];
+    const rarity = INJECT_TAG_RARITY[tag.def.id];
+    const item = generateRandomEquipment({ rarity });
+    if (!item) break;
+
+    stockItems[applied] = { type: 'equipment', def: { ...item, cost: 0 } };
+    consumeShopTagCopies(tag.def.id, 1, player);
+    applied++;
+  }
+
+  return applied;
+}
+
+/** Apply aura tags to base shop equipment, consuming only copies actually used. */
+export function applyAuraTagsToShopStock(
+  stockItems: ShopStockRow[],
+  player = getPlayerState(),
+): number {
+  const queue: TrailTagInstance[] = [
+    ...player.storedAuraTags,
+    ...player.getTagsByCategory('shop_aura'),
+  ];
+  player.storedAuraTags = [];
+
+  let totalApplied = 0;
+
+  for (const tag of queue) {
+    const auraId = AURA_TAG_IDS[tag.def.id];
+    if (!auraId) continue;
+
+    const aura = getItemAuraById(auraId);
+    if (!aura) continue;
+
+    let applied = 0;
+    for (const stockItem of stockItems) {
+      if (applied >= tag.copies) break;
+      if (stockItem.type === 'equipment' && !stockItem.def.aura) {
+        stockItem.def = { ...stockItem.def, aura, cost: 0 };
+        applied++;
+      }
+    }
+
+    if (applied > 0) {
+      consumeShopAuraTagCopies(tag.def.id, applied, player);
+      totalApplied += applied;
+    }
+
+    const leftover = tag.copies - applied;
+    if (leftover > 0) {
+      if (applied === 0) {
+        player.storedAuraTags.push({ def: tag.def, copies: leftover });
+        consumeShopAuraTagCopies(tag.def.id, leftover, player);
+      }
+      // Partial apply: remainder stays in pendingTags via consumeShopAuraTagCopies only taking `applied`
+    }
+  }
+
+  return totalApplied;
+}
+
+const AURA_TAG_IDS: Record<string, string> = {
+  tag_ghost: 'ghost',
+  tag_icy: 'icy',
+  tag_fire: 'fire',
+  tag_holy: 'holy',
+};
+
+/** Apply per-visit shop flags (free shop, reroll, permit). One copy consumed per effect. */
+export function processShopTags(player = getPlayerState()): ShopTagModifications {
+  const mods: ShopTagModifications = {
+    freeShop: false,
+    freeFirstReroll: false,
+    extraPermits: 0,
+  };
+
+  for (const tag of player.getTagsByCategory('shop')) {
+    switch (tag.def.id) {
+      case 'tag_company_store':
+        if (!mods.freeShop) {
+          mods.freeShop = true;
+          consumeShopTagCopies(tag.def.id, 1, player);
+        }
+        break;
+      case 'tag_free_reroll':
+        if (!mods.freeFirstReroll) {
+          mods.freeFirstReroll = true;
+          consumeShopTagCopies(tag.def.id, 1, player);
+        }
+        break;
+      case 'tag_permit':
+        mods.extraPermits += 1;
+        consumeShopTagCopies(tag.def.id, 1, player);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return mods;
+}
+
+/** Map aura override id back to trail tag def for banking unapplied copies. */
+export function getAuraTagDefForAuraId(auraId: string): TrailTagDef | undefined {
+  const tagId = Object.entries(AURA_TAG_IDS).find(([, id]) => id === auraId)?.[0];
+  return tagId ? getTrailTagById(tagId) : undefined;
+}
+
+/** Junk Pile: create up to 2 Common equipment per copy (if space allows). */
+export function processJunkPileTag(
+  tag: TrailTagInstance,
+  player = getPlayerState(),
+): EquipmentDef[] {
+  const created: EquipmentDef[] = [];
+  const count = 2 * tag.copies;
+
+  for (let i = 0; i < count; i++) {
+    if (player.equipmentSlotsFree <= 0) break;
+    const item = generateRandomEquipment({ rarity: 'common' });
+    if (item) {
+      player.equipment.push(createEquipmentInstance(item, player.purchasedPermits));
+      created.push(item);
+    }
+  }
+
+  return created;
+}
+
+/** Consume next-round tags and apply bonuses before the round starts. */
+export function consumeNextRoundTags(player = getPlayerState()): void {
+  const tags = player.consumeTagsByCategory('next_round');
+  for (const tag of tags) {
+    if (tag.def.id === 'tag_wide_saddle') {
+      player.wideSaddleBonus += 3 * tag.copies;
+    }
+  }
+}
+
+/** Bounty Payout: consume investment boss tags and return bonus money. */
+export function processBossPayoutTags(player = getPlayerState()): number {
+  let bonus = 0;
+  const remaining: TrailTagInstance[] = [];
+
+  for (const tag of player.pendingTags) {
+    if (tag.def.category === 'boss' && tag.def.id === 'tag_investment') {
+      bonus += 25 * tag.copies;
+    } else {
+      remaining.push(tag);
+    }
+  }
+
+  player.pendingTags = remaining;
+  return bonus;
 }

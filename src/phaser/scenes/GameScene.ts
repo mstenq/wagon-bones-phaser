@@ -10,6 +10,7 @@ import { GameState } from '../../game/GameState';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { detectBestHand } from '../../game/DiceSystem';
 import { getPlayerState } from '../../game/PlayerState';
+import { consumeNextRoundTags } from '../../game/TagSystem';
 import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
@@ -133,6 +134,7 @@ export class GameScene extends Scene {
     // Initialize game state only on first create (not on relayout)
     if (!this.gameState) {
       const player = getPlayerState();
+      consumeNextRoundTags(player);
       this.gameState = new GameState({ targetMiles: player.targetMiles });
       this.gameState.startRound();
       // Pick up any dice added during leg transition or round start

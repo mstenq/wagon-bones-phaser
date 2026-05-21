@@ -173,6 +173,13 @@ export function getPermitShopDiscount(purchasedIds: string[]): number {
   return 0;
 }
 
+/** Apply permit shop discount to a list price (matches camp shop pricing). */
+export function getDiscountedShopPrice(baseCost: number, purchasedIds: string[]): number {
+  const discount = getPermitShopDiscount(purchasedIds);
+  if (discount <= 0) return baseCost;
+  return Math.max(1, Math.floor(baseCost * (1 - discount)));
+}
+
 /** Get the shop reroll cost reduction ($0, $2, or $4) */
 export function getPermitShopRerollDiscount(purchasedIds: string[]): number {
   let discount = 0;

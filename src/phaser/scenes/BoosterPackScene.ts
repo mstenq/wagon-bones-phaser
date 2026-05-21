@@ -13,7 +13,7 @@ import {
   getPackDefById,
 } from '../../game/BoosterPackSystem';
 import { getPlayerState } from '../../game/PlayerState';
-import { generateRandomEquipment } from '../../game/ItemsSystem';
+import { generateRandomEquipment, createEquipmentInstance } from '../../game/ItemsSystem';
 import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
@@ -909,11 +909,7 @@ export class BoosterPackScene extends Scene {
       this.showFloatingText(result);
     } else if (item.category === 'equipment' && item.equipmentDef) {
       if (item.equipmentDef.aura?.id === 'ghost' || player.equipmentSlotsFree > 0) {
-        player.equipment.push({
-          def: item.equipmentDef,
-          sellValue: Math.max(1, Math.floor(item.equipmentDef.cost / 2)),
-          state: item.equipmentDef.initialState ? { ...item.equipmentDef.initialState } : {},
-        });
+        player.equipment.push(createEquipmentInstance(item.equipmentDef, player.purchasedPermits));
       }
     } else if (item.category === 'dice' && item.die) {
       player.addDie(item.die);
@@ -1108,11 +1104,7 @@ export class BoosterPackScene extends Scene {
             rarity: effect.rarity,
             excludeRarity: effect.excludeRarity,
           });
-          player.equipment.push({
-            def,
-            sellValue: Math.max(1, Math.floor(def.cost / 2)),
-            state: def.initialState ? { ...def.initialState } : {},
-          });
+          player.equipment.push(createEquipmentInstance(def, player.purchasedPermits));
         }
         if (effect.setMoneyZero) {
           player.economy.spend(player.economy.balance);

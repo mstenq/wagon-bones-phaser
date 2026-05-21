@@ -6,7 +6,7 @@ import { Die, DiceEnhancement, DiceAura, DiceSticker, HandType, BossDef } from '
 import bossesData from '../../data/bosses.json';
 import { GameState } from '../GameState';
 import { PlayerState, resetPlayerState, ProfessionDef } from '../PlayerState';
-import { EquipmentDef, EquipmentInstance, getAllEquipment } from '../ItemsSystem';
+import { EquipmentDef, EquipmentInstance, getAllEquipment, createEquipmentInstance } from '../ItemsSystem';
 import { createDie } from '../DiceSystem';
 
 // ─── Item Lookup ───
@@ -22,14 +22,10 @@ function getItemsMap(): Map<string, EquipmentDef> {
 }
 
 /** Look up an equipment def by id. Throws if not found. */
-export function item(id: string): EquipmentInstance {
+export function item(id: string, purchasedPermitIds: string[] = []): EquipmentInstance {
   const def = getItemsMap().get(id);
   if (!def) throw new Error(`Unknown item id: "${id}". Available: ${[...getItemsMap().keys()].join(', ')}`);
-  return {
-    def,
-    sellValue: Math.max(1, Math.floor(def.cost / 2)),
-    state: def.initialState ? { ...def.initialState } : {},
-  };
+  return createEquipmentInstance(def, purchasedPermitIds);
 }
 
 /** Create an equipment instance with an aura applied */
@@ -47,10 +43,12 @@ export function itemWithAura(id: string, auraId: 'fire' | 'icy' | 'holy' | 'ghos
       chance: 0,
     },
   } as const;
-  return {
-    ...inst,
-    def: { ...inst.def, aura: auraMap[auraId] },
+  const def = {
+    ...inst.def,
+    aura: auraMap[auraId],
+    cost: inst.def.cost + auraMap[auraId].costIncrease,
   };
+  return createEquipmentInstance(def);
 }
 
 /** Create an equipment instance with custom initial state overrides */

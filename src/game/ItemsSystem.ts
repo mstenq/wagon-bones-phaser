@@ -8,6 +8,7 @@ export type { HintSegment, HintStyle } from '../data/items';
 
 import type { GameState } from './GameState';
 import type { PlayerState } from './PlayerState';
+import { getDiscountedShopPrice } from './PermitsSystem';
 import { CHANCES } from './Constants';
 
 export interface ItemAura {
@@ -125,11 +126,36 @@ function pickWeightedEquipmentRarity(pool: EquipmentDef[]): string | null {
 /** Generate a random piece of equipment filtered by rarity.
  *  If no items match the filter, falls back to any rarity.
  *  Applies a random aura roll. */
+/** Look up the canonical base definition for an equipment id. */
+export function getEquipmentDefById(id: string): EquipmentDef | undefined {
+  return ITEMS_POOL.find((i) => i.id === id);
+}
+
+/** Camp shop list price before permit discounts (includes aura cost bump).
+ *  When cost is overridden to $0 (free tag, On the House, etc.), reconstruct from base + aura. */
+export function getEquipmentListPrice(def: EquipmentDef): number {
+  if (def.cost > 0) return def.cost;
+  const base = getEquipmentDefById(def.id);
+  if (!base) return 0;
+  const auraBump = def.aura?.costIncrease ?? 0;
+  return base.cost + auraBump;
+}
+
+/** Sell value: half of what the player would pay in camp shop (list price + permit discount). */
+export function getEquipmentSellValue(def: EquipmentDef, purchasedPermitIds: string[] = []): number {
+  const listPrice = getEquipmentListPrice(def);
+  const shopPrice = getDiscountedShopPrice(listPrice, purchasedPermitIds);
+  return Math.max(1, Math.floor(shopPrice / 2));
+}
+
 /** Create an EquipmentInstance from a def, initializing state from initialState. */
-export function createEquipmentInstance(def: EquipmentDef): EquipmentInstance {
+export function createEquipmentInstance(
+  def: EquipmentDef,
+  purchasedPermitIds: string[] = [],
+): EquipmentInstance {
   return {
     def,
-    sellValue: Math.max(1, Math.floor(def.cost / 2)),
+    sellValue: getEquipmentSellValue(def, purchasedPermitIds),
     state: def.initialState ? { ...def.initialState } : {},
   };
 }

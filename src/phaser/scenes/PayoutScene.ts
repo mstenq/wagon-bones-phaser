@@ -7,6 +7,8 @@ import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState, PayoutBreakdown } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
+import { processBossPayoutTags, grantTag } from '../../game/TagSystem';
+import { getTrailTagById } from '../../data/trail_tags';
 import { formatScore } from '../../game/formatScore';
 import { Button } from '../ui/Button';
 
@@ -80,10 +82,20 @@ export class PayoutScene extends Scene {
     // Calculate payout
     const payout = player.calculatePayout(data.daysRemaining, data.rerollsRemaining);
 
+    let investmentBonus = 0;
+    if (data.round === GAMEPLAY.ROUNDS_PER_LEG) {
+      investmentBonus = processBossPayoutTags(player);
+      const profMods = player.profession?.modifiers as Record<string, unknown> | undefined;
+      if (profMods?.doubleTagOnBoss) {
+        const twinWagonDef = getTrailTagById('tag_twin_wagon');
+        if (twinWagonDef) grantTag(twinWagonDef);
+      }
+    }
+
     // ─── Payout Panel ───
     const panelW = 420;
     const rowH = 40;
-    const rows = this.buildPayoutRows(payout, data);
+    const rows = this.buildPayoutRows(payout, data, investmentBonus);
     const panelH = rows.length * rowH + 60; // header + rows + padding
     const panelX = width / 2 - panelW / 2;
     const panelY = height * 0.32;
@@ -97,7 +109,7 @@ export class PayoutScene extends Scene {
 
     // Panel title
     this.add
-      .text(width / 2, panelY + 22, `Collect Earnings: $${payout.total}`, {
+      .text(width / 2, panelY + 22, `Collect Earnings: $${payout.total + investmentBonus}`, {
         fontFamily: FONTS.HEADING,
         fontSize: '22px',
         color: TEXT_COLORS.GOLD,
@@ -140,7 +152,7 @@ export class PayoutScene extends Scene {
     const btnY = panelY + panelH + 30;
     new Button(this, width / 2, btnY, 'Collect & Continue', 260, 50).onClick(() => {
       // Apply payout
-      player.economy.earn(payout.total);
+      player.economy.earn(payout.total + investmentBonus);
 
       // Advance round
       const journeyDone = player.advanceRound();
@@ -165,6 +177,7 @@ export class PayoutScene extends Scene {
   private buildPayoutRows(
     payout: PayoutBreakdown,
     data: PayoutData,
+    investmentBonus = 0,
   ): { label: string; amount: string; highlight?: boolean }[] {
     const rows: { label: string; amount: string; highlight?: boolean }[] = [];
     const player = getPlayerState();
@@ -215,6 +228,14 @@ export class PayoutScene extends Scene {
       rows.push({
         label: `Equipment Bonus`,
         amount: `$${payout.equipmentMoney}`,
+        highlight: true,
+      });
+    }
+
+    if (investmentBonus > 0) {
+      rows.push({
+        label: 'Bounty Payout',
+        amount: `$${investmentBonus}`,
         highlight: true,
       });
     }

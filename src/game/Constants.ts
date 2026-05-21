@@ -197,7 +197,17 @@ export const UI = {
   MODAL_BG: 0x151528,
   MODAL_BORDER: 0x555588,
   MODAL_RADIUS: 12,
-};
+} as const;
+
+// ─── Tag Stack ───
+export const TAG_STACK = {
+  BADGE_SIZE: 40,
+  BADGE_GAP: 4,
+  BADGE_RADIUS: 6,
+  TOOLTIP_WIDTH: 200,
+  /** Gap between dice pouch top edge and bottom of tag stack */
+  POUCH_CLEARANCE: 12,
+} as const;
 
 // ─── Dice ───
 export const DICE = {

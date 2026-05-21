@@ -12,7 +12,7 @@ import {
   getRandomFrontierDef,
   createConsumableInstance,
 } from './ConsumablesSystem';
-import { generateShopStock } from './ItemsSystem';
+import { generateShopStock, createEquipmentInstance } from './ItemsSystem';
 import { TRAIL_EVENT } from './Constants';
 
 // ─── Types ───
@@ -470,14 +470,10 @@ export function applyEffect(
       const rarityFilter = effect.rarity ? stock.filter((e: any) => e.rarity === effect.rarity) : stock;
       const pick = rarityFilter.length > 0 ? rarityFilter[0] : stock[0];
       if (pick) {
-        const equipInst = {
-          def: effect.aura
-            ? { ...pick, aura: { id: effect.aura, name: effect.aura, description: '', costIncrease: 0, chance: 0 } }
-            : pick,
-          sellValue: Math.max(1, Math.floor(pick.cost / 2)),
-          state: pick.initialState ? { ...pick.initialState } : {},
-        };
-        player.equipment.push(equipInst);
+        const def = effect.aura
+          ? { ...pick, aura: { id: effect.aura, name: effect.aura, description: '', costIncrease: 0, chance: 0 } }
+          : pick;
+        player.equipment.push(createEquipmentInstance(def, player.purchasedPermits));
       }
       break;
     }

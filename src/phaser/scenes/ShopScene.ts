@@ -9,6 +9,12 @@ import { getPlayerState } from '../../game/PlayerState';
 import { processEquipmentOnShopReroll, processEquipmentOnShopEnd } from '../../game/EquipmentEffects';
 import { TEXT_COLORS, FONTS, UI, SHOP_WEIGHTS } from '../../game/Constants';
 import { generateShopStock, EquipmentDef } from '../../game/ItemsSystem';
+import {
+  processShopTags,
+  applyInjectTagsToShopStock,
+  applyAuraTagsToShopStock,
+  type ShopTagModifications,
+} from '../../game/TagSystem';
 import { generateShopPacks, PackInstance } from '../../game/BoosterPackSystem';
 import {
   ConsumableDef,
@@ -29,7 +35,15 @@ import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
-import { PermitDef, generateShopPermit, getPermitShopDiscount, applyPermitEffect, hasPermitDiceInShop } from '../../game/PermitsSystem';
+import {
+  PermitDef,
+  generateShopPermit,
+  getPermitShopDiscount,
+  getDiscountedShopPrice,
+  applyPermitEffect,
+  hasPermitDiceInShop,
+} from '../../game/PermitsSystem';
+import { createEquipmentInstance } from '../../game/ItemsSystem';
 import { createDie } from '../../game/DiceSystem';
 import { Die } from '../../game/types';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
@@ -124,9 +138,20 @@ export class ShopScene extends Scene {
     const player = getPlayerState();
     if (!this.stockItems) {
       this.stockItems = this.generateMixedStock(player);
+      if (!this.packs) {
+        this.packs = generateShopPacks(2);
+      }
+      const tagMods = processShopTags(player);
+      this.applyShopTagMods(tagMods, player);
+      EventBus.emit(Events.TAG_QUEUE_CHANGED);
       player.resetShopRerolls();
-    }
-    if (!this.packs) {
+      if (tagMods.freeFirstReroll) {
+        player.tagFreeReroll = true;
+      }
+      if (tagMods.extraPermits > 0) {
+        player.bonusShopPermit = generateShopPermit(player.purchasedPermits);
+      }
+    } else if (!this.packs) {
       this.packs = generateShopPacks(2);
     }
 
@@ -306,69 +331,11 @@ export class ShopScene extends Scene {
 
     this.permitCard = null;
     const permit = this.getOrGeneratePermit(player);
-    if (permit) {
-      // Create a fake equipment-style def for ItemCard display
-      const permitDisplayDef = {
-        id: permit.id,
-        name: permit.name,
-        description: permit.description,
-        cost: this.getPermitCost(permit, player),
-        rarity: 'permit' as string,
-        effectType: 'PERMIT',
-        effectParams: {},
-      } as unknown as EquipmentDef;
-
-      const permitItemCard = new ItemCard(this, voucherX, voucherY, permitDisplayDef, {
-        mode: 'shop',
-        showCost: true,
-        texturePrefix: 'permit_',
-        transparentBg: true,
-        cardScale: 1.2,
-        tabAnchorX: 45,
-      });
-      permitItemCard.setDepth(10);
-      permitItemCard.setAffordable(player.economy.balance >= permitDisplayDef.cost);
-      this.setupPermitCardClick(permitItemCard, permit);
-      this.permitCard = permitItemCard;
-
-      // Dev icon on permit
-      if (isDevMode()) {
-        this.addDevIcon(voucherX + 50, voucherY - 125, () => this.devSwapPermit());
-      }
-
-      // Stationary "FRONTIER PERMIT" label anchored to scene (not card)
-      const labelX = voucherX - voucherW / 2 - 20;
-      const labelY = voucherY;
-      const permitLabel = this.add.text(labelX, labelY, 'FRONTIER PERMIT', {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        color: '#ccccdd',
-        fontStyle: 'bold',
-        align: 'center',
-        letterSpacing: 1,
-      });
-      permitLabel.setOrigin(0.5);
-      permitLabel.setRotation(-Math.PI / 2);
-      permitLabel.setAlpha(0.85);
-      permitLabel.setDepth(5);
-    } else {
-      // No permit available — show empty slot
-      const voucherSlot = this.add.graphics();
-      voucherSlot.fillStyle(0x1a1a2e, 0.6);
-      voucherSlot.fillRoundedRect(-voucherW / 2, -voucherH / 2, voucherW, voucherH, 8);
-      voucherSlot.lineStyle(1.5, 0x444466, 0.5);
-      voucherSlot.strokeRoundedRect(-voucherW / 2, -voucherH / 2, voucherW, voucherH, 8);
-      voucherSlot.setPosition(voucherX, voucherY);
-
-      this.add
-        .text(voucherX, voucherY, 'SOLD', {
-          fontFamily: FONTS.HEADING,
-          fontSize: '12px',
-          color: TEXT_COLORS.MUTED,
-          align: 'center',
-        })
-        .setOrigin(0.5)
-        .setAlpha(0.4);
+    this.renderPermitCard(permit, player, voucherX, voucherY, voucherW, voucherH, 'FRONTIER PERMIT', true);
+    const bonusPermit = player.bonusShopPermit;
+    if (bonusPermit && bonusPermit.id !== permit?.id) {
+      const bonusX = voucherX + voucherW + 24;
+      this.renderPermitCard(bonusPermit, player, bonusX, voucherY, voucherW, voucherH, 'BONUS PERMIT', false);
     }
 
     // Booster packs (right side of box 2)
@@ -460,11 +427,7 @@ export class ShopScene extends Scene {
       return;
     }
     player.economy.spend(cost);
-    player.equipment.push({
-      def,
-      sellValue: Math.max(1, Math.floor(def.cost / 2)),
-      state: def.initialState ? { ...def.initialState } : {},
-    });
+    player.equipment.push(createEquipmentInstance(def, player.purchasedPermits));
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
@@ -810,6 +773,9 @@ export class ShopScene extends Scene {
     if (!player.payShopReroll()) return;
 
     this.stockItems = this.generateMixedStock(player);
+    applyInjectTagsToShopStock(this.stockItems, player);
+    applyAuraTagsToShopStock(this.stockItems, player);
+    EventBus.emit(Events.TAG_QUEUE_CHANGED);
 
     this.children.removeAll(true);
     this.cards = [];
@@ -885,6 +851,31 @@ export class ShopScene extends Scene {
     const equipIds = player.equipment.map((e) => e.def.id);
     const consumableIds = player.consumables.map((c) => c.def.id);
     return [...equipIds, ...consumableIds];
+  }
+
+  /** Apply tag modifications to freshly generated shop stock. */
+  private applyShopTagMods(
+    tagMods: ShopTagModifications,
+    player: ReturnType<typeof getPlayerState>,
+  ): void {
+    applyInjectTagsToShopStock(this.stockItems, player);
+
+    if (tagMods.freeShop) {
+      for (const stockItem of this.stockItems) {
+        if (stockItem.type === 'equipment') {
+          stockItem.def = { ...stockItem.def, cost: 0 };
+        } else if (stockItem.type === 'consumable') {
+          stockItem.def = { ...stockItem.def, cost: 0 };
+        } else if (stockItem.type === 'dice') {
+          stockItem.displayDef = { ...stockItem.displayDef, cost: 0 };
+        }
+      }
+      for (const pack of this.packs ?? []) {
+        pack.def = { ...pack.def, cost: 0 };
+      }
+    }
+
+    applyAuraTagsToShopStock(this.stockItems, player);
   }
 
   /** Generate a mix of equipment and consumable cards for the shop stock.
@@ -983,6 +974,77 @@ export class ShopScene extends Scene {
 
   // ─── Permit Helpers ───
 
+  private renderPermitCard(
+    permit: PermitDef | null,
+    player: ReturnType<typeof getPlayerState>,
+    voucherX: number,
+    voucherY: number,
+    voucherW: number,
+    voucherH: number,
+    label: string,
+    isPrimary: boolean,
+  ): void {
+    if (permit) {
+      const permitDisplayDef = {
+        id: permit.id,
+        name: permit.name,
+        description: permit.description,
+        cost: this.getPermitCost(permit, player),
+        rarity: 'permit' as string,
+        effectType: 'PERMIT',
+        effectParams: {},
+      } as unknown as EquipmentDef;
+
+      const permitItemCard = new ItemCard(this, voucherX, voucherY, permitDisplayDef, {
+        mode: 'shop',
+        showCost: true,
+        texturePrefix: 'permit_',
+        transparentBg: true,
+        cardScale: 1.2,
+        tabAnchorX: 45,
+      });
+      permitItemCard.setDepth(10);
+      permitItemCard.setAffordable(player.economy.balance >= permitDisplayDef.cost);
+      this.setupPermitCardClick(permitItemCard, permit, isPrimary);
+      if (isPrimary) this.permitCard = permitItemCard;
+
+      if (isDevMode() && isPrimary) {
+        this.addDevIcon(voucherX + 50, voucherY - 125, () => this.devSwapPermit());
+      }
+
+      const labelX = voucherX - voucherW / 2 - 20;
+      const permitLabel = this.add.text(labelX, voucherY, label, {
+        fontFamily: 'Arial',
+        fontSize: '18px',
+        color: '#ccccdd',
+        fontStyle: 'bold',
+        align: 'center',
+        letterSpacing: 1,
+      });
+      permitLabel.setOrigin(0.5);
+      permitLabel.setRotation(-Math.PI / 2);
+      permitLabel.setAlpha(0.85);
+      permitLabel.setDepth(5);
+    } else if (isPrimary) {
+      const voucherSlot = this.add.graphics();
+      voucherSlot.fillStyle(0x1a1a2e, 0.6);
+      voucherSlot.fillRoundedRect(-voucherW / 2, -voucherH / 2, voucherW, voucherH, 8);
+      voucherSlot.lineStyle(1.5, 0x444466, 0.5);
+      voucherSlot.strokeRoundedRect(-voucherW / 2, -voucherH / 2, voucherW, voucherH, 8);
+      voucherSlot.setPosition(voucherX, voucherY);
+
+      this.add
+        .text(voucherX, voucherY, 'SOLD', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '12px',
+          color: TEXT_COLORS.MUTED,
+          align: 'center',
+        })
+        .setOrigin(0.5)
+        .setAlpha(0.4);
+    }
+  }
+
   /** Get or generate the permit for this leg */
   private getOrGeneratePermit(player: ReturnType<typeof getPlayerState>): PermitDef | null {
     // Already purchased a permit this leg — no new one until next leg
@@ -1001,13 +1063,11 @@ export class ShopScene extends Scene {
 
   /** Get the discounted cost for any shop item */
   private getDiscountedCost(baseCost: number): number {
-    const discount = getPermitShopDiscount(getPlayerState().purchasedPermits);
-    if (discount <= 0) return baseCost;
-    return Math.max(1, Math.floor(baseCost * (1 - discount)));
+    return getDiscountedShopPrice(baseCost, getPlayerState().purchasedPermits);
   }
 
   /** Set up click-to-buy on the permit card */
-  private setupPermitCardClick(card: ItemCard, permit: PermitDef): void {
+  private setupPermitCardClick(card: ItemCard, permit: PermitDef, isPrimary: boolean): void {
     card.on('pointerover', () => {
       if (!card.sold && this.activeTabCard !== card) {
         this.tweens.add({ targets: card, scaleX: 1.05, scaleY: 1.05, duration: 100 });
@@ -1045,7 +1105,7 @@ export class ShopScene extends Scene {
           position: 'bottom',
           callback: () => {
             this.dismissActiveTab();
-            this.onBuyPermit(card, permit);
+            this.onBuyPermit(card, permit, isPrimary);
           },
         },
       ];
@@ -1071,7 +1131,7 @@ export class ShopScene extends Scene {
   }
 
   /** Handle purchasing a permit */
-  private onBuyPermit(card: ItemCard, permit: PermitDef): void {
+  private onBuyPermit(card: ItemCard, permit: PermitDef, isPrimary: boolean): void {
     if (card.sold) return;
     const player = getPlayerState();
     const cost = this.getPermitCost(permit, player);
@@ -1085,8 +1145,12 @@ export class ShopScene extends Scene {
     player.economy.spend(cost);
     player.purchasedPermits.push(permit.id);
     applyPermitEffect(permit, player);
-    player.currentLegPermit = null;
-    player.permitPurchasedThisLeg = true;
+    if (isPrimary) {
+      player.currentLegPermit = null;
+      player.permitPurchasedThisLeg = true;
+    } else {
+      player.bonusShopPermit = null;
+    }
 
     card.markSold();
     this.sound.play('sfx_tarot1', { volume: 0.6 });

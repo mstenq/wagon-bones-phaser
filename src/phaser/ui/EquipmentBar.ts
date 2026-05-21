@@ -6,6 +6,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { UI } from '../../game/Constants';
+import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { CardBar } from './CardBar';
@@ -189,7 +190,12 @@ export class EquipmentBar extends CardBar {
 
   protected onSellComplete(index: number): void {
     remapEquipmentDisplayOrderAfterRemove(index);
-    getPlayerState().sellEquipment(index);
+    const player = getPlayerState();
+    const grantsTag = player.equipment[index]?.def.effectType === 'SELL_GRANT_TAG';
+    player.sellEquipment(index);
+    if (grantsTag) {
+      EventBus.emit(Events.TAG_QUEUE_CHANGED);
+    }
     this.emit('equipment-changed');
   }
 }

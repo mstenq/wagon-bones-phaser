@@ -4,7 +4,7 @@
 import { Die, HandType, HandStats, BossDef, TrailTagDef, TrailTagInstance, TagCategory } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
-import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
+import { EquipmentDef, EquipmentInstance, createEquipmentInstance } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
 import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
 import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers';
@@ -91,6 +91,8 @@ export class PlayerState {
   unusedRerollsTotal: number = 0; // cumulative unused rerolls at round-end (for Pack Rat)
   twinWagonCount: number = 0; // pending Twin Wagon multipliers
   wideSaddleBonus: number = 0; // temporary +handSize for next round only
+  tagFreeReroll: boolean = false; // Coupon Book: first shop reroll is free
+  bonusShopPermit: PermitDef | null = null; // Permit Stamp: extra permit in shop
   skippedRoundsThisLeg: number[] = []; // round numbers skipped this leg (for RoundSelect UI)
   skippedRoundTags: Partial<Record<number, TrailTagDef>> = {}; // tag earned per skipped round
   roundSkipPreviewTags: Partial<Record<number, TrailTagDef>> = {}; // tag offered if each round is skipped
@@ -293,7 +295,9 @@ export class PlayerState {
   }
 
   get shopRerollCost(): number {
-    // Coupon Book: free rerolls before paid ones
+    // Coupon Book tag: first reroll free
+    if (this.tagFreeReroll && this.shopRerollCount === 0) return 0;
+    // Equipment: free rerolls before paid ones
     const freeRerolls = getConfigModifiers(this.equipment).freeShopRerolls;
     if (this.shopRerollCount < freeRerolls) return 0;
     const discount = getPermitShopRerollDiscount(this.purchasedPermits);
@@ -307,7 +311,9 @@ export class PlayerState {
 
   payShopReroll(): boolean {
     if (!this.canRerollShop()) return false;
+    const usedTagFreeReroll = this.tagFreeReroll && this.shopRerollCount === 0;
     this.trySpend(this.shopRerollCost);
+    if (usedTagFreeReroll) this.tagFreeReroll = false;
     this.shopRerollCount++;
     processEquipmentOnShopReroll(this.equipment);
     return true;
@@ -315,6 +321,8 @@ export class PlayerState {
 
   resetShopRerolls(): void {
     this.shopRerollCount = 0;
+    this.tagFreeReroll = false;
+    this.bonusShopPermit = null;
   }
 
   /** Number of equipment slots currently occupied (ghost-aura items don't count) */
@@ -336,11 +344,7 @@ export class PlayerState {
   buyEquipment(def: EquipmentDef): boolean {
     if (!this.canBuy(def)) return false;
     this.trySpend(def.cost);
-    this.equipment.push({
-      def,
-      sellValue: Math.max(1, Math.floor(def.cost / 2)),
-      state: def.initialState ? { ...def.initialState } : {},
-    });
+    this.equipment.push(createEquipmentInstance(def, this.purchasedPermits));
     return true;
   }
 
@@ -715,6 +719,8 @@ export class PlayerState {
     this.unusedRerollsTotal = 0;
     this.twinWagonCount = 0;
     this.wideSaddleBonus = 0;
+    this.tagFreeReroll = false;
+    this.bonusShopPermit = null;
     this.skippedRoundsThisLeg = [];
     this.skippedRoundTags = {};
     this.roundSkipPreviewTags = {};

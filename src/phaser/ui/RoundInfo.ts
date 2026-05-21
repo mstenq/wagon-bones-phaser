@@ -65,6 +65,7 @@ export interface RoundInfoConfig {
   depth?: number;
   onPlay?: () => void;
   onSkip?: () => void;
+  onRerollBoss?: () => void;
   onTagHover?: (tag: TrailTagDef, anchorX: number, anchorY: number) => void;
   onTagHoverEnd?: () => void;
 }
@@ -85,6 +86,7 @@ export interface LegRoundPanelsConfig {
   depth?: number;
   onPlay?: () => void;
   onSkip?: () => void;
+  onRerollBoss?: () => void;
   onTagHover?: (tag: TrailTagDef, anchorX: number, anchorY: number) => void;
   onTagHoverEnd?: () => void;
 }
@@ -120,6 +122,7 @@ export function createLegRoundPanels(
       depth: config.depth,
       onPlay: config.onPlay,
       onSkip: config.onSkip,
+      onRerollBoss: config.onRerollBoss,
       onTagHover: config.onTagHover,
       onTagHoverEnd: config.onTagHoverEnd,
     });
@@ -306,18 +309,29 @@ export class RoundInfoPanel extends GameObjects.Container {
     if (showActions) {
       const bottomY = height - COL_PAD;
       const hasSkip = !isBoss && !!config.skipPreviewTag;
-      const skipY = bottomY - BTN_H / 2;
-      const playY = hasSkip ? skipY - BTN_H - BTN_GAP : skipY;
+      const hasBossReroll = isBoss && !!config.onRerollBoss;
+      let actionY = bottomY - BTN_H / 2;
       const absX = x + cx;
+
+      if (hasBossReroll) {
+        const rerollBtn = new Button(scene, absX, y + actionY, 'Re-roll Boss', width - 30, BTN_H)
+          .setColor(0x6b2d6b, 0x8b3d8b)
+          .setDepth(depth + 5);
+        rerollBtn.onClick(config.onRerollBoss!);
+        this.registerButton(rerollBtn);
+        actionY -= BTN_H + BTN_GAP;
+      }
+
+      const playY = hasSkip ? actionY - BTN_H - BTN_GAP : actionY;
 
       const playBtn = new Button(scene, absX, y + playY, 'Play Round', width - 30, BTN_H)
         .setColor(0x2d6b2d, 0x3d8b3d)
         .setDepth(depth + 5);
       if (config.onPlay) playBtn.onClick(config.onPlay);
-      // Button is scene-owned; track for cleanup on destroy
       this.registerButton(playBtn);
 
       if (hasSkip && config.skipPreviewTag) {
+        const skipY = actionY;
         const tag = config.skipPreviewTag;
         const tagX = 14;
         const tagY = skipY - TAG_SIZE / 2;
