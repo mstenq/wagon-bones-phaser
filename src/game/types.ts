@@ -165,3 +165,6 @@ export interface BossDef {
   effectParams: Record<string, unknown>;
   minimumLeg?: number;
 }
+
+// ─── Trail Tags (re-export from data layer) ───
+export type { TagCategory, TrailTagDef, TrailTagInstance } from '../data/trail_tags';
