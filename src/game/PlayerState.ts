@@ -1,7 +1,7 @@
 // ─── PlayerState (No Phaser imports) ───
 // Persistent state that carries across scenes (shop, rounds, etc).
 
-import { Die, HandType, HandStats, BossDef } from './types';
+import { Die, HandType, HandStats, BossDef, TrailTagDef, TrailTagInstance, TagCategory } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
@@ -81,6 +81,16 @@ export class PlayerState {
   pendingNewDiceIds: string[] = []; // dice IDs pending animation (Quarry Stone, Mystery Crate, etc.)
   pendingAnimatedDestructions: { sourceIdx: number; victimIdx: number }[] = []; // equipment destructions pending animation (Funeral Pyre, Haunted Totem, etc.)
   pendingJunkDealerCount: number = 0; // number of equipment cards just created by Junk Dealer (for animation)
+
+  // ─── Trail Tags ───
+  pendingTags: TrailTagInstance[] = []; // tags waiting to fire (shop, boss, next_round)
+  storedAuraTags: TrailTagInstance[] = []; // aura tags banked because no base equipment was in shop
+  roundsSkipped: number = 0; // total rounds skipped this run (for Shortcut tag)
+  daysScored: number = 0; // total days where scoring occurred (for Well-Traveled)
+  unusedRerollsTotal: number = 0; // cumulative unused rerolls at round-end (for Pack Rat)
+  twinWagonCount: number = 0; // pending Twin Wagon multipliers
+  wideSaddleBonus: number = 0; // temporary +handSize for next round only
+
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
 
@@ -569,8 +579,48 @@ export class PlayerState {
     return this.leg > GAMEPLAY.LEGS;
   }
 
+  /** Add a tag to the pending queue. Twin Wagon increases copies. */
+  addTag(def: TrailTagDef): void {
+    if (def.id === 'tag_twin_wagon') {
+      const copies = 1 + this.twinWagonCount;
+      this.twinWagonCount += copies;
+      return;
+    }
+
+    const copies = 1 + this.twinWagonCount;
+    this.twinWagonCount = 0;
+    this.pendingTags.push({ def, copies });
+  }
+
+  /** Remove a specific pending tag by index. Returns the removed tag or null. */
+  consumeTag(index: number): TrailTagInstance | null {
+    if (index < 0 || index >= this.pendingTags.length) return null;
+    return this.pendingTags.splice(index, 1)[0];
+  }
+
+  /** Remove all pending tags matching a category. Returns removed tags. */
+  consumeTagsByCategory(category: TagCategory): TrailTagInstance[] {
+    const consumed: TrailTagInstance[] = [];
+    this.pendingTags = this.pendingTags.filter((t) => {
+      if (t.def.category === category) {
+        consumed.push(t);
+        return false;
+      }
+      return true;
+    });
+    return consumed;
+  }
+
+  /** Get pending tags for a specific category (read-only). */
+  getTagsByCategory(category: TagCategory): TrailTagInstance[] {
+    return this.pendingTags.filter((t) => t.def.category === category);
+  }
+
   /** Advance to next round after a win. Returns true if the journey is complete. */
-  advanceRound(): boolean {
+  advanceRound(skipped: boolean = false): boolean {
+    if (skipped) {
+      this.roundsSkipped++;
+    }
     this.round++;
     if (this.round > GAMEPLAY.ROUNDS_PER_LEG) {
       this.round = 1;
@@ -625,6 +675,13 @@ export class PlayerState {
     this.permitDayPenalty = 0;
     this.permitRerollPenalty = 0;
     this.permitScoreReduction = 0;
+    this.pendingTags = [];
+    this.storedAuraTags = [];
+    this.roundsSkipped = 0;
+    this.daysScored = 0;
+    this.unusedRerollsTotal = 0;
+    this.twinWagonCount = 0;
+    this.wideSaddleBonus = 0;
     this.assignBosses();
   }
 }

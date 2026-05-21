@@ -106,12 +106,17 @@ export class GameState {
     const player = getPlayerState();
     const mods = getConfigModifiers(player.equipment);
     const trailMods = player.trailEventModifiers;
+    const wideSaddleBonus = player.wideSaddleBonus;
+    player.wideSaddleBonus = 0;
 
     this.config = {
       ...this.config,
       maxRerolls: player.effectiveRerolls + mods.rerollsBonus,
       maxDays: Math.max(1, player.effectiveDays - mods.daysPenalty),
-      rollSize: Math.max(1, player.handSize + mods.rollSizeBonus - trailMods.handSizePenalty),
+      rollSize: Math.max(
+        1,
+        player.handSize + mods.rollSizeBonus - trailMods.handSizePenalty + wideSaddleBonus,
+      ),
     };
 
     // Apply trail event: target miles multiplier (score multiplier means harder target)
@@ -463,6 +468,7 @@ export class GameState {
     const handUpgrades = processEquipmentAfterHandScored(player.equipment, handType);
 
     this.state.totalMiles += Math.floor(finalResult.miles);
+    player.daysScored++;
     this.state.phase = 'DAY_END';
     if (handUpgrades.length > 0) {
       finalResult.handUpgrades = handUpgrades;
@@ -505,6 +511,7 @@ export class GameState {
     processEquipmentOnDayEnd(player.equipment);
 
     if (this.state.totalMiles >= this.config.targetMiles) {
+      player.unusedRerollsTotal += this.state.rerollsRemaining;
       this.state.phase = 'ROUND_END';
       this.emit('round-won', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
       this.emit('phase-change', this.state.phase);

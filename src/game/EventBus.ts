@@ -18,4 +18,6 @@ export const Events = {
   ROUND_LOST: 'game:round-lost',
   REROLL_UPDATED: 'game:reroll-updated',
   SPENT_REFRESHED: 'game:spent-refreshed',
+  TAG_EARNED: 'game:tag-earned',
+  ROUND_SKIPPED: 'game:round-skipped',
 } as const;
