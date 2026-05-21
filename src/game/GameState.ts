@@ -491,6 +491,11 @@ export class GameState {
     const endEffects = processEndOfRound(player.equipment);
     // Capture destroyed equipment names before splicing
     const destroyedEquipment = endEffects.destroyedIndices.map((i) => player.equipment[i].def.name);
+    for (const idx of endEffects.destroyedIndices) {
+      if (player.equipment[idx]?.def.id === 'dynamite') {
+        player.dynamiteSelfDestructed = true;
+      }
+    }
     // Destroy risky equipment (iterate in reverse to keep indices valid)
     for (const idx of endEffects.destroyedIndices.sort((a, b) => b - a)) {
       player.equipment.splice(idx, 1);

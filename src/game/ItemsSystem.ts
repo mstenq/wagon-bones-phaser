@@ -11,6 +11,9 @@ import type { PlayerState } from './PlayerState';
 import type { EquipmentModifier } from './types';
 import { getDiscountedShopPrice } from './PermitsSystem';
 import { CHANCES } from './Constants';
+import { isEquipmentUnlocked } from './equipmentUnlock';
+
+export type { EquipmentUnlockCondition } from './equipmentUnlock';
 
 export interface ItemAura {
   id: string;
@@ -31,6 +34,7 @@ export interface EquipmentDef {
   initialState?: Record<string, number>;
   aura?: ItemAura | null;
   hintDisplay?: (game: GameState | null, player: PlayerState) => import('../data/items').HintSegment[][];
+  unlockCondition?: (game: GameState | null, player: PlayerState) => boolean;
 }
 
 export interface EquipmentInstance {
@@ -67,9 +71,15 @@ const ITEM_AURAS: ItemAura[] = itemAurasData as ItemAura[];
 const SHOP_SIZE = 5;
 const LEGENDARY_RARITY = 'legendary';
 
-/** Equipment pool eligible for shop stock and random rolls (excludes legendaries). */
-function getShopEquipmentPool(excludeIds?: string[]): EquipmentDef[] {
-  let pool = ITEMS_POOL.filter((i) => i.rarity !== LEGENDARY_RARITY);
+/** Equipment pool eligible for shop stock and random rolls (excludes legendaries and locked items). */
+function getShopEquipmentPool(
+  excludeIds?: string[],
+  game: GameState | null = null,
+  player?: PlayerState,
+): EquipmentDef[] {
+  let pool = ITEMS_POOL.filter(
+    (i) => i.rarity !== LEGENDARY_RARITY && isEquipmentUnlocked(i, game, player),
+  );
   if (excludeIds && excludeIds.length > 0) {
     const excluded = new Set(excludeIds);
     pool = pool.filter((i) => !excluded.has(i.id));
@@ -202,7 +212,7 @@ export function createEquipmentInstance(
 }
 
 export function generateRandomEquipment(options?: { rarity?: string; excludeRarity?: string }): EquipmentDef {
-  let pool = [...ITEMS_POOL];
+  let pool = ITEMS_POOL.filter((i) => isEquipmentUnlocked(i));
 
   // Legendaries are only granted via explicit rarity (e.g. Pandora's Box)
   if (options?.rarity !== LEGENDARY_RARITY) {

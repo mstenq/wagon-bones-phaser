@@ -1,7 +1,7 @@
 # Bugs noticed while playing
 - Selling Consumable cards needs to update Equipment bar cards (Snake Oil Ledger xmult doesn't update until after you drag and drop the cards to force a refresh currently)
 - Gold dice held in hand don't show animation at end of round showing you got money. I had one with a red_bullet sticker and it was hard to tell if it was working cause there was not indication
-- Was able to buy nitro equipment despite not every purchasing dynamite and having it blow up
+- ~~Was able to buy nitro equipment despite not every purchasing dynamite and having it blow up~~ (fixed: equipment unlock conditions)
 -Snake Oil Ledger never reset after defeating boss
 -I'm getting Rares way more often then I feel I should be. 
 

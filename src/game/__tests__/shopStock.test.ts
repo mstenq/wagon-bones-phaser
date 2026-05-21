@@ -1,8 +1,11 @@
 import './setup';
 import { describe, test, expect } from 'bun:test';
 import itemAurasData from '../../data/item_auras.json';
-import { generateRandomEquipment, generateShopStock, getAllEquipment } from '../ItemsSystem';
+import { generateRandomEquipment, generateShopStock, getAllEquipment, getEquipmentDefById } from '../ItemsSystem';
 import { getRandomSupplyDef, getRandomTrailGuideDef, getRandomFrontierDef, getShopRandomFrontierDef, generateShopConsumables } from '../ConsumablesSystem';
+import { resetPlayerState } from '../PlayerState';
+import { die } from './testHelpers';
+import { isEquipmentUnlocked } from '../equipmentUnlock';
 
 describe('Shop stock exclusion', () => {
   test('generateShopStock never includes legendary items', () => {
@@ -189,6 +192,46 @@ describe('Shop stock exclusion', () => {
     expect(counts.rare / trials).toBeCloseTo(0.05, 1);
     expect(counts.uncommon / trials).toBeCloseTo(0.25, 1);
     expect(counts.common / trials).toBeCloseTo(0.7, 1);
+  });
+
+  test('locked equipment is excluded from shop stock', () => {
+    const player = resetPlayerState();
+    let foundNitro = false;
+    for (let i = 0; i < 200; i++) {
+      const stock = generateShopStock(5);
+      if (stock.some((item) => item.id === 'nitro')) foundNitro = true;
+    }
+    expect(foundNitro).toBe(false);
+
+    player.dynamiteSelfDestructed = true;
+    let foundAfterUnlock = false;
+    for (let i = 0; i < 200; i++) {
+      const stock = generateShopStock(5);
+      if (stock.some((item) => item.id === 'nitro')) {
+        foundAfterUnlock = true;
+        break;
+      }
+    }
+    expect(foundAfterUnlock).toBe(true);
+  });
+
+  test('isEquipmentUnlocked gates enhancement-specific items', () => {
+    const player = resetPlayerState();
+    const goldTooth = getEquipmentDefById('gold_tooth')!;
+    expect(isEquipmentUnlocked(goldTooth, null, player)).toBe(false);
+
+    player.dice.push(die({ enhancement: 'gold', value: 6 }));
+    expect(isEquipmentUnlocked(goldTooth, null, player)).toBe(true);
+  });
+
+  test('rainbow_trail requires two different enhanced dice in pouch', () => {
+    const player = resetPlayerState();
+    const rainbow = getEquipmentDefById('rainbow_trail')!;
+    player.dice.push(die({ enhancement: 'gold', value: 6 }));
+    expect(isEquipmentUnlocked(rainbow, null, player)).toBe(false);
+
+    player.dice.push(die({ enhancement: 'steel', value: 5 }));
+    expect(isEquipmentUnlocked(rainbow, null, player)).toBe(true);
   });
 
   test('generateRandomEquipment respects explicit rarity filters before weighted rolls', () => {

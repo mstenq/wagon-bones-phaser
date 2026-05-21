@@ -94,9 +94,10 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
       game.selectForScore(scoredIds);
       game.calculateScore();
       game.endDay();
-      // Dynamite should be gone, horseshoe remains
+      // Dynamite should be gone, horseshoe remains; unlocks Nitro in shops
       expect(player.equipment.length).toBe(1);
       expect(player.equipment[0].def.id).toBe('horseshoe');
+      expect(player.dynamiteSelfDestructed).toBe(true);
     } finally {
       Math.random = original;
     }

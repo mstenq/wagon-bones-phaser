@@ -143,6 +143,8 @@ export class PlayerState {
   skippedRoundTags: Partial<Record<number, TrailTagDef>> = {}; // tag earned per skipped round
   roundSkipPreviewTags: Partial<Record<number, TrailTagDef>> = {}; // tag offered if each round is skipped
   bossRerollsUsedThisLeg: number = 0; // permit boss rerolls consumed this leg
+  /** Set when Dynamite self-destructs at end of round; unlocks Nitro in shops. */
+  dynamiteSelfDestructed: boolean = false;
 
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
@@ -851,6 +853,7 @@ export class PlayerState {
     this.skippedRoundTags = {};
     this.roundSkipPreviewTags = {};
     this.bossRerollsUsedThisLeg = 0;
+    this.dynamiteSelfDestructed = false;
     this.assignBosses();
   }
 }

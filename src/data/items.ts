@@ -42,6 +42,13 @@ import type { PlayerState } from '../game/PlayerState';
 import { HandType } from '../game/types';
 import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/Constants';
 import { resolveEffectParam, resolveChance } from '../game/effectParams';
+import {
+  unlockAnyEnhanced,
+  unlockByEnhancement,
+  unlockNitro,
+  unlockTwoEnhancedTypes,
+  type EquipmentUnlockCondition,
+} from '../game/equipmentUnlock';
 
 /** Raw item definition shape (matches the old JSON + hintDisplay) */
 export interface ItemDef {
@@ -55,6 +62,7 @@ export interface ItemDef {
   effectParams: Record<string, unknown>;
   initialState?: Record<string, number>;
   hintDisplay: (game: GameState | null, player: PlayerState) => HintSegment[][];
+  unlockCondition?: EquipmentUnlockCondition;
 }
 
 // ─── Helper constructors for readability ───
@@ -469,6 +477,7 @@ const items: ItemDef[] = [
       if (enhanced > 0) return [[money(`$1`), oddsDisplay([1, 2], player), condition(`${enhanced} enhanced`)]];
       return [[money('$1'), oddsDisplay([1, 2], player), condition('enhanced held')]];
     },
+    unlockCondition: unlockAnyEnhanced,
   },
   {
     id: 'eleventh_crossing',
@@ -494,6 +503,7 @@ const items: ItemDef[] = [
     cardTemplate: "white-text",
     cost: 6,
     rarity: 'uncommon',
+    unlockCondition: unlockByEnhancement('lucky'),
     description: 'Item gains x0.25 for every lucky dice trigger',
     effectType: 'LUCKY_TRIGGER_XMULT',
     effectParams: { value: 0.25 },
@@ -653,6 +663,7 @@ const items: ItemDef[] = [
       const m = equip?.state.miles ?? 0;
       return [[miles(`+${m}`)]];
     },
+    unlockCondition: unlockByEnhancement('bone'),
   },
   {
     id: 'snake_oil_ledger',
@@ -680,6 +691,7 @@ const items: ItemDef[] = [
     effectType: 'GOLD_DICE_MONEY',
     effectParams: { value: 4 },
     hintDisplay: () => [[money('+$4'), condition('per gold')]],
+    unlockCondition: unlockByEnhancement('gold'),
   },
   {
     id: 'guardian_totem',
@@ -1050,6 +1062,7 @@ const items: ItemDef[] = [
       if (count > 0) return [[mult(`x${xm.toFixed(1)}`), condition(`${count} steel`)]];
       return [[mult('x0.2'), condition('per steel')], [inactive('None')]];
     },
+    unlockCondition: unlockByEnhancement('steel'),
   },
   {
     id: 'rainy_day_fund',
@@ -1088,6 +1101,7 @@ const items: ItemDef[] = [
       if (chance[0] >= chance[1]) return [[money('$2'), oddsDisplay([1,1], player), condition('enhanced scored')]];
       return [[money('$2'), oddsDisplay(chance, player), condition('enhanced scored')]];
     },
+    unlockCondition: unlockAnyEnhanced,
   },
 
   // ─── Phase 4 Items ───
@@ -1215,6 +1229,7 @@ const items: ItemDef[] = [
       if (game && game.state.day === 1) return [[condition('First hand'), active('Ready')]];
       return [[condition('First hand'), inactive('Inactive')]];
     },
+    unlockCondition: unlockAnyEnhanced,
   },
   {
     id: 'cowboy_boots',
@@ -1273,6 +1288,7 @@ const items: ItemDef[] = [
     effectType: 'XMULT_RISKY',
     effectParams: { value: 3, destroyChance: [1, 1000] },
     hintDisplay: (_game, player) => [[mult('x3')], [oddsDisplay([1, 1000], player), text('self-destruct')]],
+    unlockCondition: unlockNitro,
   },
   {
     id: 'repeat_offender',
@@ -1448,6 +1464,7 @@ const items: ItemDef[] = [
       if (count > 0) return [[miles(`+${total}`), condition(`${count} stone`)]];
       return [[miles('+25'), condition('per stone die')]];
     },
+    unlockCondition: unlockByEnhancement('stone'),
   },
   {
     id: 'antique_revolver',
@@ -1555,6 +1572,7 @@ const items: ItemDef[] = [
       if (m > 0) return [[miles(`+${m}`), condition('wooden scored')]];
       return [[miles('+30'), condition('per wooden scored')]];
     },
+    unlockCondition: unlockByEnhancement('wooden'),
   },
   {
     id: 'moonshine',
@@ -1566,6 +1584,7 @@ const items: ItemDef[] = [
     effectType: 'ENHANCED_RETRIGGER',
     effectParams: { destroyChance: [1, 6], diamondDestroyChance: [1, 3] },
     hintDisplay: (_game, player) => [[text('Retrigger'), condition('enhanced dice')], [oddsDisplay([1, 6], player), text('destroy')]],
+    unlockCondition: unlockAnyEnhanced,
   },
   {
     id: 'burn_barrel',
@@ -1639,6 +1658,7 @@ const items: ItemDef[] = [
     effectType: 'BONE_DICE_XMULT_CHANCE',
     effectParams: { chance: [1, 2], value: 1.5 },
     hintDisplay: (_game, player) => [[mult('x1.5'), oddsDisplay([1, 2], player), condition('per bone')]],
+    unlockCondition: unlockByEnhancement('bone'),
   },
   {
     id: 'wood_axe',
@@ -1650,6 +1670,7 @@ const items: ItemDef[] = [
     effectType: 'WOODEN_DICE_MILES',
     effectParams: { value: 50 },
     hintDisplay: () => [[miles('+50'), condition('per wooden')]],
+    unlockCondition: unlockByEnhancement('wooden'),
   },
   {
     id: 'iron_spurs',
@@ -1661,6 +1682,7 @@ const items: ItemDef[] = [
     effectType: 'IRON_DICE_MULT',
     effectParams: { value: 7 },
     hintDisplay: () => [[mult('+7'), condition('per steel')]],
+    unlockCondition: unlockByEnhancement('steel'),
   },
   {
     id: 'diamond_coffin',
@@ -1678,6 +1700,7 @@ const items: ItemDef[] = [
       if (xm > 1) return [[mult(`x${xm.toFixed(2)}`)]];
       return [[mult('x0.75'), condition('per diamond destroyed')], [inactive('None')]];
     },
+    unlockCondition: unlockByEnhancement('diamond'),
   },
   {
     id: 'counterfeit_goods',
@@ -1706,6 +1729,7 @@ const items: ItemDef[] = [
       }
       return [[mult('x1')], [condition('per enhancement')]];
     },
+    unlockCondition: unlockTwoEnhancedTypes,
   },
   {
     id: 'loaded_dice',
@@ -1960,6 +1984,7 @@ const items: ItemDef[] = [
       if (xm > 1) return [[mult(`x${xm.toFixed(1)}`)]];
       return [[mult('x0.1'), condition('per enhanced scored')]];
     },
+    unlockCondition: unlockAnyEnhanced,
   },
   {
     id: 'pack_saddle',
@@ -2172,6 +2197,7 @@ const items: ItemDef[] = [
     effectType: 'STACKED_DECK',
     effectParams: {},
     hintDisplay: () => [[active('Loaded = all pips')]],
+    unlockCondition: unlockByEnhancement('loaded'),
   },
 ];
 
