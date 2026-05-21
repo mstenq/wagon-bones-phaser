@@ -303,7 +303,7 @@ export class ShopScene extends Scene {
         if (alreadyOwned) {
           card.markSold();
         } else {
-          const canAffordEquip = player.economy.balance >= discountedCost &&
+          const canAffordEquip = player.canAfford(discountedCost) &&
             (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
           card.setAffordable(canAffordEquip);
           this.setupShopCardClick(card, i);
@@ -313,13 +313,13 @@ export class ShopScene extends Scene {
         if (alreadyOwned) {
           card.markSold();
         } else {
-          const canAfford = player.economy.balance >= discountedCost;
+          const canAfford = player.canAfford(discountedCost);
           card.setAffordable(canAfford);
           this.setupShopCardClick(card, i);
         }
       } else {
         // Dice card
-        const canAfford = player.economy.balance >= discountedCost;
+        const canAfford = player.canAfford(discountedCost);
         card.setAffordable(canAfford);
         this.setupShopCardClick(card, i);
       }
@@ -379,7 +379,7 @@ export class ShopScene extends Scene {
       if ((packInst as unknown as { _opened?: boolean })._opened) {
         packCard.markSold();
       } else {
-        packCard.setAffordable(player.economy.balance >= discountedPackCost);
+        packCard.setAffordable(player.canAfford(discountedPackCost));
         packCard.on('pointerdown', () => this.onBuyPack(packCard, packInst));
         packCard.on('pointerover', () => {
           if (!packCard.sold) this.tweens.add({ targets: packCard, scaleX: 1.05, scaleY: 1.05, duration: 100 });
@@ -408,12 +408,11 @@ export class ShopScene extends Scene {
     // Explorer's Guild: trail guide packs are free
     const isTrailGuidePack = pack.def.category === 'trail_guide' && player.trailGuidesFree;
     const cost = isTrailGuidePack ? 0 : this.getDiscountedCost(pack.def.cost);
-    if (player.economy.balance < cost) {
+    if (!player.trySpend(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
 
-    player.economy.spend(cost);
     card.markSold();
     (pack as unknown as { _opened?: boolean })._opened = true;
     this.updateDisplays();
@@ -447,11 +446,10 @@ export class ShopScene extends Scene {
     const instance = acquireEquipmentInstance(def, player.purchasedPermits, shopItem.preview.modifiers);
     const listPrice = getEquipmentListPrice(def);
     const cost = getEquipmentPurchasePrice(def, instance.modifiers, listPrice, player.purchasedPermits);
-    if (player.economy.balance < cost) {
+    if (!player.trySpend(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
-    player.economy.spend(cost);
     player.equipment.push(instance);
     card.markSold();
     this.markStockSold(card);
@@ -480,11 +478,10 @@ export class ShopScene extends Scene {
     if (card.sold) return;
     const player = getPlayerState();
     const cost = this.getDiscountedCost(shopItem.displayDef.cost);
-    if (player.economy.balance < cost) {
+    if (!player.trySpend(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
-    player.economy.spend(cost);
     player.addDie(shopItem.die);
     card.markSold();
     this.markStockSold(card);
@@ -510,7 +507,7 @@ export class ShopScene extends Scene {
     const player = getPlayerState();
     // Explorer's Guild: trail guides are free
     const cost = (def.category === 'trail_guide' && player.trailGuidesFree) ? 0 : this.getDiscountedCost(def.cost);
-    if (player.economy.balance < cost) {
+    if (!player.canAfford(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
@@ -518,7 +515,7 @@ export class ShopScene extends Scene {
       this.showCardPopup(card, 'No space!');
       return;
     }
-    player.economy.spend(cost);
+    player.trySpend(cost);
     player.addConsumable(def);
     card.markSold();
     this.markStockSold(card);
@@ -549,11 +546,10 @@ export class ShopScene extends Scene {
     const player = getPlayerState();
     // Explorer's Guild: trail guides are free
     const cost = (def.category === 'trail_guide' && player.trailGuidesFree) ? 0 : this.getDiscountedCost(def.cost);
-    if (player.economy.balance < cost) {
+    if (!player.trySpend(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
-    player.economy.spend(cost);
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_tarot1', { volume: 0.5 });
@@ -828,11 +824,11 @@ export class ShopScene extends Scene {
           listPrice,
           player.purchasedPermits,
         );
-        const canAffordEquip = player.economy.balance >= cost &&
+        const canAffordEquip = player.canAfford(cost) &&
           (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
         card.setAffordable(canAffordEquip);
       } else {
-        card.setAffordable(player.economy.balance >= cost);
+        card.setAffordable(player.canAfford(cost));
       }
     }
 
@@ -841,7 +837,7 @@ export class ShopScene extends Scene {
         // Explorer's Guild: trail guide packs are free
         const isTrailGuidePack = packCard.pack.def.category === 'trail_guide' && player.trailGuidesFree;
         const packCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packCard.pack.def.cost);
-        packCard.setAffordable(player.economy.balance >= packCost);
+        packCard.setAffordable(player.canAfford(packCost));
       }
     }
 
@@ -849,7 +845,7 @@ export class ShopScene extends Scene {
     if (this.permitCard && !this.permitCard.sold) {
       const permit = player.currentLegPermit;
       if (permit) {
-        this.permitCard.setAffordable(player.economy.balance >= this.getPermitCost(permit, player));
+        this.permitCard.setAffordable(player.canAfford(this.getPermitCost(permit, player)));
       }
     }
 
@@ -1059,7 +1055,7 @@ export class ShopScene extends Scene {
         tabAnchorX: 45,
       });
       permitItemCard.setDepth(10);
-      permitItemCard.setAffordable(player.economy.balance >= permitDisplayDef.cost);
+      permitItemCard.setAffordable(player.canAfford(permitDisplayDef.cost));
       this.setupPermitCardClick(permitItemCard, permit, isPrimary);
       if (isPrimary) this.permitCard = permitItemCard;
 
@@ -1191,13 +1187,12 @@ export class ShopScene extends Scene {
     const player = getPlayerState();
     const cost = this.getPermitCost(permit, player);
 
-    if (player.economy.balance < cost) {
+    if (!player.trySpend(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
 
-    // Manually spend the discounted cost and apply permit
-    player.economy.spend(cost);
+    // Apply permit after spending
     player.purchasedPermits.push(permit.id);
     applyPermitEffect(permit, player);
     if (isPrimary) {

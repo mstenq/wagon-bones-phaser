@@ -2071,7 +2071,7 @@ const items: ItemDef[] = [
   {
     id: 'bounty_contract',
     name: 'Bounty Contract',
-    cardTemplate: 'black-text',
+    cardTemplate: 'black-text-white-outline',
     cost: 6,
     rarity: 'uncommon',
     description: 'Sell this item to gain a free Twin Wagon tag',
@@ -2119,7 +2119,7 @@ const items: ItemDef[] = [
   {
     id: 'savings_account',
     name: 'Savings Account',
-    cardTemplate: 'black-text-white-outline',
+    cardTemplate: 'white-text',
     cost: 5,
     rarity: 'uncommon',
     description:
@@ -2137,7 +2137,7 @@ const items: ItemDef[] = [
   {
     id: 'six_feet_under',
     name: 'Six Feet Under',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'common',
     description: 'Item gains 66 miles for every dice that is destroyed',
@@ -2154,7 +2154,7 @@ const items: ItemDef[] = [
   {
     id: 'eight_second_ride',
     name: 'Eight Second Ride',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'rare',
     description: 'Each consecutive scored 8 gains +0.5 xMult over the previous (x1, x1.5, x2, x2.5, x3...)',

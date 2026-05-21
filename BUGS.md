@@ -53,3 +53,14 @@ rail_splitter: should probably be 10 mult
 4 straight: adjust stats to be equal to 2-pair
 covered_wagon: already have wood_axe, I think we just deprecate covered_wagon.
 
+
+# Bad Art
+wild_card
+trail_tax
+town_choir
+toolbelt
+trail_rations
+wedding_ring
+last_stand
+snake_oil_ledger
+

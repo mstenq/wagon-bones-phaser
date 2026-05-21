@@ -112,6 +112,13 @@ describe('BANK_NOTE: Bank Note', () => {
     player.sellEquipment(0);
     expect(player.economy.balance).toBe(-14);
   });
+
+  test('at $0 can still afford shop reroll and boss permit reroll into debt', () => {
+    const { player } = setupGame({ equipment: [item('bank_note')], money: 0 });
+    expect(player.canAfford(5)).toBe(true);
+    expect(player.canRerollShop()).toBe(true);
+    expect(player.canAfford(10)).toBe(true);
+  });
 });
 
 // ─── REFRESH_SPENT_DICE: Extra Saddlebag ───

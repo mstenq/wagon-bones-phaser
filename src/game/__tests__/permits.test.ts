@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, die, diceWithValue, calculateTestScore } from './testHelpers';
+import { resetDieIds, setupGame, die, diceWithValue, calculateTestScore, item } from './testHelpers';
 import { resetPlayerState, getPlayerState } from '../PlayerState';
 import {
   getAllPermits,
@@ -600,6 +600,17 @@ describe('Permit boss reroll', () => {
     expect(player.leg).toBe(2);
     expect(player.bossRerollsUsedThisLeg).toBe(0);
     expect(player.canBossPermitReroll()).toBe(true);
+  });
+
+  test('bank note: boss reroll at $0 spends into debt', () => {
+    const player = resetPlayerState();
+    player.equipment.push(item('bank_note'));
+    player.economy.setBalance(20);
+    player.buyPermit(getPermitById('bounty_board')!);
+    player.economy.setBalance(0);
+
+    expect(player.tryBossPermitReroll()).toBe(true);
+    expect(player.economy.balance).toBe(-10);
   });
 });
 

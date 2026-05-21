@@ -407,12 +407,18 @@ describe('frontier cards and cursed equipment', () => {
     player.equipment.push(equipWithModifiers('war_drums', ['cursed']));
 
     const def = getFrontierDefById('priests_blessing')!;
-    const result = useConsumableDirectly(def, player);
+    const original = Math.random;
+    Math.random = () => 0; // bless horseshoe (index 0), not the cursed war_drums
+    try {
+      const result = useConsumableDirectly(def, player);
 
-    expect(result.success).toBe(true);
-    expect(player.equipment).toHaveLength(2);
-    expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
-    expect(player.equipment.some((e) => e.def.aura?.id === 'holy')).toBe(true);
+      expect(result.success).toBe(true);
+      expect(player.equipment).toHaveLength(2);
+      expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
+      expect(player.equipment.some((e) => e.def.aura?.id === 'holy')).toBe(true);
+    } finally {
+      Math.random = original;
+    }
   });
 
   test('skin walker copies random item and keeps cursed equipment', () => {

@@ -6,6 +6,7 @@ import { GameObjects, Scene } from 'phaser';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { resetPlayerState } from '../../game/PlayerState';
 import { Button } from './Button';
+import { EquipmentCatalogModal } from './EquipmentCatalogModal';
 
 export class OptionsModal extends GameObjects.Container {
   constructor(scene: Scene, contentX: number, width: number, height: number) {
@@ -20,7 +21,7 @@ export class OptionsModal extends GameObjects.Container {
 
     // Modal panel
     const panelW = Math.min(width - 40, 380);
-    const panelH = 260;
+    const panelH = 310;
     const panelX = contentX + (width - panelW) / 2;
     const panelY = (height - panelH) / 2;
 
@@ -41,8 +42,16 @@ export class OptionsModal extends GameObjects.Container {
       .setOrigin(0.5);
     this.add(title);
 
+    // Equipment catalog
+    const equipmentBtn = new Button(scene, panelX + panelW / 2, panelY + 88, 'Equipment', panelW - 60, 40);
+    equipmentBtn.onClick(() => {
+      this.destroy();
+      new EquipmentCatalogModal(scene);
+    });
+    this.add(equipmentBtn);
+
     // New Run button
-    const newRunBtn = new Button(scene, panelX + panelW / 2, panelY + 90, 'New Run', panelW - 60, 40);
+    const newRunBtn = new Button(scene, panelX + panelW / 2, panelY + 138, 'New Run', panelW - 60, 40);
     newRunBtn.onClick(() => {
       this.destroy();
       resetPlayerState();
@@ -51,7 +60,7 @@ export class OptionsModal extends GameObjects.Container {
     this.add(newRunBtn);
 
     // Return to Main Menu button
-    const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 145, 'Main Menu', panelW - 60, 40);
+    const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 188, 'Main Menu', panelW - 60, 40);
     menuBtn.onClick(() => {
       this.destroy();
       scene.scene.start('MainMenu');

@@ -186,7 +186,7 @@ export class DicePouchModal extends GameObjects.Container {
     const spentCount = player.spentDice.length;
     if (spentCount > 0) {
       const refreshCost = player.refreshCost;
-      const canAfford = player.economy.balance >= refreshCost;
+      const canAfford = player.canAfford(refreshCost);
 
       // Check for free refresh via Extra Saddlebag
       const hasFreeRefresh = player.equipment.some(
