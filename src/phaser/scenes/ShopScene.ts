@@ -8,7 +8,7 @@ import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
 import { processEquipmentOnShopReroll, processEquipmentOnShopEnd } from '../../game/EquipmentEffects';
 import { TEXT_COLORS, FONTS, UI, SHOP_WEIGHTS } from '../../game/Constants';
-import { generateShopStock, EquipmentDef } from '../../game/ItemsSystem';
+import { generateShopStock, EquipmentDef, EquipmentInstance, getEquipmentListPrice } from '../../game/ItemsSystem';
 import {
   processShopTags,
   applyInjectTagsToShopStock,
@@ -43,7 +43,12 @@ import {
   applyPermitEffect,
   hasPermitDiceInShop,
 } from '../../game/PermitsSystem';
-import { createEquipmentInstance } from '../../game/ItemsSystem';
+import {
+  acquireEquipmentInstance,
+  applyModifiersToEquipment,
+  getEquipmentPurchasePrice,
+  rollShopEquipmentPreview,
+} from '../../game/EquipmentModifiers';
 import { createDie } from '../../game/DiceSystem';
 import { Die } from '../../game/types';
 import diceEnhancementsData from '../../data/dice_enhancements.json';
@@ -72,7 +77,7 @@ function canBuyAndUse(def: ConsumableDef): boolean {
 
 /** A shop stock item — equipment, consumable, or dice */
 type ShopItem =
-  | { type: 'equipment'; def: EquipmentDef; sold?: boolean }
+  | { type: 'equipment'; def: EquipmentDef; preview: EquipmentInstance; sold?: boolean }
   | { type: 'consumable'; def: ConsumableDef; sold?: boolean }
   | { type: 'dice'; die: Die; displayDef: EquipmentDef; sold?: boolean };
 
@@ -262,14 +267,25 @@ export class ShopScene extends Scene {
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
       // Explorer's Guild: trail guides are free
       const isTrailGuideFree = shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
-      const displayDef = isTrailGuideFree
+      let displayDef = isTrailGuideFree
         ? { ...itemDef, cost: 0 }
-        : shopDiscount > 0
+        : shopDiscount > 0 && shopItem.type !== 'equipment'
           ? { ...itemDef, cost: Math.max(1, Math.floor(itemDef.cost * (1 - shopDiscount))) }
           : itemDef;
+      if (shopItem.type === 'equipment') {
+        const listPrice = getEquipmentListPrice(shopItem.def);
+        const purchaseCost = getEquipmentPurchasePrice(
+          shopItem.def,
+          shopItem.preview.modifiers,
+          listPrice,
+          player.purchasedPermits,
+        );
+        displayDef = { ...shopItem.def, cost: purchaseCost };
+      }
       const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, displayDef, {
         mode: 'shop',
         showCost: true,
+        ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
         ...(texturePrefix != null ? { texturePrefix } : {}),
       });
       card.setDepth(10);
@@ -281,7 +297,7 @@ export class ShopScene extends Scene {
         continue;
       }
 
-      const discountedCost = displayDef.cost;
+      const discountedCost = displayDef.cost ?? 0;
       if (shopItem.type === 'equipment') {
         const alreadyOwned = player.equipment.some((e) => e.def.id === shopItem.def.id);
         if (alreadyOwned) {
@@ -418,20 +434,25 @@ export class ShopScene extends Scene {
     });
   }
 
-  private onBuyEquipment(card: ItemCard, def: EquipmentDef): void {
+  private onBuyEquipment(card: ItemCard, stockIndex: number): void {
     if (card.sold) return;
+    const shopItem = this.stockItems[stockIndex];
+    if (!shopItem || shopItem.type !== 'equipment') return;
+    const def = shopItem.def;
     const player = getPlayerState();
-    const cost = this.getDiscountedCost(def.cost);
-    if (player.economy.balance < cost) {
-      this.showCardPopup(card, "Can't afford!");
-      return;
-    }
     if (def.aura?.id !== 'ghost' && player.usedEquipmentSlots >= player.maxEquipmentSlots) {
       this.showCardPopup(card, 'No space!');
       return;
     }
+    const instance = acquireEquipmentInstance(def, player.purchasedPermits, shopItem.preview.modifiers);
+    const listPrice = getEquipmentListPrice(def);
+    const cost = getEquipmentPurchasePrice(def, instance.modifiers, listPrice, player.purchasedPermits);
+    if (player.economy.balance < cost) {
+      this.showCardPopup(card, "Can't afford!");
+      return;
+    }
     player.economy.spend(cost);
-    player.equipment.push(createEquipmentInstance(def, player.purchasedPermits));
+    player.equipment.push(instance);
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
@@ -603,7 +624,7 @@ export class ShopScene extends Scene {
           position: 'bottom',
           callback: () => {
             this.dismissActiveTab();
-            this.onBuyEquipment(card, shopItem.def);
+            this.onBuyEquipment(card, stockIndex);
           },
         });
       } else if (shopItem.type === 'dice') {
@@ -798,8 +819,15 @@ export class ShopScene extends Scene {
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
       // Explorer's Guild: trail guides are free
       const isTrailGuideFree = shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
-      const cost = isTrailGuideFree ? 0 : this.getDiscountedCost(itemDef.cost);
+      let cost = isTrailGuideFree ? 0 : this.getDiscountedCost(itemDef.cost);
       if (shopItem.type === 'equipment') {
+        const listPrice = getEquipmentListPrice(shopItem.def);
+        cost = getEquipmentPurchasePrice(
+          shopItem.def,
+          shopItem.preview.modifiers,
+          listPrice,
+          player.purchasedPermits,
+        );
         const canAffordEquip = player.economy.balance >= cost &&
           (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
         card.setAffordable(canAffordEquip);
@@ -880,6 +908,21 @@ export class ShopScene extends Scene {
     }
 
     applyAuraTagsToShopStock(this.stockItems, player);
+    this.syncEquipmentPreviews();
+  }
+
+  /** Keep preview instances aligned with stock defs (aura tags, free shop, inject tags). */
+  private syncEquipmentPreviews(): void {
+    const player = getPlayerState();
+    for (const item of this.stockItems) {
+      if (item.type !== 'equipment') continue;
+      if (!item.preview) {
+        item.preview = rollShopEquipmentPreview(item.def, player.purchasedPermits);
+        continue;
+      }
+      item.preview.def = item.def;
+      applyModifiersToEquipment(item.preview, item.preview.modifiers);
+    }
   }
 
   /** Generate a mix of equipment and consumable cards for the shop stock.
@@ -922,7 +965,11 @@ export class ShopScene extends Scene {
 
       if (picked === 'equipment') {
         const [def] = generateShopStock(1, excludeIds);
-        items.push({ type: 'equipment', def });
+        items.push({
+          type: 'equipment',
+          def,
+          preview: rollShopEquipmentPreview(def, player.purchasedPermits),
+        });
         excludeIds.push(def.id); // also exclude from subsequent slots
       } else {
         let def: ConsumableDef;
@@ -967,7 +1014,11 @@ export class ShopScene extends Scene {
     }
     if (picked === 'equipment') {
       const [def] = generateShopStock(1, excludeIds);
-      return { type: 'equipment', def };
+      return {
+        type: 'equipment',
+        def,
+        preview: rollShopEquipmentPreview(def, player.purchasedPermits),
+      };
     }
     let def: ConsumableDef;
     if (picked === 'supply') def = getRandomSupplyDef(undefined, excludeIds);
@@ -1211,7 +1262,12 @@ export class ShopScene extends Scene {
       return;
     }
     if (result.type === 'equipment') {
-      this.stockItems[index] = { type: 'equipment', def: result.def };
+      const player = getPlayerState();
+      this.stockItems[index] = {
+        type: 'equipment',
+        def: result.def,
+        preview: rollShopEquipmentPreview(result.def, player.purchasedPermits),
+      };
     } else {
       this.stockItems[index] = { type: 'consumable', def: result.def };
     }

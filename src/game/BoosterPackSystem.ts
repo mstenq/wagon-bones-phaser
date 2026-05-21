@@ -3,7 +3,9 @@
 
 import { Die, DiceSticker } from './types';
 import { createDie } from './DiceSystem';
-import { generateShopStock, EquipmentDef } from './ItemsSystem';
+import { generateShopStock, EquipmentDef, EquipmentInstance } from './ItemsSystem';
+import { rollShopEquipmentPreview } from './EquipmentModifiers';
+import { getPlayerState } from './PlayerState';
 import {
   DiceSelectionConfig,
   DiceSelectionEffectType,
@@ -57,6 +59,8 @@ export interface InstantEffect {
   rarity?: string; // for CREATE_EQUIPMENT (target rarity)
   excludeRarity?: string; // for CREATE_EQUIPMENT (exclude rarity)
   setMoneyZero?: boolean; // for CREATE_EQUIPMENT (magic beans)
+  /** When true, granted equipment ignores difficulty modifiers (ingenuity, magic beans). */
+  noModifiers?: boolean;
 }
 
 /** A generated item inside an opened pack */
@@ -68,6 +72,8 @@ export interface PackItem {
   // Actual content payload
   die?: Die;
   equipmentDef?: EquipmentDef;
+  /** Pre-rolled modifiers for equipment pack cards (shop/pack preview). */
+  equipmentPreview?: EquipmentInstance;
   supplyCardId?: string;
   trailGuideId?: string;
   frontierEncounterId?: string;
@@ -348,6 +354,7 @@ function generateFrontierPackContents(count: number): PackItem[] {
 }
 
 function generateEquipmentPackContents(count: number): PackItem[] {
+  const player = getPlayerState();
   const defs = generateShopStock(count);
   return defs.map((def) => ({
     id: def.id + '_' + Math.random().toString(36).slice(2, 6),
@@ -355,5 +362,6 @@ function generateEquipmentPackContents(count: number): PackItem[] {
     description: def.description,
     category: 'equipment' as PackCategory,
     equipmentDef: def,
+    equipmentPreview: rollShopEquipmentPreview(def, player.purchasedPermits),
   }));
 }

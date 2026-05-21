@@ -38,7 +38,27 @@ export interface EquipmentInstance {
   sellValue: number;
   state: Record<string, number>;
   modifiers: EquipmentModifier[];
-  perishableRounds?: number;
+  /** Rounds remaining before perishable equipment is destroyed. */
+  perishableRoundsLeft?: number;
+}
+
+export function hasEquipmentModifier(
+  instance: EquipmentInstance,
+  modifier: EquipmentModifier,
+): boolean {
+  return instance.modifiers.includes(modifier);
+}
+
+export function isEquipmentCursed(instance: EquipmentInstance): boolean {
+  return hasEquipmentModifier(instance, 'cursed');
+}
+
+export function isEquipmentPerishable(instance: EquipmentInstance): boolean {
+  return hasEquipmentModifier(instance, 'perishable');
+}
+
+export function isEquipmentLeased(instance: EquipmentInstance): boolean {
+  return hasEquipmentModifier(instance, 'leased');
 }
 
 const ITEMS_POOL: EquipmentDef[] = allItems as EquipmentDef[];

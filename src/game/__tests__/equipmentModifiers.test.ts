@@ -1,0 +1,436 @@
+import { describe, test, expect, beforeEach } from 'bun:test';
+import './setup';
+import { resetPlayerState, getPlayerState } from '../PlayerState';
+import {
+  rollEquipmentModifiers,
+  applyModifiersToEquipment,
+  processEquipmentModifiersEndOfRound,
+  applyEquipmentModifierDestructions,
+  getEquipmentPurchasePrice,
+  acquireRewardEquipmentInstance,
+  CURSED_IMMUNE,
+  PERISHABLE_IMMUNE,
+} from '../EquipmentModifiers';
+import { getSupplyDefById, getFrontierDefById, useConsumableDirectly } from '../ConsumablesSystem';
+import { createEquipmentInstance, getAllEquipment } from '../ItemsSystem';
+import { EQUIPMENT_MODIFIER } from '../Constants';
+import { equipWithModifiers, setTestDifficulty } from './testHelpers';
+import { getModifierTooltipLines, getModifierHintRows } from '../EquipmentModifierDisplay';
+
+function nonImmuneEquipmentId(): string {
+  return getAllEquipment().find((d) => !CURSED_IMMUNE.has(d.id) && !PERISHABLE_IMMUNE.has(d.id))!.id;
+}
+
+beforeEach(() => {
+  resetPlayerState();
+});
+
+describe('Equipment Modifiers', () => {
+  describe('rollEquipmentModifiers', () => {
+    test('returns empty array below difficulty 4', () => {
+      expect(rollEquipmentModifiers(1, 'horseshoe')).toEqual([]);
+      expect(rollEquipmentModifiers(3, 'horseshoe')).toEqual([]);
+    });
+
+    test('can return cursed at difficulty 4+', () => {
+      const id = nonImmuneEquipmentId();
+      let found = false;
+      for (let i = 0; i < 3000; i++) {
+        if (rollEquipmentModifiers(4, id).includes('cursed')) {
+          found = true;
+          break;
+        }
+      }
+      expect(found).toBe(true);
+    });
+
+    test('can return perishable at difficulty 7+', () => {
+      const id = nonImmuneEquipmentId();
+      let found = false;
+      for (let i = 0; i < 3000; i++) {
+        if (rollEquipmentModifiers(7, id).includes('perishable')) {
+          found = true;
+          break;
+        }
+      }
+      expect(found).toBe(true);
+    });
+
+    test('can return leased at difficulty 8+', () => {
+      const id = nonImmuneEquipmentId();
+      let found = false;
+      for (let i = 0; i < 3000; i++) {
+        if (rollEquipmentModifiers(8, id).includes('leased')) {
+          found = true;
+          break;
+        }
+      }
+      expect(found).toBe(true);
+    });
+
+    test('never returns cursed + perishable together', () => {
+      const trials = 5000;
+      for (let i = 0; i < trials; i++) {
+        const mods = rollEquipmentModifiers(8, 'horseshoe');
+        if (mods.includes('cursed')) {
+          expect(mods.includes('perishable')).toBe(false);
+        }
+      }
+    });
+
+    test('can return cursed + leased together', () => {
+      const id = nonImmuneEquipmentId();
+      let found = false;
+      for (let i = 0; i < 8000; i++) {
+        const mods = rollEquipmentModifiers(8, id);
+        if (mods.includes('cursed') && mods.includes('leased')) {
+          expect(mods.includes('perishable')).toBe(false);
+          found = true;
+          break;
+        }
+      }
+      expect(found).toBe(true);
+    });
+
+    test('can return perishable + leased together', () => {
+      const id = nonImmuneEquipmentId();
+      let found = false;
+      for (let i = 0; i < 8000; i++) {
+        const mods = rollEquipmentModifiers(8, id);
+        if (mods.includes('perishable') && mods.includes('leased')) {
+          expect(mods.includes('cursed')).toBe(false);
+          found = true;
+          break;
+        }
+      }
+      expect(found).toBe(true);
+    });
+
+    test('cursed is skipped for immune items', () => {
+      const immuneId = [...CURSED_IMMUNE][0];
+      for (let i = 0; i < 2000; i++) {
+        expect(rollEquipmentModifiers(8, immuneId).includes('cursed')).toBe(false);
+      }
+    });
+
+    test('perishable is skipped for immune items', () => {
+      const immuneId = [...PERISHABLE_IMMUNE][0];
+      for (let i = 0; i < 2000; i++) {
+        expect(rollEquipmentModifiers(8, immuneId).includes('perishable')).toBe(false);
+      }
+    });
+
+    test('cursed spawns at approximately 30% at difficulty 4', () => {
+      const id = nonImmuneEquipmentId();
+      let cursedCount = 0;
+      const trials = 10_000;
+      for (let i = 0; i < trials; i++) {
+        if (rollEquipmentModifiers(4, id).includes('cursed')) cursedCount++;
+      }
+      const rate = cursedCount / trials;
+      expect(rate).toBeGreaterThan(0.25);
+      expect(rate).toBeLessThan(0.35);
+    });
+
+    test('perishable spawns at approximately 30% at difficulty 7', () => {
+      // Cursed-immune item so perishable rate is not reduced by cursed rolls first
+      const id = [...CURSED_IMMUNE].find((itemId) => !PERISHABLE_IMMUNE.has(itemId))!;
+      let perishableCount = 0;
+      const trials = 10_000;
+      for (let i = 0; i < trials; i++) {
+        const mods = rollEquipmentModifiers(7, id);
+        if (mods.includes('perishable')) perishableCount++;
+      }
+      const rate = perishableCount / trials;
+      expect(rate).toBeGreaterThan(0.25);
+      expect(rate).toBeLessThan(0.35);
+    });
+
+    test('leased spawns at approximately 30% at difficulty 8', () => {
+      const id = nonImmuneEquipmentId();
+      let leasedCount = 0;
+      const trials = 10_000;
+      for (let i = 0; i < trials; i++) {
+        if (rollEquipmentModifiers(8, id).includes('leased')) leasedCount++;
+      }
+      const rate = leasedCount / trials;
+      expect(rate).toBeGreaterThan(0.25);
+      expect(rate).toBeLessThan(0.35);
+    });
+  });
+
+  describe('applyModifiersToEquipment', () => {
+    test('perishable sets rounds left; leased sets $1 sell value', () => {
+      const def = getAllEquipment()[0];
+      const instance = createEquipmentInstance(def);
+      applyModifiersToEquipment(instance, ['perishable', 'leased']);
+      expect(instance.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS);
+      expect(instance.sellValue).toBe(EQUIPMENT_MODIFIER.LEASED_BUY_PRICE);
+      expect(instance.modifiers).toEqual(['perishable', 'leased']);
+    });
+
+    test('cursed sets sell value to 0', () => {
+      const def = getAllEquipment()[0];
+      const instance = createEquipmentInstance(def);
+      applyModifiersToEquipment(instance, ['cursed']);
+      expect(instance.sellValue).toBe(0);
+      expect(instance.perishableRoundsLeft).toBeUndefined();
+    });
+
+    test('leased shop price is $1', () => {
+      const def = getAllEquipment().find((d) => d.cost > 5)!;
+      expect(getEquipmentPurchasePrice(def, ['leased'], def.cost)).toBe(
+        EQUIPMENT_MODIFIER.LEASED_BUY_PRICE,
+      );
+    });
+
+    test('leased sell value is $1', () => {
+      const def = getAllEquipment()[0];
+      const instance = createEquipmentInstance(def);
+      applyModifiersToEquipment(instance, ['leased']);
+      expect(instance.sellValue).toBe(EQUIPMENT_MODIFIER.LEASED_BUY_PRICE);
+    });
+  });
+
+  describe('Cursed', () => {
+    test('prevents selling equipment', () => {
+      const player = getPlayerState();
+      player.equipment.push(equipWithModifiers('horseshoe', ['cursed']));
+      const balanceBefore = player.economy.balance;
+      expect(player.sellEquipment(0)).toBe(false);
+      expect(player.equipment).toHaveLength(1);
+      expect(player.economy.balance).toBe(balanceBefore);
+    });
+
+    test('sets sell value to 0', () => {
+      const inst = equipWithModifiers('horseshoe', ['cursed']);
+      expect(inst.sellValue).toBe(0);
+    });
+
+    test('still allows destruction (trail events / bosses)', () => {
+      const player = getPlayerState();
+      player.equipment.push(equipWithModifiers('horseshoe', ['cursed']));
+      expect(player.destroyEquipment(0)).toBe(true);
+      expect(player.equipment).toHaveLength(0);
+    });
+  });
+
+  describe('Perishable', () => {
+    test('starts with configured rounds remaining', () => {
+      const inst = equipWithModifiers('horseshoe', ['perishable']);
+      expect(inst.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS);
+    });
+
+    test('decrements each completed round', () => {
+      const player = getPlayerState();
+      const inst = equipWithModifiers('horseshoe', ['perishable']);
+      player.equipment.push(inst);
+
+      processEquipmentModifiersEndOfRound(player);
+      expect(inst.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS - 1);
+
+      processEquipmentModifiersEndOfRound(player);
+      expect(inst.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS - 2);
+      expect(player.equipment).toHaveLength(1);
+    });
+
+    test('destroys equipment when reaching 0', () => {
+      const player = getPlayerState();
+      const inst = equipWithModifiers('horseshoe', ['perishable']);
+      inst.perishableRoundsLeft = 1;
+      player.equipment.push(inst);
+
+      const result = processEquipmentModifiersEndOfRound(player);
+      expect(player.equipment).toHaveLength(0);
+      expect(result.perished).toHaveLength(1);
+      expect(result.perished[0].equipmentName).toBe(inst.def.name);
+    });
+
+    test('does not decrement when round is skipped without end-of-round processing', () => {
+      const player = getPlayerState();
+      const inst = equipWithModifiers('horseshoe', ['perishable']);
+      player.equipment.push(inst);
+      const before = inst.perishableRoundsLeft;
+
+      player.advanceRound(true);
+      expect(inst.perishableRoundsLeft).toBe(before);
+      expect(player.equipment).toHaveLength(1);
+    });
+  });
+
+  describe('Leased', () => {
+    test('deducts upkeep at end of round', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(10);
+      player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
+
+      const result = processEquipmentModifiersEndOfRound(player);
+
+      expect(player.economy.balance).toBe(10 - EQUIPMENT_MODIFIER.LEASED_UPKEEP);
+      expect(result.leasePaid).toHaveLength(1);
+      expect(player.equipment).toHaveLength(1);
+    });
+
+    test('destroys equipment when player cannot afford upkeep', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(2);
+      player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
+
+      const result = processEquipmentModifiersEndOfRound(player);
+
+      expect(player.equipment).toHaveLength(0);
+      expect(result.leaseDefaulted).toHaveLength(1);
+      expect(player.economy.balance).toBe(2);
+    });
+
+    test('processes left-to-right (slot order)', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(5);
+      const secondId = getAllEquipment().find((d) => d.id !== 'horseshoe')!.id;
+      player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
+      player.equipment.push(equipWithModifiers(secondId, ['leased']));
+
+      processEquipmentModifiersEndOfRound(player);
+
+      expect(player.economy.balance).toBe(2);
+      expect(player.equipment).toHaveLength(1);
+      expect(player.equipment[0].def.id).toBe('horseshoe');
+    });
+
+    test('partial payment keeps earlier slots, repossesses later ones', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(EQUIPMENT_MODIFIER.LEASED_UPKEEP);
+      const secondId = getAllEquipment().find((d) => d.id !== 'horseshoe')!.id;
+      player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
+      player.equipment.push(equipWithModifiers(secondId, ['leased']));
+
+      const result = processEquipmentModifiersEndOfRound(player);
+
+      expect(player.economy.balance).toBe(0);
+      expect(player.equipment).toHaveLength(1);
+      expect(player.equipment[0].def.id).toBe('horseshoe');
+      expect(result.leasePaid).toHaveLength(1);
+      expect(result.leaseDefaulted).toHaveLength(1);
+    });
+  });
+
+  describe('Modifier Combinations', () => {
+    test('cursed + leased: cannot sell but must pay upkeep', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(10);
+      player.equipment.push(equipWithModifiers('horseshoe', ['cursed', 'leased']));
+
+      expect(player.sellEquipment(0)).toBe(false);
+      processEquipmentModifiersEndOfRound(player);
+
+      expect(player.economy.balance).toBe(10 - EQUIPMENT_MODIFIER.LEASED_UPKEEP);
+      expect(player.equipment).toHaveLength(1);
+    });
+
+    test('perishable + leased: counts down AND pays upkeep', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(20);
+      const inst = equipWithModifiers('horseshoe', ['perishable', 'leased']);
+      player.equipment.push(inst);
+
+      processEquipmentModifiersEndOfRound(player);
+
+      expect(inst.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS - 1);
+      expect(player.economy.balance).toBe(20 - EQUIPMENT_MODIFIER.LEASED_UPKEEP);
+      expect(player.equipment).toHaveLength(1);
+    });
+
+    test('perishable + leased: expiry destroys item after final upkeep', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(100);
+      const inst = equipWithModifiers('horseshoe', ['perishable', 'leased']);
+      inst.perishableRoundsLeft = 1;
+      player.equipment.push(inst);
+
+      const result = processEquipmentModifiersEndOfRound(player);
+
+      expect(player.equipment).toHaveLength(0);
+      expect(result.perished).toHaveLength(1);
+      expect(player.economy.balance).toBe(100 - EQUIPMENT_MODIFIER.LEASED_UPKEEP);
+    });
+  });
+
+  describe('display helpers', () => {
+    test('modifier tooltip lines describe active modifiers', () => {
+      const inst = equipWithModifiers('horseshoe', ['cursed', 'perishable', 'leased']);
+      inst.perishableRoundsLeft = 3;
+      const lines = getModifierTooltipLines(inst);
+      expect(lines.some((l) => l.text.includes('Cursed'))).toBe(true);
+      expect(lines.some((l) => l.text.includes('3 round'))).toBe(true);
+      expect(lines.some((l) => l.text.includes('$3/round'))).toBe(true);
+    });
+
+    test('modifier hint rows list each active modifier', () => {
+      const inst = equipWithModifiers('horseshoe', ['perishable', 'leased']);
+      inst.perishableRoundsLeft = 2;
+      const rows = getModifierHintRows(inst);
+      expect(rows.length).toBe(2);
+    });
+  });
+
+  describe('deferred destruction', () => {
+    test('applyEquipmentModifierDestructions removes without sell payout', () => {
+      const player = getPlayerState();
+      const inst = equipWithModifiers('horseshoe', ['perishable']);
+      inst.perishableRoundsLeft = 1;
+      player.equipment.push(inst);
+      const balanceBefore = player.economy.balance;
+
+      const result = processEquipmentModifiersEndOfRound(player, { applyDestruction: false });
+      expect(player.equipment).toHaveLength(1);
+
+      applyEquipmentModifierDestructions(player, result);
+      expect(player.equipment).toHaveLength(0);
+      expect(player.economy.balance).toBe(balanceBefore);
+    });
+
+    test('destroyEquipment removes without sell payout', () => {
+      const player = getPlayerState();
+      player.equipment.push(equipWithModifiers('horseshoe', []));
+      const balanceBefore = player.economy.balance;
+
+      expect(player.destroyEquipment(0)).toBe(true);
+      expect(player.equipment).toHaveLength(0);
+      expect(player.economy.balance).toBe(balanceBefore);
+    });
+  });
+
+  describe('acquire with difficulty', () => {
+    test('setTestDifficulty affects rolled modifiers via player state', () => {
+      setTestDifficulty(8);
+      const player = getPlayerState();
+      expect(player.difficulty).toBe(8);
+    });
+  });
+
+  describe('reward equipment (no modifiers)', () => {
+    test('acquireRewardEquipmentInstance never rolls modifiers at difficulty 8', () => {
+      setTestDifficulty(8);
+      const def = getAllEquipment()[0];
+      for (let i = 0; i < 30; i++) {
+        const inst = acquireRewardEquipmentInstance(def);
+        expect(inst.modifiers).toEqual([]);
+      }
+    });
+
+    test('reward CREATE_EQUIPMENT cards flag noModifiers in data', () => {
+      expect(getSupplyDefById('ingenuity')?.instantEffect?.noModifiers).toBe(true);
+      expect(getFrontierDefById('magic_beans')?.instantEffect?.noModifiers).toBe(true);
+      expect(getFrontierDefById('pandoras_box')?.instantEffect?.noModifiers).toBe(true);
+    });
+
+    test('ingenuity grants equipment without modifiers at difficulty 8', () => {
+      setTestDifficulty(8);
+      const player = getPlayerState();
+      const ingenuity = getSupplyDefById('ingenuity')!;
+      useConsumableDirectly(ingenuity, player);
+      expect(player.equipment.length).toBeGreaterThan(0);
+      expect(player.equipment.every((e) => e.modifiers.length === 0)).toBe(true);
+    });
+  });
+});

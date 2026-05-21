@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, diceWithValue, die, item } from './testHelpers';
+import { resetDieIds, setupGame, diceWithValue, die, item, setTestDifficulty } from './testHelpers';
 import { resetPlayerState } from '../PlayerState';
 import {
   getAllTrailEvents,
@@ -556,6 +556,15 @@ describe('Effect application', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, player, mods);
     expect(player.equipment.length).toBe(1);
+  });
+
+  test('GAIN_RANDOM_EQUIPMENT does not apply difficulty modifiers', () => {
+    setTestDifficulty(8);
+    const player = resetPlayerState();
+    const mods = createEmptyModifiers();
+    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, player, mods);
+    expect(player.equipment.length).toBe(1);
+    expect(player.equipment[0].modifiers).toEqual([]);
   });
 
   test('GAIN_TRAIL_GUIDES adds trail guide consumables', () => {

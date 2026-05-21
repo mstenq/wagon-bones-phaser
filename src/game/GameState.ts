@@ -46,7 +46,8 @@ import {
   canPlayHandType,
   recordBossHandPlayed,
 } from './BossEffectsSystem';
-import { generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
+import { generateRandomEquipment } from './ItemsSystem';
+import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 
 export class GameState {
   config: GameConfig;
@@ -178,7 +179,7 @@ export class GameState {
       for (let i = 0; i < roundStartEffects.equipmentToCreate; i++) {
         if (player.usedEquipmentSlots < player.maxEquipmentSlots) {
           const def = generateRandomEquipment({ rarity: roundStartEffects.equipmentCreateRarity });
-          player.equipment.push(createEquipmentInstance(def));
+          player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
           created++;
         }
       }

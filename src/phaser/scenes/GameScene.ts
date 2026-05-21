@@ -10,6 +10,11 @@ import { GameState } from '../../game/GameState';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { detectBestHand } from '../../game/DiceSystem';
 import { getPlayerState } from '../../game/PlayerState';
+import {
+  applyEquipmentModifierDestructions,
+  processEquipmentModifiersEndOfRound,
+} from '../../game/EquipmentModifiers';
+import { isEquipmentLeased } from '../../game/ItemsSystem';
 import { consumeNextRoundTags } from '../../game/TagSystem';
 import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
@@ -165,6 +170,18 @@ export class GameScene extends Scene {
     if (pyrePlayer.pendingJunkDealerCount > 0) {
       this.animateJunkDealerCreation(pyrePlayer.pendingJunkDealerCount);
       pyrePlayer.pendingJunkDealerCount = 0;
+    }
+
+    this.flashLeasedBadgeReminders();
+  }
+
+  /** Subtle leased-badge pulse at round start as an upkeep reminder. */
+  private flashLeasedBadgeReminders(): void {
+    for (const card of this.equipBar.getCards()) {
+      const equip = card.equipment;
+      if (equip && isEquipmentLeased(equip)) {
+        card.flashLeasedPaid();
+      }
     }
   }
 
@@ -684,13 +701,49 @@ export class GameScene extends Scene {
       }
     }
 
+    if (outcome === 'won' || outcome === 'lost') {
+      const player = getPlayerState();
+      if (goldHeldCount > 0) {
+        player.economy.earn(goldHeldCount * 3);
+        this.showFloatingText(`$${goldHeldCount * 3} from gold dice!`, COLORS.GOLD);
+      }
+
+      const modifierResult = processEquipmentModifiersEndOfRound(player, { applyDestruction: false });
+      const hasDestroy =
+        modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
+
+      const showModifierFeedback = () => {
+        for (const { index, equipmentName, cost } of modifierResult.leasePaid) {
+          EventBus.emit(Events.LEASE_PAID, { equipmentName, index, cost });
+          this.showFloatingText(`-$${cost} lease: ${equipmentName}`, COLORS.GOLD);
+        }
+        this.equipBar.flashLeasedUpkeepPaid(modifierResult.leasePaid.map((p) => p.index));
+
+        for (const { index, equipmentName } of modifierResult.perished) {
+          EventBus.emit(Events.EQUIPMENT_PERISHED, { equipmentName, index });
+        }
+        for (const { index, equipmentName } of modifierResult.leaseDefaulted) {
+          EventBus.emit(Events.LEASE_DEFAULTED, { equipmentName, index });
+        }
+
+        if (!hasDestroy) {
+          applyEquipmentModifierDestructions(player, modifierResult);
+          this.equipBar.refresh();
+        }
+        this.equipBar.updateHints(this.gameState, player);
+        this.equipBar.flashPerishableWarnings();
+      };
+
+      if (hasDestroy) {
+        this.equipBar.animateModifierDestructions(modifierResult, showModifierFeedback);
+      } else {
+        showModifierFeedback();
+      }
+    }
+
     if (outcome === 'won') {
       this.sound.play('sfx_win', { volume: 0.6 });
       const player = getPlayerState();
-      if (goldHeldCount > 0) {
-        player.economy.earn(goldHeldCount * 3)
-        this.showFloatingText(`$${goldHeldCount * 3} from gold dice!`, COLORS.GOLD);
-      };
       const daysRemaining = this.gameState.config.maxDays - this.gameState.state.day;
       const rerollsRemaining = this.gameState.state.rerollsRemaining;
       this.scene.start('Payout', {

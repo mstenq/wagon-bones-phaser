@@ -67,9 +67,9 @@
     }
   },
   { "id": "magic_beans", "name": "Magic Beans", "description": "Create rare item, money is set to $0",
-    "instantEffect": { "type": "CREATE_EQUIPMENT", "rarity": "rare", "setMoneyZero": true } },
+    "instantEffect": { "type": "CREATE_EQUIPMENT", "rarity": "rare", "setMoneyZero": true, "noModifiers": true } },
   { "id": "pandoras_box", "name": "Pandora's Box", "description": "Create legendary item (very rare)",
-    "instantEffect": { "type": "CREATE_EQUIPMENT", "rarity": "legendary" } },
+    "instantEffect": { "type": "CREATE_EQUIPMENT", "rarity": "legendary", "noModifiers": true } },
   { "id": "spiritual_journey", "name": "Spiritual Journey", "description": "Increase all trail knowledge by 1 (very rare)",
     "instantEffect": { "type": "UPGRADE_ALL_HANDS" } }
 ]

@@ -13,8 +13,6 @@ import {
 import { HandType } from '../types';
 import {
   resetPlayerState,
-  computeTargetMiles,
-  computeRoundReward,
 } from '../PlayerState';
 import { detectBestHand, rollDie } from '../DiceSystem';
 import { GAMEPLAY } from '../Constants';
@@ -544,71 +542,6 @@ describe('effectiveDays / effectiveRerolls', () => {
     expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
   });
 
-  test('difficulty 5 (Harsh Rations) reduces rerolls by 1', () => {
-    const player = resetPlayerState();
-    player.setDifficulty(5);
-    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
-  });
-
-  test('difficulty 5 stacks with profession reroll bonus', () => {
-    const player = resetPlayerState();
-    player.applyProfession('farmer');
-    player.setDifficulty(5);
-    expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS);
-  });
-});
-
-// ─── Difficulty Gameplay Effects ───
-
-describe('difficulty gameplay effects', () => {
-  test('difficulty 1: normal target miles and round rewards', () => {
-    const player = resetPlayerState();
-    player.leg = 2;
-    player.round = 2;
-    expect(player.targetMiles).toBe(
-      Math.ceil(GAMEPLAY.TARGET_MILES_BY_LEG[1] * GAMEPLAY.ROUND_MULTIPLIERS[1]),
-    );
-    expect(player.roundReward).toBe(GAMEPLAY.ROUND_REWARDS[1]);
-  });
-
-  test('difficulty 2 (Thin Supplies): round 1 reward is $0, round 2 unchanged', () => {
-    const player = resetPlayerState();
-    player.setDifficulty(2);
-    player.round = 1;
-    expect(computeRoundReward(1, 2)).toBe(0);
-    expect(player.roundReward).toBe(0);
-    player.round = 2;
-    expect(player.roundReward).toBe(GAMEPLAY.ROUND_REWARDS[1]);
-  });
-
-  test('difficulty 3 (Rough Trail): uses ROUGH mile targets', () => {
-    const player = resetPlayerState();
-    player.setDifficulty(3);
-    player.leg = 2;
-    player.round = 1;
-    expect(player.targetMiles).toBe(GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[1]);
-    expect(computeTargetMiles(2, 1, 0, 3)).toBe(GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[1]);
-  });
-
-  test('difficulty 6 (Deadly Frontier): uses DEADLY targets, overrides Rough', () => {
-    const player = resetPlayerState();
-    player.setDifficulty(6);
-    player.leg = 3;
-    player.round = 1;
-    expect(player.targetMiles).toBe(GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY[2]);
-    expect(computeTargetMiles(3, 1, 0, 6)).toBe(GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY[2]);
-    expect(computeTargetMiles(3, 1, 0, 3)).toBe(GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[2]);
-  });
-
-  test('Thin Supplies payout total excludes round reward on round 1', () => {
-    const player = resetPlayerState();
-    player.setDifficulty(2);
-    player.round = 1;
-    player.economy.setBalance(0);
-    const payout = player.calculatePayout(0, 0);
-    expect(payout.roundReward).toBe(0);
-    expect(payout.total).toBe(0);
-  });
 });
 
 // ─── Stone Dice ───

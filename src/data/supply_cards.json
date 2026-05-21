@@ -126,7 +126,8 @@
     "description": "Get 1 random piece of equipment",
     "instantEffect": {
       "type": "CREATE_EQUIPMENT",
-      "excludeRarity": "legendary"
+      "excludeRarity": "legendary",
+      "noModifiers": true
     }
   },
   {

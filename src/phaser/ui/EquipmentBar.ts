@@ -23,6 +23,11 @@ import {
   remapEquipmentDisplayOrderAfterReorder,
   syncEquipmentDisplayOrder,
 } from '../../game/BossEffectsSystem';
+import { isEquipmentCursed, isEquipmentPerishable } from '../../game/ItemsSystem';
+import {
+  applyEquipmentModifierDestructions,
+  type EquipmentModifierRoundResult,
+} from '../../game/EquipmentModifiers';
 
 export class EquipmentBar extends CardBar {
   protected readonly cardScale = UI.EQUIP_CARD_SCALE;
@@ -43,11 +48,63 @@ export class EquipmentBar extends CardBar {
     const faceHidden = isBossEquipmentHidden();
     for (const card of this.cards) {
       const equipIndex = card.getData('equipIndex') as number;
+      const equip = player.equipment[equipIndex];
       card.setSuppressHints(hintsHidden);
       card.setSuppressTooltip(hintsHidden);
       card.setFaceDown(faceHidden);
       card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
+      if (equip) card.updateModifierBadges(equip);
       if (!hintsHidden) card.updateHints(game, player);
+    }
+  }
+
+  /** Animate perished/repossessed cards, then apply destruction and refresh. */
+  animateModifierDestructions(
+    result: EquipmentModifierRoundResult,
+    onComplete: () => void,
+  ): void {
+    const entries = [
+      ...result.perished.map((p) => ({ index: p.index, type: 'perished' as const })),
+      ...result.leaseDefaulted.map((p) => ({ index: p.index, type: 'repossessed' as const })),
+    ];
+
+    const run = (i: number) => {
+      if (i >= entries.length) {
+        applyEquipmentModifierDestructions(getPlayerState(), result);
+        this.refresh();
+        this.updateHints(this.lastGame, getPlayerState());
+        onComplete();
+        return;
+      }
+
+      const card = this.getCardByEquipIndex(entries[i].index);
+      if (!card) {
+        run(i + 1);
+        return;
+      }
+
+      card.animateModifierDestruction(entries[i].type, () => run(i + 1));
+    };
+
+    run(0);
+  }
+
+  /** Flash warnings on perishable items with one round left. */
+  flashPerishableWarnings(): void {
+    const player = getPlayerState();
+    for (const card of this.cards) {
+      const equipIndex = card.getData('equipIndex') as number;
+      const equip = player.equipment[equipIndex];
+      if (equip && isEquipmentPerishable(equip) && equip.perishableRoundsLeft === 1) {
+        card.flashPerishableWarning();
+      }
+    }
+  }
+
+  /** Brief pulse on leased badges when upkeep was paid. */
+  flashLeasedUpkeepPaid(indices: number[]): void {
+    for (const index of indices) {
+      this.getCardByEquipIndex(index)?.flashLeasedPaid();
     }
   }
 
@@ -153,6 +210,7 @@ export class EquipmentBar extends CardBar {
     const card = new ItemCard(this.scene, x, y, equip.def, {
       mode: 'compact',
       cardScale: UI.EQUIP_CARD_SCALE,
+      equipment: equip,
     });
     card.setData('equipIndex', equipIndex);
     card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
@@ -167,6 +225,17 @@ export class EquipmentBar extends CardBar {
     const equipIndex = (card.getData('equipIndex') as number) ?? this.getEquipmentIndexForSlot(index);
     const equip = player.equipment[equipIndex];
     if (!equip) return null;
+    if (isEquipmentCursed(equip)) {
+      return [
+        {
+          label: 'SELL\n—',
+          color: 0x333333,
+          textColor: '#666666',
+          disabled: true,
+          callback: () => {},
+        },
+      ];
+    }
 
     return [
       {
@@ -192,7 +261,7 @@ export class EquipmentBar extends CardBar {
     remapEquipmentDisplayOrderAfterRemove(index);
     const player = getPlayerState();
     const grantsTag = player.equipment[index]?.def.effectType === 'SELL_GRANT_TAG';
-    player.sellEquipment(index);
+    if (!player.sellEquipment(index)) return;
     if (grantsTag) {
       EventBus.emit(Events.TAG_QUEUE_CHANGED);
     }

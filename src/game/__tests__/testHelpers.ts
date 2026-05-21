@@ -2,11 +2,21 @@
 // Factories and utilities for setting up game state in tests.
 // Usage: const { game, player } = setupGame({ equipment: [item('horseshoe')] });
 
-import { Die, DiceEnhancement, DiceAura, DiceSticker, HandType, BossDef } from '../types';
+import {
+  Die,
+  DiceEnhancement,
+  DiceAura,
+  DiceSticker,
+  HandType,
+  BossDef,
+  DifficultyLevel,
+  EquipmentModifier,
+} from '../types';
 import bossesData from '../../data/bosses.json';
 import { GameState } from '../GameState';
-import { PlayerState, resetPlayerState, ProfessionDef } from '../PlayerState';
+import { PlayerState, resetPlayerState, ProfessionDef, getPlayerState } from '../PlayerState';
 import { EquipmentDef, EquipmentInstance, getAllEquipment, createEquipmentInstance } from '../ItemsSystem';
+import { EQUIPMENT_MODIFIER } from '../Constants';
 import { createDie } from '../DiceSystem';
 
 // ─── Item Lookup ───
@@ -57,6 +67,29 @@ export function itemWithState(id: string, stateOverrides: Record<string, number>
   return {
     ...inst,
     state: { ...inst.state, ...stateOverrides },
+  };
+}
+
+export function setTestDifficulty(level: DifficultyLevel): void {
+  getPlayerState().setDifficulty(level);
+}
+
+/** Build equipment with explicit modifiers (no random roll). */
+export function equipWithModifiers(id: string, modifiers: EquipmentModifier[]): EquipmentInstance {
+  const def = getItemsMap().get(id);
+  if (!def) throw new Error(`Unknown item id: "${id}"`);
+  return {
+    def,
+    sellValue: modifiers.includes('cursed')
+      ? 0
+      : modifiers.includes('leased')
+        ? EQUIPMENT_MODIFIER.LEASED_BUY_PRICE
+        : Math.max(1, Math.floor(def.cost / 2)),
+    state: def.initialState ? { ...def.initialState } : {},
+    modifiers: [...modifiers],
+    perishableRoundsLeft: modifiers.includes('perishable')
+      ? EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS
+      : undefined,
   };
 }
 

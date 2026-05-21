@@ -13,7 +13,8 @@ import {
   getPackDefById,
 } from '../../game/BoosterPackSystem';
 import { getPlayerState } from '../../game/PlayerState';
-import { generateRandomEquipment, createEquipmentInstance } from '../../game/ItemsSystem';
+import { generateRandomEquipment } from '../../game/ItemsSystem';
+import { acquireEquipmentInstance, acquireRewardEquipmentInstance } from '../../game/EquipmentModifiers';
 import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
@@ -446,7 +447,10 @@ export class BoosterPackScene extends Scene {
         container.add(descText);
       }
     } else if (item.category === 'equipment' && item.equipmentDef) {
-      itemCard = new ItemCard(this, 0, 0, item.equipmentDef, { mode: 'inventory' });
+      itemCard = new ItemCard(this, 0, 0, item.equipmentDef, {
+        mode: 'inventory',
+        equipment: item.equipmentPreview,
+      });
       container.add(itemCard);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
       const tgData = { ...item, id: item.trailGuideId };
@@ -909,7 +913,13 @@ export class BoosterPackScene extends Scene {
       this.showFloatingText(result);
     } else if (item.category === 'equipment' && item.equipmentDef) {
       if (item.equipmentDef.aura?.id === 'ghost' || player.equipmentSlotsFree > 0) {
-        player.equipment.push(createEquipmentInstance(item.equipmentDef, player.purchasedPermits));
+        player.equipment.push(
+          acquireEquipmentInstance(
+            item.equipmentDef,
+            player.purchasedPermits,
+            item.equipmentPreview?.modifiers,
+          ),
+        );
       }
     } else if (item.category === 'dice' && item.die) {
       player.addDie(item.die);
@@ -1104,7 +1114,7 @@ export class BoosterPackScene extends Scene {
             rarity: effect.rarity,
             excludeRarity: effect.excludeRarity,
           });
-          player.equipment.push(createEquipmentInstance(def, player.purchasedPermits));
+          player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
         }
         if (effect.setMoneyZero) {
           player.economy.spend(player.economy.balance);

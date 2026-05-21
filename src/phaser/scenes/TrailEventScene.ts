@@ -6,6 +6,7 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState } from '../../game/PlayerState';
+import { isEquipmentCursed } from '../../game/ItemsSystem';
 import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
@@ -326,7 +327,8 @@ export class TrailEventScene extends Scene {
     const loseEquipEffect = result.effects.find(
       (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(hassaint_elmos_shield && isNegativeEffect(e)),
     );
-    const needsEquipChoice = loseEquipEffect && player.equipment.length > 0;
+    const sacrificableCount = player.equipment.filter((e) => !isEquipmentCursed(e)).length;
+    const needsEquipChoice = loseEquipEffect && sacrificableCount > 0;
 
     // Continue button (after a short delay)
     this.time.delayedCall(800, () => {
@@ -365,7 +367,10 @@ export class TrailEventScene extends Scene {
 
   private showEquipmentPicker(count: number, cx: number, y: number, onComplete: () => void): void {
     const player = getPlayerState();
-    let remaining = Math.min(count, player.equipment.length);
+    const sacrificableIndices = player.equipment
+      .map((e, idx) => (!isEquipmentCursed(e) ? idx : -1))
+      .filter((idx) => idx >= 0);
+    let remaining = Math.min(count, sacrificableIndices.length);
 
     if (remaining === 0) {
       onComplete();
@@ -391,8 +396,7 @@ export class TrailEventScene extends Scene {
       // Clear existing cards
       cardContainer.removeAll(true);
 
-      const equip = player.equipment;
-      if (equip.length === 0 || remaining === 0) {
+      if (sacrificableIndices.length === 0 || remaining === 0) {
         promptText.destroy();
         cardContainer.destroy();
         onComplete();
@@ -401,13 +405,16 @@ export class TrailEventScene extends Scene {
 
       promptText.setText(`Choose ${remaining} equipment to sacrifice:`);
 
-      const totalW = (equip.length - 1) * spacing;
+      const totalW = (sacrificableIndices.length - 1) * spacing;
       const startX = cx - totalW / 2;
 
-      for (let i = 0; i < equip.length; i++) {
-        const card = new ItemCard(this, startX + i * spacing, y + 110, equip[i].def, {
+      for (let slot = 0; slot < sacrificableIndices.length; slot++) {
+        const equipIndex = sacrificableIndices[slot];
+        const equipItem = player.equipment[equipIndex];
+        const card = new ItemCard(this, startX + slot * spacing, y + 110, equipItem.def, {
           mode: 'compact',
           cardScale,
+          equipment: equipItem,
         });
         card.setDepth(200);
 
@@ -420,10 +427,9 @@ export class TrailEventScene extends Scene {
         });
 
         card.on('pointerdown', () => {
-          // Remove this equipment
-          const idx = player.equipment.findIndex((e) => e === equip[i]);
+          const idx = player.equipment.findIndex((e) => e === equipItem);
           if (idx !== -1) {
-            player.equipment.splice(idx, 1);
+            player.destroyEquipment(idx);
           }
           remaining--;
 

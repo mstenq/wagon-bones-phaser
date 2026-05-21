@@ -13,7 +13,9 @@ import {
 } from './types';
 import { createPouch } from './DiceSystem';
 import { Economy } from './Economy';
-import { EquipmentDef, EquipmentInstance, createEquipmentInstance } from './ItemsSystem';
+import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
+import { acquireRewardEquipmentInstance, getEquipmentPurchasePrice } from './EquipmentModifiers';
+import { isEquipmentCursed } from './ItemsSystem';
 import { ConsumableDef, ConsumableInstance, createConsumableInstance, getSupplyDefById } from './ConsumablesSystem';
 import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
 import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers';
@@ -394,15 +396,27 @@ export class PlayerState {
   }
 
   buyEquipment(def: EquipmentDef): boolean {
-    if (!this.canBuy(def)) return false;
-    this.trySpend(def.cost);
-    this.equipment.push(createEquipmentInstance(def, this.purchasedPermits));
+    if (def.aura?.id !== 'ghost' && this.usedEquipmentSlots >= this.maxEquipmentSlots) return false;
+    const instance = acquireRewardEquipmentInstance(def, this.purchasedPermits);
+    const cost = getEquipmentPurchasePrice(def, instance.modifiers, def.cost, this.purchasedPermits);
+    if (!this.canAfford(cost)) return false;
+    this.trySpend(cost);
+    this.equipment.push(instance);
+    return true;
+  }
+
+  /** Remove equipment without granting sell value (perishable expiry, lease default, etc.). */
+  destroyEquipment(index: number): boolean {
+    if (index < 0 || index >= this.equipment.length) return false;
+    this.equipment.splice(index, 1);
     return true;
   }
 
   sellEquipment(index: number): boolean {
     if (index < 0 || index >= this.equipment.length) return false;
     const item = this.equipment[index];
+    if (isEquipmentCursed(item)) return false;
+
     this.economy.earn(item.sellValue);
 
     // Sheriff's Badge: selling disables the current boss effect for this round
@@ -440,7 +454,7 @@ export class PlayerState {
             sellValue: source.sellValue,
             state: { ...source.state },
             modifiers: [...source.modifiers],
-            perishableRounds: source.perishableRounds,
+            perishableRoundsLeft: source.perishableRoundsLeft,
           };
           // Add the duplicate after splicing the phantom wagon
           this.equipment.splice(index, 1);

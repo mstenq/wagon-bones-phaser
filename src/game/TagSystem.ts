@@ -3,12 +3,8 @@
 
 import { HandType } from './types';
 import { getPlayerState } from './PlayerState';
-import {
-  generateRandomEquipment,
-  createEquipmentInstance,
-  EquipmentDef,
-  getItemAuraById,
-} from './ItemsSystem';
+import { generateRandomEquipment, EquipmentDef, getItemAuraById } from './ItemsSystem';
+import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { getTrailTagById } from '../data/trail_tags';
 import trailTags, { TrailTagDef, TrailTagInstance, TagCategory } from '../data/trail_tags';
 
@@ -397,7 +393,7 @@ export function processJunkPileTag(
     if (player.equipmentSlotsFree <= 0) break;
     const item = generateRandomEquipment({ rarity: 'common' });
     if (item) {
-      player.equipment.push(createEquipmentInstance(item, player.purchasedPermits));
+      player.equipment.push(acquireRewardEquipmentInstance(item, player.purchasedPermits));
       created.push(item);
     }
   }

@@ -12,7 +12,8 @@ import {
   getRandomFrontierDef,
   createConsumableInstance,
 } from './ConsumablesSystem';
-import { generateShopStock, createEquipmentInstance } from './ItemsSystem';
+import { generateShopStock } from './ItemsSystem';
+import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { TRAIL_EVENT } from './Constants';
 
 // ─── Types ───
@@ -473,7 +474,7 @@ export function applyEffect(
         const def = effect.aura
           ? { ...pick, aura: { id: effect.aura, name: effect.aura, description: '', costIncrease: 0, chance: 0 } }
           : pick;
-        player.equipment.push(createEquipmentInstance(def, player.purchasedPermits));
+        player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
       }
       break;
     }

@@ -128,6 +128,7 @@ export const EQUIPMENT_MODIFIER = {
   PERISHABLE_ROUNDS: 5,
   LEASED_RATE: 0.3,
   LEASED_UPKEEP: 3,
+  LEASED_BUY_PRICE: 1,
 } as const;
 
 // ─── RNG / Chance Tuning ───
@@ -265,6 +266,11 @@ export const UI = {
   BTN_FONT_SIZE: '18px',
 
   // Cards
+  /** Equipment modifier badges (cursed / perishable / leased) */
+  MODIFIER_BADGE_SIZE: 20,
+  MODIFIER_BADGE_GAP: 2,
+  MODIFIER_BADGE_OFFSET: 4,
+
   CARD_W: 133,
   CARD_H: 200,
   CARD_RADIUS: 10,

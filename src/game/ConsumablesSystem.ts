@@ -253,7 +253,8 @@ export function generateShopConsumables(count: number, options?: { includeFronti
 // ─── Use Execution (non-Phaser logic) ───
 
 import { createDie } from './DiceSystem';
-import { generateRandomEquipment, createEquipmentInstance } from './ItemsSystem';
+import { generateRandomEquipment } from './ItemsSystem';
+import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import type { DiceEnhancement } from './types';
 import type { PlayerState } from './PlayerState';
 
@@ -451,7 +452,7 @@ function applyConsumableInstantEffect(effect: InstantEffect, player: PlayerState
           rarity: effect.rarity,
           excludeRarity: effect.excludeRarity,
         });
-        player.equipment.push(createEquipmentInstance(def));
+        player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
       }
       if (effect.setMoneyZero) {
         player.economy.spend(player.economy.balance);

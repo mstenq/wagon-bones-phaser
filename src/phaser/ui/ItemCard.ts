@@ -6,8 +6,10 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../game/Constants';
-import type { ItemAura } from '../../game/ItemsSystem';
+import type { ItemAura, EquipmentInstance } from '../../game/ItemsSystem';
 import type { HintSegment } from '../../game/ItemsSystem';
+import { isEquipmentCursed, isEquipmentLeased, isEquipmentPerishable } from '../../game/ItemsSystem';
+import { getModifierTooltipLines } from '../../game/EquipmentModifierDisplay';
 import type { CardTemplate } from '../../data/items';
 import type { GameState } from '../../game/GameState';
 import type { PlayerState } from '../../game/PlayerState';
@@ -40,6 +42,8 @@ export interface ItemCardOptions {
   transparentBg?: boolean;
   /** Override x-anchor for action tabs (default: card half-width). Useful for narrow images. */
   tabAnchorX?: number;
+  /** Owned equipment instance — enables modifier badges and tooltip lines */
+  equipment?: EquipmentInstance;
 }
 
 const CARD_W = UI.CARD_W;
@@ -60,6 +64,8 @@ export interface CardActionTabConfig {
   callback: () => void;
   /** Tab position: 'right' slides out from right side, 'bottom' appears below card */
   position?: 'right' | 'bottom';
+  /** Grayed-out tab with no action (e.g. cursed equipment) */
+  disabled?: boolean;
 }
 
 interface ActionTabInstance {
@@ -105,11 +111,16 @@ export class ItemCard extends GameObjects.Container {
   private actionTabs: ActionTabInstance[] = [];
   private _tabsVisible: boolean = false;
   private _tabLiftAmount: number = 0;
+  private _equipment: EquipmentInstance | null = null;
+  private modifierBadgeContainers: GameObjects.Container[] = [];
+  private perishableBadgeContainer: GameObjects.Container | null = null;
+  private leasedBadgeContainer: GameObjects.Container | null = null;
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
     this._def = def;
     this._options = options ?? {};
+    this._equipment = this._options.equipment ?? null;
 
     const scale = this._options.cardScale ?? 1;
     this._cardW = CARD_W * scale;
@@ -120,6 +131,7 @@ export class ItemCard extends GameObjects.Container {
 
     this.drawCard();
     this.addContent(scale);
+    this.renderModifierBadges();
     this.setupAuraVFX();
 
     // Sold overlay (hidden initially)
@@ -145,6 +157,95 @@ export class ItemCard extends GameObjects.Container {
   }
   get sold(): boolean {
     return this._sold;
+  }
+  get equipment(): EquipmentInstance | null {
+    return this._equipment;
+  }
+
+  /** Refresh modifier badges (e.g. after perishable countdown). */
+  updateModifierBadges(equipment?: EquipmentInstance): void {
+    if (equipment) this._equipment = equipment;
+    this.renderModifierBadges();
+  }
+
+  /** Pulse the perishable badge red when one round remains. */
+  flashPerishableWarning(): void {
+    if (!this.perishableBadgeContainer || !this.scene) return;
+    this.scene.tweens.add({
+      targets: this.perishableBadgeContainer,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      duration: 120,
+      yoyo: true,
+      repeat: 3,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  /** Brief flash on leased badge when upkeep is paid. */
+  flashLeasedPaid(): void {
+    if (!this.leasedBadgeContainer || !this.scene) return;
+    this.scene.tweens.add({
+      targets: this.leasedBadgeContainer,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 100,
+      yoyo: true,
+      repeat: 1,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  /** Crumble/fade when destroyed by perishable expiry or lease default. */
+  animateModifierDestruction(
+    type: 'perished' | 'repossessed',
+    onComplete: () => void,
+  ): void {
+    this.hideTooltip();
+    this.hideActionTabs(true);
+    this.disableInteractive();
+
+    const matrix = this.getWorldTransformMatrix();
+    const wx = matrix.tx;
+    const wy = matrix.ty - this._cardH / 2 - 8;
+    const label = type === 'perished' ? 'Spoiled!' : 'Repossessed!';
+    const color = type === 'perished' ? '#ff8800' : '#ffd700';
+
+    const popup = this.scene.add
+      .text(wx, wy, label, {
+        fontFamily: 'Arial Black',
+        fontSize: '15px',
+        color,
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(500);
+
+    this.scene.sound.play('sfx_explosion', { volume: 0.45 });
+
+    this.scene.tweens.add({
+      targets: popup,
+      y: wy - 28,
+      alpha: 0,
+      duration: 700,
+      ease: 'Power2',
+      onComplete: () => popup.destroy(),
+    });
+
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 0,
+      scaleX: 0.15,
+      scaleY: 0.15,
+      rotation: this.rotation + (Math.random() > 0.5 ? 0.6 : -0.6),
+      duration: 380,
+      ease: 'Power2',
+      onComplete: () => {
+        this.destroy();
+        onComplete();
+      },
+    });
   }
 
   // ─── Public API ───
@@ -415,6 +516,81 @@ export class ItemCard extends GameObjects.Container {
     }
   }
 
+  // ─── Modifier Badges ───
+
+  private clearModifierBadges(): void {
+    for (const c of this.modifierBadgeContainers) c.destroy();
+    this.modifierBadgeContainers = [];
+    this.perishableBadgeContainer = null;
+    this.leasedBadgeContainer = null;
+  }
+
+  private renderModifierBadges(): void {
+    this.clearModifierBadges();
+    if (!this._equipment || this._equipment.modifiers.length === 0) return;
+
+    const scale = this._options.cardScale ?? 1;
+    const size = UI.MODIFIER_BADGE_SIZE * scale;
+    const gap = UI.MODIFIER_BADGE_GAP * scale;
+    const offset = UI.MODIFIER_BADGE_OFFSET * scale;
+    const hw = this._cardW / 2;
+    const hh = this._cardH / 2;
+    const radius = Math.round(4 * scale);
+    const fontSize = Math.round(11 * scale);
+
+    const specs: { icon: string; bg: number; text?: string; kind: 'cursed' | 'perishable' | 'leased' }[] = [];
+    if (isEquipmentCursed(this._equipment)) specs.push({ icon: '🔒', bg: 0x333333, kind: 'cursed' });
+    if (isEquipmentPerishable(this._equipment)) {
+      specs.push({
+        icon: '⏱',
+        bg: 0xff8800,
+        text: `${this._equipment.perishableRoundsLeft ?? '?'}`,
+        kind: 'perishable',
+      });
+    }
+    if (isEquipmentLeased(this._equipment)) specs.push({ icon: '$', bg: 0xffd700, kind: 'leased' });
+
+    for (let i = 0; i < specs.length; i++) {
+      const spec = specs[i];
+      const badgeW = spec.text ? size + 8 * scale : size;
+      const x = hw - offset - badgeW / 2;
+      const y = -hh + offset + size / 2 + i * (size + gap);
+
+      const container = this.scene.add.container(x, y);
+      const bg = this.scene.add.graphics();
+      bg.fillStyle(spec.bg, 0.95);
+      bg.fillRoundedRect(-badgeW / 2, -size / 2, badgeW, size, radius);
+      bg.lineStyle(1, 0xffffff, 0.35);
+      bg.strokeRoundedRect(-badgeW / 2, -size / 2, badgeW, size, radius);
+      container.add(bg);
+
+      const iconX = spec.text ? -badgeW / 2 + 8 * scale : 0;
+      const icon = this.scene.add
+        .text(iconX, 0, spec.icon, { fontSize: `${fontSize}px`, color: '#ffffff' })
+        .setOrigin(0.5);
+      container.add(icon);
+
+      if (spec.text) {
+        const count = this.scene.add
+          .text(badgeW / 2 - 7 * scale, 0, spec.text, {
+            fontFamily: 'Arial Black',
+            fontSize: `${Math.round(10 * scale)}px`,
+            color: '#ffffff',
+          })
+          .setOrigin(0.5);
+        container.add(count);
+      }
+
+      container.setDepth(25);
+      this.add(container);
+      this.bringToTop(container);
+      this.modifierBadgeContainers.push(container);
+
+      if (spec.kind === 'perishable') this.perishableBadgeContainer = container;
+      if (spec.kind === 'leased') this.leasedBadgeContainer = container;
+    }
+  }
+
   // ─── Hint Display ───
 
   private static readonly HINT_COLORS: Record<string, { text: string; bg?: number }> = {
@@ -631,10 +807,14 @@ export class ItemCard extends GameObjects.Container {
           bg.strokeRoundedRect(-btabW / 2, tabY, btabW, btabH, { tl: 0, tr: 0, bl: tabRadius, br: tabRadius });
         });
 
-        tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-          pointer.event?.stopPropagation();
-          cfg.callback();
-        });
+        if (!cfg.disabled) {
+          tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            pointer.event?.stopPropagation();
+            cfg.callback();
+          });
+        } else {
+          tabContainer.disableInteractive();
+        }
 
         this.add(tabContainer);
         this.sendToBack(tabContainer);
@@ -714,10 +894,14 @@ export class ItemCard extends GameObjects.Container {
         bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
       });
 
-      tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        pointer.event?.stopPropagation();
-        cfg.callback();
-      });
+      if (!cfg.disabled) {
+        tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          pointer.event?.stopPropagation();
+          cfg.callback();
+        });
+      } else {
+        tabContainer.disableInteractive();
+      }
 
       const finalX = hw;
       tabContainer.x = hw - tabW;
@@ -873,6 +1057,22 @@ export class ItemCard extends GameObjects.Container {
       tooltipChildren.push(auraText);
     }
 
+    if (this._equipment) {
+      const modLines = getModifierTooltipLines(this._equipment);
+      for (const line of modLines) {
+        const modText = this.scene.add
+          .text(TOOLTIP_PAD, bottomY + 6, line.text, {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: line.color,
+            fontStyle: 'bold',
+          })
+          .setOrigin(0, 0);
+        bottomY = bottomY + 6 + modText.height;
+        tooltipChildren.push(modText);
+      }
+    }
+
     // Compute size
     const contentWidth = tooltipChildren.reduce(
       (max, child) => Math.max(max, (child as GameObjects.Text).width ?? 0),
@@ -920,6 +1120,7 @@ export class ItemCard extends GameObjects.Container {
   destroy(fromScene?: boolean): void {
     this.hideTooltip();
     this.hideActionTabs();
+    this.clearModifierBadges();
     for (const tw of this.auraTweens) tw.destroy();
     this.auraTweens = [];
     for (const em of this.auraEmitters) em.destroy();
