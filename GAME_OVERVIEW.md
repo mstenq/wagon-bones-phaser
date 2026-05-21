@@ -71,7 +71,7 @@ Instead of decks, we instead choose a character, and the character affects how t
 - Gambler Thomas “Tommy” Reeve - Start with +2 hand size and -1 equipment slot
 - Hunter / Trapper Nathan Cole - After each boss gain a double tag (Doubles rewards from skipping a blind)
 - Accountant Henry Pritchard - Balance miles and mult before calculating total miles when scoring (x2 base blind size)
-- Doctor Dr. Eleanor Sykes - Start the game with 2 medicine cards in hand, medicine is twice as likely to show up in shop
+- Doctor Dr. Eleanor Sykes - Start the game with 2 medicine cards in hand
 - Con Artist Victor Hale - +2 re-rolls per day, -1 hand size
 
 

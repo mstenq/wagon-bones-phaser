@@ -7,7 +7,6 @@ import {
   getConfigModifiers,
   getScoredRetriggerCount,
   findDeathPrevention,
-  getDayModifiers,
   processEquipmentOnDayEnd,
   processEquipmentOnDiceSpent,
   processEquipmentOnHandPlayed,
@@ -121,15 +120,19 @@ describe('BANK_NOTE: Bank Note', () => {
   });
 });
 
-// ─── REFRESH_SPENT_DICE: Extra Saddlebag ───
-// This effect is handled by the UI/game flow, not by scoring.
-// We test that the item exists and has correct effect type.
+// ─── Deprecated: Extra Saddlebag / Stagecoach ───
 
-describe('REFRESH_SPENT_DICE: Extra Saddlebag', () => {
-  test('has correct effect type and params', () => {
+describe('Deprecated items', () => {
+  test('extra saddlebag is deprecated and inert', () => {
     const equip = item('extra_saddlebag');
-    expect(equip.def.effectType).toBe('REFRESH_SPENT_DICE');
-    expect(equip.def.effectParams.value).toBe(1);
+    expect(equip.def.effectType).toBe('NONE');
+    expect(equip.def.rarity).toBe('deprecated');
+  });
+
+  test('stagecoach is deprecated and inert', () => {
+    const equip = item('stagecoach');
+    expect(equip.def.effectType).toBe('NONE');
+    expect(equip.def.rarity).toBe('deprecated');
   });
 });
 
@@ -181,26 +184,6 @@ describe('PREVENT_DEATH: Guardian Totem', () => {
     const inst = item('guardian_totem');
     const idx = findDeathPrevention([inst], 100, 400); // 100 = 400*0.25
     expect(idx).toBe(0);
-  });
-});
-
-// ─── AUTO_REFRESH_REDUCE_DAYS: Stagecoach ───
-
-describe('AUTO_REFRESH_REDUCE_DAYS: Stagecoach', () => {
-  test('reduces days by 1', () => {
-    const inst = item('stagecoach');
-    const { daysPenalty } = getDayModifiers([inst]);
-    expect(daysPenalty).toBe(1);
-  });
-
-  test('stacks with multiple stagecoaches', () => {
-    const { daysPenalty } = getDayModifiers([item('stagecoach'), item('stagecoach')]);
-    expect(daysPenalty).toBe(2);
-  });
-
-  test('no penalty without stagecoach', () => {
-    const { daysPenalty } = getDayModifiers([item('horseshoe')]);
-    expect(daysPenalty).toBe(0);
   });
 });
 

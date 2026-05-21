@@ -4,7 +4,6 @@ export { effectRegistry, EffectRegistry } from './registry';
 export {
   getConfigModifiers,
   findDeathPrevention,
-  getDayModifiers,
   getScoredRetriggerCount,
   forEachEquipmentResolved,
   applyEquipmentAuras,

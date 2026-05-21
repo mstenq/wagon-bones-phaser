@@ -96,7 +96,7 @@ export class PlayerState {
   economy: Economy;
   dice: Die[]; // all dice the player owns
   loadedDieTarget: number | null = null; // selected face for loaded enhancement dice
-  spentDiceIds: Set<string> = new Set(); // dice used this cycle (persists across days & rounds)
+  spentDiceIds: Set<string> = new Set(); // dice used this round (persists across days, reset when round ends)
   equipment: EquipmentInstance[];
   maxEquipmentSlots: number;
   consumables: ConsumableInstance[];
@@ -794,7 +794,7 @@ export class PlayerState {
       this.permitPurchasedThisLeg = false;
 
     }
-    // Spent dice persist across rounds — only refreshed by paying or auto-refresh
+    // Spent dice are reset when the round ends (GameState.endDay win/loss).
     return this.journeyComplete;
   }
 

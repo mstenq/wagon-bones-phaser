@@ -2,7 +2,6 @@
 // Full-screen modal showing all dice in player's collection.
 // Filter toggles: All / Available / Spent
 // Groups identical dice together with count labels.
-// Includes a "Refresh Spent Dice" button.
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
@@ -26,12 +25,10 @@ export class DicePouchModal extends GameObjects.Container {
   private filterMode: FilterMode = 'all';
   private filterBtns: Button[] = [];
   private diceContainer: GameObjects.Container;
-  private refreshBtn: Button | null = null;
   private panelX: number;
   private panelY: number;
   private panelW: number;
   private panelH: number;
-  private onRefreshCallback: (() => void) | null = null;
 
   constructor(scene: Scene, contentX: number, width: number, height: number) {
     super(scene, 0, 0);
@@ -110,12 +107,6 @@ export class DicePouchModal extends GameObjects.Container {
     scene.add.existing(this);
   }
 
-  /** Set a callback for when the player refreshes spent dice from this modal */
-  onRefresh(cb: () => void): this {
-    this.onRefreshCallback = cb;
-    return this;
-  }
-
   private updateFilterButtons(): void {
     const modes: FilterMode[] = ['all', 'available', 'spent'];
     for (let i = 0; i < this.filterBtns.length; i++) {
@@ -164,12 +155,6 @@ export class DicePouchModal extends GameObjects.Container {
     this.diceSprites = [];
     this.diceContainer.removeAll(true);
 
-    // Remove old refresh button
-    if (this.refreshBtn) {
-      this.refreshBtn.destroy();
-      this.refreshBtn = null;
-    }
-
     const player = getPlayerState();
     const { panelX, panelY, panelW, panelH } = this;
     const startY = panelY + 80;
@@ -182,48 +167,7 @@ export class DicePouchModal extends GameObjects.Container {
       dice = player.spentDice;
     }
 
-    // Add refresh button if there are spent dice
     const spentCount = player.spentDice.length;
-    if (spentCount > 0) {
-      const refreshCost = player.refreshCost;
-      const canAfford = player.canAfford(refreshCost);
-
-      // Check for free refresh via Extra Saddlebag
-      const hasFreeRefresh = player.equipment.some(
-        (e) => e.def.effectType === 'REFRESH_SPENT_DICE' && (e.state.usesRemaining ?? e.def.effectParams.value as number) > 0,
-      );
-      const label = hasFreeRefresh
-        ? `Refresh Dice (Free — Saddlebag)`
-        : `Refresh Dice ($${refreshCost})`;
-
-      this.refreshBtn = new Button(
-        this.scene,
-        panelX + panelW / 2,
-        panelY + panelH - 66,
-        label,
-        280,
-        30,
-      );
-      this.refreshBtn.setEnabled(canAfford || hasFreeRefresh);
-      this.refreshBtn.onClick(() => {
-        if (hasFreeRefresh) {
-          // Use the free refresh from extra saddlebag
-          const equip = player.equipment.find(
-            (e) => e.def.effectType === 'REFRESH_SPENT_DICE' && (e.state.usesRemaining ?? e.def.effectParams.value as number) > 0,
-          );
-          if (equip) {
-            const uses = equip.state.usesRemaining ?? (equip.def.effectParams.value as number);
-            equip.state.usesRemaining = uses - 1;
-            player.spentDiceIds.clear();
-          }
-        } else {
-          player.refreshSpentDice();
-        }
-        this.renderDice();
-        if (this.onRefreshCallback) this.onRefreshCallback();
-      });
-      this.add(this.refreshBtn);
-    }
 
     if (dice.length === 0) {
       const emptyText = this.scene.add

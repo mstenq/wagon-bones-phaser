@@ -14,7 +14,7 @@ import {
   GameEventCallback,
   HandType,
 } from './types';
-import { rollDice, rollDie, detectBestHand, scoreHand, createDie } from './DiceSystem';
+import { rollDice, rollDie, detectBestHand, scoreHand, createDie, drawFromPouch } from './DiceSystem';
 import { getPlayerState } from './PlayerState';
 import {
   applyEquipmentEffects,
@@ -28,7 +28,6 @@ import {
   processEquipmentOnRoundStart,
   processEquipmentOnDayEnd,
   findDeathPrevention,
-  getDayModifiers,
 } from './EquipmentEffects';
 import { getRandomTrailGuideDef, getRandomSupplyDef } from './ConsumablesSystem';
 import { applyScoringMutations } from './effects/applyMutations';
@@ -82,9 +81,8 @@ export class GameState {
   // ─── Initialization ───
 
   private createInitialState(): RoundState {
-    // All available (non-spent) dice go into the hand
     const player = getPlayerState();
-    const hand = [...player.availableDice].sort(() => Math.random() - 0.5);
+    const hand = this.drawRandomHand(player);
     return {
       phase: 'SELECT',
       day: 1,
@@ -98,6 +96,12 @@ export class GameState {
       currentHandType: null,
       handHistory: [],
     };
+  }
+
+  private drawRandomHand(player = getPlayerState()): Die[] {
+    const available = player.availableDice;
+    const drawCount = Math.min(this.config.rollSize, available.length);
+    return drawFromPouch(available, drawCount).drawn;
   }
 
   startRound(config?: Partial<GameConfig>): void {
@@ -149,12 +153,6 @@ export class GameState {
     player.bossEffectDisabled = false;
 
     applyBossOnDayStart(1);
-
-    // Apply day penalties (e.g. Stagecoach: -1 day)
-    const dayMods = getDayModifiers(player.equipment);
-    if (dayMods.daysPenalty > 0) {
-      this.config.maxDays = Math.max(1, this.config.maxDays - dayMods.daysPenalty);
-    }
 
     // Process round-start equipment effects (Fading Memory decay, Lucky Number randomize, Funeral Pyre, etc.)
     const roundStartEffects = processEquipmentOnRoundStart(player.equipment, player.isBossRound);
@@ -517,6 +515,8 @@ export class GameState {
     processEquipmentOnDayEnd(player.equipment);
 
     if (this.state.totalMiles >= this.config.targetMiles) {
+      // Round complete: refresh pouch for post-round scenes (payout/shop).
+      player.spentDiceIds.clear();
       player.unusedRerollsTotal += this.state.rerollsRemaining;
       this.state.phase = 'ROUND_END';
       this.emit('round-won', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
@@ -533,6 +533,8 @@ export class GameState {
         this.emit('death-prevented', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
         // Don't end — give them one more day
       } else {
+        // Round complete: refresh pouch for post-round scenes (game over/shop parity).
+        player.spentDiceIds.clear();
         this.state.phase = 'ROUND_END';
         this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
         this.emit('phase-change', this.state.phase);
@@ -540,12 +542,20 @@ export class GameState {
       }
     }
 
-    // Next day — draw fresh dice
+    // Next day — fail if we cannot draw a full hand.
+    if (player.availableDice.length < this.config.rollSize) {
+      // Round complete: refresh pouch for post-round scenes (payout/shop parity).
+      player.spentDiceIds.clear();
+      this.state.phase = 'ROUND_END';
+      this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
+      this.emit('phase-change', this.state.phase);
+      return { outcome: 'lost', destroyedEquipment };
+    }
+
+    // Next day — draw random hand from remaining pouch dice
     this.state.day++;
     applyBossOnDayStart(this.state.day);
-
-    // Hand = all currently available (non-spent) dice
-    this.state.hand = [...player.availableDice].sort(() => Math.random() - 0.5);
+    this.state.hand = this.drawRandomHand(player);
     this.state.spent = [...player.spentDice];
     this.state.selectedForRoll = [];
     this.state.rolledDice = [];
@@ -559,54 +569,5 @@ export class GameState {
     this.emit('phase-change', this.state.phase);
     this.emit('hand-updated', this.state.hand);
     return { outcome: 'next-day', destroyedEquipment };
-  }
-
-  // ─── Refresh Spent Dice ───
-
-  /** Check if the player needs to refresh before the SELECT phase can proceed.
-   *  Returns null if no prompt needed, or an object describing the options. */
-  getRefreshPrompt(): { availableCount: number; refreshCost: number; canAfford: boolean; freeIfUsed: boolean } | null {
-    const player = getPlayerState();
-    const available = player.availableDice.length;
-    if (available >= this.config.rollSize) return null; // enough dice, no prompt needed
-
-    const cost = player.refreshCost;
-    // If using the remaining dice would exhaust the pool, refresh is free
-    const freeIfUsed = available + player.spentDiceIds.size >= player.dice.length;
-    return {
-      availableCount: available,
-      refreshCost: cost,
-      canAfford: player.canAfford(cost),
-      freeIfUsed,
-    };
-  }
-
-  /** Use remaining dice and get a free refresh (marks all available as spent, then auto-refreshes). */
-  useRemainingAndRefresh(): void {
-    const player = getPlayerState();
-    // Mark all currently available dice as spent to trigger auto-refresh
-    const availableIds = player.availableDice.map((d) => d.id);
-    player.markDiceSpent(availableIds); // will auto-clear since all are now spent
-
-    // Rebuild hand from the full pool
-    this.state.hand = [...player.availableDice].sort(() => Math.random() - 0.5);
-    this.state.spent = [];
-    this.emit('spent-refreshed', { cost: 0 });
-    this.emit('hand-updated', this.state.hand);
-  }
-
-  /** Pay money to refresh all spent dice back into the available pool.
-   *  Cost = number of currently available (non-spent) dice.
-   *  Can be called during SELECT phase. Returns false if can't afford or nothing to refresh. */
-  refreshSpentDice(): boolean {
-    const player = getPlayerState();
-    if (!player.refreshSpentDice()) return false;
-
-    // Rebuild hand from the full available pool
-    this.state.hand = [...player.availableDice].sort(() => Math.random() - 0.5);
-    this.state.spent = [];
-    this.emit('spent-refreshed', { cost: player.refreshCost });
-    this.emit('hand-updated', this.state.hand);
-    return true;
   }
 }

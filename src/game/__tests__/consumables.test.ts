@@ -361,6 +361,30 @@ describe('Mirage CLONE effect', () => {
   });
 });
 
+describe('pre-roll consumable targeting regression', () => {
+  test('loaded can enhance a drawn hand die before first roll', () => {
+    const { game, player } = setupGame({
+      dice: [die({ value: 2 }), die({ value: 4 }), die({ value: 6 }), die({ value: 8 }), die({ value: 10 }), die({ value: 12 })],
+      handSize: 5,
+    });
+    game.startRound();
+
+    const loadedDef = getSupplyDefById('loaded');
+    expect(loadedDef).not.toBeNull();
+
+    const useResult = executeConsumableEffect(createConsumableInstance(loadedDef!), player);
+    expect(useResult.success).toBe(true);
+    expect(useResult.diceSelection).toBeDefined();
+
+    const target = game.state.hand[0];
+    const applyMessage = applyDiceSelectionEffect(useResult.diceSelection!, [target]);
+
+    expect(applyMessage).toContain('Enhanced 1 dice');
+    const updated = player.dice.find((d) => d.id === target.id);
+    expect(updated?.enhancement).toBe('loaded');
+  });
+});
+
 // ─── Bless Aura Weighting ───
 
 import itemAurasData from '../../data/item_auras.json';

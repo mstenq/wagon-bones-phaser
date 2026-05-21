@@ -1,14 +1,14 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { die, diceFromValues, setupGame, resetDieIds } from './testHelpers';
-import { resetPlayerState, getPlayerState } from '../PlayerState';
+import { diceFromValues, setupGame, resetDieIds } from './testHelpers';
+import { resetPlayerState } from '../PlayerState';
 
 beforeEach(() => {
   resetDieIds();
 });
 
 describe('spent dice persistence', () => {
-  test('spent dice persist across rounds (advanceRound does not clear)', () => {
+  test('spent dice remain until round end', () => {
     const player = resetPlayerState();
     player.dice = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -17,7 +17,7 @@ describe('spent dice persistence', () => {
     expect(player.spentDiceIds.size).toBe(2);
     expect(player.availableDice.length).toBe(6);
 
-    // Advance round — spent dice should NOT be cleared
+    // Advance round alone does not clear spent dice.
     player.advanceRound();
 
     expect(player.spentDiceIds.size).toBe(2);
@@ -25,58 +25,25 @@ describe('spent dice persistence', () => {
     expect(player.spentDice.length).toBe(2);
   });
 
-  test('spent dice persist across multiple rounds', () => {
-    const player = resetPlayerState();
-    player.dice = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  test('startRound keeps existing spent dice state', () => {
+    const { game, player } = setupGame({ dice: diceFromValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) });
 
-    // Round 1: spend 2 dice
-    player.markDiceSpent([player.dice[0].id, player.dice[1].id]);
-    expect(player.spentDiceIds.size).toBe(2);
-    player.advanceRound();
-
-    // Round 2: spend 2 more dice
-    player.markDiceSpent([player.dice[2].id, player.dice[3].id]);
+    player.markDiceSpent([player.dice[0].id, player.dice[1].id, player.dice[2].id, player.dice[3].id]);
     expect(player.spentDiceIds.size).toBe(4);
-    player.advanceRound();
-
-    // Round 3: all 4 should still be spent
+    game.startRound();
     expect(player.spentDiceIds.size).toBe(4);
     expect(player.availableDice.length).toBe(6);
   });
 
-  test('spent dice persist across leg transitions', () => {
-    const player = resetPlayerState();
-    player.dice = diceFromValues([1, 2, 3, 4, 5, 6]);
-    player.round = 3; // last round of leg
-
-    player.markDiceSpent([player.dice[0].id]);
-    expect(player.spentDiceIds.size).toBe(1);
-
-    // This should advance to next leg (round 3 → leg++)
-    player.advanceRound();
-
-    expect(player.leg).toBe(2);
-    expect(player.round).toBe(1);
-    // Spent dice still persist
-    expect(player.spentDiceIds.size).toBe(1);
-    expect(player.availableDice.length).toBe(5);
-  });
-
-  test('spent dice carry into new round initial state', () => {
+  test('startRound draws from available dice without clearing spent', () => {
     const testDice = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8]);
     const { game, player } = setupGame({ dice: testDice });
 
-    // Manually mark some dice as spent
     player.markDiceSpent([player.dice[0].id, player.dice[1].id, player.dice[2].id]);
-    expect(player.spentDiceIds.size).toBe(3);
-
-    // Advance round (simulating a won round)
-    player.advanceRound();
-
-    // Start a new round — initial state should reflect spent dice
     game.startRound();
+    expect(player.spentDiceIds.size).toBe(3);
     expect(game.state.spent.length).toBe(3);
-    expect(game.state.hand.length).toBe(5); // 8 - 3 spent = 5 available
+    expect(game.state.hand.length).toBe(5);
   });
 
   test('auto-refresh triggers when all dice are spent', () => {
@@ -88,21 +55,6 @@ describe('spent dice persistence', () => {
     expect(refreshed).toBe(true);
     expect(player.spentDiceIds.size).toBe(0);
     expect(player.availableDice.length).toBe(3);
-  });
-
-  test('manual refresh clears spent dice when paid for', () => {
-    const player = resetPlayerState();
-    player.dice = diceFromValues([1, 2, 3, 4, 5, 6]);
-    player.economy.setBalance(10);
-
-    player.markDiceSpent([player.dice[0].id, player.dice[1].id]);
-    expect(player.spentDiceIds.size).toBe(2);
-
-    // Manual refresh costs = number of available dice (4)
-    const success = player.refreshSpentDice();
-    expect(success).toBe(true);
-    expect(player.spentDiceIds.size).toBe(0);
-    expect(player.economy.balance).toBe(6); // 10 - 4 available dice cost
   });
 
   test('spent dice persist within days of a round', () => {
@@ -120,26 +72,37 @@ describe('spent dice persistence', () => {
     expect(player.spentDice.length).toBe(2);
   });
 
-  test('new round hand only contains non-spent dice and allows rolling', () => {
-    const testDice = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    const { game, player } = setupGame({ dice: testDice, handSize: 5 });
+  test('round is lost when next day cannot draw a full hand', () => {
+    const testDice = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8]);
+    const { game, player } = setupGame({ dice: testDice, handSize: 8 });
 
-    // Spend 3 dice (simulating previous round usage)
-    player.markDiceSpent([player.dice[0].id, player.dice[1].id, player.dice[2].id]);
-    expect(player.spentDiceIds.size).toBe(3);
-
-    // Advance round and start new one
-    player.advanceRound();
     game.startRound();
+    const allIds = game.state.hand.map((d) => d.id);
+    expect(game.selectForRoll(allIds)).toBe(true);
+    expect(game.selectForScore([allIds[0]])).toBe(true);
+    expect(game.calculateScore()).not.toBeNull();
 
-    // Hand should only have the 7 available dice
-    expect(game.state.hand.length).toBe(7);
-    expect(game.state.spent.length).toBe(3);
+    const result = game.endDay();
+    expect(result.outcome).toBe('lost');
+    expect(game.state.phase).toBe('ROUND_END');
+    expect(player.spentDiceIds.size).toBe(0);
+  });
 
-    // Should be able to select up to handSize (5) dice from the 7 available
-    const idsToRoll = game.state.hand.slice(0, 5).map((d) => d.id);
-    const success = game.selectForRoll(idsToRoll);
-    expect(success).toBe(true);
-    expect(game.state.phase).toBe('ROLL');
+  test('round end refreshes spent dice after a win', () => {
+    const testDice = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8]);
+    const { game, player } = setupGame({ dice: testDice, handSize: 8 });
+
+    game.startRound();
+    game.config.targetMiles = 1;
+    const allIds = game.state.hand.map((d) => d.id);
+    expect(game.selectForRoll(allIds)).toBe(true);
+    expect(game.selectForScore([allIds[0]])).toBe(true);
+    expect(game.calculateScore()).not.toBeNull();
+
+    expect(player.spentDiceIds.size).toBe(0);
+    const result = game.endDay();
+    expect(result.outcome).toBe('won');
+    expect(player.spentDiceIds.size).toBe(0);
+    expect(player.availableDice.length).toBe(player.dice.length);
   });
 });

@@ -443,7 +443,6 @@ export { processEquipmentOnDayEnd } from './effects/lifecycle/misc';
 export {
   getConfigModifiers,
   findDeathPrevention,
-  getDayModifiers,
   getScoredRetriggerCount,
 } from './effects/helpers';
 

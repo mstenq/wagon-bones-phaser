@@ -125,10 +125,7 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   const pouchY = height - UI.POUCH_MARGIN - UI.POUCH_SIZE;
   const dicePouch = new DicePouch(scene, pouchX, pouchY);
   dicePouch.setClickCallback(() => {
-    new DicePouchModal(scene, sidebarW, width - sidebarW, height).onRefresh(() => {
-      dicePouch.refresh();
-      dicePouch.emit('dice-refreshed');
-    });
+    new DicePouchModal(scene, sidebarW, width - sidebarW, height);
   });
 
   const tagStack = new TagStack(scene, pouchX, pouchY);

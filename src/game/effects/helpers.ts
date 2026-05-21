@@ -132,17 +132,6 @@ export function findDeathPrevention(equipment: EquipmentInstance[], totalMiles: 
   return -1;
 }
 
-/** Get config modifiers that affect days (e.g. Stagecoach -1 day). */
-export function getDayModifiers(equipment: EquipmentInstance[]): { daysPenalty: number } {
-  let daysPenalty = 0;
-  for (const equip of equipment) {
-    if (equip.def.effectType === 'AUTO_REFRESH_REDUCE_DAYS') {
-      daysPenalty += (equip.def.effectParams.daysPenalty as number) ?? 1;
-    }
-  }
-  return { daysPenalty };
-}
-
 export function getScoredRetriggerCount(equipment: EquipmentInstance[], context?: { currentDay: number; maxDays: number }): number {
   let count = 0;
   const maxCopyDepth = equipment.length;

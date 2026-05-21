@@ -20,6 +20,8 @@ Devil’s Dice - $5 - scored 6s give +3 mult - not worth it
 Trail Boss - $4 - sixes add +30 miles when scored - not worth it (Already have odd fellow)
 Spare Parts - $5 - +2 miles per each remaining dice in collection (doesn't work as well without discards)
 Crooked Trail - $7 - allow straights to have a gap of 1 in rank (1,3,4,6,8) - (straights are too easy already)
+Extra Saddlebag - deprecated (refresh mechanic removed)
+Stagecoach - deprecated (refresh mechanic removed)
 
 ## Equipment Basic List
 Horseshoe - $2 - +4 mult
@@ -35,7 +37,6 @@ Toolbelt - $4 - +3 mult for each piece of equipment
 Dynamite - $5 - +15 mult - 1 in 6 chance to be destroyed at end of round
 Even Odds - $4 - +4 when an even pip is scored
 Odd Fellow - $4 - +31 miles when an odd pip is scored
-Extra Saddlebag - $4 - refresh your spent dice for free 1 time a round
 Spare Holster - $4 - +1 re-roll per round
 Payday - $6 - Earn $4 at end of round. Jesse Rawlins (Outlaw) earns $12
 
@@ -56,7 +57,6 @@ Gold Tooth - $4 - Played gold dice earn $4
 Guardian Totem - $5 - prevents death if miles travelled is at least 25% of required distance, card is destroyed if used
 High Noon - $6 - x3 mult on final day of round
 Desperado - $4 - add the sell value of all other owned equipment as mult
-Stagecoach - $6 - dice are automatically refreshed when supply reaches %50 or below, -1 day per round
 Mystery Crate - $6 - add a dice at the start of each round with a random sticker
 Ace in the Whole - $8 - Each 1 held in hand gives x1.5 mult
 

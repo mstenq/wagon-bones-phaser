@@ -88,7 +88,6 @@ export class GameScene extends Scene {
 
   // Track selections
   private selectedHandIds: Set<string> = new Set();
-  private forcedDiceIds: Set<string> = new Set();
   private lockedDiceIds: Set<string> = new Set();
 
   // Lock icons
@@ -109,9 +108,6 @@ export class GameScene extends Scene {
   private dragOffsetY: number = 0;
   private dragPrevX: number = 0;
   private dragVelocityX: number = 0;
-
-  // Refresh prompt overlay
-  private refreshOverlay: Phaser.GameObjects.Container | null = null;
 
   // Loaded die target control
   private loadedDiceLabel: Phaser.GameObjects.Text;
@@ -146,8 +142,7 @@ export class GameScene extends Scene {
       this.gameState.startRound();
       // Pick up any dice added during leg transition or round start
       this.pendingNewDiceIds = player.pendingNewDiceIds.splice(0);
-      // Clear forced/selected state from previous round (scene instance is reused)
-      this.forcedDiceIds = new Set();
+      // Clear selected state from previous round (scene instance is reused)
       this.selectedHandIds = new Set();
     }
 
@@ -208,20 +203,6 @@ export class GameScene extends Scene {
     this.consumableBar.on('consumable-changed', () => {
       this.sidebar.refreshMoney();
       this.dicePouch.refresh();
-    });
-
-    // Rebuild hand when dice are refreshed from the pouch modal
-    this.dicePouch.on('dice-refreshed', () => {
-      this.sidebar.refreshMoney();
-      if (this.gameState.state.phase === 'SELECT') {
-        // Rebuild hand from freshly available dice
-        const player = getPlayerState();
-        this.gameState.state.hand = [...player.availableDice].sort(() => Math.random() - 0.5);
-        this.gameState.state.spent = [...player.spentDice];
-        this.forcedDiceIds.clear();
-        this.selectedHandIds.clear();
-        this.enterDrawPhase();
-      }
     });
 
     // Execute consumable effect when used
@@ -305,7 +286,6 @@ export class GameScene extends Scene {
     this.rollSprites = [];
     this.availableStacks = [];
     this.playAreaSprites = [];
-    this.refreshOverlay = null;
     this.children.removeAll(true);
     this.buildLayout();
   }
@@ -314,87 +294,26 @@ export class GameScene extends Scene {
 
   private enterDrawPhase(): void {
     this.clearSprites();
-    this.selectedHandIds.clear();
-    // Note: forcedDiceIds is set by callers (onContinue, refresh prompt) — don't clear here
+    this.selectedHandIds = new Set(this.gameState.state.hand.map((die) => die.id));
     this.hideAllButtons();
     this.sidebar.clearHandDisplay();
     this.sidebar.updateData({ milesBase: 0, mult: 0 });
-
-    // Check if we need a refresh prompt (available dice < rollSize)
-    const prompt = this.gameState.getRefreshPrompt();
-    if (prompt) {
-      this.showRefreshPrompt(prompt);
-      return;
-    }
-
     this.enterDrawPhaseLayout();
   }
 
   /** Show the actual SELECT phase UI (called after refresh prompt is resolved or not needed) */
   private enterDrawPhaseLayout(): void {
-    this.destroyRefreshOverlay();
-
     const { height } = this.scale;
     this.playAreaY = height * UI.ROLL_Y_RATIO;
     this.availableY = height * UI.HAND_Y_RATIO;
 
     const hand = this.gameState.state.hand;
-
-    // Ensure forced dice are in selectedHandIds
-    for (const id of this.forcedDiceIds) {
-      this.selectedHandIds.add(id);
-    }
-
-    // Separate selected (in play area) from available (in stacks)
-    const selectedDice: Die[] = [];
-    const availableDice: Die[] = [];
-    for (const die of hand) {
-      if (this.selectedHandIds.has(die.id)) {
-        selectedDice.push(die);
-      } else {
-        availableDice.push(die);
-      }
-    }
-
-    // Place selected dice in play area
-    for (const die of selectedDice) {
-      const sprite = new DiceSprite(this, this.contentCX, this.playAreaY, die);
-      sprite.setDepth(20);
-      if (this.forcedDiceIds.has(die.id)) {
-        sprite.setForced(true);
-      }
+    this.handSprites = this.createDiceRow(hand, this.playAreaY);
+    this.playAreaSprites = [...this.handSprites];
+    for (const sprite of this.playAreaSprites) {
       this.setupPlayAreaSprite(sprite);
-      this.playAreaSprites.push(sprite);
+      sprite.disableInteractive();
     }
-
-    // Group available dice by visual identity
-    const groups = new Map<string, Die[]>();
-    for (const die of availableDice) {
-      const key = this.getDiceGroupKey(die);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(die);
-    }
-
-    // Create stacks
-    this.availableStacks = [];
-    for (const [key, dice] of groups) {
-      const countText = this.add
-        .text(0, this.availableY + 44, '', {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '14px',
-          color: TEXT_COLORS.SECONDARY,
-        })
-        .setOrigin(0.5)
-        .setDepth(15);
-
-      const stack: DiceStackData = { key, dice: [...dice], sprites: [], countText, addBtn: null, targetX: 0 };
-      this.availableStacks.push(stack);
-    }
-
-    // Layout and render
-    this.layoutStacks();
-    this.renderAllStacks();
-    this.repositionPlayArea(false);
 
     // Animate mystery crate dice appearing
     if (this.pendingNewDiceIds.length > 0) {
@@ -406,10 +325,8 @@ export class GameScene extends Scene {
     this.readyBtn.setVisible(true);
     this.updateDrawButtons();
 
-    const remaining = hand.length;
     const spent = this.gameState.state.spent.length;
-    const required = Math.min(this.maxSelectForRoll, remaining);
-    this.instructionText.setText(`Select ${required} dice to roll (${spent} dice spent, ${remaining} available)`);
+    this.instructionText.setText(`Roll ${hand.length} drawn dice (${spent} spent)`);
 
     this.updateHUD();
   }
@@ -608,20 +525,9 @@ export class GameScene extends Scene {
   // ─── Player Actions ───
 
   private onReadyToRoll(): void {
-    console.log('[DEBUG] onReadyToRoll called, animating:', this.animating);
-    if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
-    const ids = [...this.selectedHandIds];
-    const required = Math.min(this.maxSelectForRoll, this.gameState.state.hand.length);
-    console.log('[DEBUG] selectedHandIds:', ids.length, 'required:', required, 'ids:', ids);
-
-    if (ids.length !== required) {
-      console.log('[DEBUG] BLOCKED: ids.length !== required');
-      this.instructionText.setText(`Select exactly ${required} dice to roll`);
-      return;
-    }
-
+    if (this.animating) return;
+    const ids = this.gameState.state.hand.map((die) => die.id);
     const success = this.gameState.selectForRoll(ids);
-    console.log('[DEBUG] selectForRoll result:', success);
     if (success) {
       this.enterRollPhase();
     }
@@ -695,7 +601,6 @@ export class GameScene extends Scene {
   private onDevWinRound(): void {
     if (!isDevMode() || this.animating) return;
 
-    this.destroyRefreshOverlay();
     this.hideAllButtons();
     this.clearSprites();
     this.gameState.state.totalMiles = 1_000_000;
@@ -707,9 +612,7 @@ export class GameScene extends Scene {
   private onContinue(): void {
     if (this.animating) return;
 
-    // Compute unscored dice IDs before endDay clears state
     const scoredIds = new Set(this.gameState.state.selectedForScore.map((d) => d.id));
-    const unscoredIds = this.gameState.state.selectedForRoll.filter((d) => !scoredIds.has(d.id)).map((d) => d.id);
 
     // Gold dice held in hand earn $3 each (before payout so interest sees updated balance)
     const goldHeldCount = this.gameState.state.selectedForRoll.filter(
@@ -792,8 +695,6 @@ export class GameScene extends Scene {
         round: player.round,
       });
     } else {
-      // Next day — force unscored dice to be selected
-      this.forcedDiceIds = new Set(unscoredIds);
       this.enterDrawPhase();
     }
   }
@@ -842,23 +743,9 @@ export class GameScene extends Scene {
   }
 
   private updateDrawButtons(): void {
-    const selCount = this.selectedHandIds.size;
-    const required = Math.min(this.maxSelectForRoll, this.gameState.state.hand.length);
-    console.log('[DEBUG] updateDrawButtons: selCount:', selCount, 'required:', required, 'handLength:', this.gameState.state.hand.length, 'animating:', this.animating);
-
-    if (selCount === required) {
-      this.readyBtn.setText(`Roll ${selCount} Dice`);
-      this.readyBtn.setEnabled(true);
-    } else if (selCount > required) {
-      this.readyBtn.setText(`Too Many (max ${required})`);
-      this.readyBtn.setEnabled(false);
-    } else {
-      this.readyBtn.setText(`${selCount}/${required} Dice Selected`);
-      this.readyBtn.setEnabled(false);
-    }
-
-    // Refresh add buttons on all stacks
-    this.refreshAllAddButtons();
+    const drawCount = this.gameState.state.hand.length;
+    this.readyBtn.setText(drawCount > 0 ? `Roll ${drawCount} Dice` : 'No Dice To Roll');
+    this.readyBtn.setEnabled(drawCount > 0);
   }
 
   private updateRollButtons(): void {
@@ -973,7 +860,7 @@ export class GameScene extends Scene {
       title: boss
         ? boss.name
         : s.phase === 'SELECT'
-          ? 'SELECT DICE'
+          ? 'READY TO ROLL'
           : s.phase === 'ROLL'
             ? 'ROLL PHASE'
             : s.phase === 'SCORE'
@@ -1192,110 +1079,6 @@ export class GameScene extends Scene {
     if (chance === 2 / 3) return 'Selected face rolls at 2 in 3.';
     if (chance === 1 / 3) return 'Selected face rolls at 1 in 3.';
     return 'Selected face rolls at 1 in 6.';
-  }
-
-  // ─── Refresh Prompt ───
-
-  private showRefreshPrompt(prompt: {
-    availableCount: number;
-    refreshCost: number;
-    canAfford: boolean;
-    freeIfUsed: boolean;
-  }): void {
-    this.destroyRefreshOverlay();
-    const { width, height } = this.scale;
-
-    this.refreshOverlay = this.add.container(0, 0).setDepth(100);
-
-    // Dim background (content area only)
-    const dimBg = this.add.graphics();
-    dimBg.fillStyle(0x000000, 0.6);
-    dimBg.fillRect(this.sidebarW, 0, width - this.sidebarW, height);
-    this.refreshOverlay.add(dimBg);
-
-    // Panel
-    const panelW = 440;
-    const panelH = 200;
-    const cx = this.contentCX;
-    const panelX = cx - panelW / 2;
-    const panelY = height / 2 - panelH / 2;
-    const panel = this.add.graphics();
-    panel.fillStyle(COLORS.BG_PANEL, 1);
-    panel.fillRoundedRect(panelX, panelY, panelW, panelH, 12);
-    panel.lineStyle(2, COLORS.PANEL_BORDER, 1);
-    panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 12);
-    this.refreshOverlay.add(panel);
-
-    // Title
-    const title = this.add
-      .text(cx, panelY + 30, 'Not Enough Dice!', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '22px',
-        color: TEXT_COLORS.GOLD,
-        align: 'center',
-      })
-      .setOrigin(0.5);
-    this.refreshOverlay.add(title);
-
-    // Description
-    const desc = this.add
-      .text(
-        cx,
-        panelY + 60,
-        `You only have ${prompt.availableCount} dice available (need ${this.gameState.config.rollSize})`,
-        {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '14px',
-          color: TEXT_COLORS.SECONDARY,
-          align: 'center',
-        },
-      )
-      .setOrigin(0.5);
-    this.refreshOverlay.add(desc);
-
-    // Option 1: Use remaining and refresh for free
-    if (prompt.freeIfUsed) {
-      const freeBtn = new Button(
-        this,
-        cx,
-        panelY + 110,
-        `Use remaining ${prompt.availableCount} dice & refresh for free`,
-        380,
-        40,
-      ).onClick(() => {
-        const player = getPlayerState();
-        const remainingIds = player.availableDice.map((d) => d.id);
-        this.gameState.useRemainingAndRefresh();
-        // Keep any existing forced dice and add remaining pre-refresh dice
-        for (const id of remainingIds) this.forcedDiceIds.add(id);
-        this.destroyRefreshOverlay();
-        this.enterDrawPhaseLayout();
-      });
-      freeBtn.setDepth(101);
-      this.refreshOverlay.add(freeBtn);
-    }
-
-    // Option 2: Pay to refresh now
-    const costLabel = prompt.refreshCost === 0 ? 'Refresh for free' : `Spend $${prompt.refreshCost} to refresh now`;
-    const payBtn = new Button(this, cx, panelY + 160, costLabel, 380, 40).onClick(() => {
-      const success = this.gameState.refreshSpentDice();
-      if (success) {
-        this.destroyRefreshOverlay();
-        this.enterDrawPhase();
-      }
-    });
-    payBtn.setEnabled(prompt.canAfford);
-    payBtn.setDepth(101);
-    this.refreshOverlay.add(payBtn);
-
-    this.updateHUD();
-  }
-
-  private destroyRefreshOverlay(): void {
-    if (this.refreshOverlay) {
-      this.refreshOverlay.destroy();
-      this.refreshOverlay = null;
-    }
   }
 
   // ─── Dice Stacking & Play Area ───
@@ -1870,8 +1653,6 @@ export class GameScene extends Scene {
     if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
     const die = sprite.dieData;
 
-    // Can't remove forced dice (including Bounty-locked)
-    if (this.forcedDiceIds.has(die.id)) return;
     // Sound
     this.sound.play('sfx_card_slide2', { volume: 0.35 });
 
@@ -1945,7 +1726,6 @@ export class GameScene extends Scene {
 
   /** Get the active draggable sprite list (play area in SELECT, roll sprites in ROLL) */
   private getDraggableList(): DiceSprite[] | null {
-    if (this.playAreaSprites.length > 0 && this.gameState.state.phase === 'SELECT') return this.playAreaSprites;
     if (this.rollSprites.length > 0) return this.rollSprites;
     return null;
   }
@@ -2222,6 +2002,14 @@ export class GameScene extends Scene {
     this.consumableTargeting = config;
     this.consumableTargetIds = new Set();
 
+    // In pre-roll SELECT phase, hand dice are normally non-interactive.
+    // Consumable targeting needs temporary interaction to pick targets.
+    if (this.gameState.state.phase === 'SELECT') {
+      for (const sprite of this.playAreaSprites) {
+        sprite.setInteractive({ useHandCursor: true });
+      }
+    }
+
     // Save current state so we can restore
     this.savedInstructionText = this.instructionText.text;
     this.savedLockedDiceIds = new Set(this.lockedDiceIds);
@@ -2278,7 +2066,7 @@ export class GameScene extends Scene {
     if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
       return {
         sprites: this.playAreaSprites,
-        dice: this.playAreaSprites.map((s) => s.dieData),
+        dice: this.gameState.state.hand,
       };
     }
     // Fallback — roll sprites if available
@@ -2416,6 +2204,9 @@ export class GameScene extends Scene {
       this.showSortButtons();
       this.updateRollButtons();
     } else if (phase === 'SELECT') {
+      for (const sprite of this.playAreaSprites) {
+        sprite.disableInteractive();
+      }
       this.readyBtn.setVisible(true);
       this.updateDrawButtons();
     }
