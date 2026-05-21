@@ -648,23 +648,23 @@ const items: ItemDef[] = [
       return [[inactive('Expired')]];
     },
   },
-  {
-    id: 'bone_collector',
-    name: 'Bone Collector',
-    cost: 6,
-    rarity: 'uncommon',
-    cardTemplate: 'white-text',
-    description: 'Gains +3 miles per each enhanced dice that is spent',
-    effectType: 'ENHANCED_SPENT_MILES_GAIN',
-    effectParams: { value: 3 },
-    initialState: { miles: 0 },
-    hintDisplay: (_game, player) => {
-      const equip = player.equipment.find((e) => e.def.id === 'bone_collector');
-      const m = equip?.state.miles ?? 0;
-      return [[miles(`+${m}`)]];
-    },
-    unlockCondition: unlockByEnhancement('bone'),
-  },
+  // {
+  //   id: 'bone_collector',
+  //   name: 'Bone Collector',
+  //   cost: 6,
+  //   rarity: 'uncommon',
+  //   cardTemplate: 'white-text',
+  //   description: 'Gains +3 miles per each enhanced dice that is spent',
+  //   effectType: 'ENHANCED_SPENT_MILES_GAIN',
+  //   effectParams: { value: 3 },
+  //   initialState: { miles: 0 },
+  //   hintDisplay: (_game, player) => {
+  //     const equip = player.equipment.find((e) => e.def.id === 'bone_collector');
+  //     const m = equip?.state.miles ?? 0;
+  //     return [[miles(`+${m}`)]];
+  //   },
+  //   unlockCondition: unlockByEnhancement('bone'),
+  // },
   {
     id: 'snake_oil_ledger',
     name: 'Snake Oil Ledger',

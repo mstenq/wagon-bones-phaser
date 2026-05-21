@@ -215,7 +215,7 @@ describe('ROUND_START_ADD_DICE: Mystery Crate', () => {
 
 // ─── ENHANCED_SPENT_MILES_GAIN: Bone Collector ───
 
-describe('ENHANCED_SPENT_MILES_GAIN: Bone Collector', () => {
+describe.skip('ENHANCED_SPENT_MILES_GAIN: Bone Collector', () => {
   test('starts at +0 miles', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
