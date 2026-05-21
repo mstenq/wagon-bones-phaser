@@ -799,7 +799,7 @@ const items: ItemDef[] = [
   {
     id: 'devils_hand',
     name: "The Devil's Hand",
-    cardTemplate: 'hellfire',
+    cardTemplate: 'white-text-noborder',
     cost: 20,
     rarity: 'legendary',
     description: "Played 6's give x2 mult when scored",
@@ -829,7 +829,7 @@ const items: ItemDef[] = [
   {
     id: 'ghost_lantern',
     name: 'Ghost Lantern',
-    cardTemplate: 'white-text-black-outline',
+    cardTemplate: 'white-text-noborder',
     cost: 20,
     rarity: 'legendary',
     description: 'Creates a ghost copy of a random consumable card in your possession at the end of the shop phase',
@@ -965,7 +965,7 @@ const items: ItemDef[] = [
   {
     id: 'bank_note',
     name: 'Bank Note',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-black-outline',
     cost: 1,
     rarity: 'common',
     description:
