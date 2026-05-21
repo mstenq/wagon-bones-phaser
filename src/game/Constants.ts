@@ -26,7 +26,9 @@ export const GAMEPLAY = {
   LEGS: 8,
   ROUNDS_PER_LEG: 3,
   // Target miles per leg (index 0 = leg 1). Base value — multiplied by round multiplier.
-  TARGET_MILES_BY_LEG: [500, 800, 2000, 5000, 11_000, 20_000, 35_000, 50_000],
+  TARGET_MILES_BY_LEG: [300, 800, 2000, 5000, 11_000, 20_000, 35_000, 50_000], // for Normal difficulty
+  TARGET_MILES_BY_LEG_ROUGH: [300, 900, 2600, 8000, 20000, 36000, 60000, 100_000], // for Rough Trail difficulty
+  TARGET_MILES_BY_LEG_DEADLY: [300, 1000, 3200, 9000, 25000, 60000, 110_000, 200_000], // for Deadly Frontier difficulty
   // Round difficulty multiplier within a leg (round 1 = 1x, round 2 = 1.5x, round 3/boss = 2x)
   ROUND_MULTIPLIERS: [1, 1.5, 2],
   // Money earned for completing each round (index 0 = round 1)
