@@ -260,6 +260,7 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'STACKED_DECK',            // Stacked Deck
   'END_ROUND_MONEY_SCALING', // Railroad Bonds
   'SELL_DISABLE_BOSS',       // Sheriff's Badge
+  'SELL_GRANT_TAG',          // Bounty Contract
   'TRAIL_ALMANAC_MONEY',     // Trail Almanac
   'ALLOW_DUPLICATES',        // Counterfeit Goods
   'HELLFIRE_ROUND',          // Hellfire Round

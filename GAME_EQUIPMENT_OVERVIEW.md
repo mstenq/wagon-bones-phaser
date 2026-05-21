@@ -178,4 +178,4 @@ Ghost Lantern - $20 - Creates a ghost copy of a random consumable card in your p
 The Seventh Trumpet - $20 - Retriggers all played dice, and all held in hand effects
 
  ## Requires features before implementing
- Bounty Contract - $6 - sell this item to gain a free double tag 
+ Bounty Contract - $6 - sell this item to gain a free tag_twin_wagon tag 

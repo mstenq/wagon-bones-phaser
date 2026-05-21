@@ -15,6 +15,7 @@ import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
 import bossesData from '../data/bosses.json';
 import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
+import { getTrailTagById } from '../data/trail_tags';
 
 export interface ProfessionSpecialEquipment {
   name: string;
@@ -348,6 +349,15 @@ export class PlayerState {
     // Sheriff's Badge: selling disables the current boss effect for this round
     if (item.def.effectType === 'SELL_DISABLE_BOSS' && this.isBossRound) {
       this.bossEffectDisabled = true;
+    }
+
+    // Bounty Contract: selling grants a Twin Wagon tag
+    if (item.def.effectType === 'SELL_GRANT_TAG') {
+      const tagId = (item.def.effectParams.tagId as string) ?? 'tag_twin_wagon';
+      const tagDef = getTrailTagById(tagId);
+      if (tagDef) {
+        this.addTag(tagDef);
+      }
     }
 
     // Bank Note: banker wipes debt when selling this item

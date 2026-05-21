@@ -2069,6 +2069,17 @@ const items: ItemDef[] = [
     hintDisplay: () => [[text('Sell to'), condition('disable boss')]],
   },
   {
+    id: 'bounty_contract',
+    name: 'Bounty Contract',
+    cardTemplate: 'black-text',
+    cost: 6,
+    rarity: 'uncommon',
+    description: 'Sell this item to gain a free Twin Wagon tag',
+    effectType: 'SELL_GRANT_TAG',
+    effectParams: { tagId: 'tag_twin_wagon' },
+    hintDisplay: () => [[text('Sell to'), condition('Twin Wagon')]],
+  },
+  {
     id: 'double_barrel',
     name: 'Double Barrel',
     cardTemplate: 'black-text',

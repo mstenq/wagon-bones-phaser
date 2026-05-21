@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
+import { getTrailTagById } from '../../../data/trail_tags';
 import { die, diceWithValue, item, itemWithState, itemWithAura, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
 import {
   processEndOfRound,
@@ -1043,6 +1044,26 @@ describe('SELL_DISABLE_BOSS: Sheriff\'s Badge', () => {
     player.sellEquipment(0);
     expect(player.bossEffectDisabled).toBe(true);
     expect(player.equipment.length).toBe(0);
+  });
+});
+
+// ─── SELL_GRANT_TAG: Bounty Contract ───
+
+describe('SELL_GRANT_TAG: Bounty Contract', () => {
+  test('selling grants a Twin Wagon tag', () => {
+    const { player } = setupGame({ equipment: [item('bounty_contract')] });
+    expect(player.twinWagonCount).toBe(0);
+    player.sellEquipment(0);
+    expect(player.equipment.length).toBe(0);
+    expect(player.twinWagonCount).toBe(1);
+    expect(player.pendingTags.length).toBe(0);
+  });
+
+  test('Twin Wagon from contract doubles the next earned tag', () => {
+    const { player } = setupGame({ equipment: [item('bounty_contract')] });
+    player.sellEquipment(0);
+    player.addTag(getTrailTagById('tag_shortcut')!);
+    expect(player.pendingTags[0].copies).toBe(2);
   });
 });
 
