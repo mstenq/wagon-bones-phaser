@@ -157,14 +157,6 @@ export type GameEventType =
 
 export type GameEventCallback = (data?: unknown) => void;
 
-export interface BossDef {
-  id: string;
-  name: string;
-  description: string;
-  effectType: string;
-  effectParams: Record<string, unknown>;
-  minimumLeg?: number;
-}
 
 // ─── Difficulty ───
 export type DifficultyLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -183,3 +175,6 @@ export type EquipmentModifier = 'cursed' | 'perishable' | 'leased';
 
 // ─── Trail Tags (re-export from data layer) ───
 export type { TagCategory, TrailTagDef, TrailTagInstance } from '../data/trail_tags';
+
+// ─── Bosses (re-export from data layer) ───
+export type { BossDef, BossEffectType } from '../data/bosses';

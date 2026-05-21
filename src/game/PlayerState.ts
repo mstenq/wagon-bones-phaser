@@ -30,7 +30,7 @@ import { PermitDef, applyPermitEffect, getPermitBossRerollLimit, getPermitShopRe
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
-import bossesData from '../data/bosses.json';
+import bosses from '../data/bosses';
 import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
 import { getTrailTagById } from '../data/trail_tags';
 
@@ -546,7 +546,7 @@ export class PlayerState {
   /** Randomly assign one eligible boss per leg (respects minimumLeg, no repeats in legs 1–8) */
   private assignBosses(): void {
     this.bossAssignments = [];
-    const allBosses = bossesData as BossDef[];
+    const allBosses = bosses;
     const usedInFirstEight = new Set<string>();
 
     for (let leg = 1; leg <= GAMEPLAY.LEGS; leg++) {
@@ -579,7 +579,7 @@ export class PlayerState {
 
   /** Pick a different boss for a leg. Returns true if the assignment changed. */
   rerollBossForLeg(leg: number = this.leg): boolean {
-    const allBosses = bossesData as BossDef[];
+    const allBosses = bosses;
     const current = this.bossAssignments[leg - 1];
     let eligible = allBosses.filter(
       (b) => (b.minimumLeg ?? 1) <= leg && b.id !== current?.id,

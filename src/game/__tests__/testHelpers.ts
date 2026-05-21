@@ -12,7 +12,7 @@ import {
   DifficultyLevel,
   EquipmentModifier,
 } from '../types';
-import bossesData from '../../data/bosses.json';
+import { getBossById } from '../../data/bosses';
 import { GameState } from '../GameState';
 import { PlayerState, resetPlayerState, ProfessionDef, getPlayerState } from '../PlayerState';
 import { EquipmentDef, EquipmentInstance, getAllEquipment, createEquipmentInstance } from '../ItemsSystem';
@@ -185,7 +185,7 @@ export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
 
   if (options.bossId) {
     player.round = 3;
-    const boss = (bossesData as BossDef[]).find((b) => b.id === options.bossId);
+    const boss = getBossById(options.bossId);
     if (!boss) throw new Error(`Unknown boss id: "${options.bossId}"`);
     player.setBossForCurrentLeg(boss);
   }
@@ -196,7 +196,7 @@ export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
 
 /** Force boss on current leg (round 3) */
 export function setBoss(player: PlayerState, bossId: string): BossDef {
-  const boss = (bossesData as BossDef[]).find((b) => b.id === bossId);
+  const boss = getBossById(bossId);
   if (!boss) throw new Error(`Unknown boss id: "${bossId}"`);
   player.round = 3;
   player.setBossForCurrentLeg(boss);

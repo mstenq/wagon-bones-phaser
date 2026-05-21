@@ -5,7 +5,7 @@ import { getPlayerState } from './PlayerState';
 import { GAMEPLAY } from './Constants';
 import { createEmptyModifiers } from './TrailEventsSystem';
 import { resetBossRoundState } from './BossEffectsSystem';
-import bossesData from '../data/bosses.json';
+import bosses from '../data/bosses';
 import type { BossDef } from './types';
 import { getAllEquipment, EquipmentDef, ItemAura } from './ItemsSystem';
 import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableDef } from './ConsumablesSystem';
@@ -116,7 +116,7 @@ export function devGetAllAuras(): ItemAura[] {
 
 /** All boss definitions (for dev boss picker) */
 export function devGetAllBosses(): BossDef[] {
-  return bossesData as BossDef[];
+  return bosses;
 }
 
 /** Configure player state and start a boss round with a specific boss */

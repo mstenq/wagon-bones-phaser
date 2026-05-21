@@ -6,7 +6,7 @@ import allFrontierEncounters from '../../data/frontier_encounters.json';
 import packsData from '../../data/packs.json';
 import permitsData from '../../data/permits.json';
 import professionsData from '../../data/professions.json';
-import bossesData from '../../data/bosses.json';
+import bosses from '../../data/bosses';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 import stickerData from '../../data/pip_enhancements.json';
 
@@ -88,7 +88,7 @@ export class Preloader extends Scene {
     }
 
     // Load boss images (square portraits in /public/assets/bosses)
-    for (const boss of bossesData) {
+    for (const boss of bosses) {
       this.load.image(`boss_${boss.id}`, `assets/bosses/${boss.id}.png`);
     }
 
