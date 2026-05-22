@@ -15,7 +15,9 @@ import {
   applyHolyAuraXMult,
   forEachEquipmentResolved,
   hasStackedDeck,
+  multiplyCtxXMult,
 } from './effects/helpers';
+import { multiplyScore } from './scoreMath';
 import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
 
 export interface ScoringContext {
@@ -92,9 +94,9 @@ export function applyEquipmentEffects(
     },
     'skip',
   );
-  finalMult *= ctx.xMult;
+  finalMult = multiplyScore(finalMult, ctx.xMult);
 
-  const finalMiles = (baseMiles + totalValue + ctx.bonusMiles) * finalMult;
+  const finalMiles = multiplyScore(baseMiles + totalValue + ctx.bonusMiles, finalMult);
   console.log(
     `  [equip] Final: (${baseMiles} base + ${totalValue} value + ${ctx.bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`,
   );
@@ -219,7 +221,7 @@ export function processHeldInHand(
 
       // Steel enhancement: x1.5 mult per trigger
       if (die.enhancement === 'steel') {
-        heldCtx.xMult *= 1.5;
+        multiplyCtxXMult(heldCtx, 1.5);
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5 });
         console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${heldCtx.xMult})`);
       }

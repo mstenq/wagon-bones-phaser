@@ -2,10 +2,11 @@
 
 import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
+import { multiplyCtxXMult } from '../helpers';
 
 effectRegistry.registerXMult('XMULT_RISKY', (ctx, equip, index) => {
   const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
-  ctx.xMult *= xVal;
+  multiplyCtxXMult(ctx, xVal);
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
   console.log(`  [xmult] ${equip.def.name}: x${xVal} (xMult: ${ctx.xMult})`);
 });
@@ -15,7 +16,7 @@ effectRegistry.registerXMult('EMPTY_SLOT_XMULT', (ctx, equip, index) => {
   const emptySlots = player.maxEquipmentSlots - player.usedEquipmentSlots;
   if (emptySlots > 0) {
     const xVal = 1 + emptySlots * ((equip.def.effectParams as Record<string, unknown>).value as number);
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
     console.log(`  [xmult] ${equip.def.name}: x${xVal} (${emptySlots} empty slots) (xMult: ${ctx.xMult})`);
   }
@@ -25,7 +26,7 @@ effectRegistry.registerXMult('UNCOMMON_EQUIP_XMULT', (ctx, equip, index) => {
   const uncommonCount = ctx.equipment.filter((e) => e.def.rarity === 'uncommon').length;
   if (uncommonCount > 0) {
     const xVal = Math.pow(1.5, uncommonCount);
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
     console.log(`  [xmult] ${equip.def.name}: x1.5 × ${uncommonCount} uncommon items (xMult: ${ctx.xMult})`);
   }
@@ -38,7 +39,7 @@ effectRegistry.registerXMult('ENHANCEMENT_COUNT_XMULT', (ctx, equip, index) => {
   const enhCount = ctx.allDice.filter((d) => d.enhancement === enhancement).length;
   if (enhCount > 0) {
     const xVal = 1 + enhCount * perValue;
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
     console.log(`  [xmult] ${equip.def.name}: x${xVal.toFixed(1)} (${enhCount} ${enhancement} dice) (xMult: ${ctx.xMult})`);
   }
@@ -48,7 +49,7 @@ effectRegistry.registerXMult('REPEAT_HAND_XMULT', (ctx, equip, index) => {
   const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
   const handKey = `round_${ctx.handType}`;
   if (ctx.handType && (equip.state[handKey] ?? 0) > 0) {
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
     console.log(`  [xmult] ${equip.def.name}: x${xVal} (repeat hand ${ctx.handType}) (xMult: ${ctx.xMult})`);
   }
@@ -62,7 +63,7 @@ effectRegistry.registerXMult('RAINBOW_TRAIL_XMULT', (ctx, equip, index) => {
   );
   if (enhTypes.size >= 2) {
     const xVal = enhTypes.size;
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
     console.log(`  [xmult] ${equip.def.name}: x${xVal} (${enhTypes.size} enhancement types) (xMult: ${ctx.xMult})`);
   }

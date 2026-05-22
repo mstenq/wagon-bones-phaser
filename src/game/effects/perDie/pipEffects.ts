@@ -4,7 +4,7 @@ import { effectRegistry } from '../registry';
 import { checkLoadedChance } from '../../Constants';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { getPlayerState } from '../../PlayerState';
-import { dieMatchesPip, resolveChance, resolveEffectParam } from '../helpers';
+import { dieMatchesPip, multiplyCtxXMult, resolveChance, resolveEffectParam } from '../helpers';
 
 effectRegistry.registerPerDie('PIP_MULT', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
@@ -30,7 +30,7 @@ effectRegistry.registerPerDie('LUCKY_NUMBER_PIP_XMULT', (ctx, equip, _idx, die, 
   const p = equip.def.effectParams as Record<string, unknown>;
   if (dieMatchesPip(die, equip.state.pip ?? 0, ctx.equipment, ctx.hasStackedDeck)) {
     const xVal = resolveEffectParam<number>(p, 'value', getPlayerState().profession?.id);
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'xmult', value: xVal, dieId: die.id });
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal} (lucky number ${equip.state.pip})`);
   }
@@ -55,7 +55,7 @@ effectRegistry.registerPerDie('FIRST_PIP_XMULT', (ctx, equip, equipIdx, die, _t)
   const xVal = p.value as number;
   const firstPipDieId = ctx.scoringDice.find((d) => dieMatchesPip(d, pip, ctx.equipment, ctx.hasStackedDeck))?.id;
   if (!firstPipDieId || die.id !== firstPipDieId) return;
-  ctx.xMult *= xVal;
+  multiplyCtxXMult(ctx, xVal);
   ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: equipIdx }, popupType: 'xmult', value: xVal, dieId: die.id });
   console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal} (first ${pip})`);
 });
@@ -64,7 +64,7 @@ effectRegistry.registerPerDie('PIP_XMULT', (ctx, equip, equipIdx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
   if (dieMatchesPip(die, p.pip as number, ctx.equipment, ctx.hasStackedDeck)) {
     const xVal = p.value as number;
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: equipIdx }, popupType: 'xmult', value: xVal, dieId: die.id });
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal} (pip ${p.pip})`);
   }
@@ -78,7 +78,7 @@ effectRegistry.registerPerDie('CONSECUTIVE_PIP_XMULT', (ctx, equip, equipIdx, di
     const count = (equip.state.consecutiveCount ?? 0) + 1;
     equip.state.consecutiveCount = count;
     const xVal = 1 + (count - 1) * increment;
-    ctx.xMult *= xVal;
+    multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: equipIdx }, popupType: 'xmult', value: xVal, dieId: die.id });
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal} (${count} consecutive ${pip}s)`);
   } else {

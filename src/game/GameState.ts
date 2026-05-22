@@ -15,6 +15,7 @@ import {
   HandType,
 } from './types';
 import { rollDice, rollDie, detectBestHand, scoreHand, createDie, drawFromPouch } from './DiceSystem';
+import { multiplyScore } from './scoreMath';
 import { getPlayerState } from './PlayerState';
 import {
   applyEquipmentEffects,
@@ -442,14 +443,14 @@ export class GameState {
     const heldResult = processHeldInHand(heldDice, player.equipment, handType);
 
     // Apply held-in-hand mult bonuses to the base result before independent equipment
-    const heldMult = (baseResult.mult + heldResult.bonusMult) * heldResult.xMult;
+    const heldMult = multiplyScore(baseResult.mult + heldResult.bonusMult, heldResult.xMult);
     const mergedMutations = createEmptyScoringMutations();
     mergeMutations(mergedMutations, baseResult.mutations);
     mergeMutations(mergedMutations, heldResult.mutations);
     const afterHeldResult: ScoreResult = {
       handResult: baseResult.handResult,
       totalValue: baseResult.totalValue,
-      miles: (baseResult.handResult.baseMiles + baseResult.totalValue) * heldMult,
+      miles: multiplyScore(baseResult.handResult.baseMiles + baseResult.totalValue, heldMult),
       mult: heldMult,
       animEvents: [...baseResult.animEvents, ...heldResult.animEvents],
       mutations: mergedMutations,

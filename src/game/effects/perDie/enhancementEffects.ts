@@ -3,7 +3,7 @@
 import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
 import { checkLoadedChance } from '../../Constants';
-import { resolveChance } from '../helpers';
+import { multiplyCtxXMult, resolveChance } from '../helpers';
 
 effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement === 'gold') {
@@ -40,7 +40,7 @@ effectRegistry.registerPerDie('BONE_DICE_XMULT_CHANCE', (ctx, equip, _idx, die, 
     const p = equip.def.effectParams as Record<string, unknown>;
     if (checkLoadedChance(p.chance as [number, number], ctx.equipment)) {
       const xVal = p.value as number;
-      ctx.xMult *= xVal;
+      multiplyCtxXMult(ctx, xVal);
       ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'xmult', value: xVal, dieId: die.id });
       console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal}`);
     }

@@ -367,8 +367,8 @@ describe('Copy item round-start effects', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('mirror_lake'), kit],
     });
-    // PAIR baseMult 1; mirror copies kit x1.75, kit applies x1.75
-    expect(result.mult).toBeCloseTo(3.0625, 4);
+    // PAIR baseMult 1; mirror copies kit x1.75, kit applies x1.75 (rounded per multiply)
+    expect(result.mult).toBe(3.06);
   });
 });
 

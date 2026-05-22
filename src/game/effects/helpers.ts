@@ -6,8 +6,14 @@ import { Die, HandType } from '../types';
 import { getPlayerState } from '../PlayerState';
 import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 import type { ScoringPipelineContext } from './types';
+import { multiplyScore } from '../scoreMath';
 
 export type UnresolvedCopyBehavior = 'none' | 'skip';
+
+/** Multiply pipeline xMult and round to avoid float drift. */
+export function multiplyCtxXMult(ctx: { xMult: number }, factor: number): void {
+  ctx.xMult = multiplyScore(ctx.xMult, factor);
+}
 
 export function forEachEquipmentResolved(
   equipment: EquipmentInstance[],
@@ -67,7 +73,7 @@ export function applyHolyAuraXMult(
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
     if (equip.def.aura?.id === 'holy') {
-      finalMult *= 1.5;
+      finalMult = multiplyScore(finalMult, 1.5);
       ctx.animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: 1.5 });
       console.log(`  [equip] ${equip.def.name} HOLY aura: x1.5 mult (finalMult: ${finalMult})`);
     }

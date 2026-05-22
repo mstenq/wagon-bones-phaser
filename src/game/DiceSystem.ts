@@ -10,7 +10,8 @@ import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from './E
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
 import { GAMEPLAY, resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
-import { dieMatchesPip, hasStackedDeck } from './effects/helpers';
+import { dieMatchesPip, hasStackedDeck, multiplyCtxXMult } from './effects/helpers';
+import { multiplyScore } from './scoreMath';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
 
@@ -433,7 +434,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} WOODEN: +10 miles (totalValue: ${totalValue})`);
           break;
         case 'diamond':
-          xMult *= 2;
+          xMult = multiplyScore(xMult, 2);
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 2, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} DIAMOND: x2 mult (xMult: ${xMult})`);
           break;
@@ -468,7 +469,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} ICY aura: +50 miles (totalValue: ${totalValue})`);
           break;
         case 'holy':
-          xMult *= 1.5;
+          xMult = multiplyScore(xMult, 1.5);
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} HOLY aura: x1.5 (xMult: ${xMult})`);
           break;
@@ -519,7 +520,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
       const handlerDeltaXMult = pipelineCtx.xMult / savedCtxXMult;
       pipelineCtx.totalValue = totalValue + handlerDeltaTotalValue;
       pipelineCtx.bonusMult = bonusMult + handlerDeltaBonusMult;
-      pipelineCtx.xMult = xMult * handlerDeltaXMult;
+      pipelineCtx.xMult = multiplyScore(xMult, handlerDeltaXMult);
     } // end trigger loop
   }
 
@@ -611,8 +612,8 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
     }
   }
 
-  const mult = (handResult.baseMult + bonusMult) * xMult;
-  const miles = (handResult.baseMiles + totalValue) * mult;
+  const mult = multiplyScore(handResult.baseMult + bonusMult, xMult);
+  const miles = multiplyScore(handResult.baseMiles + totalValue, mult);
   console.log(
     `  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalValue} value) * (${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult = ${miles} miles (mult: ${mult})`,
   );

@@ -1,11 +1,12 @@
 // ─── STATEFUL_XMULT, LUCKY_TRIGGER_XMULT, SELL_XMULT_GAIN, TRAIL_GUIDE_XMULT, DECAYING_XMULT, ROUND_START_XMULT_DESTROY, DIAMOND_DESTROYED_XMULT, GRAVEROBBER_XMULT ───
 
 import { effectRegistry } from '../registry';
+import { multiplyCtxXMult } from '../helpers';
 
 effectRegistry.registerXMult('STATEFUL_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm !== 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
@@ -14,7 +15,7 @@ effectRegistry.registerXMult('STATEFUL_XMULT', (ctx, equip, index) => {
 effectRegistry.registerXMult('LUCKY_TRIGGER_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm !== 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   } else {
@@ -25,7 +26,7 @@ effectRegistry.registerXMult('LUCKY_TRIGGER_XMULT', (ctx, equip, index) => {
 effectRegistry.registerXMult('SELL_XMULT_GAIN', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm !== 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   } else {
@@ -36,7 +37,7 @@ effectRegistry.registerXMult('SELL_XMULT_GAIN', (ctx, equip, index) => {
 effectRegistry.registerXMult('TRAIL_GUIDE_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
@@ -45,7 +46,7 @@ effectRegistry.registerXMult('TRAIL_GUIDE_XMULT', (ctx, equip, index) => {
 effectRegistry.registerXMult('DECAYING_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 0 && xm !== 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
@@ -54,7 +55,7 @@ effectRegistry.registerXMult('DECAYING_XMULT', (ctx, equip, index) => {
 effectRegistry.registerXMult('ROUND_START_XMULT_DESTROY', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
@@ -63,7 +64,7 @@ effectRegistry.registerXMult('ROUND_START_XMULT_DESTROY', (ctx, equip, index) =>
 effectRegistry.registerXMult('DIAMOND_DESTROYED_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
@@ -72,7 +73,7 @@ effectRegistry.registerXMult('DIAMOND_DESTROYED_XMULT', (ctx, equip, index) => {
 effectRegistry.registerXMult('GRAVEROBBER_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
@@ -81,7 +82,7 @@ effectRegistry.registerXMult('GRAVEROBBER_XMULT', (ctx, equip, index) => {
 effectRegistry.registerXMult('ENHANCED_DESTROYED_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
@@ -90,7 +91,7 @@ effectRegistry.registerXMult('ENHANCED_DESTROYED_XMULT', (ctx, equip, index) => 
 effectRegistry.registerXMult('REROLL_COUNT_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {
-    ctx.xMult *= xm;
+    multiplyCtxXMult(ctx, xm);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
     console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
   }
