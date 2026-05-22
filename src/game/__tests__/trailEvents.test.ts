@@ -611,7 +611,7 @@ describe('Effect application', () => {
 
   test('ADD_AURA_TO_RANDOM_DICE applies aura', () => {
     const player = resetPlayerState();
-    // All dice start with null aura
+    player.dice = diceWithValue(6, 5);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'ADD_AURA_TO_RANDOM_DICE', count: 3, aura: 'fire' }, player, mods);
     const fireDice = player.dice.filter((d) => d.aura === 'fire');

@@ -2,7 +2,12 @@
 // Typed profession data following the trail_tags.ts pattern.
 // Each profession defines modifiers applied at run start and optional signature equipment.
 
+import type { DiceEnhancement } from '../game/types';
+
 // ─── Types ───
+
+/** Non-null dice enhancement for profession starting pouches */
+export type ProfessionStartingEnhancement = Exclude<DiceEnhancement, null>;
 
 export interface ProfessionSpecialEquipment {
   name: string;
@@ -36,6 +41,7 @@ export interface ProfessionDef {
   name: string;
   description: string;
   modifiers: ProfessionModifiers;
+  startingDice: ProfessionStartingEnhancement[];
   specialEquipment?: ProfessionSpecialEquipment;
 }
 
@@ -48,6 +54,7 @@ const professions: ProfessionDef[] = [
     name: 'Hank Caldwell',
     description: '+1 re-roll per day',
     modifiers: { rerolls: 1 },
+    startingDice: ['wooden', 'wooden', 'wooden', 'steel', 'steel'],
     specialEquipment: {
       name: 'Flour Sack',
       effect: 'Keeps +5 hand size with no decay each round',
@@ -59,6 +66,7 @@ const professions: ProfessionDef[] = [
     name: 'Elias Mercer',
     description: '+1 day of travel',
     modifiers: { days: 1 },
+    startingDice: ['wooden', 'wooden', 'steel', 'steel', 'stone'],
     specialEquipment: {
       name: "Surveyor's Transit",
       effect: '1 in 2 chance to upgrade trail knowledge of hand type played',
@@ -70,6 +78,7 @@ const professions: ProfessionDef[] = [
     name: 'Charles Whitlock',
     description: 'Starts with $20',
     modifiers: { startingMoney: 20 },
+    startingDice: ['gold', 'gold', 'gold', 'diamond', 'diamond'],
     specialEquipment: {
       name: 'Bank Note',
       effect: 'Selling Bank Note wipes your debt clean',
@@ -81,6 +90,7 @@ const professions: ProfessionDef[] = [
     name: 'Jesse Rawlins',
     description: 'Earns no interest. $1 per remaining day and unused re-roll.',
     modifiers: { noInterest: true, endOfRoundBonusPerRemaining: 1 },
+    startingDice: ['loaded', 'loaded', 'steel', 'steel', 'bone'],
     specialEquipment: {
       name: 'Payday',
       effect: 'Earn $12 at end of round',
@@ -92,6 +102,7 @@ const professions: ProfessionDef[] = [
     name: 'Abigail Turner',
     description: '1 extra equipment slot, -1 day of travel',
     modifiers: { equipmentSlots: 1, days: -1 },
+    startingDice: ['gold', 'diamond', 'lucky', 'steel', 'wooden'],
     specialEquipment: {
       name: 'Snake Eyes',
       effect: '1 in 2 chance for a supply card when a 1 is scored',
@@ -106,6 +117,7 @@ const professions: ProfessionDef[] = [
       startingVouchers: ['extra_supplies'],
       startingSupplyCards: ['second_helpings', 'second_helpings'],
     },
+    startingDice: ['bone', 'bone', 'wooden', 'wooden', 'stone'],
     specialEquipment: {
       name: 'Leftovers',
       effect: 'Guaranteed supply card when opening a booster pack',
@@ -117,6 +129,7 @@ const professions: ProfessionDef[] = [
     name: 'Caleb Winters',
     description: 'Starts with binoculars voucher, -1 supply slot',
     modifiers: { startingVouchers: ['binoculars'], supplySlots: -1 },
+    startingDice: ['wooden', 'steel', 'lucky', 'stone', 'bone'],
     specialEquipment: {
       name: 'Guide Lantern',
       effect: 'Gain x0.2 mult for every trail guide used',
@@ -128,6 +141,7 @@ const professions: ProfessionDef[] = [
     name: 'Isaac Granger',
     description: 'Frontier Encounter cards appear in shop, start with a Priests Blessings card',
     modifiers: { frontierInShop: true, startingSupplyCards: ['priests_blessings'] },
+    startingDice: ['steel', 'steel', 'steel', 'bone', 'bone'],
     specialEquipment: {
       name: 'Marked',
       effect: '+2 mult per hand played without scoring a 6',
@@ -141,6 +155,7 @@ const professions: ProfessionDef[] = [
     modifiers: {
       startingVouchers: ['extra_supplies', 'extra_trail_guides', 'extra_stock'],
     },
+    startingDice: ['gold', 'gold', 'diamond', 'diamond', 'lucky'],
     specialEquipment: {
       name: 'Gold Pan',
       effect: 'Guaranteed $2 when an enhanced die scores',
@@ -152,6 +167,7 @@ const professions: ProfessionDef[] = [
     name: 'Thomas "Tommy" Reeve',
     description: 'Start with +2 hand size and -1 equipment slot',
     modifiers: { handSize: 2, equipmentSlots: -1 },
+    startingDice: ['lucky', 'lucky', 'lucky', 'loaded', 'loaded'],
     specialEquipment: {
       name: 'Lucky Number',
       effect: 'x2 mult when your lucky number scores',
@@ -163,6 +179,7 @@ const professions: ProfessionDef[] = [
     name: 'Nathan Cole',
     description: 'After each boss gain a double tag',
     modifiers: { doubleTagOnBoss: true },
+    startingDice: ['bone', 'bone', 'bone', 'steel', 'stone'],
     specialEquipment: {
       name: 'Wanted Poster',
       effect: 'Earn $8 when the wanted hand is played',
@@ -174,6 +191,7 @@ const professions: ProfessionDef[] = [
     name: 'Henry Pritchard',
     description: 'Balance miles and mult before calculating. x2 base blind size.',
     modifiers: { balanceMilesAndMult: true, blindSizeMultiplier: 2 },
+    startingDice: ['stone', 'stone', 'wooden', 'wooden', 'gold'],
     specialEquipment: {
       name: 'Savings Account',
       effect: 'Earn an extra $1 of interest per $5 held',
@@ -192,6 +210,7 @@ const professions: ProfessionDef[] = [
       ],
       ghostMedicineOnBoss: true,
     },
+    startingDice: ['steel', 'steel', 'stone', 'stone', 'bone'],
     specialEquipment: {
       name: 'Emergency Supplies',
       effect: 'Free supply card when playing a hand at $8 or less',
@@ -203,6 +222,7 @@ const professions: ProfessionDef[] = [
     name: 'Victor Hale',
     description: '+2 re-rolls per day, -1 hand size',
     modifiers: { rerolls: 2, handSize: -1 },
+    startingDice: ['loaded', 'loaded', 'loaded', 'gold', 'diamond'],
     specialEquipment: {
       name: 'Card Counter',
       effect: '+4 mult when hand contains two pair',
@@ -214,6 +234,7 @@ const professions: ProfessionDef[] = [
     name: 'Dev Mode',
     description: 'Starts with $999. For testing purposes.',
     modifiers: { startingMoney: 99900 },
+    startingDice: ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond', 'stone'],
   },
 ];
 

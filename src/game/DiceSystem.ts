@@ -1,7 +1,7 @@
 // ─── Dice System (No Phaser imports) ───
 // Handles dice creation, rolling, pouch management, hand detection, and scoring.
 
-import { Die, HandType, HandResult, HandDefinition, ScoreResult, ScoreAnimEvent } from './types';
+import { Die, DiceEnhancement, HandType, HandResult, HandDefinition, ScoreResult, ScoreAnimEvent } from './types';
 import hands from '../data/hands';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
@@ -9,7 +9,7 @@ import { effectRegistry, getScoredRetriggerCount } from './effects';
 import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from './EquipmentEffects';
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
-import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
+import { GAMEPLAY, resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
 import { dieMatchesPip, hasStackedDeck } from './effects/helpers';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
@@ -37,6 +37,21 @@ export function createDie(overrides?: Partial<Die>): Die {
 
 export function createPouch(count: number): Die[] {
   return Array.from({ length: count }, () => createDie());
+}
+
+/** Create profession-enhanced dice (non-null enhancements only). */
+export function createStartingDice(enhancements: Exclude<DiceEnhancement, null>[]): Die[] {
+  return enhancements.map((enhancement) => createDie({ enhancement }));
+}
+
+/** Profession dice plus standard (unenhanced) dice up to total collection size. */
+export function createRunStartingPouch(
+  professionEnhancements: Exclude<DiceEnhancement, null>[],
+  totalCount: number = GAMEPLAY.STARTING_DICE,
+): Die[] {
+  const professionDice = createStartingDice(professionEnhancements);
+  const standardCount = Math.max(0, totalCount - professionDice.length);
+  return [...professionDice, ...createPouch(standardCount)];
 }
 
 // ─── Rolling ───

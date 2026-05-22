@@ -53,7 +53,8 @@ src/data/          # JSON data + items.ts definitions
 ### Data Layer (src/data/)
 
 - `items.ts` — **Sole source** for equipment definitions (includes `hintDisplay` functions)
-- JSON files — hands, professions, trail guides, supplies, frontier encounters, bosses, etc.
+- Typed data modules (`professions.ts`, `trail_guides.ts`, etc.) and remaining JSON — hands, bosses, etc.
+- `professions.ts` — profession modifiers and **starting enhanced dice** per profession (plus standard dice to `GAMEPLAY.STARTING_DICE`, default 25)
 
 ## Key Patterns
 

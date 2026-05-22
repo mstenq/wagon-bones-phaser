@@ -17,7 +17,8 @@ import { GameState } from '../GameState';
 import { PlayerState, resetPlayerState, ProfessionDef, getPlayerState } from '../PlayerState';
 import { EquipmentDef, EquipmentInstance, getAllEquipment, createEquipmentInstance } from '../ItemsSystem';
 import { EQUIPMENT_MODIFIER } from '../Constants';
-import { createDie } from '../DiceSystem';
+import { createDie, createPouch } from '../DiceSystem';
+import { GAMEPLAY } from '../Constants';
 
 // ─── Item Lookup ───
 
@@ -171,6 +172,9 @@ export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
   if (options.profession) player.applyProfession(options.profession);
   if (options.equipment) player.equipment = [...options.equipment];
   if (options.dice) player.dice = [...options.dice];
+  if (!options.profession && !options.dice) {
+    player.dice = createPouch(GAMEPLAY.STARTING_DICE);
+  }
   player.finalizeRunSetup();
   if (options.handSize !== undefined) player.handSize = options.handSize;
   if (options.maxEquipmentSlots !== undefined) player.maxEquipmentSlots = options.maxEquipmentSlots;

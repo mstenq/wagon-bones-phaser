@@ -11,7 +11,7 @@ import {
   TagCategory,
   DifficultyLevel,
 } from './types';
-import { createPouch } from './DiceSystem';
+import { createPouch, createRunStartingPouch } from './DiceSystem';
 import { Economy } from './Economy';
 import { EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { acquireRewardEquipmentInstance, getEquipmentPurchasePrice } from './EquipmentModifiers';
@@ -29,25 +29,13 @@ import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitBossRerollLimit, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
 import type { TrailEventDef } from '../data/trail_events';
-import trailGuidesData from '../data/trail_guides.json';
-import professionsData from '../data/professions.json';
+import trailGuidesData from '../data/trail_guides';
+import { getProfessionById, type ProfessionDef } from '../data/professions';
 import bosses from '../data/bosses';
 import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
 import { getTrailTagById } from '../data/trail_tags';
 
-export interface ProfessionSpecialEquipment {
-  name: string;
-  effect: string;
-}
-
-export interface ProfessionDef {
-  id: string;
-  title: string;
-  name: string;
-  description: string;
-  modifiers: Record<string, unknown>;
-  specialEquipment?: ProfessionSpecialEquipment;
-}
+export type { ProfessionDef } from '../data/professions';
 
 export interface PayoutBreakdown {
   roundReward: number; // base reward for completing the round ($3/$4/$5)
@@ -154,8 +142,8 @@ export class PlayerState {
 
   constructor() {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
-    this.dice = createPouch(DEFAULT_STARTING_DICE);
-    this.nextDieId = this.dice.length; // start counter after initial dice
+    this.dice = [];
+    this.nextDieId = 0;
     this.equipment = [];
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;
     this.consumables = [];
@@ -204,10 +192,17 @@ export class PlayerState {
 
   /** Apply profession modifiers after selection */
   applyProfession(professionId: string): void {
-    const prof = professionsData.find((p) => p.id === professionId);
+    const prof = getProfessionById(professionId);
     if (!prof) return;
-    this.profession = prof as ProfessionDef;
+    this.profession = prof;
     const m = prof.modifiers as Record<string, unknown>;
+
+    if (prof.startingDice.length > 0) {
+      this.dice = createRunStartingPouch(prof.startingDice, GAMEPLAY.STARTING_DICE);
+    } else {
+      this.dice = createPouch(GAMEPLAY.STARTING_DICE);
+    }
+    this.nextDieId = this.dice.length;
 
     // Starting money bonus
     if (typeof m.startingMoney === 'number') {
@@ -823,7 +818,8 @@ export class PlayerState {
   /** Reset for a new run */
   reset(): void {
     this.economy = new Economy(DEFAULT_STARTING_MONEY);
-    this.dice = createPouch(10);
+    this.dice = [];
+    this.nextDieId = 0;
     this.spentDiceIds = new Set();
     this.equipment = [];
     this.maxEquipmentSlots = DEFAULT_MAX_EQUIPMENT_SLOTS;

@@ -5,10 +5,11 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
+import { getPlayerState } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
-import professionsData from '../../data/professions';
+import professionsData, { type ProfessionDef } from '../../data/professions';
+import { ProfessionStartingDiceTooltip } from '../ui/ProfessionStartingDiceTooltip';
 
 const CARD_W = 190;
 const CARD_H = 310;
@@ -26,6 +27,7 @@ export class ProfessionSelectScene extends Scene {
   private isDragging = false;
   private dragStartY = 0;
   private scrollStartY = 0;
+  private startingDiceTooltip = new ProfessionStartingDiceTooltip();
 
   constructor() {
     super('ProfessionSelect');
@@ -35,7 +37,10 @@ export class ProfessionSelectScene extends Scene {
     const { width, height } = this.scale;
 
     this.scale.on('resize', this.onResize, this);
-    this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
+    this.events.on('shutdown', () => {
+      this.scale.off('resize', this.onResize, this);
+      this.startingDiceTooltip.hide();
+    });
 
     // Background
     const bg = this.add.graphics();
@@ -116,7 +121,7 @@ export class ProfessionSelectScene extends Scene {
       const cx = startX + col * (CARD_W + CARD_GAP);
       const cy = CARD_H / 2 + row * (CARD_H + CARD_GAP);
 
-      const card = this.createProfessionCard(prof, cx, cy);
+      const card = this.createProfessionCard(prof, cx, cy, row);
       this.scrollContainer.add(card);
       this.cards.push(card);
     });
@@ -164,7 +169,12 @@ export class ProfessionSelectScene extends Scene {
     this.scrollContainer.y = Phaser.Math.Clamp(newY, scrollAreaTop + scrollAreaH - this.contentHeight, scrollAreaTop);
   }
 
-  private createProfessionCard(prof: ProfessionDef, cx: number, cy: number): Phaser.GameObjects.Container {
+  private createProfessionCard(
+    prof: ProfessionDef,
+    cx: number,
+    cy: number,
+    row: number,
+  ): Phaser.GameObjects.Container {
     const container = this.add.container(cx, cy);
 
     // Card background
@@ -256,6 +266,26 @@ export class ProfessionSelectScene extends Scene {
     container.add(hitZone);
     hitZone.setInteractive({ useHandCursor: true });
 
+    const showStartingDiceTooltip = () => {
+      const matrix = container.getWorldTransformMatrix();
+      const placeBelow = row === 0;
+      this.startingDiceTooltip.show(
+        this,
+        prof,
+        {
+          x: matrix.tx,
+          y: placeBelow ? matrix.ty + CARD_H / 2 + 4 : matrix.ty - CARD_H / 2 - 4,
+          placement: placeBelow ? 'below' : 'above',
+        },
+        {
+          minX: 12,
+          maxX: this.scale.width - 12,
+          minY: 88,
+          maxY: this.scale.height - 96,
+        },
+      );
+    };
+
     hitZone.on('pointerover', () => {
       if (this.selectedId !== prof.id) {
         cardBg.clear();
@@ -264,6 +294,7 @@ export class ProfessionSelectScene extends Scene {
         cardBg.lineStyle(2, COLORS.BTN_HOVER, 1);
         cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
       }
+      showStartingDiceTooltip();
     });
 
     hitZone.on('pointerout', () => {
@@ -274,9 +305,11 @@ export class ProfessionSelectScene extends Scene {
         cardBg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
         cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
       }
+      this.startingDiceTooltip.scheduleHide(this);
     });
 
     hitZone.on('pointerdown', () => {
+      this.startingDiceTooltip.hide();
       this.selectProfession(prof.id);
     });
 
@@ -320,6 +353,7 @@ export class ProfessionSelectScene extends Scene {
   }
 
   private onResize(): void {
+    this.startingDiceTooltip.hide();
     this.scene.restart();
   }
 }

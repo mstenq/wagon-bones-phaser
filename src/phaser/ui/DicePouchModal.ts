@@ -10,6 +10,7 @@ import { getPlayerState } from '../../game/PlayerState';
 import { Die } from '../../game/types';
 import { DiceSprite } from './DiceSprite';
 import { Button } from './Button';
+import { getDiceGroupDisplayLabel, getDiceGroupKey } from './diceGrouping';
 
 type FilterMode = 'all' | 'available' | 'spent';
 
@@ -114,11 +115,6 @@ export class DicePouchModal extends GameObjects.Container {
     }
   }
 
-  /** Generate a grouping key for dice based on visual identity (not face value) */
-  private getDiceGroupKey(die: Die): string {
-    return `${die.enhancement || ''}|${die.aura || ''}|${die.sticker || ''}|${die.isGrimy}`;
-  }
-
   /** Group dice by visual identity, preserving spent/available status */
   private groupDice(dice: Die[], markSpent: boolean): DiceGroup[] {
     const player = getPlayerState();
@@ -127,9 +123,8 @@ export class DicePouchModal extends GameObjects.Container {
 
     for (const die of dice) {
       const isSpent = spentIds.has(die.id);
-      // In "all" mode, group separately by spent vs available
       const spentSuffix = markSpent ? (isSpent ? '|SPENT' : '|AVAIL') : '';
-      const key = this.getDiceGroupKey(die) + spentSuffix;
+      const key = getDiceGroupKey(die) + spentSuffix;
 
       if (!groups.has(key)) {
         groups.set(key, {
@@ -142,7 +137,6 @@ export class DicePouchModal extends GameObjects.Container {
       groups.get(key)!.dice.push(die);
     }
 
-    // Sort: available groups first, then spent
     return [...groups.values()].sort((a, b) => {
       if (a.isSpent !== b.isSpent) return a.isSpent ? 1 : -1;
       return 0;
@@ -185,7 +179,7 @@ export class DicePouchModal extends GameObjects.Container {
     const markSpent = this.filterMode === 'all';
     const groups = this.groupDice(dice, markSpent);
 
-    const spacing = 76;
+    const spacing = 88;
     const cols = Math.max(1, Math.floor((panelW - 40) / spacing));
     const totalGroups = groups.length;
     const totalW = (Math.min(totalGroups, cols) - 1) * spacing;
@@ -208,17 +202,14 @@ export class DicePouchModal extends GameObjects.Container {
       this.diceContainer.add(sprite);
       this.diceSprites.push(sprite);
 
-      // Count label below the die
-      if (group.dice.length > 1) {
-        const countLabel = this.scene.add
-          .text(x, y + 36, `x${group.dice.length}`, {
-            fontFamily: FONTS.PRIMARY,
-            fontSize: '12px',
-            color: group.isSpent ? TEXT_COLORS.DISABLED : TEXT_COLORS.SECONDARY,
-          })
-          .setOrigin(0.5);
-        this.diceContainer.add(countLabel);
-      }
+      const countLabel = this.scene.add
+        .text(x, y + 36, getDiceGroupDisplayLabel(group.representative, group.dice.length), {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '12px',
+          color: group.isSpent ? TEXT_COLORS.DISABLED : TEXT_COLORS.SECONDARY,
+        })
+        .setOrigin(0.5);
+      this.diceContainer.add(countLabel);
     }
 
     // Summary text
