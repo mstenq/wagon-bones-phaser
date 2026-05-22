@@ -584,6 +584,13 @@ export class ItemCard extends GameObjects.Container {
     aura_holy: { text: '#fffacd' },
   };
 
+  /** Tooltip uses larger type and brighter plain text than on-card hints */
+  private static tooltipSegmentColors(style: string): { text: string; bg?: number } {
+    const base = ItemCard.HINT_COLORS[style] ?? ItemCard.HINT_COLORS.text;
+    if (style === 'text') return { text: COLORS.TOOLTIP_BODY_TEXT };
+    return base;
+  }
+
   /** Build aura bonus row if this card has a scoring aura */
   private getAuraHintRow(): HintSegment[] | null {
     const aura = this._def.aura;
@@ -632,7 +639,7 @@ export class ItemCard extends GameObjects.Container {
     this.hintObjects = [];
 
     const scale = this._options.cardScale ?? 1;
-    const fontSize = Math.round(18 * scale);
+    const fontSize = Math.round(24 * scale);
     const padX = 3 * scale;
     const padY = 1 * scale;
     const chipRadius = 3 * scale;
@@ -973,7 +980,7 @@ export class ItemCard extends GameObjects.Container {
     const nameText = this.scene.add
       .text(TOOLTIP_PAD, TOOLTIP_PAD, this._def.name, {
         fontFamily: 'Arial',
-        fontSize: '14px',
+        fontSize: `${UI.CARD_TOOLTIP_TITLE_FONT_SIZE}px`,
         color: (this._def.rarity && RARITY_LABEL_COLORS[this._def.rarity]) || '#ffffff',
         fontStyle: 'bold',
       })
@@ -983,7 +990,7 @@ export class ItemCard extends GameObjects.Container {
     const tooltipChildren: GameObjects.GameObject[] = [nameText];
     let contentWidth = nameText.width;
 
-    const tooltipFontSize = 12;
+    const tooltipFontSize = UI.CARD_TOOLTIP_FONT_SIZE;
     const segGap = 4;
     const padX = 3;
     const padY = 1;
@@ -998,7 +1005,7 @@ export class ItemCard extends GameObjects.Container {
       let rowWidth = 0;
       let rowHeight = 0;
       for (const seg of row) {
-        const colors = ItemCard.HINT_COLORS[seg.style] ?? ItemCard.HINT_COLORS.text;
+        const colors = ItemCard.tooltipSegmentColors(seg.style);
         const hasBg = colors.bg !== undefined;
         const tmpText = this.scene.add.text(0, 0, seg.text, {
           fontFamily: 'Arial',
@@ -1019,7 +1026,7 @@ export class ItemCard extends GameObjects.Container {
       let curX = TOOLTIP_PAD;
       for (let i = 0; i < row.length; i++) {
         const seg = row[i];
-        const colors = ItemCard.HINT_COLORS[seg.style] ?? ItemCard.HINT_COLORS.text;
+        const colors = ItemCard.tooltipSegmentColors(seg.style);
         const measurement = measurements[i];
         if (measurement.hasBg) {
           const chipG = this.scene.add.graphics();
@@ -1045,7 +1052,7 @@ export class ItemCard extends GameObjects.Container {
       const rarityText = this.scene.add
         .text(TOOLTIP_PAD, bottomY + 8, rarityLabel, {
           fontFamily: 'Arial',
-          fontSize: '11px',
+          fontSize: `${UI.CARD_TOOLTIP_META_FONT_SIZE}px`,
           color: (this._def.rarity && RARITY_LABEL_COLORS[this._def.rarity]) || '#888888',
         })
         .setOrigin(0, 0);
@@ -1060,7 +1067,7 @@ export class ItemCard extends GameObjects.Container {
       const auraText = this.scene.add
         .text(TOOLTIP_PAD, bottomY + 6, `✦ ${aura.name}: ${aura.description}`, {
           fontFamily: 'Arial',
-          fontSize: '11px',
+          fontSize: `${UI.CARD_TOOLTIP_META_FONT_SIZE}px`,
           color: '#ddaa44',
           fontStyle: 'bold',
         })
@@ -1076,7 +1083,7 @@ export class ItemCard extends GameObjects.Container {
         const modText = this.scene.add
           .text(TOOLTIP_PAD, bottomY + 6, line.text, {
             fontFamily: 'Arial',
-            fontSize: '11px',
+            fontSize: `${UI.CARD_TOOLTIP_META_FONT_SIZE}px`,
             color: line.color,
             fontStyle: 'bold',
           })

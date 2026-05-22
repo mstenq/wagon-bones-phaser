@@ -196,6 +196,8 @@ export const COLORS = {
   // Tooltip
   TOOLTIP_BG: 0x1a1a2e,
   TOOLTIP_BORDER: 0x555588,
+  /** Plain glue text on tooltips (brighter than card-hint default for dark bg) */
+  TOOLTIP_BODY_TEXT: '#d8dce8',
 
   // Accents
   GOLD: 0xffd700,
@@ -218,9 +220,9 @@ export const COLORS = {
 // ─── Text Colors (CSS strings for Phaser Text objects) ───
 export const TEXT_COLORS = {
   PRIMARY: '#ffffff',
-  SECONDARY: '#cccccc',
-  MUTED: '#aaaaaa',
-  DISABLED: '#666666',
+  SECONDARY: '#ebebeb',
+  MUTED: '#c0c0c0',
+  DISABLED: '#b0b0b0',
   GOLD: '#ffcc00',
   MONEY: '#ffd700',
   SCORE_GREEN: '#44ff44',
@@ -282,6 +284,9 @@ export const UI = {
   CARD_PRICE_TAG_H: 26,
   CARD_PRICE_TAG_GAP: 6,
   CARD_TOOLTIP_PAD: 10,
+  CARD_TOOLTIP_TITLE_FONT_SIZE: 16,
+  CARD_TOOLTIP_FONT_SIZE: 14,
+  CARD_TOOLTIP_META_FONT_SIZE: 14,
 
   // Game scene (main content area — right of sidebar)
   HAND_Y_RATIO: 0.72,
