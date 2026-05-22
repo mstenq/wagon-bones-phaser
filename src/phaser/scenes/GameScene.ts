@@ -146,10 +146,10 @@ export class GameScene extends Scene {
   private pendingRestore: GameRoundSaveData | null = null;
 
   init(data: { restore?: GameRoundSaveData } = {}) {
-    if (data.restore) {
-      this.pendingRestore = data.restore;
-      this.gameState = null!;
-    }
+    // Always discard prior round state — the scene instance is reused across rounds and
+    // shutdown may not run before the next start (e.g. after autosave restore → win → new round).
+    this.pendingRestore = data.restore ?? null;
+    this.gameState = null!;
   }
 
   getGameState(): GameState {
@@ -172,8 +172,9 @@ export class GameScene extends Scene {
         // Pick up any dice added during leg transition or round start
         this.pendingNewDiceIds = player.pendingNewDiceIds.splice(0);
       }
-      // Clear selected state from previous round (scene instance is reused)
+      // Clear selection state from previous round (scene instance is reused)
       this.selectedHandIds = new Set();
+      this.lockedDiceIds = new Set();
     }
 
     this.scale.on('resize', this.onResize, this);

@@ -198,4 +198,24 @@ describe('SaveLoad', () => {
   test('getProfessionById used in restore', () => {
     expect(getProfessionById('outlaw')).toBeDefined();
   });
+
+  test('startRound clears restored ROLL state for the next blind', () => {
+    resetPlayerState();
+    const player = getPlayerState();
+    player.applyProfession('farmer');
+    player.finalizeRunSetup();
+
+    const restored = new GameState();
+    restored.startRound();
+    restored.selectForRoll(restored.state.hand.map((d) => d.id));
+    expect(restored.state.phase).toBe('ROLL');
+    expect(restored.state.rolledDice.length).toBeGreaterThan(0);
+
+    // New blind: fresh GameState + startRound (must not reuse restored round state)
+    const nextBlind = new GameState({ targetMiles: player.targetMiles });
+    nextBlind.startRound();
+    expect(nextBlind.state.phase).toBe('SELECT');
+    expect(nextBlind.state.rolledDice).toEqual([]);
+    expect(nextBlind.state.hand.length).toBeGreaterThan(0);
+  });
 });

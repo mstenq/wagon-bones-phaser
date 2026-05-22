@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import '../setup';
 import { calculateTestScore, die, diceWithValue, item, itemWithState, setupGame, resetDieIds } from '../testHelpers';
-import { processEndOfRound, processEquipmentOnHandPlayed, processEquipmentOnReroll, getScoredRetriggerCount, processEquipmentOnRoundStart, getConfigModifiers } from '../../EquipmentEffects';
+import { processEndOfRound, processEquipmentOnHandPlayed, processEquipmentOnReroll, getScoredRetriggerCount, processEquipmentOnRoundStart, getConfigModifiers, processEquipmentAfterHandScored } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
 
@@ -484,6 +484,66 @@ describe('Mirror Lake copies ROUND_START_SUPPLY', () => {
     const equipment = [item('mirror_lake'), item('supply_drop')];
     const result = processEquipmentOnRoundStart(equipment);
     expect(result.supplyCardsToAdd).toBe(2);
+  });
+});
+
+describe('Copy item HAND_UPGRADE_CHANCE (Surveyor\'s Transit)', () => {
+  test('mirror lake copying surveyors_transit rolls upgrade chance', () => {
+    const original = Math.random;
+    Math.random = () => 0.1; // succeeds at 1 in 4
+    try {
+      const { player } = setupGame({
+        equipment: [item('mirror_lake'), item('surveyors_transit')],
+      });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      const upgrades = processEquipmentAfterHandScored(
+        [item('mirror_lake'), item('surveyors_transit')],
+        HandType.PAIR,
+      );
+      // Mirror Lake copy + Surveyor's Transit each roll independently
+      expect(upgrades.length).toBe(2);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 2);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('echo chamber copying surveyors_transit rolls upgrade chance', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const { player } = setupGame({
+        equipment: [item('surveyors_transit'), item('echo_chamber')],
+      });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      const upgrades = processEquipmentAfterHandScored(
+        [item('surveyors_transit'), item('echo_chamber')],
+        HandType.PAIR,
+      );
+      // Echo Chamber copy + Surveyor's Transit each roll independently
+      expect(upgrades.length).toBe(2);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 2);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('mirror lake and echo chamber both copying transit give multiple rolls', () => {
+    let upgraded = 0;
+    const runs = 2000;
+    const equipment = [item('mirror_lake'), item('surveyors_transit'), item('echo_chamber')];
+
+    for (let i = 0; i < runs; i++) {
+      const { player } = setupGame({ equipment });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      const upgrades = processEquipmentAfterHandScored(equipment, HandType.PAIR);
+      if (upgrades.length > 0) upgraded++;
+      expect(player.getHandStats(HandType.PAIR).level).toBeGreaterThanOrEqual(levelBefore);
+    }
+
+    // 3 independent 1-in-4 rolls ≈ 58% per hand; 2000 runs should be well above 50%
+    const rate = upgraded / runs;
+    expect(rate).toBeGreaterThan(0.5);
   });
 });
 
