@@ -830,18 +830,29 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
 
     effectType: 'STATEFUL_XMULT',
-    effectParams: {},
+    effectParams: { xMultGainPerNegation: 0.75 },
     initialState: { xMult: 1 },
     display: (_game, player) => {
       const inst = player.equipment.find((e) => e.def.id === 'trail_repair_kit');
       const xm = inst?.state.xMult ?? 1;
+      const gain = resolveEffectParam<number>(
+        inst?.def.effectParams ?? { xMultGainPerNegation: 0.75 },
+        'xMultGainPerNegation',
+        player.profession?.id,
+      );
       const hint = [
         [active('Negates'), text(' trail penalties')],
         xm > 1 ? [text('x'), mult(xm.toFixed(2))] : [inactive('x1'), text(' until first save')],
       ];
       return {
         hint,
-        tooltip: [[text('Negates negative trail event penalties. Gains '), mult('x0.75'), text(' mult each time it prevents a penalty.')]],
+        tooltip: [
+          [
+            text('Negates negative trail event penalties. Gains '),
+            mult(`x${gain}`),
+            text(' mult each time it prevents a penalty.'),
+          ],
+        ],
       };
     },
 
@@ -854,18 +865,32 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
 
     effectType: 'STATEFUL_ADD_MILES',
-    effectParams: {},
+    effectParams: { investigateMiles: 20 },
     initialState: { miles: 0 },
     display: (_game, player) => {
       const inst = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
       const stored = inst?.state.miles ?? 0;
+      const investigateMiles = resolveEffectParam<number>(
+        inst?.def.effectParams ?? { investigateMiles: 20 },
+        'investigateMiles',
+        player.profession?.id,
+      );
       const hint = [
-        [text('Preview'), condition('trail events')],
-        stored > 0 ? [miles(`+${stored}`), text(' stored miles')] : [miles('+50'), text(' if avoided')],
+        [text('View'), condition('trail ahead')],
+        stored > 0
+          ? [miles(`+${stored}`), text(' stored miles')]
+          : [miles(`+${investigateMiles}`), text(' if investigated')],
       ];
       return {
         hint,
-        tooltip: [[text('Preview the next trail event category. Avoid it for '), miles('+50'), text(' miles (stored on this item) or face the event.')]],
+        tooltip: [
+          [
+            text('View from the spyglass before the next trail event. '),
+            text('Avoid to skip it, or investigate for '),
+            miles(`+${investigateMiles}`),
+            text(' stored miles and face the full event.'),
+          ],
+        ],
       };
     },
 

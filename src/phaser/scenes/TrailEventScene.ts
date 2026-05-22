@@ -5,12 +5,13 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState } from '../../game/PlayerState';
+import { getPlayerState, type PlayerState } from '../../game/PlayerState';
 import { isEquipmentCursed } from '../../game/ItemsSystem';
-import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { trailEventImageKey, trailEventImagePath } from '../../game/trailEventAssets';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
-import { createLayout } from '../ui/SceneLayout';
+import { createLayout, type LayoutResult } from '../ui/SceneLayout';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
@@ -22,11 +23,10 @@ import {
   isNegativeEffect,
   hasScoutsSpyglass,
   applySpyglassAvoid,
-  getTrailEventPreviewCategory,
+  applySpyglassInvestigate,
   getTrailEventById,
   findTrailRepairKit,
   isTrailNegativeNegated,
-  type TrailEventPreviewCategory,
   TrailEventDef,
   TrailEventChoice,
   TrailEventResult,
@@ -34,6 +34,7 @@ import {
 } from '../../game/TrailEventsSystem';
 import type { TrailEventSaveData } from '../../game/SaveLoad';
 import { flushAutoSave } from '../AutoSaveManager';
+import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -47,13 +48,6 @@ const CATEGORY_COLORS: Record<string, number> = {
   stranger: 0xccaa44,
   uneventful: 0x888888,
   demon_hunter: 0x880088,
-};
-
-const PREVIEW_CATEGORY_COLORS: Record<TrailEventPreviewCategory, number> = {
-  positive: 0x44aa44,
-  negative: 0xcc4444,
-  animal: 0x88aa44,
-  weather: 0x6688cc,
 };
 
 export class TrailEventScene extends Scene {
@@ -73,18 +67,60 @@ export class TrailEventScene extends Scene {
     super('TrailEvent');
   }
 
-  init(data: { restoreTrail?: TrailEventSaveData } = {}) {
+  init(
+    data: {
+      restoreTrail?: TrailEventSaveData;
+      eventId?: string;
+      spyglassRevealed?: boolean;
+      resolved?: boolean;
+    } = {},
+  ) {
     if (data.restoreTrail) {
       this.pendingRestoreTrail = data.restoreTrail;
-      this.currentEvent = null!;
+      return;
+    }
+    if (data.eventId) {
+      const event = getTrailEventById(data.eventId);
+      if (event) {
+        this.currentEvent = event;
+        this.spyglassRevealed = data.spyglassRevealed ?? false;
+        this.resolved = data.resolved ?? false;
+      }
     }
   }
 
   getSaveContext(): TrailEventSaveData {
+    const player = getPlayerState();
+    this.syncSpyglassPendingForSave(player);
+    const eventId = this.currentEvent?.id ?? player.pendingTrailEvent?.id;
+    if (!eventId) {
+      throw new Error('Trail event save context missing event id');
+    }
     return {
-      eventId: this.currentEvent.id,
+      eventId,
       resolved: this.resolved,
       spyglassRevealed: this.spyglassRevealed,
+    };
+  }
+
+  /** Keep player.pendingTrailEvent aligned with scene event while on spyglass preview (autosave). */
+  private syncSpyglassPendingForSave(player: PlayerState): void {
+    if (!hasScoutsSpyglass(player) || this.spyglassRevealed) return;
+    const event = this.currentEvent ?? player.pendingTrailEvent;
+    if (event) player.pendingTrailEvent = event;
+  }
+
+  private getSceneRestartData(): {
+    eventId?: string;
+    spyglassRevealed: boolean;
+    resolved: boolean;
+  } {
+    const player = getPlayerState();
+    const eventId = this.currentEvent?.id ?? player.pendingTrailEvent?.id;
+    return {
+      eventId,
+      spyglassRevealed: this.spyglassRevealed,
+      resolved: this.resolved,
     };
   }
 
@@ -111,6 +147,9 @@ export class TrailEventScene extends Scene {
       this.pendingRestoreTrail = null;
       // Restored event has already been shown to the player — never re-roll it.
       player.seenTrailEventIds.add(event.id);
+      if (hasScoutsSpyglass(player) && !this.spyglassRevealed) {
+        player.pendingTrailEvent = this.currentEvent;
+      }
     }
 
     // Select / preview trail event (persist across resize restarts)
@@ -139,7 +178,7 @@ export class TrailEventScene extends Scene {
     }
 
     if (hasScoutsSpyglass(player) && !this.spyglassRevealed) {
-      player.pendingTrailEvent = this.currentEvent;
+      player.pendingTrailEvent = this.currentEvent ?? player.pendingTrailEvent;
       this.buildSpyglassPreview(layout);
       EventBus.emit(Events.SCENE_READY, this);
       return;
@@ -153,9 +192,9 @@ export class TrailEventScene extends Scene {
     };
 
     // Load event image dynamically if not already cached
-    const imageKey = `trail_event_${this.currentEvent.id}`;
+    const imageKey = trailEventImageKey(this.currentEvent.id);
     if (!this.textures.exists(imageKey)) {
-      this.load.image(imageKey, `assets/trail-events/${this.currentEvent.id}.png`);
+      this.load.image(imageKey, trailEventImagePath(this.currentEvent.id));
       this.load.once('complete', () => onDisplayReady());
       this.load.once('loaderror', () => onDisplayReady());
       this.load.start();
@@ -166,75 +205,40 @@ export class TrailEventScene extends Scene {
     EventBus.emit(Events.SCENE_READY, this);
   }
 
-  private buildSpyglassPreview(layout: { contentW: number; contentCX: number }): void {
+  private resolveSpyglassPreviewEvent(player: PlayerState): TrailEventDef {
+    const event = player.pendingTrailEvent ?? this.currentEvent;
+    if (!event) {
+      throw new Error('Spyglass preview missing trail event');
+    }
+    player.pendingTrailEvent = event;
+    return event;
+  }
+
+  private buildSpyglassPreview(
+    layout: Pick<LayoutResult, 'contentX' | 'contentW' | 'contentCX' | 'contentTop' | 'contentBottom'>,
+  ): void {
     const player = getPlayerState();
-    const event = player.pendingTrailEvent!;
-    const preview = getTrailEventPreviewCategory(event);
-    const { contentW, contentCX } = layout;
-    const panelW = Math.min(520, contentW - 40);
-    const panelX = contentCX - panelW / 2;
-    const panelTop = UI.EQUIP_BAR_HEIGHT + 40;
-    const categoryColor = PREVIEW_CATEGORY_COLORS[preview];
-
-    const panel = this.add.graphics();
-    panel.fillStyle(COLORS.BG_PANEL, 0.95);
-    panel.fillRoundedRect(panelX, panelTop, panelW, 280, 12);
-    panel.lineStyle(2, categoryColor, 0.9);
-    panel.strokeRoundedRect(panelX, panelTop, panelW, 280, 12);
-
-    this.add
-      .text(contentCX, panelTop + 24, "Scout's Spyglass", {
-        fontFamily: FONTS.HEADING,
-        fontSize: '22px',
-        color: TEXT_COLORS.PRIMARY,
-        stroke: '#000000',
-        strokeThickness: 2,
-        align: 'center',
-      })
-      .setOrigin(0.5, 0);
-
-    this.add
-      .text(contentCX, panelTop + 58, 'Ahead on the trail…', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '16px',
-        color: TEXT_COLORS.SECONDARY,
-        align: 'center',
-      })
-      .setOrigin(0.5, 0);
-
-    this.add
-      .text(contentCX, panelTop + 100, preview.toUpperCase(), {
-        fontFamily: FONTS.HEADING,
-        fontSize: '36px',
-        color: '#' + categoryColor.toString(16).padStart(6, '0'),
-        stroke: '#000000',
-        strokeThickness: 3,
-        align: 'center',
-      })
-      .setOrigin(0.5, 0);
-
-    this.add
-      .text(contentCX, panelTop + 150, 'Event type only — details hidden until you commit.', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '13px',
-        color: TEXT_COLORS.MUTED,
-        align: 'center',
-        wordWrap: { width: panelW - 48 },
-      })
-      .setOrigin(0.5, 0);
-
-    const btnY = panelTop + 210;
-    const btnW = Math.min(360, panelW - 48);
-    new Button(this, contentCX, btnY, 'Avoid the trail (+50 miles)', btnW, 44).onClick(() => {
-      applySpyglassAvoid(player);
-      this.spyglassRevealed = false;
-      this.proceedToNextScene();
-    });
-    new Button(this, contentCX, btnY + 56, 'Face the trail', btnW, 44).onClick(() => {
-      this.currentEvent = event;
-      player.pendingTrailEvent = null;
-      this.spyglassRevealed = true;
-      this.scene.restart();
+    const event = this.resolveSpyglassPreviewEvent(player);
+    SpyglassTrailPreview.show(this, layout, event.id, {
+      onAvoid: () => {
+        applySpyglassAvoid(player);
+        this.spyglassRevealed = false;
+        this.syncSpyglassPendingForSave(player);
+        this.proceedToNextScene();
+      },
+      onInvestigate: () => {
+        const committed = this.resolveSpyglassPreviewEvent(player);
+        applySpyglassInvestigate(player);
+        this.equipBar.refresh();
+        this.currentEvent = committed;
+        player.pendingTrailEvent = null;
+        this.spyglassRevealed = true;
+        this.scene.restart({
+          eventId: committed.id,
+          spyglassRevealed: true,
+          resolved: this.resolved,
+        });
+      },
     });
   }
 
@@ -256,7 +260,7 @@ export class TrailEventScene extends Scene {
     panel.fillRoundedRect(panelX, panelTop, panelW, 0, 12); // height set later
 
     // Event image (load dynamically if available)
-    const imageKey = `trail_event_${event.id}`;
+    const imageKey = trailEventImageKey(event.id);
     let imageY = panelTop + 20;
     let imageHeight = 0;
 
@@ -932,7 +936,7 @@ export class TrailEventScene extends Scene {
   private onResize(): void {
     // Don't restart after choice is resolved — effects already applied
     if (!this.resolved) {
-      this.scene.restart();
+      this.scene.restart(this.getSceneRestartData());
     }
   }
 }

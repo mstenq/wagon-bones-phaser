@@ -23,6 +23,7 @@ import {
 import { generateShopStock } from './ItemsSystem';
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { TRAIL_EVENT } from './Constants';
+import { resolveEffectParam } from './effectParams';
 import type { EquipmentInstance } from './ItemsSystem';
 
 export type {
@@ -103,20 +104,34 @@ export function createEmptyModifiers(): TrailEventModifiers {
 /** Demon hunter pool draw chance */
 const DEMON_HUNTER_POOL_CHANCE = 0.3;
 
-export type TrailEventPreviewCategory = 'positive' | 'negative' | 'animal' | 'weather';
-
 /** Whether the player has Scout's Spyglass equipped. */
 export function hasScoutsSpyglass(player: PlayerState): boolean {
   return player.equipment.some((e) => e.def.id === 'scouts_spyglass');
 }
 
-/** Skip the pending trail event; store miles on the spyglass item. */
+/** Skip the pending trail event (no miles). */
 export function applySpyglassAvoid(player: PlayerState): void {
+  player.pendingTrailEvent = null;
+}
+
+/** Miles granted when investigating with Scout's Spyglass equipped. */
+export function getScoutsSpyglassInvestigateMiles(player: PlayerState): number {
+  const spyglass = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
+  if (!spyglass) return 0;
+  return resolveEffectParam<number>(
+    spyglass.def.effectParams,
+    'investigateMiles',
+    player.profession?.id,
+  );
+}
+
+/** Commit to the pending trail event; store investigate miles on the spyglass item. */
+export function applySpyglassInvestigate(player: PlayerState): void {
   const spyglass = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
   if (spyglass) {
-    spyglass.state.miles = (spyglass.state.miles ?? 0) + TRAIL_EVENT.SPYGLASS_SKIP_MILES;
+    const gain = getScoutsSpyglassInvestigateMiles(player);
+    spyglass.state.miles = (spyglass.state.miles ?? 0) + gain;
   }
-  player.pendingTrailEvent = null;
 }
 
 export function findTrailRepairKit(player: PlayerState): EquipmentInstance | undefined {
@@ -129,14 +144,6 @@ export function isTrailNegativeNegated(player: PlayerState): boolean {
     player.equipment.some((e) => e.def.id === 'saint_elmos_shield') ||
     findTrailRepairKit(player) !== undefined
   );
-}
-
-/** UI preview bucket for Scout's Spyglass (category only, not full event name). */
-export function getTrailEventPreviewCategory(event: TrailEventDef): TrailEventPreviewCategory {
-  if (event.category === 'positive') return 'positive';
-  if (event.category === 'animal') return 'animal';
-  if (event.category === 'weather') return 'weather';
-  return 'negative';
 }
 
 /** Filter events eligible for the current leg (mirrors boss minimumLeg). */
@@ -293,8 +300,12 @@ export function resolveChoice(
   }
 
   if (trailRepairKit && trailRepairKitNegatedEvent) {
-    trailRepairKit.state.xMult =
-      (trailRepairKit.state.xMult ?? 1) + TRAIL_EVENT.TRAIL_REPAIR_KIT_XMULT_GAIN;
+    const gain = resolveEffectParam<number>(
+      trailRepairKit.def.effectParams,
+      'xMultGainPerNegation',
+      player.profession?.id,
+    );
+    trailRepairKit.state.xMult = (trailRepairKit.state.xMult ?? 1) + gain;
   }
 
   player.seenTrailEventIds.add(event.id);

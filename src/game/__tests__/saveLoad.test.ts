@@ -11,7 +11,8 @@ import {
   SAVE_VERSION,
   type GameSaveSnapshot,
 } from '../SaveLoad';
-import { selectTrailEvent } from '../TrailEventsSystem';
+import { getTrailEventById, selectTrailEvent } from '../TrailEventsSystem';
+import { item } from './testHelpers';
 import { HandType } from '../types';
 import bosses from '../../data/bosses';
 
@@ -214,6 +215,25 @@ describe('SaveLoad', () => {
     const restored = getPlayerState();
     expect(restored.seenTrailEventIds.has('wildflowers')).toBe(true);
     expect(restored.seenTrailEventIds.has('bad_mosquitos')).toBe(true);
+  });
+
+  test('spyglass preview snapshot preserves pendingTrailEventId for reload', () => {
+    const player = resetPlayerState();
+    player.applyProfession('farmer');
+    player.equipment = [item('scouts_spyglass')];
+    player.seenTrailEventIds.add('wildflowers');
+    player.pendingTrailEvent = getTrailEventById('wildflowers')!;
+
+    const snapshot = buildSaveSnapshot({
+      activeScene: 'TrailEvent',
+      data: { eventId: 'wildflowers', resolved: false, spyglassRevealed: false },
+    });
+
+    expect(snapshot.player.pendingTrailEventId).toBe('wildflowers');
+
+    applySaveSnapshot(snapshot);
+    const restored = getPlayerState();
+    expect(restored.pendingTrailEvent?.id).toBe('wildflowers');
   });
 
   test('restored TrailEvent snapshot keeps event excluded from future selection', () => {

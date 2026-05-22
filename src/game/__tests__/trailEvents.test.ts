@@ -15,12 +15,15 @@ import {
   isNegativeEffect,
   applyEffect,
   applySpyglassAvoid,
+  applySpyglassInvestigate,
+  getScoutsSpyglassInvestigateMiles,
   hasScoutsSpyglass,
-  getTrailEventPreviewCategory,
   createEmptyModifiers,
 } from '../TrailEventsSystem';
 import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
 import { GAMEPLAY, TRAIL_EVENT } from '../Constants';
+import { getEquipmentDefById } from '../ItemsSystem';
+import { resolveEffectParam } from '../effectParams';
 
 beforeEach(() => {
   resetDieIds();
@@ -825,15 +828,19 @@ describe('saint_elmos_shield equipment interaction', () => {
 // ─── Trail Repair Kit ───
 
 describe('Trail Repair Kit interaction', () => {
-  test('negates negative effects and gains x0.75 mult per event', () => {
+  test('negates negative effects and gains xMult per event from effectParams', () => {
     const player = resetPlayerState();
     const kit = item('trail_repair_kit');
     player.equipment = [kit];
+    const gain = resolveEffectParam<number>(
+      getEquipmentDefById('trail_repair_kit')!.effectParams,
+      'xMultGainPerNegation',
+    );
 
     const event = getTrailEventById('bad_mosquitos')!;
     const result = resolveChoice(event, 'endure', player);
     expect(result.modifiers.rerollPenalty).toBe(0);
-    expect(kit.state.xMult).toBeCloseTo(1.75, 5);
+    expect(kit.state.xMult).toBeCloseTo(1 + gain, 5);
   });
 
   test('does not gain xMult on positive-only events', () => {
@@ -846,36 +853,48 @@ describe('Trail Repair Kit interaction', () => {
     expect(kit.state.xMult ?? 1).toBe(1);
   });
 
-  test('shield and repair kit still only add x0.75 once per event', () => {
+  test('shield and repair kit still only add xMult gain once per event', () => {
     const player = resetPlayerState();
     const kit = item('trail_repair_kit');
     player.equipment = [item('saint_elmos_shield'), kit];
+    const gain = resolveEffectParam<number>(
+      getEquipmentDefById('trail_repair_kit')!.effectParams,
+      'xMultGainPerNegation',
+    );
 
     const event = getTrailEventById('lose_trail')!;
     resolveChoice(event, 'wander', player);
-    expect(kit.state.xMult).toBeCloseTo(1.75, 5);
+    expect(kit.state.xMult).toBeCloseTo(1 + gain, 5);
   });
 });
 
 // ─── Scout's Spyglass ───
 
 describe("Scout's Spyglass", () => {
-  test('getTrailEventPreviewCategory maps categories', () => {
-    expect(getTrailEventPreviewCategory(getTrailEventById('caught_fish')!)).toBe('positive');
-    expect(getTrailEventPreviewCategory(getTrailEventById('bad_mosquitos')!)).toBe('animal');
-    expect(getTrailEventPreviewCategory(getTrailEventById('blizzard')!)).toBe('weather');
-    expect(getTrailEventPreviewCategory(getTrailEventById('broken_wheel')!)).toBe('negative');
-  });
-
-  test('applySpyglassAvoid stores miles and clears pending event', () => {
+  test('applySpyglassAvoid clears pending event without adding miles', () => {
     const player = resetPlayerState();
     const spyglass = item('scouts_spyglass');
+    spyglass.state.miles = 5;
     player.equipment = [spyglass];
     player.pendingTrailEvent = getTrailEventById('bad_mosquitos')!;
 
     applySpyglassAvoid(player);
-    expect(spyglass.state.miles).toBe(TRAIL_EVENT.SPYGLASS_SKIP_MILES);
+    expect(spyglass.state.miles).toBe(5);
     expect(player.pendingTrailEvent).toBeNull();
+  });
+
+  test('applySpyglassInvestigate adds investigate miles from item effectParams', () => {
+    const player = resetPlayerState();
+    const spyglass = item('scouts_spyglass');
+    player.equipment = [spyglass];
+    const expected = resolveEffectParam<number>(
+      getEquipmentDefById('scouts_spyglass')!.effectParams,
+      'investigateMiles',
+    );
+
+    applySpyglassInvestigate(player);
+    expect(getScoutsSpyglassInvestigateMiles(player)).toBe(expected);
+    expect(spyglass.state.miles).toBe(expected);
   });
 
   test('hasScoutsSpyglass detects equipped item', () => {

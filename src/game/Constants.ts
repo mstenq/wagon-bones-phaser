@@ -367,8 +367,7 @@ export const ANIM = {
 export const TRAIL_EVENT = {
   AMOUNT_PER_MISSING_DIE: 3, // $ lost per missing die for LOSE_RANDOM_DICE
   AMOUNT_PER_MISSING_EQUIP: 4, // $ lost per missing equipment for LOSE_RANDOM_EQUIPMENT
-  SPYGLASS_SKIP_MILES: 50, // miles stored on Scout's Spyglass when avoiding a trail event
-  TRAIL_REPAIR_KIT_XMULT_GAIN: 0.75, // xMult added per trail event with negated penalties
+  SPYGLASS_VIEW_RADIUS: 180, // radius of the static circular spy preview
 };
 
 // ─── Copy Equipment Incompatibility ───
