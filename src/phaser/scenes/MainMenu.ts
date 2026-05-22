@@ -3,6 +3,8 @@ import { EventBus, Events } from '../../game/EventBus';
 import { resetPlayerState } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
+import { clearAutoSave } from '../AutoSaveManager';
+import { ensureBackgroundMusic } from '../BackgroundMusic';
 
 export class MainMenu extends Scene {
   constructor() {
@@ -12,10 +14,7 @@ export class MainMenu extends Scene {
   create() {
     const { width, height } = this.scale;
 
-    // Start background music if not already playing
-    if (!this.sound.get('bg_music_1')?.isPlaying) {
-      this.sound.play('bg_music_1', { loop: true, volume: 0.3 });
-    }
+    ensureBackgroundMusic(this);
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
@@ -49,6 +48,7 @@ export class MainMenu extends Scene {
 
     // Start button
     new Button(this, width / 2, height * 0.57, 'Start Journey', 220, 52).onClick(() => {
+      clearAutoSave();
       resetPlayerState();
       this.scene.start('ProfessionSelect');
     });

@@ -43,6 +43,10 @@ export const GAMEPLAY = {
   SCORE_SCIENTIFIC_THRESHOLD: 1_000_000_000_000,
   /** Money earned per trigger when a gold die is held (not scored) at round end */
   GOLD_DICE_HELD_MONEY: 3,
+  /** Auto-save interval while a run is in progress (localStorage, ms) */
+  AUTOSAVE_INTERVAL_MS: 10_000,
+  /** localStorage key for the auto-save snapshot */
+  AUTOSAVE_STORAGE_KEY: 'wagon-bones-autosave',
 };
 
 export const DIFFICULTIES: DifficultyDef[] = [

@@ -9,6 +9,7 @@ import { COLORS, TEXT_COLORS, FONTS, DIFFICULTIES } from '../../game/Constants';
 import { DifficultyLevel } from '../../game/types';
 import { Button } from '../ui/Button';
 import { addDifficultyImage } from '../ui/DifficultyAssets';
+import { startAutoSaveLoop } from '../AutoSaveManager';
 
 const CARD_W = 230;
 const CARD_H = 288;
@@ -67,6 +68,7 @@ export class DifficultySelectScene extends Scene {
     confirmBtn.setDepth(100);
     confirmBtn.onClick(() => {
       getPlayerState().setDifficulty(this.selectedLevel);
+      startAutoSaveLoop();
       this.scene.start('RoundSelect');
     });
 

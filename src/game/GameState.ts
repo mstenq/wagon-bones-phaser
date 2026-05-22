@@ -119,6 +119,20 @@ export class GameState {
     return drawn;
   }
 
+  /** Restore mid-round state from a save without re-running round-start hooks. */
+  restoreRound(config: GameConfig, state: RoundState): void {
+    this.config = { ...config };
+    this.state = {
+      ...state,
+      spent: [...state.spent],
+      hand: [...state.hand],
+      selectedForRoll: [...state.selectedForRoll],
+      rolledDice: [...state.rolledDice],
+      selectedForScore: [...state.selectedForScore],
+      handHistory: [...state.handHistory],
+    };
+  }
+
   startRound(config?: Partial<GameConfig>): void {
     if (config) this.config = { ...this.config, ...config };
 

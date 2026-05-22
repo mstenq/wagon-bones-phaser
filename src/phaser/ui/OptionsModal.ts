@@ -7,6 +7,8 @@ import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { resetPlayerState } from '../../game/PlayerState';
 import { Button } from './Button';
 import { EquipmentCatalogModal } from './EquipmentCatalogModal';
+import { clearAutoSave } from '../AutoSaveManager';
+import { exportGameFromScene, performLoadGame } from '../SaveLoadIO';
 
 export class OptionsModal extends GameObjects.Container {
   constructor(scene: Scene, contentX: number, width: number, height: number) {
@@ -21,7 +23,7 @@ export class OptionsModal extends GameObjects.Container {
 
     // Modal panel
     const panelW = Math.min(width - 40, 380);
-    const panelH = 310;
+    const panelH = 410;
     const panelX = contentX + (width - panelW) / 2;
     const panelY = (height - panelH) / 2;
 
@@ -43,24 +45,40 @@ export class OptionsModal extends GameObjects.Container {
     this.add(title);
 
     // Equipment catalog
-    const equipmentBtn = new Button(scene, panelX + panelW / 2, panelY + 88, 'Equipment', panelW - 60, 40);
+    const equipmentBtn = new Button(scene, panelX + panelW / 2, panelY + 78, 'Equipment', panelW - 60, 40);
     equipmentBtn.onClick(() => {
       this.destroy();
       new EquipmentCatalogModal(scene);
     });
     this.add(equipmentBtn);
 
+    // Export game state
+    const exportBtn = new Button(scene, panelX + panelW / 2, panelY + 128, 'Export Game State', panelW - 60, 40);
+    exportBtn.onClick(() => {
+      exportGameFromScene(scene);
+    });
+    this.add(exportBtn);
+
+    // Load game
+    const loadBtn = new Button(scene, panelX + panelW / 2, panelY + 178, 'Load Game', panelW - 60, 40);
+    loadBtn.onClick(() => {
+      this.destroy();
+      void performLoadGame(scene, { confirmOverwrite: true });
+    });
+    this.add(loadBtn);
+
     // New Run button
-    const newRunBtn = new Button(scene, panelX + panelW / 2, panelY + 138, 'New Run', panelW - 60, 40);
+    const newRunBtn = new Button(scene, panelX + panelW / 2, panelY + 228, 'New Run', panelW - 60, 40);
     newRunBtn.onClick(() => {
       this.destroy();
+      clearAutoSave();
       resetPlayerState();
       scene.scene.start('MainMenu');
     });
     this.add(newRunBtn);
 
     // Return to Main Menu button
-    const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 188, 'Main Menu', panelW - 60, 40);
+    const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 278, 'Main Menu', panelW - 60, 40);
     menuBtn.onClick(() => {
       this.destroy();
       scene.scene.start('MainMenu');

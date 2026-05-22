@@ -642,6 +642,30 @@ export class PlayerState {
     return this.bossAssignments[leg - 1] ?? null;
   }
 
+  /** Boss IDs per leg (for save/load). */
+  getBossAssignmentIds(): string[] {
+    return this.bossAssignments.map((b) => b.id);
+  }
+
+  /** Restore boss schedule from saved IDs. */
+  restoreBossAssignments(ids: string[]): void {
+    this.bossAssignments = ids.map((id) => {
+      const boss = bosses.find((b) => b.id === id);
+      if (!boss) throw new Error(`Unknown boss id: ${id}`);
+      return boss;
+    });
+  }
+
+  /** Die ID counter (for save/load). */
+  getNextDieIdForSave(): number {
+    return this.nextDieId;
+  }
+
+  /** Restore die ID counter after loading a save. */
+  setNextDieIdForRestore(value: number): void {
+    this.nextDieId = value;
+  }
+
   /** Whether the current round is a boss round */
   get isBossRound(): boolean {
     return this.round === GAMEPLAY.ROUNDS_PER_LEG;

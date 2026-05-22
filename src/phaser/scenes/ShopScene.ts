@@ -56,6 +56,15 @@ import { Die } from '../../game/types';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
+import {
+  type ShopSaveData,
+  type SerializedShopItem,
+  serializeEquipmentInstance,
+  deserializeEquipmentInstance,
+} from '../../game/SaveLoad';
+import { getPackDefById } from '../../game/BoosterPackSystem';
+import { getConsumableDefById } from '../../game/ConsumablesSystem';
+import { getEquipmentDefById } from '../../game/ItemsSystem';
 
 const CARD_SPACING = 185;
 
@@ -122,6 +131,28 @@ function generateShopDie(mode: 'enhanced' | 'stickered'): { die: Die; displayDef
   return { die, displayDef };
 }
 
+function buildShopDieDisplayDef(die: Die): EquipmentDef {
+  const enhInfo = die.enhancement ? ENHANCEMENT_INFO.get(die.enhancement) : null;
+  const name = enhInfo ? `${enhInfo.name} Die` : 'Die';
+  const descParts = [enhInfo?.description ?? 'Standard die'];
+  if (die.sticker) {
+    const stickerInfo = STICKER_INFO.get(die.sticker);
+    if (stickerInfo) descParts.push(`Sticker: ${stickerInfo.name}`);
+  }
+  return {
+    id: `shop_die_${die.id}`,
+    name,
+    cost: DICE_SHOP_COST,
+    rarity: 'uncommon' as string,
+    effectType: 'DICE',
+    effectParams: {},
+    display: () => ({
+      hint: [],
+      tooltip: [[{ text: descParts.join('\n'), style: 'text' }]],
+    }),
+  } as unknown as EquipmentDef;
+}
+
 export class ShopScene extends Scene {
   private stockItems: ShopItem[];
   private packs: PackInstance[];
@@ -140,13 +171,79 @@ export class ShopScene extends Scene {
   private consumableBar: ConsumableBar;
   private dicePouch: DicePouch;
 
+  private pendingRestoreShop: ShopSaveData | null = null;
+
   constructor() {
     super('Shop');
   }
 
+  init(data: { restoreShop?: ShopSaveData } = {}) {
+    if (data.restoreShop) {
+      this.pendingRestoreShop = data.restoreShop;
+      this.stockItems = null!;
+      this.packs = null!;
+    }
+  }
+
+  getSaveContext(): ShopSaveData {
+    return {
+      stock: this.stockItems.map((item) => this.serializeShopItem(item)),
+      packs: this.packs.map((p) => ({ defId: p.def.id, instanceId: p.id })),
+      shopRerollCount: getPlayerState().shopRerollCount,
+    };
+  }
+
+  private serializeShopItem(item: ShopItem): SerializedShopItem {
+    if (item.type === 'equipment') {
+      return {
+        type: 'equipment',
+        defId: item.def.id,
+        preview: serializeEquipmentInstance(item.preview),
+        sold: item.sold,
+      };
+    }
+    if (item.type === 'consumable') {
+      return { type: 'consumable', defId: item.def.id, sold: item.sold };
+    }
+    return { type: 'dice', die: { ...item.die }, sold: item.sold };
+  }
+
+  private deserializeShopItem(item: SerializedShopItem): ShopItem {
+    if (item.type === 'equipment') {
+      const def = getEquipmentDefById(item.defId);
+      if (!def) throw new Error(`Unknown equipment: ${item.defId}`);
+      return {
+        type: 'equipment',
+        def,
+        preview: deserializeEquipmentInstance(item.preview),
+        sold: item.sold,
+      };
+    }
+    if (item.type === 'consumable') {
+      const def = getConsumableDefById(item.defId);
+      if (!def) throw new Error(`Unknown consumable: ${item.defId}`);
+      return { type: 'consumable', def, sold: item.sold };
+    }
+    return {
+      type: 'dice',
+      die: { ...item.die },
+      displayDef: buildShopDieDisplayDef(item.die),
+      sold: item.sold,
+    };
+  }
+
   create() {
     const player = getPlayerState();
-    if (!this.stockItems) {
+    if (this.pendingRestoreShop) {
+      this.stockItems = this.pendingRestoreShop.stock.map((s) => this.deserializeShopItem(s));
+      this.packs = this.pendingRestoreShop.packs.map((p) => {
+        const def = getPackDefById(p.defId);
+        if (!def) throw new Error(`Unknown pack: ${p.defId}`);
+        return { def, id: p.instanceId };
+      });
+      player.shopRerollCount = this.pendingRestoreShop.shopRerollCount;
+      this.pendingRestoreShop = null;
+    } else if (!this.stockItems) {
       this.stockItems = this.generateMixedStock(player);
       if (!this.packs) {
         this.packs = generateShopPacks(2, player.isFirstShopVisit()

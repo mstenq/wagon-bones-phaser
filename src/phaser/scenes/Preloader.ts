@@ -9,6 +9,7 @@ import professionsData from '../../data/professions';
 import bosses from '../../data/bosses';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 import pipEnhancements from '../../data/pip_enhancements';
+import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
 
 // Map sticker IDs to their PNG filenames (when they differ)
 const STICKER_FILE_MAP: Record<string, string> = {
@@ -160,7 +161,10 @@ export class Preloader extends Scene {
       .setOrigin(0.5);
 
     this.time.delayedCall(400, () => {
-      this.scene.start('MainMenu');
+      initAutoSave(this.game);
+      if (!tryRestoreAutoSaveOnBoot(this)) {
+        this.scene.start('MainMenu');
+      }
     });
   }
 }

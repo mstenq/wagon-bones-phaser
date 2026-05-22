@@ -4,6 +4,7 @@ import { resetPlayerState } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
 import { Button } from '../ui/Button';
+import { clearAutoSave } from '../AutoSaveManager';
 
 interface GameOverData {
   won: boolean;
@@ -22,6 +23,7 @@ export class GameOver extends Scene {
   private sceneData: GameOverData;
 
   create(data: GameOverData) {
+    clearAutoSave();
     this.sceneData = data;
     const { width, height } = this.scale;
 
@@ -83,6 +85,7 @@ export class GameOver extends Scene {
     }
 
     new Button(this, width / 2, height * 0.6, 'Play Again', 200, 48).onClick(() => {
+      clearAutoSave();
       resetPlayerState();
       this.scene.start('MainMenu');
     });

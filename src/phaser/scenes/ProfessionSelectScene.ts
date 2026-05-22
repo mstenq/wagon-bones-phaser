@@ -10,6 +10,7 @@ import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import professionsData, { type ProfessionDef } from '../../data/professions';
 import { ProfessionStartingDiceTooltip } from '../ui/ProfessionStartingDiceTooltip';
+import { performLoadGame } from '../SaveLoadIO';
 
 const CARD_W = 190;
 const CARD_H = 310;
@@ -70,6 +71,13 @@ export class ProfessionSelectScene extends Scene {
       })
       .setOrigin(0.5)
       .setDepth(60);
+
+    // Load game (bottom-left, before a run starts)
+    const loadBtn = new Button(this, 120, height - 40, 'Load Game', 160, 48);
+    loadBtn.setDepth(100);
+    loadBtn.onClick(() => {
+      void performLoadGame(this, { confirmOverwrite: false });
+    });
 
     // Confirm button (bottom)
     this.confirmBtn = new Button(this, width / 2, height - 40, 'Select Difficulty', 220, 48);

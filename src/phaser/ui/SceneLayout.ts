@@ -18,6 +18,8 @@ import { JourneyInfoModal } from './JourneyInfoModal';
 import { OptionsModal } from './OptionsModal';
 import { BossTestModal } from './BossTestModal';
 import { isDevMode } from '../../game/DevMode';
+import { startAutoSaveLoop } from '../AutoSaveManager';
+import { ensureBackgroundMusic } from '../BackgroundMusic';
 
 export interface LayoutResult {
   sidebar: Sidebar;
@@ -56,6 +58,11 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   const { width, height } = scene.scale;
   const player = getPlayerState();
   const opts = options ?? {};
+
+  if (player.profession) {
+    ensureBackgroundMusic(scene);
+    startAutoSaveLoop();
+  }
 
   // ─── Background ───
   if (opts.bgKey) {

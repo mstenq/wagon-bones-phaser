@@ -23,6 +23,7 @@ import {
   hasScoutsSpyglass,
   applySpyglassAvoid,
   getTrailEventPreviewCategory,
+  getTrailEventById,
   findTrailRepairKit,
   isTrailNegativeNegated,
   type TrailEventPreviewCategory,
@@ -31,6 +32,7 @@ import {
   TrailEventResult,
   TrailEventEffect,
 } from '../../game/TrailEventsSystem';
+import type { TrailEventSaveData } from '../../game/SaveLoad';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -64,9 +66,25 @@ export class TrailEventScene extends Scene {
   private spyglassRevealed: boolean = false;
   private choiceButtons: Button[] = [];
   private resultContainer: Phaser.GameObjects.Container | null = null;
+  private pendingRestoreTrail: TrailEventSaveData | null = null;
 
   constructor() {
     super('TrailEvent');
+  }
+
+  init(data: { restoreTrail?: TrailEventSaveData } = {}) {
+    if (data.restoreTrail) {
+      this.pendingRestoreTrail = data.restoreTrail;
+      this.currentEvent = null!;
+    }
+  }
+
+  getSaveContext(): TrailEventSaveData {
+    return {
+      eventId: this.currentEvent.id,
+      resolved: this.resolved,
+      spyglassRevealed: this.spyglassRevealed,
+    };
   }
 
   create() {
@@ -81,6 +99,16 @@ export class TrailEventScene extends Scene {
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
     this.dicePouch = layout.dicePouch;
+
+    if (this.pendingRestoreTrail) {
+      const restore = this.pendingRestoreTrail;
+      const event = getTrailEventById(restore.eventId);
+      if (!event) throw new Error(`Unknown trail event: ${restore.eventId}`);
+      this.currentEvent = event;
+      this.resolved = restore.resolved;
+      this.spyglassRevealed = restore.spyglassRevealed;
+      this.pendingRestoreTrail = null;
+    }
 
     // Select / preview trail event (persist across resize restarts)
     if (!this.currentEvent) {
@@ -100,20 +128,29 @@ export class TrailEventScene extends Scene {
       }
     }
 
+    if (hasScoutsSpyglass(player) && !this.spyglassRevealed) {
+      player.pendingTrailEvent = this.currentEvent;
+      this.buildSpyglassPreview(layout);
+      EventBus.emit(Events.SCENE_READY, this);
+      return;
+    }
+
+    const onDisplayReady = () => {
+      this.buildEventDisplay(layout);
+      if (this.resolved) {
+        this.showResolvedContinue(layout);
+      }
+    };
+
     // Load event image dynamically if not already cached
     const imageKey = `trail_event_${this.currentEvent.id}`;
     if (!this.textures.exists(imageKey)) {
       this.load.image(imageKey, `assets/trail-events/${this.currentEvent.id}.png`);
-      this.load.once('complete', () => {
-        this.buildEventDisplay(layout);
-      });
-      this.load.once('loaderror', () => {
-        // Image doesn't exist — build without it
-        this.buildEventDisplay(layout);
-      });
+      this.load.once('complete', () => onDisplayReady());
+      this.load.once('loaderror', () => onDisplayReady());
       this.load.start();
     } else {
-      this.buildEventDisplay(layout);
+      onDisplayReady();
     }
 
     EventBus.emit(Events.SCENE_READY, this);
@@ -837,6 +874,14 @@ export class TrailEventScene extends Scene {
     }
 
     return { text, color, negative };
+  }
+
+  private showResolvedContinue(layout: { contentCX: number }): void {
+    for (const btn of this.choiceButtons) {
+      btn.setEnabled(false);
+    }
+    const continueBtn = new Button(this, layout.contentCX, this.scale.height - 48, 'Continue', 200, 44);
+    continueBtn.onClick(() => this.proceedToNextScene());
   }
 
   private proceedToNextScene(): void {

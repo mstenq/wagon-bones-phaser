@@ -39,6 +39,11 @@ import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
+import {
+  type BoosterPackSaveData,
+  deserializePackItem,
+  serializePackItem,
+} from '../../game/SaveLoad';
 import hands from '../../data/hands';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
@@ -104,6 +109,8 @@ export class BoosterPackScene extends Scene {
   // Active card tab state
   private activeTabCard: CardSprite | null = null;
   private dismissHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  private pendingRestorePack: BoosterPackSaveData | null = null;
+  private pendingUsedCardIndices: number[] = [];
 
   constructor() {
     super('BoosterPack');
@@ -114,33 +121,60 @@ export class BoosterPackScene extends Scene {
     packDefId?: string;
     returnScene?: string;
     free?: boolean;
+    restorePack?: BoosterPackSaveData;
   } = {}) {
-    if (data.packDef) {
+    if (data.restorePack) {
+      this.pendingRestorePack = data.restorePack;
+      const def = getPackDefById(data.restorePack.packDefId);
+      if (!def) throw new Error(`Unknown pack id: ${data.restorePack.packDefId}`);
+      this.packDef = def;
+      this.returnScene = data.restorePack.returnScene;
+    } else if (data.packDef) {
       this.packDef = data.packDef;
+      this.returnScene = data.returnScene ?? 'Shop';
     } else if (data.packDefId) {
       const def = getPackDefById(data.packDefId);
       if (!def) {
         throw new Error(`Unknown pack id: ${data.packDefId}`);
       }
       this.packDef = def;
+      this.returnScene = data.returnScene ?? 'Shop';
     }
-    this.returnScene = data.returnScene ?? 'Shop';
+  }
+
+  getSaveContext(): BoosterPackSaveData {
+    return {
+      packDefId: this.packDef.id,
+      returnScene: this.returnScene,
+      contents: this.contents.map(serializePackItem),
+      picksRemaining: this.picksRemaining,
+      usedCardIndices: this.cardSprites.filter((s) => s.used).map((s) => s.index),
+    };
   }
 
   create() {
-    this.contents = generatePackContents(this.packDef);
-    this.picksRemaining = this.packDef.pickCount;
+    if (this.pendingRestorePack) {
+      const restore = this.pendingRestorePack;
+      this.contents = restore.contents.map(deserializePackItem);
+      this.picksRemaining = restore.picksRemaining;
+      this.pendingUsedCardIndices = [...restore.usedCardIndices];
+      this.pendingRestorePack = null;
+    } else {
+      this.contents = generatePackContents(this.packDef);
+      this.picksRemaining = this.packDef.pickCount;
+
+      // Process pack-opened equipment effects (Leftovers: chance to grant supply card)
+      const player = getPlayerState();
+      const grantSupply = processEquipmentOnPackOpened(player.equipment);
+      if (grantSupply) {
+        const supplyDef = getRandomSupplyDef();
+        player.addConsumable(supplyDef);
+      }
+    }
+
     this.cardSprites = [];
     this.selectedDiceIds = new Set();
     this.activeTabCard = null;
-
-    // Process pack-opened equipment effects (Leftovers: chance to grant supply card)
-    const player = getPlayerState();
-    const grantSupply = processEquipmentOnPackOpened(player.equipment);
-    if (grantSupply) {
-      const supplyDef = getRandomSupplyDef();
-      player.addConsumable(supplyDef);
-    }
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
@@ -246,6 +280,12 @@ export class BoosterPackScene extends Scene {
 
       this.setupCardClick(sprite);
     }
+
+    for (const idx of this.pendingUsedCardIndices) {
+      const sprite = this.cardSprites[idx];
+      if (sprite) sprite.used = true;
+    }
+    this.pendingUsedCardIndices = [];
 
     // Skip button
     const btnY = height - 36;

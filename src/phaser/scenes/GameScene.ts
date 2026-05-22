@@ -7,6 +7,7 @@ import { Scene } from 'phaser';
 import * as Phaser from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { GameState } from '../../game/GameState';
+import type { GameRoundSaveData } from '../../game/SaveLoad';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { detectBestHand } from '../../game/DiceSystem';
 import { getPlayerState } from '../../game/PlayerState';
@@ -142,16 +143,35 @@ export class GameScene extends Scene {
 
   // Dice IDs to animate popping in on first draw phase (Mystery Crate, Quarry Stone, etc.)
   private pendingNewDiceIds: string[] = [];
+  private pendingRestore: GameRoundSaveData | null = null;
+
+  init(data: { restore?: GameRoundSaveData } = {}) {
+    if (data.restore) {
+      this.pendingRestore = data.restore;
+      this.gameState = null!;
+    }
+  }
+
+  getGameState(): GameState {
+    return this.gameState;
+  }
 
   create() {
     // Initialize game state only on first create (not on relayout)
     if (!this.gameState) {
       const player = getPlayerState();
-      consumeNextRoundTags(player);
-      this.gameState = new GameState({ targetMiles: player.targetMiles });
-      this.gameState.startRound();
-      // Pick up any dice added during leg transition or round start
-      this.pendingNewDiceIds = player.pendingNewDiceIds.splice(0);
+      if (this.pendingRestore) {
+        this.gameState = new GameState();
+        this.gameState.restoreRound(this.pendingRestore.config, this.pendingRestore.state);
+        this.pendingRestore = null;
+        this.pendingNewDiceIds = [];
+      } else {
+        consumeNextRoundTags(player);
+        this.gameState = new GameState({ targetMiles: player.targetMiles });
+        this.gameState.startRound();
+        // Pick up any dice added during leg transition or round start
+        this.pendingNewDiceIds = player.pendingNewDiceIds.splice(0);
+      }
       // Clear selected state from previous round (scene instance is reused)
       this.selectedHandIds = new Set();
     }
