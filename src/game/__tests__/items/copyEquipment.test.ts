@@ -341,13 +341,15 @@ describe('Copy item round-start effects', () => {
     expect(result.mult).toBe(13);
   });
 
-  test('spare_wagon_parts is incompatible with copy', () => {
+  test('mirror lake copies trail repair kit stateful xMult when stacked', () => {
+    const kit = item('trail_repair_kit');
+    kit.state.xMult = 1.75;
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
-      equipment: [item('mirror_lake'), item('spare_wagon_parts')],
+      equipment: [item('mirror_lake'), kit],
     });
-    // NEGATE_WAGON_DAMAGE is incompatible, mirror lake does nothing
-    expect(result.mult).toBe(5); // baseMult 1 + spare_wagon_parts +4 = 5
+    // PAIR baseMult 1; mirror copies kit x1.75, kit applies x1.75
+    expect(result.mult).toBeCloseTo(3.0625, 4);
   });
 });
 

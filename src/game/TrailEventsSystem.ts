@@ -2,7 +2,15 @@
 // Random narrative events that occur between rounds (after beating a leg, before the shop).
 // Choose-your-own-adventure moments with risk/reward.
 
-import trailEventsData from '../data/trail_events.json';
+import trailEventsData, {
+  getTrailEventById as findTrailEventById,
+  getTrailEventMinimumLeg,
+  type TrailEventChoice,
+  type TrailEventCondition,
+  type TrailEventDef,
+  type TrailEventEffect,
+  type TrailEventOutcome,
+} from '../data/trail_events';
 import type { PlayerState } from './PlayerState';
 import type { DiceEnhancement, DiceAura, DiceSticker } from './types';
 import {
@@ -15,51 +23,20 @@ import {
 import { generateShopStock } from './ItemsSystem';
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { TRAIL_EVENT } from './Constants';
+import type { EquipmentInstance } from './ItemsSystem';
 
-// ─── Types ───
+export type {
+  TrailEventCategory,
+  TrailEventChoice,
+  TrailEventCondition,
+  TrailEventConditionType,
+  TrailEventDef,
+  TrailEventEffect,
+  TrailEventEffectType,
+  TrailEventOutcome,
+} from '../data/trail_events';
 
-export interface TrailEventEffect {
-  type: string;
-  amount?: number;
-  count?: number;
-  percent?: number;
-  enhancement?: DiceEnhancement | null;
-  aura?: DiceAura | string | null;
-  sticker?: DiceSticker | null;
-  id?: string;
-  rarity?: string;
-  multiplier?: number;
-  chance?: number;
-}
-
-export interface TrailEventCondition {
-  type: string;
-  id?: string;
-  amount?: number;
-}
-
-export interface TrailEventOutcome {
-  probability: number;
-  effects: TrailEventEffect[];
-  message?: string;
-}
-
-export interface TrailEventChoice {
-  id: string;
-  label: string;
-  condition?: TrailEventCondition;
-  outcomes: TrailEventOutcome[];
-}
-
-export interface TrailEventDef {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  weight: number;
-  demonHunterOnly: boolean;
-  choices: TrailEventChoice[];
-}
+export { getTrailEventMinimumLeg } from '../data/trail_events';
 
 export interface TrailEventModifiers {
   dayPenalty: number;
@@ -89,7 +66,7 @@ export interface TrailEventResult {
 
 // ─── Data Access ───
 
-const ALL_EVENTS: TrailEventDef[] = trailEventsData as TrailEventDef[];
+const ALL_EVENTS: TrailEventDef[] = trailEventsData;
 
 /** Get all trail event definitions */
 export function getAllTrailEvents(): TrailEventDef[] {
@@ -98,7 +75,7 @@ export function getAllTrailEvents(): TrailEventDef[] {
 
 /** Get a trail event by its id */
 export function getTrailEventById(id: string): TrailEventDef | null {
-  return ALL_EVENTS.find((e) => e.id === id) ?? null;
+  return findTrailEventById(id) ?? null;
 }
 
 /** Create a fresh (zeroed) modifiers object */
@@ -126,9 +103,51 @@ export function createEmptyModifiers(): TrailEventModifiers {
 /** Demon hunter pool draw chance */
 const DEMON_HUNTER_POOL_CHANCE = 0.3;
 
+export type TrailEventPreviewCategory = 'positive' | 'negative' | 'animal' | 'weather';
+
+/** Whether the player has Scout's Spyglass equipped. */
+export function hasScoutsSpyglass(player: PlayerState): boolean {
+  return player.equipment.some((e) => e.def.id === 'scouts_spyglass');
+}
+
+/** Skip the pending trail event; store miles on the spyglass item. */
+export function applySpyglassAvoid(player: PlayerState): void {
+  const spyglass = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
+  if (spyglass) {
+    spyglass.state.miles = (spyglass.state.miles ?? 0) + TRAIL_EVENT.SPYGLASS_SKIP_MILES;
+  }
+  player.pendingTrailEvent = null;
+}
+
+export function findTrailRepairKit(player: PlayerState): EquipmentInstance | undefined {
+  return player.equipment.find((e) => e.def.id === 'trail_repair_kit');
+}
+
+/** True when shield or Trail Repair Kit negates a negative trail effect. */
+export function isTrailNegativeNegated(player: PlayerState): boolean {
+  return (
+    player.equipment.some((e) => e.def.id === 'saint_elmos_shield') ||
+    findTrailRepairKit(player) !== undefined
+  );
+}
+
+/** UI preview bucket for Scout's Spyglass (category only, not full event name). */
+export function getTrailEventPreviewCategory(event: TrailEventDef): TrailEventPreviewCategory {
+  if (event.category === 'positive') return 'positive';
+  if (event.category === 'animal') return 'animal';
+  if (event.category === 'weather') return 'weather';
+  return 'negative';
+}
+
+/** Filter events eligible for the current leg (mirrors boss minimumLeg). */
+export function filterEventsByLeg(pool: TrailEventDef[], leg: number): TrailEventDef[] {
+  const eligible = pool.filter((e) => getTrailEventMinimumLeg(e) <= leg);
+  return eligible.length > 0 ? eligible : pool;
+}
+
 /**
  * Select a random trail event from the weighted pool.
- * Filters demon_hunter events based on profession.
+ * Filters demon_hunter events based on profession and minimumLeg.
  * When playing as demon_hunter, ~30% chance to draw from exclusive pool.
  */
 export function selectTrailEvent(
@@ -136,16 +155,21 @@ export function selectTrailEvent(
   rng: () => number = Math.random,
 ): TrailEventDef {
   const isDemonHunter = player.profession?.id === 'demon_hunter';
+  const leg = player.leg;
 
   // Decide which pool to draw from
   if (isDemonHunter && rng() < DEMON_HUNTER_POOL_CHANCE) {
-    // Draw from demon hunter exclusive pool
-    const demonPool = ALL_EVENTS.filter((e) => e.demonHunterOnly);
+    const demonPool = filterEventsByLeg(
+      ALL_EVENTS.filter((e) => e.demonHunterOnly),
+      leg,
+    );
     return weightedRandomPick(demonPool, rng);
   }
 
-  // Draw from standard pool (excludes demon_hunter events)
-  const standardPool = ALL_EVENTS.filter((e) => !e.demonHunterOnly);
+  const standardPool = filterEventsByLeg(
+    ALL_EVENTS.filter((e) => !e.demonHunterOnly),
+    leg,
+  );
   return weightedRandomPick(standardPool, rng);
 }
 
@@ -236,21 +260,31 @@ export function resolveChoice(
     throw new Error(`Invalid choice "${choiceId}" for event "${event.id}"`);
   }
 
-  // Check if saint_elmos_shield equipment negates all negative effects
-  const hassaint_elmos_shield = player.equipment.some((e) => e.def.id === 'saint_elmos_shield');
+  const shieldEquip = player.equipment.find((e) => e.def.id === 'saint_elmos_shield');
+  const trailRepairKit = player.equipment.find((e) => e.def.id === 'trail_repair_kit');
 
   // Roll for outcome
   const outcomeIndex = rollOutcome(choice.outcomes, rng);
   const outcome = choice.outcomes[outcomeIndex];
   const modifiers = createEmptyModifiers();
 
+  let trailRepairKitNegatedEvent = false;
+
   // Apply effects
   for (const effect of outcome.effects) {
-    if (hassaint_elmos_shield && isNegativeEffect(effect)) {
-      continue; // saint_elmos_shield negates negative effects
+    if (isNegativeEffect(effect) && (shieldEquip || trailRepairKit)) {
+      if (trailRepairKit) trailRepairKitNegatedEvent = true;
+      continue;
     }
     applyEffect(effect, player, modifiers);
   }
+
+  if (trailRepairKit && trailRepairKitNegatedEvent) {
+    trailRepairKit.state.xMult =
+      (trailRepairKit.state.xMult ?? 1) + TRAIL_EVENT.TRAIL_REPAIR_KIT_XMULT_GAIN;
+  }
+
+  player.pendingTrailEvent = null;
 
   return {
     event,

@@ -6,11 +6,16 @@ import {
   getAllTrailEvents,
   getTrailEventById,
   selectTrailEvent,
+  filterEventsByLeg,
+  getTrailEventMinimumLeg,
   getAvailableChoices,
   resolveChoice,
   checkCondition,
   isNegativeEffect,
   applyEffect,
+  applySpyglassAvoid,
+  hasScoutsSpyglass,
+  getTrailEventPreviewCategory,
   createEmptyModifiers,
 } from '../TrailEventsSystem';
 import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
@@ -171,6 +176,35 @@ describe('Trail Event selection', () => {
     const event = selectTrailEvent(player, () => 0.0001);
     expect(event).toBeDefined();
   });
+
+  test('selectTrailEvent at leg 1 excludes events with minimumLeg > 1', () => {
+    const player = resetPlayerState();
+    player.leg = 1;
+    for (let i = 0; i < 200; i++) {
+      const event = selectTrailEvent(player, Math.random);
+      expect(getTrailEventMinimumLeg(event)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('run-warping standard events are in the leg 5 pool but not leg 4', () => {
+    const standardPool = getAllTrailEvents().filter((e) => !e.demonHunterOnly);
+    const leg4Ids = new Set(filterEventsByLeg(standardPool, 4).map((e) => e.id));
+    const leg5Ids = new Set(filterEventsByLeg(standardPool, 5).map((e) => e.id));
+
+    expect(getTrailEventMinimumLeg(getTrailEventById('lost_severe')!)).toBe(5);
+    expect(leg4Ids.has('lost_severe')).toBe(false);
+    expect(leg4Ids.has('wagon_fell_through_ice')).toBe(false);
+    expect(leg5Ids.has('lost_severe')).toBe(true);
+    expect(leg5Ids.has('wagon_fell_through_ice')).toBe(true);
+    expect(leg5Ids.has('wrong_trail')).toBe(true);
+  });
+
+  test('filterEventsByLeg falls back to full pool when nothing eligible', () => {
+    const pool = getAllTrailEvents().filter((e) => e.id === 'lost_severe');
+    const filtered = filterEventsByLeg(pool, 1);
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].id).toBe('lost_severe');
+  });
 });
 
 // ─── Condition Checking ───
@@ -190,18 +224,18 @@ describe('Condition checking', () => {
 
   test('HAS_EQUIPMENT: true when player has specific item', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts')];
-    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'spare_wagon_parts' }, player)).toBe(true);
+    player.equipment = [item('trail_repair_kit')];
+    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'trail_repair_kit' }, player)).toBe(true);
   });
 
   test('HAS_EQUIPMENT: false when player lacks item', () => {
     const player = resetPlayerState();
-    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'spare_wagon_parts' }, player)).toBe(false);
+    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'trail_repair_kit' }, player)).toBe(false);
   });
 
   test('HAS_EQUIPMENT_ANY: true when player has any equipment', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts')];
+    player.equipment = [item('trail_repair_kit')];
     expect(checkCondition({ type: 'HAS_EQUIPMENT_ANY' }, player)).toBe(true);
   });
 
@@ -225,7 +259,7 @@ describe('Condition checking', () => {
 
   test('HAS_WEAPON: false when no weapon equipped', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts')];
+    player.equipment = [item('trail_repair_kit')];
     expect(checkCondition({ type: 'HAS_WEAPON' }, player)).toBe(false);
   });
 
@@ -269,24 +303,6 @@ describe('Choice availability', () => {
     const event = getTrailEventById('broken_wheel')!;
     const choices = getAvailableChoices(event, player);
     expect(choices.some((c) => c.id === 'pay')).toBe(true);
-  });
-
-  test('equipment-gated choice available with matching item', () => {
-    const player = resetPlayerState();
-    player.economy.setBalance(100);
-    player.equipment = [item('spare_wagon_parts')];
-    const event = getTrailEventById('broken_wheel')!;
-    const choices = getAvailableChoices(event, player);
-    expect(choices.some((c) => c.id === 'spare_parts')).toBe(true);
-  });
-
-  test('equipment-gated choice hidden without item', () => {
-    const player = resetPlayerState();
-    player.economy.setBalance(100);
-    player.equipment = [];
-    const event = getTrailEventById('broken_wheel')!;
-    const choices = getAvailableChoices(event, player);
-    expect(choices.some((c) => c.id === 'spare_parts')).toBe(false);
   });
 
   test('HAS_CONSUMABLE_ANY hides choice when player has no consumables', () => {
@@ -462,7 +478,7 @@ describe('Effect application', () => {
 
   test('LOSE_RANDOM_EQUIPMENT removes equipment', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
+    player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
     expect(player.equipment.length).toBe(1);
@@ -470,7 +486,7 @@ describe('Effect application', () => {
 
   test('LOSE_EQUIPMENT_CHOICE is deferred to UI (no-op in applyEffect)', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
+    player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, player, mods);
     // Equipment is NOT removed here — the UI handles the player's choice
@@ -586,9 +602,9 @@ describe('Effect application', () => {
 
   test('DESTROY_EQUIPMENT removes specific equipment', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
+    player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'spare_wagon_parts' }, player, mods);
+    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'trail_repair_kit' }, player, mods);
     expect(player.equipment.length).toBe(1);
     expect(player.equipment[0].def.id).toBe('saint_elmos_shield');
   });
@@ -769,26 +785,67 @@ describe('saint_elmos_shield equipment interaction', () => {
   });
 });
 
-// ─── Spare Wagon Parts ───
+// ─── Trail Repair Kit ───
 
-describe('Spare Wagon Parts interaction', () => {
-  test('spare_parts choice destroys the equipment', () => {
+describe('Trail Repair Kit interaction', () => {
+  test('negates negative effects and gains x0.75 mult per event', () => {
     const player = resetPlayerState();
-    player.economy.setBalance(100);
-    player.equipment = [item('spare_wagon_parts')];
+    const kit = item('trail_repair_kit');
+    player.equipment = [kit];
 
-    const event = getTrailEventById('broken_wheel')!;
-    resolveChoice(event, 'spare_parts', player);
-    expect(player.equipment.length).toBe(0); // destroyed
+    const event = getTrailEventById('bad_mosquitos')!;
+    const result = resolveChoice(event, 'endure', player);
+    expect(result.modifiers.rerollPenalty).toBe(0);
+    expect(kit.state.xMult).toBeCloseTo(1.75, 5);
   });
 
-  test('spare_parts choice avoids day loss', () => {
+  test('does not gain xMult on positive-only events', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts')];
+    const kit = item('trail_repair_kit');
+    player.equipment = [kit];
 
-    const event = getTrailEventById('broken_axle')!;
-    const result = resolveChoice(event, 'spare_parts', player);
-    expect(result.modifiers.dayPenalty).toBe(0); // no day loss
+    const event = getTrailEventById('caught_fish')!;
+    resolveChoice(event, 'take', player);
+    expect(kit.state.xMult ?? 1).toBe(1);
+  });
+
+  test('shield and repair kit still only add x0.75 once per event', () => {
+    const player = resetPlayerState();
+    const kit = item('trail_repair_kit');
+    player.equipment = [item('saint_elmos_shield'), kit];
+
+    const event = getTrailEventById('lose_trail')!;
+    resolveChoice(event, 'wander', player);
+    expect(kit.state.xMult).toBeCloseTo(1.75, 5);
+  });
+});
+
+// ─── Scout's Spyglass ───
+
+describe("Scout's Spyglass", () => {
+  test('getTrailEventPreviewCategory maps categories', () => {
+    expect(getTrailEventPreviewCategory(getTrailEventById('caught_fish')!)).toBe('positive');
+    expect(getTrailEventPreviewCategory(getTrailEventById('bad_mosquitos')!)).toBe('animal');
+    expect(getTrailEventPreviewCategory(getTrailEventById('blizzard')!)).toBe('weather');
+    expect(getTrailEventPreviewCategory(getTrailEventById('broken_wheel')!)).toBe('negative');
+  });
+
+  test('applySpyglassAvoid stores miles and clears pending event', () => {
+    const player = resetPlayerState();
+    const spyglass = item('scouts_spyglass');
+    player.equipment = [spyglass];
+    player.pendingTrailEvent = getTrailEventById('bad_mosquitos')!;
+
+    applySpyglassAvoid(player);
+    expect(spyglass.state.miles).toBe(TRAIL_EVENT.SPYGLASS_SKIP_MILES);
+    expect(player.pendingTrailEvent).toBeNull();
+  });
+
+  test('hasScoutsSpyglass detects equipped item', () => {
+    const player = resetPlayerState();
+    expect(hasScoutsSpyglass(player)).toBe(false);
+    player.equipment = [item('scouts_spyglass')];
+    expect(hasScoutsSpyglass(player)).toBe(true);
   });
 });
 
@@ -831,7 +888,7 @@ describe('Every trail event resolves without error', () => {
     test(`${event.id}: resolves first available choice`, () => {
       const player = resetPlayerState();
       player.economy.setBalance(1000); // rich so money gates pass
-      player.equipment = [item('spare_wagon_parts')]; // has equipment
+      player.equipment = [item('trail_repair_kit')]; // has equipment
       player.dice = diceWithValue(6, 50); // plenty of dice
 
       // Add a supply card so medicine checks pass
@@ -860,7 +917,7 @@ describe('Every trail event choice resolves without error', () => {
       test(`${event.id}/${choice.id}: resolves correctly`, () => {
         const player = resetPlayerState();
         player.economy.setBalance(1000);
-        player.equipment = [item('spare_wagon_parts'), item('saint_elmos_shield')];
+        player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
         player.dice = diceWithValue(6, 50);
 
         const supplyDef = getSupplyDefById('coffee_tin')!;
@@ -960,7 +1017,7 @@ describe('Edge cases', () => {
 
   test('DESTROY_EQUIPMENT with non-existent id does nothing', () => {
     const player = resetPlayerState();
-    player.equipment = [item('spare_wagon_parts')];
+    player.equipment = [item('trail_repair_kit')];
     const mods = createEmptyModifiers();
     applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'nonexistent' }, player, mods);
     expect(player.equipment.length).toBe(1);

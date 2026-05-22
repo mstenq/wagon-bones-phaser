@@ -1,4 +1,4 @@
-// ─── ADD_MULT, NEGATE_WAGON_DAMAGE, ADD_MULT_RISKY, RANDOM_MULT ───
+// ─── ADD_MULT, ADD_MULT_RISKY, RANDOM_MULT ───
 
 import { effectRegistry } from '../registry';
 
@@ -7,13 +7,6 @@ effectRegistry.registerAdditive('ADD_MULT', (ctx, equip, index) => {
   ctx.bonusMult += value;
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value });
   console.log(`  [equip] ${equip.def.name}: ADD_MULT +${value} (bonusMult: ${ctx.bonusMult})`);
-});
-
-effectRegistry.registerAdditive('NEGATE_WAGON_DAMAGE', (ctx, equip, index) => {
-  const value = (equip.def.effectParams as Record<string, unknown>).value as number;
-  ctx.bonusMult += value;
-  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value });
-  console.log(`  [equip] ${equip.def.name}: NEGATE_WAGON_DAMAGE +${value}`);
 });
 
 effectRegistry.registerAdditive('ADD_MULT_RISKY', (ctx, equip, index) => {

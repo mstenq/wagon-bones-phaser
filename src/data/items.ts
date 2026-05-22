@@ -759,26 +759,44 @@ const items: ItemDef[] = [
     hintDisplay: () => [[active('+1 die'), condition('round start')]],
   },
   {
-    id: 'spare_wagon_parts',
-    name: 'Spare Wagon Parts',
-    cardTemplate: "white-text-black-outline",
+    id: 'trail_repair_kit',
+    name: 'Trail Repair Kit',
+    cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-    description: 'Negates one wagon-damage trail event, then destroys itself. +4 mult.',
-    effectType: 'NEGATE_WAGON_DAMAGE',
-    effectParams: { value: 4 },
-    hintDisplay: () => [[mult('+4'), text(' mult')], [text('Negates wagon damage')]],
+    description:
+      'Negates negative trail event penalties. Gains x0.75 mult each time it prevents a penalty.',
+    effectType: 'STATEFUL_XMULT',
+    effectParams: {},
+    initialState: { xMult: 1 },
+    hintDisplay: (_game, player) => {
+      const inst = player.equipment.find((e) => e.def.id === 'trail_repair_kit');
+      const xm = inst?.state.xMult ?? 1;
+      return [
+        [active('Negates'), text(' trail penalties')],
+        xm > 1 ? [text('x'), mult(xm.toFixed(2))] : [inactive('x1'), text(' until first save')],
+      ];
+    },
   },
   {
     id: 'scouts_spyglass',
     name: "Scout's Spyglass",
-    cardTemplate: "white-text",
+    cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-    description: 'See the next trail event before it happens. Skip it for $3. +25 miles.',
-    effectType: 'NONE',
+    description:
+      'Preview the next trail event category. Avoid it for +50 miles (stored on this item) or face the event.',
+    effectType: 'STATEFUL_ADD_MILES',
     effectParams: {},
-    hintDisplay: () => [[miles('+25'), text(' miles')], [text('Preview trail events')]],
+    initialState: { miles: 0 },
+    hintDisplay: (_game, player) => {
+      const inst = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
+      const stored = inst?.state.miles ?? 0;
+      return [
+        [text('Preview'), condition('trail events')],
+        stored > 0 ? [miles(`+${stored}`), text(' stored miles')] : [miles('+50'), text(' if avoided')],
+      ];
+    },
   },
   {
     id: 'saint_elmos_shield',

@@ -352,7 +352,9 @@ export const ANIM = {
 export const TRAIL_EVENT = {
   AMOUNT_PER_MISSING_DIE: 3, // $ lost per missing die for LOSE_RANDOM_DICE
   AMOUNT_PER_MISSING_EQUIP: 4, // $ lost per missing equipment for LOSE_RANDOM_EQUIPMENT
-}
+  SPYGLASS_SKIP_MILES: 50, // miles stored on Scout's Spyglass when avoiding a trail event
+  TRAIL_REPAIR_KIT_XMULT_GAIN: 0.75, // xMult added per trail event with negated penalties
+};
 
 // ─── Copy Equipment Incompatibility ───
 /** Effect types that cannot be copied by Mirror Lake / Echo Chamber */
@@ -380,7 +382,6 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'PACK_SADDLE',             // Pack Saddle
   'COFFEE',                  // Coffee
   'FLOUR_SACK',              // Flour Sack
-  'NEGATE_WAGON_DAMAGE',     // Spare Wagon Parts
   'COPY_RIGHT',              // Mirror Lake (prevent self-reference)
   'COPY_LEFTMOST',           // Echo Chamber (prevent self-reference)
   'TRAIL_BACKPACK',          // Trail Backpack

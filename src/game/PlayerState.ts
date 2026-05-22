@@ -28,6 +28,7 @@ import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers'
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitBossRerollLimit, getPermitShopRerollDiscount } from './PermitsSystem';
 import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
+import type { TrailEventDef } from '../data/trail_events';
 import trailGuidesData from '../data/trail_guides.json';
 import professionsData from '../data/professions.json';
 import bosses from '../data/bosses';
@@ -120,6 +121,8 @@ export class PlayerState {
   permitRerollPenalty: number = 0; // reroll penalty from Hidden Pass
   permitScoreReduction: number = 0; // leg-equivalent score reduction from shortcuts
   trailEventModifiers: TrailEventModifiers = createEmptyModifiers(); // penalties/bonuses from trail events, consumed next round
+  /** Pre-rolled trail event when Scout's Spyglass is equipped (category preview before reveal). */
+  pendingTrailEvent: TrailEventDef | null = null;
   skipNextShop: boolean = false; // set by trail events (Native Guide)
   trailGuidesUsed: number = 0; // count of trail guides consumed this journey (for Guide Lantern)
   startingDiceCount: number = DEFAULT_STARTING_DICE; // collection size at run start (for Ghost Town)
@@ -854,6 +857,9 @@ export class PlayerState {
     this.roundSkipPreviewTags = {};
     this.bossRerollsUsedThisLeg = 0;
     this.dynamiteSelfDestructed = false;
+    this.pendingTrailEvent = null;
+    this.trailEventModifiers = createEmptyModifiers();
+    this.skipNextShop = false;
     this.assignBosses();
   }
 }

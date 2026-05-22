@@ -20,6 +20,12 @@ import {
   getAvailableChoices,
   resolveChoice,
   isNegativeEffect,
+  hasScoutsSpyglass,
+  applySpyglassAvoid,
+  getTrailEventPreviewCategory,
+  findTrailRepairKit,
+  isTrailNegativeNegated,
+  type TrailEventPreviewCategory,
   TrailEventDef,
   TrailEventChoice,
   TrailEventResult,
@@ -40,6 +46,13 @@ const CATEGORY_COLORS: Record<string, number> = {
   demon_hunter: 0x880088,
 };
 
+const PREVIEW_CATEGORY_COLORS: Record<TrailEventPreviewCategory, number> = {
+  positive: 0x44aa44,
+  negative: 0xcc4444,
+  animal: 0x88aa44,
+  weather: 0x6688cc,
+};
+
 export class TrailEventScene extends Scene {
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
@@ -48,6 +61,7 @@ export class TrailEventScene extends Scene {
 
   private currentEvent: TrailEventDef;
   private resolved: boolean = false;
+  private spyglassRevealed: boolean = false;
   private choiceButtons: Button[] = [];
   private resultContainer: Phaser.GameObjects.Container | null = null;
 
@@ -68,9 +82,22 @@ export class TrailEventScene extends Scene {
     this.consumableBar = layout.consumableBar;
     this.dicePouch = layout.dicePouch;
 
-    // Select an event (persist across resize restarts)
+    // Select / preview trail event (persist across resize restarts)
     if (!this.currentEvent) {
-      this.currentEvent = selectTrailEvent(player);
+      if (hasScoutsSpyglass(player)) {
+        if (!player.pendingTrailEvent) {
+          player.pendingTrailEvent = selectTrailEvent(player);
+        }
+        if (!this.spyglassRevealed) {
+          this.buildSpyglassPreview(layout);
+          EventBus.emit(Events.SCENE_READY, this);
+          return;
+        }
+        this.currentEvent = player.pendingTrailEvent!;
+        player.pendingTrailEvent = null;
+      } else {
+        this.currentEvent = selectTrailEvent(player);
+      }
     }
 
     // Load event image dynamically if not already cached
@@ -90,6 +117,78 @@ export class TrailEventScene extends Scene {
     }
 
     EventBus.emit(Events.SCENE_READY, this);
+  }
+
+  private buildSpyglassPreview(layout: { contentW: number; contentCX: number }): void {
+    const player = getPlayerState();
+    const event = player.pendingTrailEvent!;
+    const preview = getTrailEventPreviewCategory(event);
+    const { contentW, contentCX } = layout;
+    const panelW = Math.min(520, contentW - 40);
+    const panelX = contentCX - panelW / 2;
+    const panelTop = UI.EQUIP_BAR_HEIGHT + 40;
+    const categoryColor = PREVIEW_CATEGORY_COLORS[preview];
+
+    const panel = this.add.graphics();
+    panel.fillStyle(COLORS.BG_PANEL, 0.95);
+    panel.fillRoundedRect(panelX, panelTop, panelW, 280, 12);
+    panel.lineStyle(2, categoryColor, 0.9);
+    panel.strokeRoundedRect(panelX, panelTop, panelW, 280, 12);
+
+    this.add
+      .text(contentCX, panelTop + 24, "Scout's Spyglass", {
+        fontFamily: FONTS.HEADING,
+        fontSize: '22px',
+        color: TEXT_COLORS.PRIMARY,
+        stroke: '#000000',
+        strokeThickness: 2,
+        align: 'center',
+      })
+      .setOrigin(0.5, 0);
+
+    this.add
+      .text(contentCX, panelTop + 58, 'Ahead on the trail…', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '16px',
+        color: TEXT_COLORS.SECONDARY,
+        align: 'center',
+      })
+      .setOrigin(0.5, 0);
+
+    this.add
+      .text(contentCX, panelTop + 100, preview.toUpperCase(), {
+        fontFamily: FONTS.HEADING,
+        fontSize: '36px',
+        color: '#' + categoryColor.toString(16).padStart(6, '0'),
+        stroke: '#000000',
+        strokeThickness: 3,
+        align: 'center',
+      })
+      .setOrigin(0.5, 0);
+
+    this.add
+      .text(contentCX, panelTop + 150, 'Event type only — details hidden until you commit.', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '13px',
+        color: TEXT_COLORS.MUTED,
+        align: 'center',
+        wordWrap: { width: panelW - 48 },
+      })
+      .setOrigin(0.5, 0);
+
+    const btnY = panelTop + 210;
+    const btnW = Math.min(360, panelW - 48);
+    new Button(this, contentCX, btnY, 'Avoid the trail (+50 miles)', btnW, 44).onClick(() => {
+      applySpyglassAvoid(player);
+      this.spyglassRevealed = false;
+      this.proceedToNextScene();
+    });
+    new Button(this, contentCX, btnY + 56, 'Face the trail', btnW, 44).onClick(() => {
+      this.currentEvent = event;
+      player.pendingTrailEvent = null;
+      this.spyglassRevealed = true;
+      this.scene.restart();
+    });
   }
 
   private buildEventDisplay(layout: { contentX: number; contentW: number; contentCX: number }): void {
@@ -224,15 +323,15 @@ export class TrailEventScene extends Scene {
     this.resultContainer = this.add.container(0, 0);
     this.resultContainer.setAlpha(0);
 
-    // Check saint_elmos_shield
     const player = getPlayerState();
     const shieldEquip = player.equipment.find((e) => e.def.id === 'saint_elmos_shield');
-    const hassaint_elmos_shield = shieldEquip !== undefined;
+    const repairKitEquip = findTrailRepairKit(player);
+    const negatesNegatives = isTrailNegativeNegated(player);
 
     // Build effect summary lines
     const effectLines: { text: string; color: string; negative: boolean }[] = [];
     for (const effect of result.effects) {
-      const negated = hassaint_elmos_shield && isNegativeEffect(effect);
+      const negated = isNegativeEffect(effect) && negatesNegatives;
       const line = this.formatEffect(effect, negated, enhancedDiceBeforeCount, equipmentBeforeCount);
       if (line) effectLines.push(line);
     }
@@ -274,7 +373,7 @@ export class TrailEventScene extends Scene {
         })
         .setOrigin(0.5, 0);
 
-      if (line.negative && !hassaint_elmos_shield) {
+      if (line.negative && !negatesNegatives) {
         // Shake animation for negative effects
         this.tweens.add({
           targets: txt,
@@ -304,16 +403,27 @@ export class TrailEventScene extends Scene {
     // Play appropriate sound
     const hasNegative = result.effects.some((e) => isNegativeEffect(e));
     const hasPositive = result.effects.some((e) => !isNegativeEffect(e));
-    if (hasNegative && !hassaint_elmos_shield) {
+    if (hasNegative && !negatesNegatives) {
       this.safePlaySound('sfx_negative');
     } else if (hasPositive) {
       this.safePlaySound('sfx_coin');
     }
 
-    // saint_elmos_shield message
-    if (shieldEquip && result.effects.some((e) => isNegativeEffect(e))) {
+    const hadNegatedNegative = result.effects.some((e) => isNegativeEffect(e) && negatesNegatives);
+    if (shieldEquip && hadNegatedNegative) {
       const provText = this.add
         .text(contentCX, resultY - 28, `✨ ${shieldEquip.def.name} protects you! ✨`, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '16px',
+          color: TEXT_COLORS.GOLD,
+          align: 'center',
+        })
+        .setOrigin(0.5, 0);
+      this.resultContainer.add(provText);
+    } else if (repairKitEquip && hadNegatedNegative) {
+      const xm = repairKitEquip.state.xMult ?? 1;
+      const provText = this.add
+        .text(contentCX, resultY - 28, `🔧 ${repairKitEquip.def.name} patches the trail (x${xm.toFixed(2)})`, {
           fontFamily: FONTS.HEADING,
           fontSize: '16px',
           color: TEXT_COLORS.GOLD,
@@ -325,7 +435,7 @@ export class TrailEventScene extends Scene {
 
     // Check if player must choose equipment to lose
     const loseEquipEffect = result.effects.find(
-      (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(hassaint_elmos_shield && isNegativeEffect(e)),
+      (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(isNegativeEffect(e) && negatesNegatives),
     );
     const sacrificableCount = player.equipment.filter((e) => !isEquipmentCursed(e)).length;
     const needsEquipChoice = loseEquipEffect && sacrificableCount > 0;
@@ -733,6 +843,8 @@ export class TrailEventScene extends Scene {
     // Clear state so a fresh event is picked next time
     this.currentEvent = null!;
     this.resolved = false;
+    this.spyglassRevealed = false;
+    player.pendingTrailEvent = null;
     if (player.skipNextShop) {
       player.skipNextShop = false;
       this.scene.start('RoundSelect');
