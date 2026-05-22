@@ -26,6 +26,7 @@ import {
   getRandomTrailGuideDef,
   getShopRandomFrontierDef,
   canUseConsumableInShop,
+  isSecondHelpingsCloneTarget,
 } from '../../game/ConsumablesSystem';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
@@ -65,10 +66,9 @@ function canBuyAndUse(def: ConsumableDef): boolean {
   // Dice-selection cards can't be used from the shop (no dice to select)
   if (def.diceSelection) return false;
   if (def.instantEffect) return true;
-  // second_helpings requires a previous consumable to clone
+  // second_helpings requires a previous supply or trail guide to clone
   if (def.id === 'second_helpings') {
-    const player = getPlayerState();
-    return player.lastUsedConsumable != null && player.lastUsedConsumable.id !== 'second_helpings';
+    return isSecondHelpingsCloneTarget(getPlayerState().lastUsedConsumable);
   }
   // Special-case supply/frontier IDs handled by switch in executeConsumableEffect
   const SPECIAL_IDS = ['doctor', 'compass', 'supply_cache', 'bless'];

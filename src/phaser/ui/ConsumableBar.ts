@@ -7,7 +7,7 @@ import { UI } from '../../game/Constants';
 import { getPlayerState } from '../../game/PlayerState';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { CardBar } from './CardBar';
-import { ConsumableDef, getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
+import { ConsumableDef, getConsumableTexturePrefix, isSecondHelpingsCloneTarget } from '../../game/ConsumablesSystem';
 
 export class ConsumableBar extends CardBar {
   protected readonly cardScale = UI.CONSUMABLE_CARD_SCALE;
@@ -56,7 +56,7 @@ export class ConsumableBar extends CardBar {
     // Block USE for second_helpings when there's no valid target to clone
     const canUse =
       consumable.def.id !== 'second_helpings' ||
-      (player.lastUsedConsumable != null && player.lastUsedConsumable.id !== 'second_helpings');
+      isSecondHelpingsCloneTarget(player.lastUsedConsumable);
     const canUseInScene = this.canUsePredicate ? this.canUsePredicate(consumable.def) : true;
 
     if (canUse && canUseInScene) {

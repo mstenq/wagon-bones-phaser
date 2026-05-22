@@ -23,6 +23,7 @@ import {
   executeConsumableEffect,
   useConsumableDirectly,
   getConsumableTexturePrefix,
+  isSecondHelpingsCloneTarget,
   getRandomSupplyDef,
 } from '../../game/ConsumablesSystem';
 import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
@@ -639,8 +640,7 @@ export class BoosterPackScene extends Scene {
 
     // second_helpings needs a valid clone target
     if (item.supplyCardId === 'second_helpings') {
-      const player = getPlayerState();
-      if (!player.lastUsedConsumable || player.lastUsedConsumable.id === 'second_helpings') {
+      if (!isSecondHelpingsCloneTarget(getPlayerState().lastUsedConsumable)) {
         return [];
       }
     }

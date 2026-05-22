@@ -8,8 +8,10 @@ import {
   createConsumableInstance,
   getSupplyDefById,
   getFrontierDefById,
+  getTrailGuideDefById,
   executeConsumableEffect,
   useConsumableDirectly,
+  isSecondHelpingsCloneTarget,
   grantGhostMedicine,
   canUseConsumableInShop,
 } from '../ConsumablesSystem';
@@ -226,6 +228,92 @@ describe('PlayerState consumable management', () => {
     const secondHelpingsDef = getSupplyDefById('second_helpings')!;
     const result = useConsumableDirectly(secondHelpingsDef, player);
     expect(result.success).toBe(false);
+  });
+
+  test('frontier encounters do not update lastUsedConsumable', () => {
+    const player = resetPlayerState();
+    const coffeeDef = getSupplyDefById('coffee_tin')!;
+    const frontierDef = getFrontierDefById('blood_moon')!;
+
+    player.addConsumable(coffeeDef);
+    player.useConsumable(0);
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+
+    player.addConsumable(frontierDef);
+    player.useConsumable(0);
+    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+    expect(isSecondHelpingsCloneTarget(frontierDef)).toBe(false);
+  });
+
+  test('second_helpings clones last supply/trail guide after frontier use', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const coffeeDef = getSupplyDefById('coffee_tin')!;
+    const frontierDef = getFrontierDefById('blood_moon')!;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+
+    player.addConsumable(coffeeDef);
+    player.useConsumable(0);
+    player.addConsumable(frontierDef);
+    player.useConsumable(0);
+    player.addConsumable(secondHelpingsDef);
+    const secondHelpings = player.useConsumable(0)!;
+
+    const result = executeConsumableEffect(secondHelpings, player);
+    expect(result.success).toBe(true);
+    expect(player.consumables[0].def.id).toBe('coffee_tin');
+  });
+
+  test('second_helpings clones trail guide after frontier use', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const tgDef = getTrailGuideDefById('tg_high_value')!;
+    const frontierDef = getFrontierDefById('blood_moon')!;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+
+    player.addConsumable(tgDef);
+    player.useConsumable(0);
+    expect(player.lastUsedConsumable!.id).toBe('tg_high_value');
+
+    player.addConsumable(frontierDef);
+    player.useConsumable(0);
+    // Frontier must not replace the trail guide clone target
+    expect(player.lastUsedConsumable!.id).toBe('tg_high_value');
+
+    player.addConsumable(secondHelpingsDef);
+    const secondHelpings = player.useConsumable(0)!;
+    const result = executeConsumableEffect(secondHelpings, player);
+
+    expect(result.success).toBe(true);
+    expect(result.consumablesCreated).toBe(1);
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0].def.id).toBe('tg_high_value');
+    expect(player.consumables[0].def.category).toBe('trail_guide');
+  });
+
+  test('second_helpings fails when only frontier encounter was used', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const frontierDef = getFrontierDefById('blood_moon')!;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+
+    player.addConsumable(frontierDef);
+    player.useConsumable(0);
+    expect(player.lastUsedConsumable).toBeNull();
+
+    player.addConsumable(secondHelpingsDef);
+    const secondHelpings = player.useConsumable(0)!;
+    const result = executeConsumableEffect(secondHelpings, player);
+    expect(result.success).toBe(false);
+  });
+
+  test('trail guides update lastUsedConsumable for second_helpings', () => {
+    const player = resetPlayerState();
+    const tgDef = getTrailGuideDefById(trailGuidesData[0].id)!;
+    player.addConsumable(tgDef);
+    player.useConsumable(0);
+    expect(player.lastUsedConsumable!.category).toBe('trail_guide');
+    expect(isSecondHelpingsCloneTarget(player.lastUsedConsumable)).toBe(true);
   });
 
   test('useConsumable returns null for invalid index', () => {

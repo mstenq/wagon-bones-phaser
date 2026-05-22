@@ -217,6 +217,12 @@ export function getConsumableDefById(id: string, aura?: ItemAura | null): Consum
   return getSupplyDefById(id, aura) ?? getTrailGuideDefById(id, aura) ?? getFrontierDefById(id, aura);
 }
 
+/** Supply/trail guide consumables that Second Helpings can duplicate and track as "last used". */
+export function isSecondHelpingsCloneTarget(def: ConsumableDef | null): boolean {
+  if (!def || def.id === 'second_helpings') return false;
+  return def.category === 'supply' || def.category === 'trail_guide';
+}
+
 /** Shop context has no natural dice board; block dice-edit cards there. */
 export function canUseConsumableInShop(def: ConsumableDef): boolean {
   if (def.id === 'raid') return false;
@@ -399,8 +405,8 @@ export function executeConsumableEffect(
       return { success: true, consumablesCreated: created };
     }
     case 'second_helpings': {
-      // Creates last used consumable (excludes itself)
-      if (!player.lastUsedConsumable || player.lastUsedConsumable.id === 'second_helpings') {
+      // Creates last used supply or trail guide (not frontier encounters)
+      if (!isSecondHelpingsCloneTarget(player.lastUsedConsumable)) {
         return { success: false, failReason: 'No previous consumable used!' };
       }
       if (player.addConsumable(player.lastUsedConsumable)) {
@@ -512,7 +518,7 @@ export function useConsumableDirectly(
   context: UseConsumableContext = {},
 ): UseConsumableResult {
   const consumed = createConsumableInstance(def);
-  if (def.id !== 'second_helpings') {
+  if (isSecondHelpingsCloneTarget(def)) {
     player.lastUsedConsumable = def;
   }
   return executeConsumableEffect(consumed, player, context);

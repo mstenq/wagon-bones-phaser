@@ -21,6 +21,7 @@ import {
   ConsumableInstance,
   createConsumableInstance,
   getSupplyDefById,
+  isSecondHelpingsCloneTarget,
 } from './ConsumablesSystem';
 import { getItemAuraById } from './ItemsSystem';
 import {
@@ -532,9 +533,8 @@ export class PlayerState {
   useConsumable(index: number): ConsumableInstance | null {
     if (index < 0 || index >= this.consumables.length) return null;
     const [item] = this.consumables.splice(index, 1);
-    // Don't overwrite lastUsedConsumable when using second_helpings,
-    // since it reads the previous value to duplicate it
-    if (item.def.id !== 'second_helpings') {
+    // Track supply/trail guide for Second Helpings (not frontier or second_helpings itself)
+    if (isSecondHelpingsCloneTarget(item.def)) {
       this.lastUsedConsumable = item.def;
     }
     return item;
