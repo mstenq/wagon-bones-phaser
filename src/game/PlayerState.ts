@@ -124,6 +124,7 @@ export class PlayerState {
   bossEffectDisabled: boolean = false; // Sheriff's Badge: disables boss effect for current round when sold
   bossRoundState: BossRoundState = { ...EMPTY_BOSS_ROUND_STATE };
   pendingNewDiceIds: string[] = []; // dice IDs pending animation (Quarry Stone, Mystery Crate, etc.)
+  pendingHandDiceIds: string[] = []; // Mystery Crate dice guaranteed in day-1 hand (not Quarry Stone)
   pendingAnimatedDestructions: { sourceIdx: number; victimIdx: number }[] = []; // equipment destructions pending animation (Funeral Pyre, Haunted Totem, etc.)
   pendingJunkDealerCount: number = 0; // number of equipment cards just created by Junk Dealer (for animation)
 
@@ -354,10 +355,12 @@ export class PlayerState {
     this.loadedDieTarget = Math.max(1, Math.min(12, Math.floor(value)));
   }
 
-  addDie(die: Die): void {
-    this.dice.push({ ...die, id: `die_player_${this.nextDieId++}` });
+  addDie(die: Die): Die {
+    const added: Die = { ...die, id: `die_player_${this.nextDieId++}` };
+    this.dice.push(added);
     // New Blood: gains xMult for every new dice added
     processEquipmentOnDiceAdded(this.equipment);
+    return added;
   }
 
   /** Explorer's Guild: trail guides and trail guide packs are free in the shop */

@@ -102,7 +102,21 @@ export class GameState {
   private drawRandomHand(player = getPlayerState()): Die[] {
     const available = player.availableDice;
     const drawCount = Math.min(this.config.rollSize, available.length);
-    return drawFromPouch(available, drawCount).drawn;
+    const drawn = drawFromPouch(available, drawCount).drawn;
+    const handIds = new Set(drawn.map((d) => d.id));
+
+    // Day 1: Mystery Crate dice are extra cards in hand (not Quarry Stone)
+    for (const id of player.pendingHandDiceIds) {
+      if (handIds.has(id)) continue;
+      const die = available.find((d) => d.id === id);
+      if (die) {
+        drawn.push(die);
+        handIds.add(id);
+      }
+    }
+    player.pendingHandDiceIds = [];
+
+    return drawn;
   }
 
   startRound(config?: Partial<GameConfig>): void {
@@ -190,8 +204,8 @@ export class GameState {
     // Quarry Stone: add stone dice at round start
     for (let i = 0; i < roundStartEffects.stoneDiceToAdd; i++) {
       const stoneDie = createDie({ enhancement: 'stone' });
-      player.addDie(stoneDie);
-      player.pendingNewDiceIds.push(stoneDie.id);
+      const addedStone = player.addDie(stoneDie);
+      player.pendingNewDiceIds.push(addedStone.id);
     }
 
     // Hardtack: +days, lose all rerolls
@@ -202,15 +216,13 @@ export class GameState {
       this.config.maxRerolls = 0;
     }
 
-    // Mystery Crate: add a die with random sticker at round start
-    for (const equip of player.equipment) {
-      if (equip.def.effectType === 'ROUND_START_ADD_DICE') {
-        const stickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
-        const sticker = stickers[Math.floor(Math.random() * stickers.length)];
-        const newDie = createDie({ sticker });
-        player.addDie(newDie);
-        player.pendingNewDiceIds.push(newDie.id);
-      }
+    // Mystery Crate (and mirror/echo copies): add dice with random stickers at round start
+    const mysteryStickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
+    for (let i = 0; i < roundStartEffects.stickerDiceToAdd; i++) {
+      const sticker = mysteryStickers[Math.floor(Math.random() * mysteryStickers.length)];
+      const added = player.addDie(createDie({ sticker }));
+      player.pendingNewDiceIds.push(added.id);
+      player.pendingHandDiceIds.push(added.id);
     }
 
     // Supply Drop (and copies): create random supply cards at start of round
@@ -232,7 +244,10 @@ export class GameState {
   /** Player confirms hand selection and moves to ROLL. Selects which dice to roll. */
   selectForRoll(diceIds: string[]): boolean {
     if (this.state.phase !== 'SELECT') { console.log('[DEBUG selectForRoll] BLOCKED: phase is', this.state.phase); return false; }
-    if (diceIds.length < 1 || diceIds.length > this.config.rollSize) { console.log('[DEBUG selectForRoll] BLOCKED: diceIds.length', diceIds.length, 'rollSize', this.config.rollSize); return false; }
+    if (diceIds.length < 1 || diceIds.length > this.state.hand.length) {
+      console.log('[DEBUG selectForRoll] BLOCKED: diceIds.length', diceIds.length, 'hand.length', this.state.hand.length);
+      return false;
+    }
 
     const selected = this.state.hand.filter((d) => diceIds.includes(d.id));
     if (selected.length !== diceIds.length) {

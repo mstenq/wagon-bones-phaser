@@ -308,6 +308,12 @@ describe('Copy item round-start effects', () => {
     expect(result.stoneDiceToAdd).toBe(2);
   });
 
+  test('mirror lake copying mystery_crate adds extra sticker die', () => {
+    const equipment = [item('mirror_lake'), item('mystery_crate')];
+    const result = processEquipmentOnRoundStart(equipment);
+    expect(result.stickerDiceToAdd).toBe(2);
+  });
+
   test('mirror lake copying haunted_totem does not trigger destruction', () => {
     const equipment = [item('mirror_lake'), itemWithState('haunted_totem', { xMult: 2 }), item('horseshoe')];
     const result = processEquipmentOnRoundStart(equipment);

@@ -328,13 +328,14 @@ export interface AnimatedDestruction {
 /** Called at the start of each round. Updates/removes decaying equipment.
  *  Returns indices of equipment to remove. Equipment is processed left-to-right;
  *  if one item destroys another that hasn't triggered yet, the destroyed item is skipped. */
-export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isBossRound: boolean = false): { destroyedIndices: number[]; animatedDestructions: AnimatedDestruction[]; equipmentToCreate: number; equipmentCreateRarity: string; stoneDiceToAdd: number; daysBonus: number; loseAllRerolls: boolean; burnBarrelMoney: number; burnBarrelTriggered: boolean; supplyCardsToAdd: number } {
+export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isBossRound: boolean = false): { destroyedIndices: number[]; animatedDestructions: AnimatedDestruction[]; equipmentToCreate: number; equipmentCreateRarity: string; stoneDiceToAdd: number; stickerDiceToAdd: number; daysBonus: number; loseAllRerolls: boolean; burnBarrelMoney: number; burnBarrelTriggered: boolean; supplyCardsToAdd: number } {
   const destroyedIndices: number[] = [];
   const animatedDestructions: AnimatedDestruction[] = [];
   const pendingAnimatedDestroy = new Set<number>(); // indices pending animated destruction
   let equipmentToCreate = 0;
   let equipmentCreateRarity = 'common';
   let stoneDiceToAdd = 0;
+  let stickerDiceToAdd = 0;
   let daysBonus = 0;
   let loseAllRerolls = false;
   let burnBarrelMoney = 0;
@@ -361,6 +362,11 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
       case 'ROUND_START_ADD_STONE': {
         // Quarry Stone: add a stone die
         stoneDiceToAdd++;
+        break;
+      }
+      case 'ROUND_START_ADD_DICE': {
+        // Mystery Crate: add a die with random sticker (copy items stack via mirror/echo)
+        stickerDiceToAdd++;
         break;
       }
       case 'ROUND_START_CREATE_EQUIPMENT': {
@@ -487,7 +493,7 @@ export function processEquipmentOnRoundStart(equipment: EquipmentInstance[], isB
         break;
     }
   }
-  return { destroyedIndices, animatedDestructions, equipmentToCreate, equipmentCreateRarity, stoneDiceToAdd, daysBonus, loseAllRerolls, burnBarrelMoney, burnBarrelTriggered, supplyCardsToAdd };
+  return { destroyedIndices, animatedDestructions, equipmentToCreate, equipmentCreateRarity, stoneDiceToAdd, stickerDiceToAdd, daysBonus, loseAllRerolls, burnBarrelMoney, burnBarrelTriggered, supplyCardsToAdd };
 }
 
 export { processEquipmentOnDayEnd } from './effects/lifecycle/misc';

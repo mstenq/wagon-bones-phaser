@@ -194,6 +194,76 @@ describe('ROUND_START_ADD_DICE: Mystery Crate', () => {
     const inst = item('mystery_crate');
     expect(inst.def.effectType).toBe('ROUND_START_ADD_DICE');
   });
+
+  test('mirror lake copying mystery crate adds two sticker dice on day 1', () => {
+    const { game, player } = setupGame({ equipment: [item('mirror_lake'), item('mystery_crate')] });
+    const diceBefore = player.dice.length;
+    game.startRound();
+
+    const newDice = player.dice.slice(diceBefore);
+    expect(newDice).toHaveLength(2);
+    expect(newDice.every((d) => d.sticker != null)).toBe(true);
+    for (const die of newDice) {
+      expect(game.state.hand.some((d) => d.id === die.id)).toBe(true);
+    }
+    expect(game.state.hand.length).toBeGreaterThanOrEqual(game.config.rollSize + 1);
+  });
+
+  test('day 1 hand includes mystery crate die beyond roll size', () => {
+    const { game, player } = setupGame({ equipment: [item('mystery_crate')] });
+    const diceBefore = player.dice.length;
+    game.startRound();
+
+    expect(player.dice.length).toBe(diceBefore + 1);
+    expect(player.pendingHandDiceIds).toHaveLength(0);
+    const newDice = player.dice.slice(diceBefore);
+    expect(newDice).toHaveLength(1);
+    expect(newDice[0].sticker).not.toBeNull();
+    expect(game.state.hand.some((d) => d.id === newDice[0].id)).toBe(true);
+    expect(game.state.hand.length).toBe(game.config.rollSize + 1);
+    expect(game.selectForRoll(game.state.hand.map((d) => d.id))).toBe(true);
+  });
+
+  test('multiple mystery crates add extra day-1 hand dice', () => {
+    const { game, player } = setupGame({
+      equipment: [item('mystery_crate'), item('mystery_crate')],
+    });
+    game.startRound();
+    const stickerDice = player.dice.filter((d) => d.sticker != null);
+    expect(stickerDice).toHaveLength(2);
+    for (const die of stickerDice) {
+      expect(game.state.hand.some((d) => d.id === die.id)).toBe(true);
+    }
+    // Hand includes all crate dice; may exceed rollSize when not all were randomly drawn
+    expect(game.state.hand.length).toBeGreaterThanOrEqual(game.config.rollSize);
+    expect(game.state.hand.length).toBeLessThanOrEqual(game.config.rollSize + 2);
+  });
+
+  test('day 2 refills to normal roll size without extra mystery slots', () => {
+    const { game, player } = setupGame({ equipment: [item('mystery_crate')] });
+    game.startRound();
+    game.config.targetMiles = 999999;
+    const handIds = game.state.hand.map((d) => d.id);
+    expect(game.selectForRoll(handIds)).toBe(true);
+    expect(game.selectForScore([handIds[0]])).toBe(true);
+    expect(game.calculateScore()).not.toBeNull();
+
+    const result = game.endDay();
+    expect(result.outcome).toBe('next-day');
+    expect(game.state.hand.length).toBe(game.config.rollSize);
+  });
+});
+
+describe('ROUND_START_ADD_STONE vs Mystery Crate day-1 hand', () => {
+  test('quarry stone does not grant extra day-1 hand slot', () => {
+    const { game, player } = setupGame({ equipment: [item('quarry_stone')] });
+    const diceBefore = player.dice.length;
+    game.startRound();
+
+    expect(player.dice.length).toBe(diceBefore + 1);
+    expect(player.pendingHandDiceIds).toHaveLength(0);
+    expect(game.state.hand.length).toBe(game.config.rollSize);
+  });
 });
 
 // ─── ENHANCED_SPENT_MILES_GAIN: Bone Collector ───
