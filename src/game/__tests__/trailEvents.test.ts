@@ -7,6 +7,7 @@ import {
   getTrailEventById,
   selectTrailEvent,
   filterEventsByLeg,
+  filterUnseenEvents,
   getTrailEventMinimumLeg,
   getAvailableChoices,
   resolveChoice,
@@ -215,6 +216,31 @@ describe('Trail Event selection', () => {
     const filtered = filterEventsByLeg(pool, 1);
     expect(filtered.length).toBe(1);
     expect(filtered[0].id).toBe('lost_severe');
+  });
+
+  test('selectTrailEvent never repeats a seen event', () => {
+    const player = resetPlayerState();
+    player.seenTrailEventIds.add('tipped_wagon');
+    for (let i = 0; i < 300; i++) {
+      const event = selectTrailEvent(player, Math.random);
+      expect(event.id).not.toBe('tipped_wagon');
+    }
+  });
+
+  test('resolveChoice records event as seen', () => {
+    const player = resetPlayerState();
+    const event = getTrailEventById('bad_mosquitos')!;
+    resolveChoice(event, 'endure', player);
+    expect(player.seenTrailEventIds.has('bad_mosquitos')).toBe(true);
+  });
+
+  test('filterUnseenEvents excludes seen ids', () => {
+    const player = resetPlayerState();
+    const pool = getAllTrailEvents().filter((e) => !e.demonHunterOnly).slice(0, 5);
+    player.seenTrailEventIds.add(pool[0].id);
+    const filtered = filterUnseenEvents(pool, player);
+    expect(filtered.some((e) => e.id === pool[0].id)).toBe(false);
+    expect(filtered.length).toBe(4);
   });
 });
 

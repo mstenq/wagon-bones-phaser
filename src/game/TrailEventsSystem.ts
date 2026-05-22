@@ -145,6 +145,13 @@ export function filterEventsByLeg(pool: TrailEventDef[], leg: number): TrailEven
   return eligible.length > 0 ? eligible : pool;
 }
 
+/** Exclude events the player has already encountered this run. */
+export function filterUnseenEvents(pool: TrailEventDef[], player: PlayerState): TrailEventDef[] {
+  if (player.seenTrailEventIds.size === 0) return pool;
+  const unseen = pool.filter((e) => !player.seenTrailEventIds.has(e.id));
+  return unseen.length > 0 ? unseen : pool;
+}
+
 /**
  * Select a random trail event from the weighted pool.
  * Filters demon_hunter events based on profession and minimumLeg.
@@ -159,16 +166,22 @@ export function selectTrailEvent(
 
   // Decide which pool to draw from
   if (isDemonHunter && rng() < DEMON_HUNTER_POOL_CHANCE) {
-    const demonPool = filterEventsByLeg(
-      ALL_EVENTS.filter((e) => e.demonHunterOnly),
-      leg,
+    const demonPool = filterUnseenEvents(
+      filterEventsByLeg(
+        ALL_EVENTS.filter((e) => e.demonHunterOnly),
+        leg,
+      ),
+      player,
     );
     return weightedRandomPick(demonPool, rng);
   }
 
-  const standardPool = filterEventsByLeg(
-    ALL_EVENTS.filter((e) => !e.demonHunterOnly),
-    leg,
+  const standardPool = filterUnseenEvents(
+    filterEventsByLeg(
+      ALL_EVENTS.filter((e) => !e.demonHunterOnly),
+      leg,
+    ),
+    player,
   );
   return weightedRandomPick(standardPool, rng);
 }
@@ -284,6 +297,7 @@ export function resolveChoice(
       (trailRepairKit.state.xMult ?? 1) + TRAIL_EVENT.TRAIL_REPAIR_KIT_XMULT_GAIN;
   }
 
+  player.seenTrailEventIds.add(event.id);
   player.pendingTrailEvent = null;
 
   return {

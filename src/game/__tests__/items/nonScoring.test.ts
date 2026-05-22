@@ -120,15 +120,9 @@ describe('BANK_NOTE: Bank Note', () => {
   });
 });
 
-// ─── Deprecated: Extra Saddlebag / Stagecoach ───
+// ─── Deprecated: Stagecoach ───
 
 describe('Deprecated items', () => {
-  test('extra saddlebag is deprecated and inert', () => {
-    const equip = item('extra_saddlebag');
-    expect(equip.def.effectType).toBe('NONE');
-    expect(equip.def.rarity).toBe('deprecated');
-  });
-
   test('stagecoach is deprecated and inert', () => {
     const equip = item('stagecoach');
     expect(equip.def.effectType).toBe('NONE');

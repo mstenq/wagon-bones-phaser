@@ -1,4 +1,7 @@
 # Bugs noticed while playing
+- why did i get Tipped Wagon in 2 leg! That one is brutal and probably shouldn't show till 5+
+- i got stupid tipped wagon twice! With 95 to choose from we should make dupes impossible.
+
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.
 

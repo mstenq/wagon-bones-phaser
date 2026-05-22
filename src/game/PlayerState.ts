@@ -118,6 +118,8 @@ export class PlayerState {
   trailEventModifiers: TrailEventModifiers = createEmptyModifiers(); // penalties/bonuses from trail events, consumed next round
   /** Pre-rolled trail event when Scout's Spyglass is equipped (category preview before reveal). */
   pendingTrailEvent: TrailEventDef | null = null;
+  /** Trail event IDs already encountered this run (no repeats until pool exhausted). */
+  seenTrailEventIds: Set<string> = new Set();
   skipNextShop: boolean = false; // set by trail events (Native Guide)
   trailGuidesUsed: number = 0; // count of trail guides consumed this journey (for Guide Lantern)
   startingDiceCount: number = DEFAULT_STARTING_DICE; // collection size at run start (for Ghost Town)
@@ -865,6 +867,7 @@ export class PlayerState {
     this.bossRerollsUsedThisLeg = 0;
     this.dynamiteSelfDestructed = false;
     this.pendingTrailEvent = null;
+    this.seenTrailEventIds = new Set();
     this.trailEventModifiers = createEmptyModifiers();
     this.skipNextShop = false;
     this.assignBosses();

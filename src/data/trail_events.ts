@@ -110,87 +110,9 @@ export interface TrailEventDef {
   choices: TrailEventChoice[];
 }
 
-/** Per-event minimum leg overrides (omit = leg 1 for standard, leg 4 for demonHunterOnly). */
-export const TRAIL_EVENT_MINIMUM_LEG: Partial<Record<string, number>> = {
-  // Leg 2 — multi-day, hand-size, resource drains
-  broken_axle: 2,
-  broken_tongue: 2,
-  broken_yoke: 2,
-  animals_exhausted: 2,
-  blizzard: 2,
-  bandit_ambush: 2,
-  hailstorm: 2,
-  snowbound: 2,
-  extreme_heat: 2,
-  extreme_cold: 2,
-  dead_livestock: 2,
-  missing_livestock: 2,
-  fallen_rocks: 2,
-  fallen_timbers: 2,
-  thick_dust: 2,
-  thief: 2,
-  missing_person: 2,
-  wagon_stuck_mud: 2,
-  wagon_deep_sand: 2,
-  lose_trail: 2,
-  lost_trail: 2,
-  no_grass: 2,
-  sick_oxen: 2,
-  flooded_trail: 2,
-  too_many_at_river: 2,
-  severe_thunderstorm: 2,
-  dust_storm: 2,
-  heavy_fog: 2,
-  rough_trail: 2,
-  bad_water: 2,
-  animal_quicksand: 2,
-  animal_injured: 2,
-  broken_wheel: 2,
-  buffalo_stampede: 2,
-  prairie_fire: 2,
-  quicksand: 2,
-  fire_in_wagon: 2,
-  locusts: 2,
-  tipped_wagon: 2,
-  swamped_wagon: 2,
-  theft_from_wagon: 2,
-  fellow_traveler: 2,
-  abandoned_mine: 2,
-  crystal_cave: 2,
-  iron_vein: 2,
-  old_burial_ground: 2,
-  four_leaf_clover: 2,
-  petrified_forest: 2,
-  native_guide: 2,
-  spoiled_food: 2,
-  traveling_blacksmith: 2,
-  // Leg 3 — heavy inventory / equipment / skip shop
-  // (fire_in_wagon etc. at 2 per plan overlap — bump hardest to 3)
-  // Leg 5+ — run-warping (standard pool)
-  lost_severe: 5,
-  wagon_fell_through_ice: 5,
-  wrong_trail: 5,
-  abandoned_wagon: 5,
-  // Demon hunter pool — leg 4+
-  crossroads_deal: 4,
-  possessed_wagon: 4,
-  fallen_angel: 4,
-  demons_bounty: 4,
-  blood_moon_rising: 4,
-  preachers_ghost: 4,
-  hellmouth: 4,
-  cursed_graveyard: 4,
-  angels_armory: 4,
-  demonic_duel: 4,
-  witchs_offer: 4,
-  infernal_forge: 4,
-  the_harrowing: 4,
-};
-
-/** Effective minimum leg for selection (data field, map, or demon-hunter default). */
+/** Effective minimum leg for selection (explicit field or defaults). */
 export function getTrailEventMinimumLeg(event: TrailEventDef): number {
   if (event.minimumLeg !== undefined) return event.minimumLeg;
-  if (TRAIL_EVENT_MINIMUM_LEG[event.id] !== undefined) return TRAIL_EVENT_MINIMUM_LEG[event.id]!;
   if (event.demonHunterOnly) return 4;
   return 1;
 }
@@ -205,6 +127,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "positive",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 5,
     "choices": [
       {
         "id": "take",
@@ -238,6 +161,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "lose_die",
@@ -278,6 +202,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "slow_down",
@@ -320,6 +245,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "push_on",
@@ -389,6 +315,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "water",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "pay",
@@ -433,6 +360,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "bandits",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "pay",
@@ -480,6 +408,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -528,6 +457,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -572,6 +502,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -616,6 +547,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 4,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -660,6 +592,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -704,6 +637,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "risk",
@@ -768,6 +702,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "accept",
@@ -793,6 +728,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -818,6 +754,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -868,6 +805,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "pay",
@@ -908,6 +846,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "risk",
@@ -947,6 +886,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "pay",
@@ -998,6 +938,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "stranger",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "trade",
@@ -1057,6 +998,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "let_burn",
@@ -1110,6 +1052,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "water",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "pay",
@@ -1231,6 +1174,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "wait",
@@ -1285,6 +1229,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -1309,6 +1254,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "let_eat",
@@ -1351,6 +1297,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "wander",
@@ -1376,6 +1323,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "wander",
@@ -1420,6 +1368,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 1,
     "demonHunterOnly": false,
+    "minimumLeg": 5,
     "choices": [
       {
         "id": "wander",
@@ -1468,6 +1417,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "accept",
@@ -1512,6 +1462,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "stranger",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "press_on",
@@ -1582,6 +1533,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "stranger",
     "weight": 1,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "accept",
@@ -1620,6 +1572,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -1708,6 +1661,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "sacrifice",
@@ -1759,6 +1713,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "water",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "lose_dice",
@@ -1802,6 +1757,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -1888,6 +1844,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -1929,6 +1886,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "animal",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "pay",
@@ -1969,6 +1927,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "weather",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "wait",
@@ -2013,6 +1972,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "positive",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "accept",
@@ -2158,6 +2118,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "water",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "lose",
@@ -2219,6 +2180,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "bandits",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "accept",
@@ -2262,6 +2224,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "endure",
@@ -2287,6 +2250,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "bandits",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "accept",
@@ -2331,6 +2295,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 5,
     "choices": [
       {
         "id": "accept",
@@ -2379,6 +2344,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "water",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "wait",
@@ -2423,6 +2389,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "water",
     "weight": 1,
     "demonHunterOnly": false,
+    "minimumLeg": 5,
     "choices": [
       {
         "id": "accept",
@@ -2471,6 +2438,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "wait",
@@ -2511,6 +2479,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "wagon_damage",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "wait",
@@ -2651,6 +2620,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "navigation",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 5,
     "choices": [
       {
         "id": "accept",
@@ -2680,6 +2650,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "positive",
     "weight": 3,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "explore",
@@ -2733,6 +2704,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "stranger",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "forge",
@@ -2783,6 +2755,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "positive",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "explore",
@@ -2877,6 +2850,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "positive",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "mine_cheap",
@@ -3029,6 +3003,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "stranger",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "respect",
@@ -3140,6 +3115,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "positive",
     "weight": 2,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "quick",
@@ -3351,6 +3327,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "positive",
     "weight": 1,
     "demonHunterOnly": false,
+    "minimumLeg": 2,
     "choices": [
       {
         "id": "careful",
@@ -3608,6 +3585,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 3,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "accept",
@@ -3668,6 +3646,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 2,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "exorcise",
@@ -3725,6 +3704,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 1,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "help",
@@ -3808,6 +3788,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 3,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "collect",
@@ -3864,6 +3845,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 2,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "endure",
@@ -3915,6 +3897,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 2,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "accept",
@@ -3941,6 +3924,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 1,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "descend",
@@ -4024,6 +4008,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 2,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "desecrate",
@@ -4101,6 +4086,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 1,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "buy",
@@ -4153,6 +4139,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 1,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "fight",
@@ -4234,6 +4221,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 2,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "accept",
@@ -4300,6 +4288,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 2,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "sacrifice_dice",
@@ -4357,6 +4346,7 @@ const trailEvents: TrailEventDef[] = [
     "category": "demon_hunter",
     "weight": 1,
     "demonHunterOnly": true,
+    "minimumLeg": 4,
     "choices": [
       {
         "id": "endure",
