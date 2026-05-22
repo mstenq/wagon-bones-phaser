@@ -11,10 +11,8 @@ import type { GameRoundSaveData } from '../../game/SaveLoad';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { detectBestHand } from '../../game/DiceSystem';
 import { getPlayerState } from '../../game/PlayerState';
-import {
-  applyEquipmentModifierDestructions,
-  processEquipmentModifiersEndOfRound,
-} from '../../game/EquipmentModifiers';
+import { hasActiveTrailRoundEffects, trailRoundEffectsFromModifiers, getPlayerTrailDebuffLines } from '../../game/TrailEventsSystem';
+import { applyEquipmentModifierDestructions, processEquipmentModifiersEndOfRound } from '../../game/EquipmentModifiers';
 import { isEquipmentLeased } from '../../game/ItemsSystem';
 import { consumeNextRoundTags } from '../../game/TagSystem';
 import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM } from '../../game/Constants';
@@ -42,11 +40,7 @@ import { processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { getLoadedDiceMultiplier } from '../../game/Constants';
-import {
-  isDiceScoringDisabledByBoss,
-  isDiceLockedByBoss,
-  revealLandSlideHints,
-} from '../../game/BossEffectsSystem';
+import { isDiceScoringDisabledByBoss, isDiceLockedByBoss, revealLandSlideHints } from '../../game/BossEffectsSystem';
 import { isDevMode } from '../../game/DevMode';
 
 const DICE_SPACING = UI.DICE_SPACING;
@@ -165,6 +159,13 @@ export class GameScene extends Scene {
         this.gameState.restoreRound(this.pendingRestore.config, this.pendingRestore.state);
         this.pendingRestore = null;
         this.pendingNewDiceIds = [];
+        // Autosave from Shop may have pending modifiers not yet copied by startRound
+        if (
+          !hasActiveTrailRoundEffects(player.trailRoundEffects) &&
+          hasActiveTrailRoundEffects(trailRoundEffectsFromModifiers(player.trailEventModifiers))
+        ) {
+          player.trailRoundEffects = trailRoundEffectsFromModifiers(player.trailEventModifiers);
+        }
       } else {
         consumeNextRoundTags(player);
         this.gameState = new GameState({ targetMiles: player.targetMiles });
@@ -460,9 +461,7 @@ export class GameScene extends Scene {
         if (this.lockIcons[lockIdx]) this.lockIcons[lockIdx].setVisible(true);
       }
     }
-    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) =>
-      this.lockedDiceIds.has(d.id),
-    );
+    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
     this.updateRollButtons();
   }
 
@@ -501,7 +500,9 @@ export class GameScene extends Scene {
           this.sound.play('sfx_highlight1', { volume: 0.3 });
         }
         // Keep selectedForScore in sync with locked dice so equipment hints can read it
-        this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
+        this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) =>
+          this.lockedDiceIds.has(d.id),
+        );
         this.updateRollButtons();
       });
     }
@@ -634,6 +635,10 @@ export class GameScene extends Scene {
     if (idsToReroll.length === 0) return;
 
     const success = this.gameState.reroll(idsToReroll);
+    if (!success && this.gameState.state.rerollsRemaining > 0 && !this.gameState.canUseReroll()) {
+      this.showFloatingText('No re-rolls on Day 1', 0xffaa44);
+      return;
+    }
     if (success) {
       this.animating = true;
       const rerolledSprites = this.rollSprites.filter((s) => idsToReroll.includes(s.dieData.id));
@@ -752,8 +757,7 @@ export class GameScene extends Scene {
   private runRoundEndModifierFeedback(onComplete: () => void): void {
     const player = getPlayerState();
     const modifierResult = processEquipmentModifiersEndOfRound(player, { applyDestruction: false });
-    const hasDestroy =
-      modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
+    const hasDestroy = modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
 
     const showModifierFeedback = () => {
       for (const { index, equipmentName, cost } of modifierResult.leasePaid) {
@@ -867,15 +871,19 @@ export class GameScene extends Scene {
     const lockedCount = this.lockedDiceIds.size;
     const totalCount = this.gameState.state.rolledDice.length;
     const rerollCount = totalCount - lockedCount;
-    const hasRerolls = this.gameState.state.rerollsRemaining > 0;
+    const remaining = this.gameState.state.rerollsRemaining;
+    const hasRerolls = remaining > 0;
+    const canUseReroll = this.gameState.canUseReroll();
 
-    this.rerollBtn.setEnabled(rerollCount > 0 && hasRerolls);
+    this.rerollBtn.setEnabled(rerollCount > 0 && canUseReroll);
     this.rerollBtn.setText(
-      hasRerolls
-        ? lockedCount === 0
-          ? `Re-roll All (${this.gameState.state.rerollsRemaining} remaining)`
-          : `Re-roll ${rerollCount} (${this.gameState.state.rerollsRemaining} remaining)`
-        : 'No Re-rolls',
+      !hasRerolls
+        ? 'No Re-rolls'
+        : !canUseReroll
+          ? `Day 1: no re-rolls (${remaining} from Day 2)`
+          : lockedCount === 0
+            ? `Re-roll All (${remaining} remaining)`
+            : `Re-roll ${rerollCount} (${remaining} remaining)`,
     );
 
     this.scoreBtn.setEnabled(lockedCount > 0);
@@ -993,6 +1001,7 @@ export class GameScene extends Scene {
       round: player.round,
       totalRounds: GAMEPLAY.ROUNDS_PER_LEG,
       targetMiles: this.gameState.config.targetMiles,
+      trailDebuffs: getPlayerTrailDebuffLines(player),
     });
     if (this.dicePouch) this.dicePouch.refresh();
     if (this.equipBar) {
@@ -1029,7 +1038,13 @@ export class GameScene extends Scene {
     this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
     this.loadedDiceValueBg.fillRoundedRect(boxCenterX - boxWidth / 2, controlY - boxHeight / 2, boxWidth, boxHeight, 6);
     this.loadedDiceValueBg.lineStyle(1, COLORS.PANEL_BORDER, 1);
-    this.loadedDiceValueBg.strokeRoundedRect(boxCenterX - boxWidth / 2, controlY - boxHeight / 2, boxWidth, boxHeight, 6);
+    this.loadedDiceValueBg.strokeRoundedRect(
+      boxCenterX - boxWidth / 2,
+      controlY - boxHeight / 2,
+      boxWidth,
+      boxHeight,
+      6,
+    );
 
     this.loadedDiceValueHitArea = this.add
       .zone(boxCenterX, controlY, boxWidth, boxHeight)
@@ -1074,7 +1089,8 @@ export class GameScene extends Scene {
   }
 
   private updateLoadedDiceControl(): void {
-    if (!this.loadedDiceValueText || !this.loadedDiceDecBtn || !this.loadedDiceIncBtn || !this.loadedDiceValueBg) return;
+    if (!this.loadedDiceValueText || !this.loadedDiceDecBtn || !this.loadedDiceIncBtn || !this.loadedDiceValueBg)
+      return;
 
     const target = getPlayerState().loadedDieTarget;
     this.loadedDiceValueText.setText(target === null ? '-' : String(target));
@@ -1084,9 +1100,21 @@ export class GameScene extends Scene {
 
     this.loadedDiceValueBg.clear();
     this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
-    this.loadedDiceValueBg.fillRoundedRect(this.loadedDiceValueHitArea.x - 22, this.loadedDiceValueHitArea.y - 14, 44, 28, 6);
+    this.loadedDiceValueBg.fillRoundedRect(
+      this.loadedDiceValueHitArea.x - 22,
+      this.loadedDiceValueHitArea.y - 14,
+      44,
+      28,
+      6,
+    );
     this.loadedDiceValueBg.lineStyle(1, this.loadedDicePicker ? COLORS.GOLD : COLORS.PANEL_BORDER, 1);
-    this.loadedDiceValueBg.strokeRoundedRect(this.loadedDiceValueHitArea.x - 22, this.loadedDiceValueHitArea.y - 14, 44, 28, 6);
+    this.loadedDiceValueBg.strokeRoundedRect(
+      this.loadedDiceValueHitArea.x - 22,
+      this.loadedDiceValueHitArea.y - 14,
+      44,
+      28,
+      6,
+    );
   }
 
   private toggleLoadedDicePicker(): void {
@@ -1382,7 +1410,9 @@ export class GameScene extends Scene {
           yoyo: true,
           repeat: 3,
           ease: 'Sine.easeInOut',
-          onComplete: () => { card.x = origX; },
+          onComplete: () => {
+            card.x = origX;
+          },
         });
       }
     }
@@ -1474,7 +1504,9 @@ export class GameScene extends Scene {
       yoyo: true,
       repeat: 5,
       ease: 'Sine.easeInOut',
-      onComplete: () => { sourceCard.x = sourceOrigX; },
+      onComplete: () => {
+        sourceCard.x = sourceOrigX;
+      },
     });
 
     // Phase 2: After brief fire buildup, play slice and destroy
@@ -1538,7 +1570,7 @@ export class GameScene extends Scene {
     const { sourceIdx, victimIdx } = destructions[0];
 
     // Adjust remaining destructions' indices after this victim is spliced out
-    const remaining = destructions.slice(1).map(d => ({
+    const remaining = destructions.slice(1).map((d) => ({
       sourceIdx: d.sourceIdx > victimIdx ? d.sourceIdx - 1 : d.sourceIdx,
       victimIdx: d.victimIdx > victimIdx ? d.victimIdx - 1 : d.victimIdx,
     }));
@@ -1609,9 +1641,24 @@ export class GameScene extends Scene {
 
   /** Handle clicking a stack to send a die to the play area */
   private onStackDiceClick(stack: DiceStackData): void {
-    console.log('[DEBUG] onStackDiceClick: animating:', this.animating, 'selectedCount:', this.selectedHandIds.size, 'stackKey:', stack.key, 'stackDice:', stack.dice.length);
-    if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
-    if (this.selectedHandIds.size >= this.maxSelectForRoll) { console.log('[DEBUG] BLOCKED: max selected'); return; }
+    console.log(
+      '[DEBUG] onStackDiceClick: animating:',
+      this.animating,
+      'selectedCount:',
+      this.selectedHandIds.size,
+      'stackKey:',
+      stack.key,
+      'stackDice:',
+      stack.dice.length,
+    );
+    if (this.animating) {
+      console.log('[DEBUG] BLOCKED by animating flag');
+      return;
+    }
+    if (this.selectedHandIds.size >= this.maxSelectForRoll) {
+      console.log('[DEBUG] BLOCKED: max selected');
+      return;
+    }
     // Sound
     this.sound.play('sfx_card_slide1', { volume: 0.4 });
 
@@ -1765,7 +1812,10 @@ export class GameScene extends Scene {
   /** Handle clicking a die in the play area to send it back to a stack */
   private onPlayAreaDiceClick(sprite: DiceSprite): void {
     console.log('[DEBUG] onPlayAreaDiceClick: animating:', this.animating, 'dieId:', sprite.dieData.id);
-    if (this.animating) { console.log('[DEBUG] BLOCKED by animating flag'); return; }
+    if (this.animating) {
+      console.log('[DEBUG] BLOCKED by animating flag');
+      return;
+    }
     const die = sprite.dieData;
 
     // Sound
@@ -2247,7 +2297,9 @@ export class GameScene extends Scene {
     }
     if (phase === 'ROLL') {
       this.gameState.state.rolledDice = this.gameState.state.rolledDice.filter((d) => !destroyedSet.has(d.id));
-      this.gameState.state.selectedForScore = this.gameState.state.selectedForScore.filter((d) => !destroyedSet.has(d.id));
+      this.gameState.state.selectedForScore = this.gameState.state.selectedForScore.filter(
+        (d) => !destroyedSet.has(d.id),
+      );
       this.lockedDiceIds = new Set([...this.lockedDiceIds].filter((id) => !destroyedSet.has(id)));
     }
   }

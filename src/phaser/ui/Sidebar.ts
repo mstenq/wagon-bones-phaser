@@ -42,6 +42,8 @@ export interface SidebarData {
   handLevel?: number;
   /** Active boss (boss round) — shows portrait + effect description */
   boss?: BossDef | null;
+  /** Active trail debuffs for the current round (GameScene) */
+  trailDebuffs?: string[];
 }
 
 export class Sidebar extends GameObjects.Container {
@@ -73,6 +75,10 @@ export class Sidebar extends GameObjects.Container {
   private bossContainer: GameObjects.Container;
   private contentStartY: number = 0;
   private bossDescText: GameObjects.Text | null = null;
+  private trailDebuffContainer: GameObjects.Container;
+  private trailDebuffBg: GameObjects.Graphics;
+  private trailDebuffTexts: GameObjects.Text[] = [];
+  private trailDebuffPanelHeight = 0;
   private profTooltip: GameObjects.Container | null = null;
   private difficultyTooltip = new DifficultyTooltip();
   private difficultyIcon: GameObjects.Image | null = null;
@@ -158,11 +164,19 @@ export class Sidebar extends GameObjects.Container {
       this.add(iconHit);
       iconHit.on('pointerover', () => {
         const def = getDifficultyDef(getPlayerState().difficulty);
-        this.difficultyTooltip.show(this.scene, def, titleIconX, tooltipAnchorY, {
-          minX: pad,
-          maxX: w - pad,
-          minY: titleBarBottom + 4,
-        }, 400, this);
+        this.difficultyTooltip.show(
+          this.scene,
+          def,
+          titleIconX,
+          tooltipAnchorY,
+          {
+            minX: pad,
+            maxX: w - pad,
+            minY: titleBarBottom + 4,
+          },
+          400,
+          this,
+        );
       });
       iconHit.on('pointerout', () => this.difficultyTooltip.hide());
     }
@@ -170,6 +184,14 @@ export class Sidebar extends GameObjects.Container {
     y += titleH + 8;
 
     this.contentStartY = y;
+
+    // ─── Trail debuffs (pinned below title; shifts boss + main content down when visible) ───
+    this.trailDebuffContainer = scene.add.container(0, y);
+    this.add(this.trailDebuffContainer);
+    this.trailDebuffBg = scene.add.graphics();
+    this.trailDebuffContainer.add(this.trailDebuffBg);
+    this.trailDebuffContainer.setVisible(false);
+    this.trailDebuffContainer.setDepth(5);
 
     // ─── Boss Display (hidden until boss round; sits above shifting content) ───
     const bossImgSize = 72;
@@ -578,8 +600,12 @@ export class Sidebar extends GameObjects.Container {
   }
 
   private syncMainContentOffset(bossVisible: boolean): void {
-    const offset = bossVisible ? this.bossPanelHeight : 0;
-    this.mainContentContainer.setY(this.contentStartY + offset);
+    const debuffOffset = this.trailDebuffPanelHeight;
+    const bossOffset = bossVisible ? this.bossPanelHeight : 0;
+    const baseY = this.contentStartY + debuffOffset;
+    this.trailDebuffContainer.setY(this.contentStartY);
+    this.bossContainer.setY(baseY);
+    this.mainContentContainer.setY(baseY + bossOffset);
     this.handDisplayY = this.getMainContentBaseY() + this.handDisplayLocalY;
   }
 
@@ -627,9 +653,62 @@ export class Sidebar extends GameObjects.Container {
       this.updateBossPanel(data.boss);
     }
 
+    if (data.trailDebuffs !== undefined) {
+      this.updateTrailDebuffPanel(data.trailDebuffs);
+    }
+
     // Always refresh money from player state
     const player = getPlayerState();
     this.moneyText.setText(`$${player.economy.balance}`);
+  }
+
+  private updateTrailDebuffPanel(lines: string[]): void {
+    const pad = UI.SIDEBAR_PADDING;
+    const w = this.sidebarWidth;
+
+    for (const txt of this.trailDebuffTexts) {
+      txt.destroy();
+    }
+    this.trailDebuffTexts = [];
+
+    if (lines.length === 0) {
+      this.trailDebuffBg.clear();
+      this.trailDebuffContainer.setVisible(false);
+      this.trailDebuffPanelHeight = 0;
+      this.syncMainContentOffset(this.bossContainer.visible);
+      return;
+    }
+
+    const panelH = 56;
+    this.trailDebuffBg.clear();
+    this.trailDebuffBg.fillStyle(0x3a2018, 0.95);
+    this.trailDebuffBg.fillRoundedRect(pad, 0, w - pad * 2, panelH, 6);
+    this.trailDebuffBg.lineStyle(1, 0x8a4433, 0.85);
+    this.trailDebuffBg.strokeRoundedRect(pad, 0, w - pad * 2, panelH, 6);
+
+    const label = this.scene.add.text(pad + 8, 6, 'Trail', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '10px',
+      color: TEXT_COLORS.MUTED,
+    });
+    this.trailDebuffContainer.add(label);
+    this.trailDebuffTexts.push(label);
+
+    const body = lines.join('\n');
+    const bodyText = this.scene.add.text(pad + 8, 20, body, {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '11px',
+      color: '#e8a070',
+      lineSpacing: 2,
+      wordWrap: { width: w - pad * 2 - 16 },
+    });
+    this.trailDebuffContainer.add(bodyText);
+    this.trailDebuffTexts.push(bodyText);
+
+    this.trailDebuffContainer.setVisible(true);
+    this.trailDebuffPanelHeight = panelH;
+    this.bringToTop(this.trailDebuffContainer);
+    this.syncMainContentOffset(this.bossContainer.visible);
   }
 
   private updateBossPanel(boss: BossDef | null | undefined): void {

@@ -9,6 +9,8 @@ export interface DiceEnhancementDef {
   description: string;
   color: string;
   fontFamily: string | null;
+  /** When scored, chance the die is destroyed ([num, den]). [0, 1] = never. */
+  scoreDestroyChance: [number, number];
 }
 
 // ─── Enhancement Definitions ───
@@ -20,6 +22,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: '+4 Mult',
     color: '0xd4c8b0',
     fontFamily: 'Freckle Face',
+    scoreDestroyChance: [0, 1],
   },
   {
     id: 'lucky',
@@ -27,6 +30,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: '1 in 5 chance for +20 Mult, 1 in 15 chance to win $20',
     color: '0xc8f0c8',
     fontFamily: 'Lobster',
+    scoreDestroyChance: [0, 1],
   },
   {
     id: 'wooden',
@@ -34,6 +38,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: '+10 base miles',
     color: '0xc4a055',
     fontFamily: 'Underdog',
+    scoreDestroyChance: [0, 1],
   },
   {
     id: 'steel',
@@ -41,6 +46,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: 'x1.5 Mult when not part of scored hand',
     color: '0xa8a8b0',
     fontFamily: 'New Rocker',
+    scoreDestroyChance: [0, 1],
   },
   {
     id: 'gold',
@@ -48,6 +54,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: 'Earn $3 when dice is not scored at end of round',
     color: '0xffe870',
     fontFamily: 'Rye',
+    scoreDestroyChance: [0, 1],
   },
   {
     id: 'loaded',
@@ -55,6 +62,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: 'Double the odds of one chosen value being rolled',
     color: '0xf0a0a0',
     fontFamily: 'Doto',
+    scoreDestroyChance: [0, 1],
   },
   {
     id: 'diamond',
@@ -62,6 +70,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: 'x2 Mult, 25% chance of cracking',
     color: '0xa0e8f0',
     fontFamily: 'Agu Display',
+    scoreDestroyChance: [1, 4],
   },
   {
     id: 'stone',
@@ -69,6 +78,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
     description: 'No dice values, counts as 50 base miles and is always scored',
     color: '0x888888',
     fontFamily: null,
+    scoreDestroyChance: [0, 1],
   },
 ];
 
@@ -79,4 +89,9 @@ export default diceEnhancements;
 /** Find a dice enhancement definition by ID */
 export function getDiceEnhancementById(id: string): DiceEnhancementDef | undefined {
   return diceEnhancements.find((e) => e.id === id);
+}
+
+/** Default score-time destroy chance for an enhancement id ([0, 1] when unknown). */
+export function getEnhancementScoreDestroyChance(enhancement: string): [number, number] {
+  return getDiceEnhancementById(enhancement)?.scoreDestroyChance ?? [0, 1];
 }

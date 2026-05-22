@@ -1,14 +1,16 @@
 # Bugs noticed while playing
 - fading_memory - once you buy it, the very first round should have 20mult. So need to adjust so it deducts 4 mult at end of round instead of start.
+-you can use a dice enhacement supply card, and then use another before you've resolved the first which leaves the UI in a broken state
+-DISABLE_REROLL_DAY1 does not work as expected. I had 0-rerolls for all 4 days.
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.
-
+- Gambling Themed Item - 1 in 4 chance to get x4 mult and $10.
 
 
 ## Code Feedback
 - lets convert the JSON data into JS arrays that are typed. It would make a lot of things much easier in our code base if we were sure about the shape of the data without doing checks.
-- Dead code: these TrailEventModifiers are defined and set but never consumed by game logic or UI: `flatMilesPenalty`, `moneyPerDayLoss`, `disableRerollDay1`, `standardDiceDay1`, `diamondCrackDoubled`, `luckyOddsHalved`, `scoredDiceDestroyChance`. Need to implement their effects in GameState/GameScene or remove them.
+- Trail round modifiers wired (May 2026): `moneyPerDayLoss`, `disableRerollDay1`, `standardDiceDay1`, `diamondCrackDoubled`, `luckyOddsHalved`, `scoredDiceDestroyChance` + base diamond crack on score. `flatMilesPenalty` deferred (blizzard no longer promises flat miles); needs leg-scaled design before implementing.
 
 ## Balance Notes
 bone_collector: Should increase miles amount

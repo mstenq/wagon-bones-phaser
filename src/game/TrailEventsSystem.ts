@@ -56,6 +56,16 @@ export interface TrailEventModifiers {
   loseAllRerolls: boolean;
 }
 
+/** Round-duration trail penalties applied after startRound consumes trailEventModifiers. */
+export interface TrailRoundEffects {
+  disableRerollDay1: boolean;
+  standardDiceDay1: boolean;
+  moneyPerDayLoss: number;
+  diamondCrackDoubled: boolean;
+  luckyOddsHalved: boolean;
+  scoredDiceDestroyChance: number;
+}
+
 export interface TrailEventResult {
   event: TrailEventDef;
   choiceId: string;
@@ -99,6 +109,73 @@ export function createEmptyModifiers(): TrailEventModifiers {
   };
 }
 
+export function createEmptyTrailRoundEffects(): TrailRoundEffects {
+  return {
+    disableRerollDay1: false,
+    standardDiceDay1: false,
+    moneyPerDayLoss: 0,
+    diamondCrackDoubled: false,
+    luckyOddsHalved: false,
+    scoredDiceDestroyChance: 0,
+  };
+}
+
+/** Copy round-duration fields from pending trail modifiers into active round effects. */
+export function trailRoundEffectsFromModifiers(mods: TrailEventModifiers): TrailRoundEffects {
+  return {
+    disableRerollDay1: mods.disableRerollDay1,
+    standardDiceDay1: mods.standardDiceDay1,
+    moneyPerDayLoss: mods.moneyPerDayLoss,
+    diamondCrackDoubled: mods.diamondCrackDoubled,
+    luckyOddsHalved: mods.luckyOddsHalved,
+    scoredDiceDestroyChance: mods.scoredDiceDestroyChance,
+  };
+}
+
+/** True when any round-duration trail penalty is active. */
+export function hasActiveTrailRoundEffects(effects: TrailRoundEffects): boolean {
+  return (
+    effects.moneyPerDayLoss > 0 ||
+    effects.disableRerollDay1 ||
+    effects.standardDiceDay1 ||
+    effects.diamondCrackDoubled ||
+    effects.luckyOddsHalved ||
+    effects.scoredDiceDestroyChance > 0
+  );
+}
+
+/** Sidebar debuffs: active round effects, or pending modifiers before the next Game startRound. */
+export function getPlayerTrailDebuffLines(player: PlayerState): string[] {
+  if (hasActiveTrailRoundEffects(player.trailRoundEffects)) {
+    return getTrailDebuffLines(player.trailRoundEffects);
+  }
+  return getTrailDebuffLines(trailRoundEffectsFromModifiers(player.trailEventModifiers));
+}
+
+/** Human-readable debuff lines for the GameScene sidebar (whole round). */
+export function getTrailDebuffLines(effects: TrailRoundEffects): string[] {
+  const lines: string[] = [];
+  if (effects.moneyPerDayLoss > 0) {
+    lines.push(`−$${effects.moneyPerDayLoss}/day`);
+  }
+  if (effects.disableRerollDay1) {
+    lines.push('No rerolls on Day 1');
+  }
+  if (effects.standardDiceDay1) {
+    lines.push('Standard dice on Day 1');
+  }
+  if (effects.diamondCrackDoubled) {
+    lines.push('Diamond crack chance doubled');
+  }
+  if (effects.luckyOddsHalved) {
+    lines.push('Lucky odds halved');
+  }
+  if (effects.scoredDiceDestroyChance > 0) {
+    lines.push(`${Math.round(effects.scoredDiceDestroyChance * 100)}% scored dice destroyed`);
+  }
+  return lines;
+}
+
 // ─── Event Selection ───
 
 /** Demon hunter pool draw chance */
@@ -118,11 +195,7 @@ export function applySpyglassAvoid(player: PlayerState): void {
 export function getScoutsSpyglassInvestigateMiles(player: PlayerState): number {
   const spyglass = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
   if (!spyglass) return 0;
-  return resolveEffectParam<number>(
-    spyglass.def.effectParams,
-    'investigateMiles',
-    player.profession?.id,
-  );
+  return resolveEffectParam<number>(spyglass.def.effectParams, 'investigateMiles', player.profession?.id);
 }
 
 /** Commit to the pending trail event; store investigate miles on the spyglass item. */
@@ -140,10 +213,7 @@ export function findTrailRepairKit(player: PlayerState): EquipmentInstance | und
 
 /** True when shield or Trail Repair Kit negates a negative trail effect. */
 export function isTrailNegativeNegated(player: PlayerState): boolean {
-  return (
-    player.equipment.some((e) => e.def.id === 'saint_elmos_shield') ||
-    findTrailRepairKit(player) !== undefined
-  );
+  return player.equipment.some((e) => e.def.id === 'saint_elmos_shield') || findTrailRepairKit(player) !== undefined;
 }
 
 /** Filter events eligible for the current leg (mirrors boss minimumLeg). */
@@ -164,10 +234,7 @@ export function filterUnseenEvents(pool: TrailEventDef[], player: PlayerState): 
  * Filters demon_hunter events based on profession and minimumLeg.
  * When playing as demon_hunter, ~30% chance to draw from exclusive pool.
  */
-export function selectTrailEvent(
-  player: PlayerState,
-  rng: () => number = Math.random,
-): TrailEventDef {
+export function selectTrailEvent(player: PlayerState, rng: () => number = Math.random): TrailEventDef {
   const isDemonHunter = player.profession?.id === 'demon_hunter';
   const leg = player.leg;
 
@@ -211,10 +278,7 @@ function weightedRandomPick(pool: TrailEventDef[], rng: () => number): TrailEven
  * Get choices available to the player for a given event.
  * Filters out choices whose conditions are not met.
  */
-export function getAvailableChoices(
-  event: TrailEventDef,
-  player: PlayerState,
-): TrailEventChoice[] {
+export function getAvailableChoices(event: TrailEventDef, player: PlayerState): TrailEventChoice[] {
   return event.choices.filter((choice) => {
     if (!choice.condition) return true;
     return checkCondition(choice.condition, player);
@@ -368,11 +432,7 @@ export function isNegativeEffect(effect: TrailEventEffect): boolean {
  * Apply a single effect to the player state and/or accumulate modifiers.
  * Some effects are immediate (money, dice), others are deferred (day penalties for next round).
  */
-export function applyEffect(
-  effect: TrailEventEffect,
-  player: PlayerState,
-  modifiers: TrailEventModifiers,
-): void {
+export function applyEffect(effect: TrailEventEffect, player: PlayerState, modifiers: TrailEventModifiers): void {
   switch (effect.type) {
     case 'LOSE_MONEY':
       player.economy.spend(Math.min(effect.amount ?? 0, player.economy.balance));
@@ -411,9 +471,7 @@ export function applyEffect(
 
     case 'LOSE_RANDOM_DICE': {
       // Only target enhanced dice (has enhancement, sticker, or aura)
-      const enhancedDice = player.dice.filter(
-        (d) => d.enhancement !== null || d.sticker !== null || d.aura !== null,
-      );
+      const enhancedDice = player.dice.filter((d) => d.enhancement !== null || d.sticker !== null || d.aura !== null);
       if (enhancedDice.length === 0) {
         const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE; // $3 per missing die as penalty
         player.economy.setBalance(player.economy.balance - lostAmount);
@@ -421,9 +479,7 @@ export function applyEffect(
       }
       const count = Math.min(effect.count ?? 0, enhancedDice.length);
       for (let i = 0; i < count; i++) {
-        const remaining = player.dice.filter(
-          (d) => d.enhancement !== null || d.sticker !== null || d.aura !== null,
-        );
+        const remaining = player.dice.filter((d) => d.enhancement !== null || d.sticker !== null || d.aura !== null);
         if (remaining.length === 0) break;
         const pick = remaining[Math.floor(Math.random() * remaining.length)];
         const idx = player.dice.indexOf(pick);
@@ -452,7 +508,7 @@ export function applyEffect(
       // Deferred to UI — the scene will prompt the player to choose.
       // If no equipment, fallback $10 penalty applied here.
       if (player.equipment.length === 0) {
-          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
+        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
         player.economy.setBalance(player.economy.balance - lostAmount);
       }
       break;
@@ -468,7 +524,7 @@ export function applyEffect(
       const count = effect.count ?? 1;
       for (let i = 0; i < count; i++) {
         const supplyIndices = player.consumables
-          .map((c, idx) => (c.def.category === 'supply' || c.def.category === 'trail_guide') ? idx : -1)
+          .map((c, idx) => (c.def.category === 'supply' || c.def.category === 'trail_guide' ? idx : -1))
           .filter((idx) => idx >= 0);
         if (supplyIndices.length === 0) break;
         const removeIdx = supplyIndices[Math.floor(Math.random() * supplyIndices.length)];

@@ -11,9 +11,10 @@ import {
   resetDieIds,
 } from './testHelpers';
 import { HandType } from '../types';
-import {
-  resetPlayerState,
-} from '../PlayerState';
+import { resolveScoreDestroyChance } from '../DiceSystem';
+import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
+import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
+import { resetPlayerState } from '../PlayerState';
 import { detectBestHand, rollDie } from '../DiceSystem';
 import { GAMEPLAY } from '../Constants';
 
@@ -541,7 +542,6 @@ describe('effectiveDays / effectiveRerolls', () => {
     // rerolls: 6 - 1(permit penalty) = 5
     expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
   });
-
 });
 
 // ─── Stone Dice ───
@@ -598,5 +598,34 @@ describe('Stone dice', () => {
     const rolled = rollDie(normal);
     expect(rolled.value).toBeGreaterThan(0);
     expect(rolled.value).toBeLessThanOrEqual(12);
+  });
+});
+
+// ─── Enhancement score destroy (crack) ───
+
+describe('resolveScoreDestroyChance', () => {
+  const trail = createEmptyTrailRoundEffects();
+
+  test('diamond defaults to [1, 4] from dice_enhancements', () => {
+    expect(getEnhancementScoreDestroyChance('diamond')).toEqual([1, 4]);
+    expect(getEnhancementScoreDestroyChance('bone')).toEqual([0, 1]);
+  });
+
+  test('bone dice have no score destroy chance', () => {
+    expect(resolveScoreDestroyChance(die({ enhancement: 'bone' }), [], trail)).toBeNull();
+  });
+
+  test('diamond without equipment uses enhancement odds', () => {
+    expect(resolveScoreDestroyChance(die({ enhancement: 'diamond' }), [], trail)).toEqual([1, 4]);
+  });
+
+  test('moonshine overrides diamond with diamondDestroyChance', () => {
+    const moonshine = item('moonshine');
+    expect(resolveScoreDestroyChance(die({ enhancement: 'diamond' }), [moonshine], trail)).toEqual([1, 3]);
+  });
+
+  test('diamondCrackDoubled doubles diamond enhancement numerator', () => {
+    const doubled = { ...trail, diamondCrackDoubled: true };
+    expect(resolveScoreDestroyChance(die({ enhancement: 'diamond' }), [], doubled)).toEqual([2, 4]);
   });
 });

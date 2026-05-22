@@ -108,13 +108,7 @@ export const DIFFICULTIES: DifficultyDef[] = [
     name: 'Spoiled Goods',
     description: 'Perishable equipment (destroyed after 5 rounds).',
     color: 0xff8800,
-    effects: [
-      'No reward for Round 1',
-      'Brutal mile targets',
-      'Cursed equipment',
-      '-1 Reroll',
-      'Perishable equipment',
-    ],
+    effects: ['No reward for Round 1', 'Brutal mile targets', 'Cursed equipment', '-1 Reroll', 'Perishable equipment'],
   },
   {
     level: 8,
@@ -363,7 +357,6 @@ export const ANIM = {
   CARD_DRAG_LIFT_Y: -6, // Y offset while dragging (card lifts up)
 };
 
-
 export const TRAIL_EVENT = {
   AMOUNT_PER_MISSING_DIE: 3, // $ lost per missing die for LOSE_RANDOM_DICE
   AMOUNT_PER_MISSING_EQUIP: 4, // $ lost per missing equipment for LOSE_RANDOM_EQUIPMENT
@@ -373,32 +366,32 @@ export const TRAIL_EVENT = {
 // ─── Copy Equipment Incompatibility ───
 /** Effect types that cannot be copied by Mirror Lake / Echo Chamber */
 export const COPY_INCOMPATIBLE_EFFECTS = new Set([
-  'FREE_SHOP_REROLL',        // Coupon Book
-  'PREVENT_DEATH',           // Guardian Totem, Saint Elmo's Shield
-  'BANK_NOTE',               // Bank Note
-  'MODIFY_REROLLS',          // Spare Holster
-  'END_ROUND_MONEY',         // Payday
+  'FREE_SHOP_REROLL', // Coupon Book
+  'PREVENT_DEATH', // Guardian Totem, Saint Elmo's Shield
+  'BANK_NOTE', // Bank Note
+  'MODIFY_REROLLS', // Spare Holster
+  'END_ROUND_MONEY', // Payday
   'END_ROUND_MONEY_PER_REROLL', // Rainy Day Fund
-  'ROUND_START_SELL_VALUE',  // Antique Revolver
+  'ROUND_START_SELL_VALUE', // Antique Revolver
   'END_ROUND_SELL_VALUE_ALL', // Raffle Ticket
-  'LOADED_DICE',             // Loaded Dice
-  'STACKED_DECK',            // Stacked Deck
+  'LOADED_DICE', // Loaded Dice
+  'STACKED_DECK', // Stacked Deck
   'END_ROUND_MONEY_SCALING', // Railroad Bonds
-  'SELL_DISABLE_BOSS',       // Sheriff's Badge
-  'SELL_GRANT_TAG',          // Bounty Contract
-  'TRAIL_ALMANAC_MONEY',     // Trail Almanac
-  'ALLOW_DUPLICATES',        // Counterfeit Goods
-  'HELLFIRE_ROUND',          // Hellfire Round
-  'OPEN_PALM',               // Open Palm
+  'SELL_DISABLE_BOSS', // Sheriff's Badge
+  'SELL_GRANT_TAG', // Bounty Contract
+  'TRAIL_ALMANAC_MONEY', // Trail Almanac
+  'ALLOW_DUPLICATES', // Counterfeit Goods
+  'HELLFIRE_ROUND', // Hellfire Round
+  'OPEN_PALM', // Open Palm
   'SAVINGS_ACCOUNT_INTEREST', // Savings Account
-  'EXPLORER_GUILD',          // Explorer's Guild
-  'PHANTOM_WAGON',           // Phantom Wagon
-  'PACK_SADDLE',             // Pack Saddle
-  'COFFEE',                  // Coffee
-  'FLOUR_SACK',              // Flour Sack
-  'COPY_RIGHT',              // Mirror Lake (prevent self-reference)
-  'COPY_LEFTMOST',           // Echo Chamber (prevent self-reference)
-  'TRAIL_BACKPACK',          // Trail Backpack
+  'EXPLORER_GUILD', // Explorer's Guild
+  'PHANTOM_WAGON', // Phantom Wagon
+  'PACK_SADDLE', // Pack Saddle
+  'COFFEE', // Coffee
+  'FLOUR_SACK', // Flour Sack
+  'COPY_RIGHT', // Mirror Lake (prevent self-reference)
+  'COPY_LEFTMOST', // Echo Chamber (prevent self-reference)
+  'TRAIL_BACKPACK', // Trail Backpack
 ]);
 
 /**

@@ -34,7 +34,12 @@ import {
 import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitBossRerollLimit, getPermitShopRerollDiscount } from './PermitsSystem';
-import { TrailEventModifiers, createEmptyModifiers } from './TrailEventsSystem';
+import {
+  TrailEventModifiers,
+  TrailRoundEffects,
+  createEmptyModifiers,
+  createEmptyTrailRoundEffects,
+} from './TrailEventsSystem';
 import type { TrailEventDef } from '../data/trail_events';
 import trailGuidesData from '../data/trail_guides';
 import { getProfessionById, type ProfessionDef } from '../data/professions';
@@ -116,6 +121,7 @@ export class PlayerState {
   permitRerollPenalty: number = 0; // reroll penalty from Hidden Pass
   permitScoreReduction: number = 0; // leg-equivalent score reduction from shortcuts
   trailEventModifiers: TrailEventModifiers = createEmptyModifiers(); // penalties/bonuses from trail events, consumed next round
+  trailRoundEffects: TrailRoundEffects = createEmptyTrailRoundEffects(); // active for current round after startRound
   /** Pre-rolled trail event when Scout's Spyglass is equipped (category preview before reveal). */
   pendingTrailEvent: TrailEventDef | null = null;
   /** Trail event IDs already encountered this run (no repeats until pool exhausted). */
@@ -185,7 +191,11 @@ export class PlayerState {
     const profMods = this.profession?.modifiers as Record<string, unknown> | undefined;
     const profRerolls = typeof profMods?.rerolls === 'number' ? profMods.rerolls : 0;
     let rerolls =
-      GAMEPLAY.MAX_REROLLS + this.permitRerollBonus - this.permitRerollPenalty + profRerolls - this.trailEventModifiers.rerollPenalty;
+      GAMEPLAY.MAX_REROLLS +
+      this.permitRerollBonus -
+      this.permitRerollPenalty +
+      profRerolls -
+      this.trailEventModifiers.rerollPenalty;
     if (this.difficulty >= 5) rerolls -= 1; // Harsh Rations
     return Math.max(0, rerolls);
   }
@@ -470,9 +480,7 @@ export class PlayerState {
           const source = others[Math.floor(Math.random() * others.length)];
           // Duplicate the item, removing ghost aura if present
           const duplicated: EquipmentInstance = {
-            def: source.def.aura?.id === 'ghost'
-              ? { ...source.def, aura: undefined }
-              : { ...source.def },
+            def: source.def.aura?.id === 'ghost' ? { ...source.def, aura: undefined } : { ...source.def },
             sellValue: source.sellValue,
             state: { ...source.state },
             modifiers: [...source.modifiers],
@@ -590,15 +598,11 @@ export class PlayerState {
   rerollBossForLeg(leg: number = this.leg): boolean {
     const allBosses = bosses;
     const current = this.bossAssignments[leg - 1];
-    let eligible = allBosses.filter(
-      (b) => (b.minimumLeg ?? 1) <= leg && b.id !== current?.id,
-    );
+    let eligible = allBosses.filter((b) => (b.minimumLeg ?? 1) <= leg && b.id !== current?.id);
 
     if (leg <= 8) {
       const usedElsewhere = new Set(
-        this.bossAssignments
-          .map((b, i) => (i !== leg - 1 ? b?.id : undefined))
-          .filter((id): id is string => !!id),
+        this.bossAssignments.map((b, i) => (i !== leg - 1 ? b?.id : undefined)).filter((id): id is string => !!id),
       );
       const unused = eligible.filter((b) => !usedElsewhere.has(b.id));
       if (unused.length > 0) eligible = unused;
@@ -693,7 +697,8 @@ export class PlayerState {
 
     // Outlaw: no interest, gets reroll bonus instead
     const noInterest = !!(this.profession?.modifiers as Record<string, unknown>)?.noInterest;
-    const perRemaining = ((this.profession?.modifiers as Record<string, unknown>)?.endOfRoundBonusPerRemaining as number) ?? 0;
+    const perRemaining =
+      ((this.profession?.modifiers as Record<string, unknown>)?.endOfRoundBonusPerRemaining as number) ?? 0;
 
     // Interest: based on current balance (gold dice money already earned before payout)
     let interest = 0;
@@ -701,15 +706,18 @@ export class PlayerState {
       const cappedMoney = Math.min(this.economy.balance, this.interestCap);
       interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
       // Savings Account: extra interest per $5 held (with copy-resolution)
-      forEachEquipmentResolved(this.equipment, (equip) => {
-        if (equip.def.effectType !== 'SAVINGS_ACCOUNT_INTEREST') return;
-        const p = equip.def.effectParams as Record<string, unknown>;
-        const chunk = (p.perChunk as number) ?? 5;
-        const perChunk = (p.value as number) ?? 1;
-        const accountantBonus =
-          this.profession?.id === 'accountant' ? ((p.accountantBonus as number) ?? 1) : 0;
-        interest += Math.floor(cappedMoney / chunk) * (perChunk + accountantBonus);
-      }, 'skip');
+      forEachEquipmentResolved(
+        this.equipment,
+        (equip) => {
+          if (equip.def.effectType !== 'SAVINGS_ACCOUNT_INTEREST') return;
+          const p = equip.def.effectParams as Record<string, unknown>;
+          const chunk = (p.perChunk as number) ?? 5;
+          const perChunk = (p.value as number) ?? 1;
+          const accountantBonus = this.profession?.id === 'accountant' ? ((p.accountantBonus as number) ?? 1) : 0;
+          interest += Math.floor(cappedMoney / chunk) * (perChunk + accountantBonus);
+        },
+        'skip',
+      );
     }
 
     // Outlaw reroll bonus
@@ -827,7 +835,6 @@ export class PlayerState {
       // New leg — clear the current permit so a new one generates
       this.currentLegPermit = null;
       this.permitPurchasedThisLeg = false;
-
     }
     // Spent dice are reset when the round ends (GameState.endDay win/loss).
     return this.journeyComplete;
@@ -893,6 +900,7 @@ export class PlayerState {
     this.pendingTrailEvent = null;
     this.seenTrailEventIds = new Set();
     this.trailEventModifiers = createEmptyModifiers();
+    this.trailRoundEffects = createEmptyTrailRoundEffects();
     this.skipNextShop = false;
     this.assignBosses();
   }

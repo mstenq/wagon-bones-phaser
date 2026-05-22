@@ -19,11 +19,15 @@ import {
   getScoutsSpyglassInvestigateMiles,
   hasScoutsSpyglass,
   createEmptyModifiers,
+  getTrailDebuffLines,
+  getPlayerTrailDebuffLines,
+  trailRoundEffectsFromModifiers,
 } from '../TrailEventsSystem';
 import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
 import { GAMEPLAY, TRAIL_EVENT } from '../Constants';
 import { getEquipmentDefById } from '../ItemsSystem';
 import { resolveEffectParam } from '../effectParams';
+import { PhaseState } from '../types';
 
 beforeEach(() => {
   resetDieIds();
@@ -239,7 +243,9 @@ describe('Trail Event selection', () => {
 
   test('filterUnseenEvents excludes seen ids', () => {
     const player = resetPlayerState();
-    const pool = getAllTrailEvents().filter((e) => !e.demonHunterOnly).slice(0, 5);
+    const pool = getAllTrailEvents()
+      .filter((e) => !e.demonHunterOnly)
+      .slice(0, 5);
     player.seenTrailEventIds.add(pool[0].id);
     const filtered = filterUnseenEvents(pool, player);
     expect(filtered.some((e) => e.id === pool[0].id)).toBe(false);
@@ -493,7 +499,7 @@ describe('Effect application', () => {
     applyEffect({ type: 'LOSE_RANDOM_DICE', count: 2 }, player, mods);
     // No enhanced dice to remove — lose $3 per missing die instead
     expect(player.dice.length).toBe(3);
-    expect(player.economy.balance).toBe(25 - (2 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE)); // $3 per missing die penalty
+    expect(player.economy.balance).toBe(25 - 2 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE); // $3 per missing die penalty
   });
 
   test('LOSE_RANDOM_DICE $3 penalty can go negative', () => {
@@ -513,7 +519,7 @@ describe('Effect application', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_DICE', count: 5 }, player, mods);
     expect(player.dice.length).toBe(0);
-    expect(player.economy.balance).toBe(20 - (5 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE)); // $3 per missing die penalty
+    expect(player.economy.balance).toBe(20 - 5 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE); // $3 per missing die penalty
   });
 
   test('LOSE_RANDOM_EQUIPMENT removes equipment', () => {
@@ -553,7 +559,7 @@ describe('Effect application', () => {
     expect(player.consumables.length).toBe(1);
   });
 
-  test('LOSE_MONEY_PER_DAY adds to modifier (UI-only, not consumed in game logic)', () => {
+  test('LOSE_MONEY_PER_DAY adds to modifier', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_MONEY_PER_DAY', amount: 3 }, player, mods);
@@ -676,7 +682,7 @@ describe('Effect application', () => {
     expect(game.config.targetMiles).toBe(1500);
   });
 
-  test('FLAT_MILES_PENALTY sets modifier (UI-only, not consumed in game logic)', () => {
+  test('FLAT_MILES_PENALTY still accumulates on modifiers (not wired to gameplay)', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
     applyEffect({ type: 'FLAT_MILES_PENALTY', amount: 10 }, player, mods);
@@ -688,41 +694,6 @@ describe('Effect application', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'SKIP_NEXT_SHOP' }, player, mods);
     expect(mods.skipNextShop).toBe(true);
-  });
-
-  test('DISABLE_REROLL_DAY1 sets flag (UI-only, not consumed in game logic)', () => {
-    const player = resetPlayerState();
-    const mods = createEmptyModifiers();
-    applyEffect({ type: 'DISABLE_REROLL_DAY1' }, player, mods);
-    expect(mods.disableRerollDay1).toBe(true);
-  });
-
-  test('STANDARD_DICE_DAY1 sets flag (UI-only, not consumed in game logic)', () => {
-    const player = resetPlayerState();
-    const mods = createEmptyModifiers();
-    applyEffect({ type: 'STANDARD_DICE_DAY1' }, player, mods);
-    expect(mods.standardDiceDay1).toBe(true);
-  });
-
-  test('DIAMOND_CRACK_DOUBLED sets flag (UI-only, not consumed in game logic)', () => {
-    const player = resetPlayerState();
-    const mods = createEmptyModifiers();
-    applyEffect({ type: 'DIAMOND_CRACK_DOUBLED' }, player, mods);
-    expect(mods.diamondCrackDoubled).toBe(true);
-  });
-
-  test('LUCKY_ODDS_HALVED sets flag (UI-only, not consumed in game logic)', () => {
-    const player = resetPlayerState();
-    const mods = createEmptyModifiers();
-    applyEffect({ type: 'LUCKY_ODDS_HALVED' }, player, mods);
-    expect(mods.luckyOddsHalved).toBe(true);
-  });
-
-  test('SCORED_DICE_DESTROY_CHANCE sets chance (UI-only, not consumed in game logic)', () => {
-    const player = resetPlayerState();
-    const mods = createEmptyModifiers();
-    applyEffect({ type: 'SCORED_DICE_DESTROY_CHANCE', chance: 0.25 }, player, mods);
-    expect(mods.scoredDiceDestroyChance).toBe(0.25);
   });
 
   test('LOSE_REROLLS_PER_DAY reduces rerolls in next round', () => {
@@ -933,6 +904,172 @@ describe('Round modifier integration', () => {
     const result = resolveChoice(event, 'accept', player);
     expect(result.modifiers.skipNextShop).toBe(true);
   });
+
+  test('startRound copies round-duration modifiers into trailRoundEffects', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    player.trailEventModifiers.moneyPerDayLoss = 3;
+    player.trailEventModifiers.disableRerollDay1 = true;
+    player.trailEventModifiers.scoredDiceDestroyChance = 0.25;
+    game.startRound();
+
+    expect(player.trailRoundEffects.moneyPerDayLoss).toBe(3);
+    expect(player.trailRoundEffects.disableRerollDay1).toBe(true);
+    expect(player.trailRoundEffects.scoredDiceDestroyChance).toBe(0.25);
+    expect(player.trailEventModifiers.moneyPerDayLoss).toBe(0);
+  });
+
+  test('moneyPerDayLoss charges when advancing to next day', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    player.economy.setBalance(20);
+    player.trailEventModifiers.moneyPerDayLoss = 3;
+    game.startRound({ targetMiles: 999_999 });
+
+    const d1 = die({ id: 'pay_d1', value: 5 });
+    const d2 = die({ id: 'pay_d2', value: 5 });
+    game.state.phase = 'ROLL' as PhaseState;
+    game.state.rolledDice = [d1, d2];
+    game.selectForScore([d1.id, d2.id]);
+    game.calculateScore();
+    expect(game.state.phase).toBe('DAY_END');
+
+    game.endDay();
+    expect(player.economy.balance).toBe(17);
+    expect(game.state.day).toBe(2);
+  });
+
+  test('disableRerollDay1 blocks rerolls on day 1 only', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    player.trailEventModifiers.disableRerollDay1 = true;
+    game.startRound({ targetMiles: 999_999 });
+
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS);
+
+    const d1 = die({ id: 'reroll_d1', value: 3 });
+    const d2 = die({ id: 'reroll_d2', value: 4 });
+    game.state.phase = 'ROLL' as PhaseState;
+    game.state.rolledDice = [d1, d2];
+
+    expect(game.canUseReroll()).toBe(false);
+    expect(game.reroll([d1.id])).toBe(false);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS);
+
+    game.selectForScore([d1.id, d2.id]);
+    game.calculateScore();
+    game.endDay();
+    expect(game.state.day).toBe(2);
+
+    game.state.phase = 'ROLL' as PhaseState;
+    game.state.rolledDice = [d1, d2];
+    expect(game.canUseReroll()).toBe(true);
+    expect(game.reroll([d1.id])).toBe(true);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS - 1);
+    expect(player.trailRoundEffects.disableRerollDay1).toBe(true);
+  });
+
+  test('heavy_fog endure does not remove round rerolls, only blocks day 1', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    const event = getTrailEventById('heavy_fog')!;
+    const result = resolveChoice(event, 'endure', player);
+    player.trailEventModifiers = result.modifiers;
+    game.startRound({ targetMiles: 999_999 });
+
+    expect(player.trailRoundEffects.disableRerollDay1).toBe(true);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS);
+    expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS);
+    expect(game.canUseReroll()).toBe(false);
+  });
+
+  test('standardDiceDay1 strips enhancement bonuses on day 1 only', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    player.trailEventModifiers.standardDiceDay1 = true;
+    game.startRound({ targetMiles: 999_999 });
+
+    const wooden = die({ id: 'std_d1', value: 5, enhancement: 'wooden' });
+    const plain = die({ id: 'std_d2', value: 5 });
+    game.state.phase = 'ROLL' as PhaseState;
+    game.state.rolledDice = [wooden, plain];
+    game.state.day = 1;
+    game.selectForScore([wooden.id, plain.id]);
+    const day1 = game.calculateScore()!;
+    expect(day1.totalValue).toBe(10);
+
+    game.state.phase = 'ROLL' as PhaseState;
+    game.state.rolledDice = [wooden, plain];
+    game.state.day = 2;
+    game.selectForScore([wooden.id, plain.id]);
+    const day2 = game.calculateScore()!;
+    expect(day2.totalValue).toBe(20);
+  });
+
+  test('diamond crack destroys scored diamond dice', () => {
+    const diamond = die({ id: 'crack_d1', value: 6, enhancement: 'diamond' });
+    const plain = die({ id: 'crack_d2', value: 6 });
+    const { game, player } = setupGame({
+      dice: [diamond, plain, ...diceWithValue(1, 48)],
+    });
+    game.startRound({ targetMiles: 999_999 });
+
+    const originalRandom = Math.random;
+    Math.random = () => 0;
+    try {
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = [diamond, plain];
+      game.selectForScore([diamond.id, plain.id]);
+      game.calculateScore();
+    } finally {
+      Math.random = originalRandom;
+    }
+
+    expect(player.dice.some((d) => d.id === 'crack_d1')).toBe(false);
+  });
+
+  test('scoredDiceDestroyChance destroys scored dice', () => {
+    const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    player.trailEventModifiers.scoredDiceDestroyChance = 1;
+    game.startRound({ targetMiles: 999_999 });
+
+    const d1 = die({ id: 'curse_d1', value: 5 });
+    const d2 = die({ id: 'curse_d2', value: 5 });
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = [d1, d2];
+    game.selectForScore([d1.id, d2.id]);
+    game.calculateScore();
+
+    expect(player.dice.some((d) => d.id === 'curse_d1')).toBe(false);
+    expect(player.dice.some((d) => d.id === 'curse_d2')).toBe(false);
+  });
+
+  test('getTrailDebuffLines formats active round penalties', () => {
+    const lines = getTrailDebuffLines(
+      trailRoundEffectsFromModifiers({
+        ...createEmptyModifiers(),
+        moneyPerDayLoss: 3,
+        disableRerollDay1: true,
+        scoredDiceDestroyChance: 0.25,
+      }),
+    );
+    expect(lines).toContain('−$3/day');
+    expect(lines).toContain('No rerolls on Day 1');
+    expect(lines).toContain('25% scored dice destroyed');
+  });
+
+  test('getPlayerTrailDebuffLines shows pending modifiers before startRound', () => {
+    const player = resetPlayerState();
+    player.trailEventModifiers.diamondCrackDoubled = true;
+    expect(player.trailRoundEffects.diamondCrackDoubled).toBe(false);
+    const lines = getPlayerTrailDebuffLines(player);
+    expect(lines).toContain('Diamond crack chance doubled');
+  });
+
+  test('getPlayerTrailDebuffLines prefers active round effects over pending', () => {
+    const player = resetPlayerState();
+    player.trailEventModifiers.luckyOddsHalved = true;
+    player.trailRoundEffects.diamondCrackDoubled = true;
+    const lines = getPlayerTrailDebuffLines(player);
+    expect(lines).toContain('Diamond crack chance doubled');
+    expect(lines).not.toContain('Lucky odds halved');
+  });
 });
 
 // ─── Every Single Event Resolution ───
@@ -1026,7 +1163,7 @@ describe('Edge cases', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_DICE', count: 3 }, player, mods);
     expect(player.dice.length).toBe(initialCount);
-    expect(player.economy.balance).toBe(50 - (3 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE));
+    expect(player.economy.balance).toBe(50 - 3 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE);
   });
 
   test(`player with no equipment loses ${TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP} per missing equipment from LOSE_RANDOM_EQUIPMENT`, () => {
@@ -1036,7 +1173,7 @@ describe('Edge cases', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 3 }, player, mods);
     expect(player.equipment.length).toBe(0);
-    expect(player.economy.balance).toBe(15 - (3 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP));
+    expect(player.economy.balance).toBe(15 - 3 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP);
   });
 
   test(`LOSE_RANDOM_EQUIPMENT ${TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP} penalty can go negative`, () => {
@@ -1045,7 +1182,7 @@ describe('Edge cases', () => {
     player.economy.setBalance(2);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
-    expect(player.economy.balance).toBe(2 - (1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP));
+    expect(player.economy.balance).toBe(2 - 1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP);
   });
 
   test(`LOSE_EQUIPMENT_CHOICE deducts ${TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP} per missing equipment`, () => {
@@ -1054,7 +1191,7 @@ describe('Edge cases', () => {
     player.economy.setBalance(30);
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, player, mods);
-    expect(player.economy.balance).toBe(30 - (1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP));
+    expect(player.economy.balance).toBe(30 - 1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP);
   });
 
   test('player with no consumables handles LOSE_ALL_SUPPLY_CARDS gracefully', () => {

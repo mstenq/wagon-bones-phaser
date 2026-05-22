@@ -10,12 +10,47 @@ import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from './E
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
 import { GAMEPLAY, resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
+import { getEnhancementScoreDestroyChance } from '../data/dice_enhancements';
 import { dieMatchesPip, hasStackedDeck, multiplyCtxXMult } from './effects/helpers';
 import { multiplyScore } from './scoreMath';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
+import type { TrailRoundEffects } from './TrailEventsSystem';
 
 const HAND_TABLE: HandDefinition[] = hands;
+
+/**
+ * Effective score-time destroy chance for a die (enhancement crack).
+ * Moonshine overrides diamond with diamondDestroyChance; trail cold doubles diamond numerator.
+ * Returns null when the die cannot crack from its enhancement ([0, 1]).
+ */
+export function resolveScoreDestroyChance(
+  die: Die,
+  equipment: EquipmentInstance[],
+  trailRound: TrailRoundEffects,
+): [number, number] | null {
+  if (!die.enhancement) return null;
+
+  if (die.enhancement === 'diamond') {
+    for (const equip of equipment) {
+      if (equip.def.effectType !== 'ENHANCED_RETRIGGER') continue;
+      const p = equip.def.effectParams as Record<string, unknown>;
+      const fromEquip = p.diamondDestroyChance as [number, number] | undefined;
+      if (fromEquip) {
+        const [num, den] = fromEquip;
+        return trailRound.diamondCrackDoubled ? [num * 2, den] : [num, den];
+      }
+    }
+  }
+
+  const [num, den] = getEnhancementScoreDestroyChance(die.enhancement);
+  if (num <= 0) return null;
+
+  if (die.enhancement === 'diamond' && trailRound.diamondCrackDoubled) {
+    return [num * 2, den];
+  }
+  return [num, den];
+}
 
 let nextDieId = 0;
 
@@ -260,7 +295,11 @@ function detectBestHandFromDice(dice: Die[]): HandResult {
  * Calculate score for a played hand.
  * miles = (handBaseMiles + sum of scoring dice values) × handBaseMult
  */
-export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[], scoreContext?: { currentDay: number; maxDays: number; rerollsRemaining?: number; allDice?: Die[] }): ScoreResult {
+export function scoreHand(
+  handResult: HandResult,
+  equipment: EquipmentInstance[],
+  scoreContext?: { currentDay: number; maxDays: number; rerollsRemaining?: number; allDice?: Die[] },
+): ScoreResult {
   let totalValue = 0;
   let bonusMult = 0;
   let xMult = 1;
@@ -283,8 +322,15 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         equip.state.xMult = (equip.state.xMult ?? 1) + (p.value as number);
         // Emit strip event on die (visual: turn white) then xMult popup on equip card
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'strip', value: 0, dieId: die.id });
-        animEvents.push({ target: { kind: 'equip', equipIndex: eIdx }, popupType: 'xmult', value: p.value as number, dieId: die.id });
-        console.log(`  [scoreHand] Graverobber: stripped ${die.enhancement} from die ${die.id}, xMult now ${equip.state.xMult}`);
+        animEvents.push({
+          target: { kind: 'equip', equipIndex: eIdx },
+          popupType: 'xmult',
+          value: p.value as number,
+          dieId: die.id,
+        });
+        console.log(
+          `  [scoreHand] Graverobber: stripped ${die.enhancement} from die ${die.id}, xMult now ${equip.state.xMult}`,
+        );
         // Strip from the scored die (rolled copy)
         die.enhancement = null;
         // Strip from the actual pouch die
@@ -308,6 +354,10 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   }
 
   console.log('  [scoreHand] Step 3: Per-die scoring');
+
+  const trailRound = player.trailRoundEffects;
+  const standardDiceDay1 = scoreContext?.currentDay === 1 && trailRound.standardDiceDay1;
+  const scoringEnhancement = (die: Die): Die['enhancement'] => (standardDiceDay1 ? null : die.enhancement);
 
   const stackedDeck = hasStackedDeck(equipment);
 
@@ -356,7 +406,8 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
   // Calculate global retrigger count (War Drums, Last Stand) once
   const globalRetriggerCount = getScoredRetriggerCount(equipment, scoreContext);
   const firstDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[0].id : null;
-  const lastDieId = handResult.scoringDice.length > 0 ? handResult.scoringDice[handResult.scoringDice.length - 1].id : null;
+  const lastDieId =
+    handResult.scoringDice.length > 0 ? handResult.scoringDice[handResult.scoringDice.length - 1].id : null;
   for (const die of handResult.scoringDice) {
     const bossDisabled = isDiceScoringDisabledByBoss(die);
     // Calculate how many times this die triggers (disabled dice: no retriggers/stickers)
@@ -371,7 +422,10 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           if (!resolved) continue;
           equip = resolved;
         }
-        if (equip.def.effectType === 'PIP_RETRIGGER' && dieMatchesPip(die, equip.def.effectParams.pip as number, equipment, stackedDeck)) {
+        if (
+          equip.def.effectType === 'PIP_RETRIGGER' &&
+          dieMatchesPip(die, equip.def.effectParams.pip as number, equipment, stackedDeck)
+        ) {
           triggers++;
         }
         if (equip.def.effectType === 'FIRST_DICE_RETRIGGER' && die.id === firstDieId) {
@@ -380,7 +434,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         if (equip.def.effectType === 'LAST_DICE_RETRIGGER' && die.id === lastDieId) {
           triggers += equip.def.effectParams.value as number;
         }
-        if (equip.def.effectType === 'ENHANCED_RETRIGGER' && die.enhancement !== null) {
+        if (equip.def.effectType === 'ENHANCED_RETRIGGER' && scoringEnhancement(die) !== null) {
           triggers++;
         }
       }
@@ -400,11 +454,13 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
       xMult = savedCtxXMult;
 
       // Base effect — value as miles (stone dice have 0 value but add 50 miles)
-      const dieMiles = die.enhancement === 'stone' ? 50 : die.value;
+      const dieMiles = scoringEnhancement(die) === 'stone' ? 50 : die.value;
       if (!bossDisabled) {
         totalValue += dieMiles;
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: dieMiles, dieId: die.id });
-        console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: +${dieMiles} ${die.enhancement === 'stone' ? 'miles (STONE)' : 'value'} (total: ${totalValue})`);
+        console.log(
+          `  [scoreHand]   Die ${die.id}${triggerLabel}: +${dieMiles} ${scoringEnhancement(die) === 'stone' ? 'miles (STONE)' : 'value'} (total: ${totalValue})`,
+        );
       } else {
         console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: DISABLED by boss (skipped)`);
       }
@@ -412,8 +468,15 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
       // Permanent bonus miles (e.g. from Cowboy Boots)
       if (!bossDisabled && die.bonusMiles > 0) {
         totalValue += die.bonusMiles;
-        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: die.bonusMiles, dieId: die.id });
-        console.log(`  [scoreHand]   Die ${die.id}${triggerLabel}: +${die.bonusMiles} bonus miles (total: ${totalValue})`);
+        animEvents.push({
+          target: { kind: 'die', dieId: die.id },
+          popupType: 'miles',
+          value: die.bonusMiles,
+          dieId: die.id,
+        });
+        console.log(
+          `  [scoreHand]   Die ${die.id}${triggerLabel}: +${die.bonusMiles} bonus miles (total: ${totalValue})`,
+        );
       }
       // Dice enhancement effects (skipped when boss-disabled)
       if (bossDisabled) {
@@ -422,7 +485,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
         pipelineCtx.xMult = xMult;
         continue;
       }
-      switch (die.enhancement) {
+      switch (scoringEnhancement(die)) {
         case 'bone':
           bonusMult += 4;
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 4, dieId: die.id });
@@ -439,13 +502,15 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} DIAMOND: x2 mult (xMult: ${xMult})`);
           break;
         case 'lucky': {
-          if (checkLoadedChance([1, 5], equipment)) {
+          const luckyMultChance: [number, number] = trailRound.luckyOddsHalved ? [1, 10] : [1, 5];
+          const luckyMoneyChance: [number, number] = trailRound.luckyOddsHalved ? [1, 30] : [1, 15];
+          if (checkLoadedChance(luckyMultChance, equipment)) {
             bonusMult += 20;
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
             for (const e of equipment) dispatchLifecycle('on-lucky-trigger', e);
           }
-          if (checkLoadedChance([1, 15], equipment)) {
+          if (checkLoadedChance(luckyMoneyChance, equipment)) {
             player.economy.earn(20);
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit $20!`);
@@ -453,7 +518,6 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
           }
           break;
         }
-      
       }
 
       // Dice aura effects
@@ -488,9 +552,7 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
       if (die.sticker === 'golden_dollar') {
         player.economy.earn(3);
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 3, dieId: die.id });
-        console.log(
-          `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER golden_dollar: +$3`,
-        );
+        console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} STICKER golden_dollar: +$3`);
       }
 
       // 'On scored' equipment — items that trigger per matching die (left to right)
@@ -582,6 +644,39 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
     }
   }
 
+  // Enhancement score destroy (e.g. diamond crack); Moonshine overrides diamond odds
+  for (const scoredDie of handResult.scoringDice) {
+    const destroyChance = resolveScoreDestroyChance(scoredDie, equipment, trailRound);
+    if (!destroyChance) continue;
+    if (!checkLoadedChance(destroyChance, equipment)) continue;
+
+    const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
+    if (idx < 0) continue;
+
+    const wasDiamond = player.dice[idx].enhancement === 'diamond';
+    const wasEnhanced = player.dice[idx].enhancement !== null;
+    player.dice.splice(idx, 1);
+    processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
+    console.log(`  [scoreHand] Score destroy (${scoredDie.enhancement}): destroyed die ${scoredDie.id}`);
+    if (wasDiamond) {
+      for (const e of equipment) dispatchLifecycle('on-diamond-destroyed', e);
+    }
+  }
+
+  // Trail: chance to destroy each scored die (blood moon)
+  const destroyChance = trailRound.scoredDiceDestroyChance;
+  if (destroyChance > 0) {
+    for (const scoredDie of handResult.scoringDice) {
+      if (Math.random() >= destroyChance) continue;
+      const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
+      if (idx < 0) continue;
+      const wasEnhanced = player.dice[idx].enhancement !== null;
+      player.dice.splice(idx, 1);
+      processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
+      console.log(`  [scoreHand] Trail curse: destroyed scored die ${scoredDie.id}`);
+    }
+  }
+
   // ENHANCED_RETRIGGER: Moonshine — enhanced dice have chance of being destroyed after scoring
   for (const equip of equipment) {
     if (equip.def.effectType !== 'ENHANCED_RETRIGGER') continue;
@@ -590,25 +685,19 @@ export function scoreHand(handResult: HandResult, equipment: EquipmentInstance[]
 
     for (const scoredDie of handResult.scoringDice) {
       if (scoredDie.enhancement === null) continue;
+      // Diamond crack is handled in the unified diamond crack pass above
+      if (scoredDie.enhancement === 'diamond') continue;
 
-      const chanceTuple = scoredDie.enhancement === 'diamond'
-        ? p.diamondDestroyChance as [number, number]
-        : p.destroyChance as [number, number];
+      const chanceTuple = p.destroyChance as [number, number];
       if (!checkLoadedChance(chanceTuple, equipment)) continue;
 
       const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
       if (idx < 0) continue;
 
-      const wasDiamond = player.dice[idx].enhancement === 'diamond';
       const wasEnhanced = player.dice[idx].enhancement !== null;
       player.dice.splice(idx, 1);
       processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
       console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced die ${scoredDie.id} (${scoredDie.enhancement})`);
-
-      // Diamond Coffin: track diamond destruction
-      if (wasDiamond) {
-        for (const e of equipment) dispatchLifecycle('on-diamond-destroyed', e);
-      }
     }
   }
 

@@ -8,16 +8,12 @@ import { getPlayerState, resetPlayerState, type PlayerState } from './PlayerStat
 import { getEquipmentDefById } from './ItemsSystem';
 import type { EquipmentInstance } from './ItemsSystem';
 import { acquireEquipmentInstance } from './EquipmentModifiers';
-import {
-  createConsumableInstance,
-  getConsumableDefById,
-  type ConsumableInstance,
-} from './ConsumablesSystem';
+import { createConsumableInstance, getConsumableDefById, type ConsumableInstance } from './ConsumablesSystem';
 import { getPermitById } from './PermitsSystem';
 import { getProfessionById } from '../data/professions';
 import { getTrailTagById } from '../data/trail_tags';
 import { getTrailEventById } from './TrailEventsSystem';
-import type { TrailEventModifiers } from './TrailEventsSystem';
+import { createEmptyTrailRoundEffects, type TrailEventModifiers, type TrailRoundEffects } from './TrailEventsSystem';
 import type { BossRoundState } from './BossEffectsSystem';
 import type { TrailTagInstance } from '../data/trail_tags';
 import bosses from '../data/bosses';
@@ -68,6 +64,7 @@ export interface PlayerSaveData {
   permitRerollPenalty: number;
   permitScoreReduction: number;
   trailEventModifiers: TrailEventModifiers;
+  trailRoundEffects: TrailRoundEffects;
   pendingTrailEventId: string | null;
   seenTrailEventIds: string[];
   skipNextShop: boolean;
@@ -172,9 +169,7 @@ export function serializeEquipmentInstance(inst: EquipmentInstance): SerializedE
     sellValue: inst.sellValue,
     state: { ...inst.state },
     modifiers: [...inst.modifiers],
-    ...(inst.perishableRoundsLeft !== undefined
-      ? { perishableRoundsLeft: inst.perishableRoundsLeft }
-      : {}),
+    ...(inst.perishableRoundsLeft !== undefined ? { perishableRoundsLeft: inst.perishableRoundsLeft } : {}),
   };
 }
 
@@ -236,13 +231,22 @@ function serializePlayer(player: PlayerState): PlayerSaveData {
     permitRerollPenalty: player.permitRerollPenalty,
     permitScoreReduction: player.permitScoreReduction,
     trailEventModifiers: { ...player.trailEventModifiers },
+    trailRoundEffects: { ...player.trailRoundEffects },
     pendingTrailEventId: player.pendingTrailEvent?.id ?? null,
     seenTrailEventIds: [...player.seenTrailEventIds],
     skipNextShop: player.skipNextShop,
     trailGuidesUsed: player.trailGuidesUsed,
     startingDiceCount: player.startingDiceCount,
     bossEffectDisabled: player.bossEffectDisabled,
-    bossRoundState: { ...player.bossRoundState, disabledEquipmentIndices: [...player.bossRoundState.disabledEquipmentIndices], lockedDiceIds: [...player.bossRoundState.lockedDiceIds], handsPlayedThisRound: [...player.bossRoundState.handsPlayedThisRound], equipmentDisplayOrder: player.bossRoundState.equipmentDisplayOrder ? [...player.bossRoundState.equipmentDisplayOrder] : null },
+    bossRoundState: {
+      ...player.bossRoundState,
+      disabledEquipmentIndices: [...player.bossRoundState.disabledEquipmentIndices],
+      lockedDiceIds: [...player.bossRoundState.lockedDiceIds],
+      handsPlayedThisRound: [...player.bossRoundState.handsPlayedThisRound],
+      equipmentDisplayOrder: player.bossRoundState.equipmentDisplayOrder
+        ? [...player.bossRoundState.equipmentDisplayOrder]
+        : null,
+    },
     pendingNewDiceIds: [...player.pendingNewDiceIds],
     pendingHandDiceIds: [...player.pendingHandDiceIds],
     pendingAnimatedDestructions: player.pendingAnimatedDestructions.map((d) => ({ ...d })),
@@ -309,12 +313,12 @@ function applyPlayerSaveData(data: PlayerSaveData): void {
     }
   }
 
-  player.profession = data.professionId ? getProfessionById(data.professionId) ?? null : null;
+  player.profession = data.professionId ? (getProfessionById(data.professionId) ?? null) : null;
   player.difficulty = data.difficulty;
   player.handSize = data.handSize;
   player.shopRerollCount = data.shopRerollCount;
   player.purchasedPermits = [...data.purchasedPermits];
-  player.currentLegPermit = data.currentLegPermitId ? getPermitById(data.currentLegPermitId) ?? null : null;
+  player.currentLegPermit = data.currentLegPermitId ? (getPermitById(data.currentLegPermitId) ?? null) : null;
   player.permitPurchasedThisLeg = data.permitPurchasedThisLeg;
   player.permitDayBonus = data.permitDayBonus;
   player.permitRerollBonus = data.permitRerollBonus;
@@ -322,9 +326,8 @@ function applyPlayerSaveData(data: PlayerSaveData): void {
   player.permitRerollPenalty = data.permitRerollPenalty;
   player.permitScoreReduction = data.permitScoreReduction;
   player.trailEventModifiers = { ...data.trailEventModifiers };
-  player.pendingTrailEvent = data.pendingTrailEventId
-    ? getTrailEventById(data.pendingTrailEventId)
-    : null;
+  player.trailRoundEffects = data.trailRoundEffects ? { ...data.trailRoundEffects } : createEmptyTrailRoundEffects();
+  player.pendingTrailEvent = data.pendingTrailEventId ? getTrailEventById(data.pendingTrailEventId) : null;
   player.seenTrailEventIds = new Set(data.seenTrailEventIds);
   player.skipNextShop = data.skipNextShop;
   player.trailGuidesUsed = data.trailGuidesUsed;
@@ -351,7 +354,7 @@ function applyPlayerSaveData(data: PlayerSaveData): void {
   player.twinWagonCount = data.twinWagonCount;
   player.wideSaddleBonus = data.wideSaddleBonus;
   player.tagFreeReroll = data.tagFreeReroll;
-  player.bonusShopPermit = data.bonusShopPermitId ? getPermitById(data.bonusShopPermitId) ?? null : null;
+  player.bonusShopPermit = data.bonusShopPermitId ? (getPermitById(data.bonusShopPermitId) ?? null) : null;
   player.skippedRoundsThisLeg = [...data.skippedRoundsThisLeg];
   player.skippedRoundTags = {};
   for (const [k, tagId] of Object.entries(data.skippedRoundTags)) {
@@ -454,9 +457,7 @@ export function serializePackItem(item: PackItem): SerializedPackItem {
     category: item.category,
     ...(item.die ? { die: { ...item.die } } : {}),
     ...(item.equipmentDef ? { equipmentDefId: item.equipmentDef.id } : {}),
-    ...(item.equipmentPreview
-      ? { equipmentPreview: serializeEquipmentInstance(item.equipmentPreview) }
-      : {}),
+    ...(item.equipmentPreview ? { equipmentPreview: serializeEquipmentInstance(item.equipmentPreview) } : {}),
     ...(item.supplyCardId ? { supplyCardId: item.supplyCardId } : {}),
     ...(item.trailGuideId ? { trailGuideId: item.trailGuideId } : {}),
     ...(item.frontierEncounterId ? { frontierEncounterId: item.frontierEncounterId } : {}),

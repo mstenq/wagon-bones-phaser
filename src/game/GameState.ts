@@ -33,7 +33,7 @@ import {
 import { getRandomSupplyDef } from './ConsumablesSystem';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import { applyScoringMutations } from './effects/applyMutations';
-import { createEmptyModifiers } from './TrailEventsSystem';
+import { createEmptyModifiers, trailRoundEffectsFromModifiers } from './TrailEventsSystem';
 import {
   getBossRoundConfigMods,
   initBossRoundState,
@@ -148,10 +148,7 @@ export class GameState {
       ...this.config,
       maxRerolls: player.effectiveRerolls + mods.rerollsBonus,
       maxDays: Math.max(1, player.effectiveDays - mods.daysPenalty),
-      rollSize: Math.max(
-        1,
-        player.handSize + mods.rollSizeBonus - trailMods.handSizePenalty + wideSaddleBonus,
-      ),
+      rollSize: Math.max(1, player.handSize + mods.rollSizeBonus - trailMods.handSizePenalty + wideSaddleBonus),
     };
 
     // Apply trail event: target miles multiplier (score multiplier means harder target)
@@ -178,7 +175,8 @@ export class GameState {
       this.config.maxDays = bossMods.setMaxDays;
     }
 
-    // Clear trail event modifiers after consumption
+    // Persist round-duration trail penalties; clear pending modifiers
+    player.trailRoundEffects = trailRoundEffectsFromModifiers(trailMods);
     player.trailEventModifiers = createEmptyModifiers();
     player.bossEffectDisabled = false;
 
@@ -192,7 +190,7 @@ export class GameState {
     // Defer animated destructions for GameScene (Funeral Pyre, Haunted Totem, etc.)
     // Adjust indices to account for any non-animated destroys (destroyedIndices) that were already spliced
     const splicedIndices = roundStartEffects.destroyedIndices.sort((a, b) => a - b);
-    player.pendingAnimatedDestructions = roundStartEffects.animatedDestructions.map(d => {
+    player.pendingAnimatedDestructions = roundStartEffects.animatedDestructions.map((d) => {
       let { sourceIdx, victimIdx } = d;
       for (const spliced of splicedIndices) {
         if (spliced < sourceIdx) sourceIdx--;
@@ -258,16 +256,24 @@ export class GameState {
 
   /** Player confirms hand selection and moves to ROLL. Selects which dice to roll. */
   selectForRoll(diceIds: string[]): boolean {
-    if (this.state.phase !== 'SELECT') { console.log('[DEBUG selectForRoll] BLOCKED: phase is', this.state.phase); return false; }
+    if (this.state.phase !== 'SELECT') {
+      console.log('[DEBUG selectForRoll] BLOCKED: phase is', this.state.phase);
+      return false;
+    }
     if (diceIds.length < 1 || diceIds.length > this.state.hand.length) {
-      console.log('[DEBUG selectForRoll] BLOCKED: diceIds.length', diceIds.length, 'hand.length', this.state.hand.length);
+      console.log(
+        '[DEBUG selectForRoll] BLOCKED: diceIds.length',
+        diceIds.length,
+        'hand.length',
+        this.state.hand.length,
+      );
       return false;
     }
 
     const selected = this.state.hand.filter((d) => diceIds.includes(d.id));
     if (selected.length !== diceIds.length) {
-      const handIds = this.state.hand.map(d => d.id);
-      const missing = diceIds.filter(id => !handIds.includes(id));
+      const handIds = this.state.hand.map((d) => d.id);
+      const missing = diceIds.filter((id) => !handIds.includes(id));
       const dupes = handIds.filter((id, i) => handIds.indexOf(id) !== i);
       console.log('[DEBUG selectForRoll] BLOCKED: selected', selected.length, 'vs diceIds', diceIds.length);
       console.log('[DEBUG selectForRoll] missing from hand:', missing);
@@ -289,12 +295,21 @@ export class GameState {
 
   // ─── ROLL Phase ───
 
+  /** True when rerolls remain and trail/day rules allow spending one (Heavy Fog: blocked on day 1 only). */
+  canUseReroll(): boolean {
+    if (this.state.rerollsRemaining <= 0) return false;
+    const player = getPlayerState();
+    if (this.state.day === 1 && player.trailRoundEffects.disableRerollDay1) return false;
+    return true;
+  }
+
   /** Re-roll specific dice during the ROLL phase. */
   reroll(diceIds: string[]): boolean {
     if (this.state.phase !== 'ROLL') return false;
     if (diceIds.length === 0) return false;
-    if (this.state.rerollsRemaining <= 0) return false;
+    if (!this.canUseReroll()) return false;
 
+    const player = getPlayerState();
     this.state.rolledDice = this.state.rolledDice.map((d) => {
       if (diceIds.includes(d.id)) {
         return rollDie(d);
@@ -305,7 +320,6 @@ export class GameState {
     this.state.rerollsRemaining--;
 
     // Update stateful equipment on reroll (e.g. Worn Deck)
-    const player = getPlayerState();
     processEquipmentOnReroll(player.equipment, diceIds.length);
 
     this.state.currentHandType = detectBestHand(this.state.rolledDice).type;
@@ -478,7 +492,7 @@ export class GameState {
 
     console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
 
-  applyScoringMutations(finalResult.mutations);
+    applyScoringMutations(finalResult.mutations);
 
     // Record hand played
     player.recordHandPlayed(handType);
@@ -523,8 +537,8 @@ export class GameState {
     // Mark dice as spent:
     // - Normal day: only scored dice are spent (unscored stay available)
     // - Round over (won/lost): all rolled dice are spent (prevents gold dice farming)
-    const rolledIds = this.state.rolledDice.map(d => d.id);
-    const scoredIds = this.state.selectedForScore.map(d => d.id);
+    const rolledIds = this.state.rolledDice.map((d) => d.id);
+    const scoredIds = this.state.selectedForScore.map((d) => d.id);
     const scoredDice = this.state.selectedForScore;
     const roundOver = this.state.totalMiles >= this.config.targetMiles || this.state.day >= this.config.maxDays;
     player.markDiceSpent(roundOver ? rolledIds : scoredIds);
@@ -571,6 +585,12 @@ export class GameState {
       this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
       this.emit('phase-change', this.state.phase);
       return { outcome: 'lost', destroyedEquipment };
+    }
+
+    // Trail: per-day money loss when advancing to the next day
+    const perDayLoss = player.trailRoundEffects.moneyPerDayLoss;
+    if (perDayLoss > 0) {
+      player.economy.spend(perDayLoss);
     }
 
     // Next day — keep unscored rolled dice on hand, fill the rest from pouch

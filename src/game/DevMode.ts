@@ -3,7 +3,7 @@
 
 import { getPlayerState } from './PlayerState';
 import { GAMEPLAY } from './Constants';
-import { createEmptyModifiers } from './TrailEventsSystem';
+import { createEmptyModifiers, createEmptyTrailRoundEffects } from './TrailEventsSystem';
 import { resetBossRoundState } from './BossEffectsSystem';
 import bosses from '../data/bosses';
 import type { BossDef } from './types';
@@ -107,6 +107,7 @@ export function devStartBossRound(bossId: string): BossDef | null {
   player.setBossForCurrentLeg(boss);
   player.bossEffectDisabled = false;
   player.trailEventModifiers = createEmptyModifiers();
+  player.trailRoundEffects = createEmptyTrailRoundEffects();
   player.skipNextShop = false;
   resetBossRoundState();
 
