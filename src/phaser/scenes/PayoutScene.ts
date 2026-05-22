@@ -171,7 +171,7 @@ export class PayoutScene extends Scene {
           round: GAMEPLAY.ROUNDS_PER_LEG,
         });
       } else {
-        this.scene.start('TrailEvent');
+        this.scene.start('TrailEvent', {});
       }
     });
 

@@ -126,6 +126,7 @@ Equipment cards show dynamic colored hints via `hintDisplay(game, player) => Hin
 - Scenes clean up resize listeners in `shutdown`
 - Use `EventBus.emit(Events.SCENE_READY, this)` at end of `create()`
 - Shared layout via `createLayout()` in `SceneLayout.ts`
+- **CRITICAL: Always pass explicit `{}` as the second argument to `this.scene.start(key, {})`** — Phaser reuses the previous `init` data when no data argument is provided, causing stale state bugs across scene re-entries
 
 ### Constants
 

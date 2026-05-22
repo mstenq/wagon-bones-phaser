@@ -75,6 +75,12 @@ export class TrailEventScene extends Scene {
       resolved?: boolean;
     } = {},
   ) {
+    // Always reset scene state to prevent stale data from previous runs
+    this.currentEvent = null!;
+    this.resolved = false;
+    this.spyglassRevealed = false;
+    this.pendingRestoreTrail = null;
+
     if (data.restoreTrail) {
       this.pendingRestoreTrail = data.restoreTrail;
       return;
@@ -222,8 +228,6 @@ export class TrailEventScene extends Scene {
     SpyglassTrailPreview.show(this, layout, event.id, {
       onAvoid: () => {
         applySpyglassAvoid(player);
-        this.spyglassRevealed = false;
-        this.syncSpyglassPendingForSave(player);
         this.proceedToNextScene();
       },
       onInvestigate: () => {
@@ -912,9 +916,9 @@ export class TrailEventScene extends Scene {
     player.pendingTrailEvent = null;
     if (player.skipNextShop) {
       player.skipNextShop = false;
-      this.scene.start('RoundSelect');
+      this.scene.start('RoundSelect', {});
     } else {
-      this.scene.start('Shop');
+      this.scene.start('Shop', {});
     }
   }
 
