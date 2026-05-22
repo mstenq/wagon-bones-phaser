@@ -1,6 +1,5 @@
 # Bugs noticed while playing
-- why did i get Tipped Wagon in 2 leg! That one is brutal and probably shouldn't show till 5+
-- i got stupid tipped wagon twice! With 95 to choose from we should make dupes impossible.
+- fading_memory - once you buy it, the very first round should have 20mult. So need to adjust so it deducts 4 mult at end of round instead of start.
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.

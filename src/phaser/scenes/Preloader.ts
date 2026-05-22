@@ -10,6 +10,8 @@ import bosses from '../../data/bosses';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 import pipEnhancements from '../../data/pip_enhancements';
 import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
+import { initAudioPreferences } from '../../game/AudioPreferences';
+import { patchGameAudio } from '../GameAudio';
 
 // Map sticker IDs to their PNG filenames (when they differ)
 const STICKER_FILE_MAP: Record<string, string> = {
@@ -145,6 +147,9 @@ export class Preloader extends Scene {
   }
 
   create() {
+    initAudioPreferences();
+    patchGameAudio();
+
     hideLoadingOverlay();
 
     const { width, height } = this.scale;

@@ -7,6 +7,7 @@ import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { resetPlayerState } from '../../game/PlayerState';
 import { Button } from './Button';
 import { EquipmentCatalogModal } from './EquipmentCatalogModal';
+import { SoundsSettingsModal } from './SoundsSettingsModal';
 import { clearAutoSave } from '../AutoSaveManager';
 import { exportGameFromScene, performLoadGame } from '../SaveLoadIO';
 
@@ -23,7 +24,7 @@ export class OptionsModal extends GameObjects.Container {
 
     // Modal panel
     const panelW = Math.min(width - 40, 380);
-    const panelH = 410;
+    const panelH = 460;
     const panelX = contentX + (width - panelW) / 2;
     const panelY = (height - panelH) / 2;
 
@@ -52,15 +53,23 @@ export class OptionsModal extends GameObjects.Container {
     });
     this.add(equipmentBtn);
 
+    // Sound settings
+    const soundBtn = new Button(scene, panelX + panelW / 2, panelY + 128, 'Sound Settings', panelW - 60, 40);
+    soundBtn.onClick(() => {
+      this.destroy();
+      new SoundsSettingsModal(scene, contentX, width, height);
+    });
+    this.add(soundBtn);
+
     // Export game state
-    const exportBtn = new Button(scene, panelX + panelW / 2, panelY + 128, 'Export Game State', panelW - 60, 40);
+    const exportBtn = new Button(scene, panelX + panelW / 2, panelY + 178, 'Export Game State', panelW - 60, 40);
     exportBtn.onClick(() => {
       exportGameFromScene(scene);
     });
     this.add(exportBtn);
 
     // Load game
-    const loadBtn = new Button(scene, panelX + panelW / 2, panelY + 178, 'Load Game', panelW - 60, 40);
+    const loadBtn = new Button(scene, panelX + panelW / 2, panelY + 228, 'Load Game', panelW - 60, 40);
     loadBtn.onClick(() => {
       this.destroy();
       void performLoadGame(scene, { confirmOverwrite: true });
@@ -68,7 +77,7 @@ export class OptionsModal extends GameObjects.Container {
     this.add(loadBtn);
 
     // New Run button
-    const newRunBtn = new Button(scene, panelX + panelW / 2, panelY + 228, 'New Run', panelW - 60, 40);
+    const newRunBtn = new Button(scene, panelX + panelW / 2, panelY + 278, 'New Run', panelW - 60, 40);
     newRunBtn.onClick(() => {
       this.destroy();
       clearAutoSave();
@@ -78,7 +87,7 @@ export class OptionsModal extends GameObjects.Container {
     this.add(newRunBtn);
 
     // Return to Main Menu button
-    const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 278, 'Main Menu', panelW - 60, 40);
+    const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 328, 'Main Menu', panelW - 60, 40);
     menuBtn.onClick(() => {
       this.destroy();
       scene.scene.start('MainMenu');
