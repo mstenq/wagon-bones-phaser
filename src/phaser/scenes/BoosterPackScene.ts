@@ -43,9 +43,9 @@ import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
 
 const HAND_TABLE: HandDefinition[] = hands;
-import trailGuidesData from '../../data/trail_guides.json';
-import supplyCardsData from '../../data/supply_cards.json';
-import frontierEncountersData from '../../data/frontier_encounters.json';
+import trailGuidesData from '../../data/trail_guides';
+import supplyCardsData from '../../data/supply_cards';
+import frontierEncountersData from '../../data/frontier_encounters';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
 const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));

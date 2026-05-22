@@ -13,10 +13,14 @@ import {
   pickRandomAura,
 } from './DiceSelectionSystem';
 import { CHANCES, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS } from './Constants';
-import packsData from '../data/packs.json';
-import supplyCardsData from '../data/supply_cards.json';
-import trailGuidesData from '../data/trail_guides.json';
-import frontierEncountersData from '../data/frontier_encounters.json';
+import packsData, {
+  type PackCategory,
+  type PackDef,
+  type PackTier,
+} from '../data/packs';
+import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
+import trailGuidesData from '../data/trail_guides';
+import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
 import diceEnhancements from '../data/dice_enhancements';
 import pipEnhancements from '../data/pip_enhancements';
 
@@ -36,20 +40,8 @@ function applyRandomSticker(die: Die): void {
 
 // ─── Types ───
 
-export type PackCategory = 'dice' | 'supply' | 'trail_guide' | 'frontier' | 'equipment';
-export type PackTier = 'normal' | 'jumbo' | 'mega';
-
-export interface PackDefinition {
-  id: string;
-  category: PackCategory;
-  tier: PackTier;
-  name: string;
-  cost: number;
-  totalCards: number; // how many cards/items shown
-  pickCount: number; // how many the player can choose
-  weight: number; // spawn weight
-  color: number; // display color
-}
+export type { PackCategory, PackTier };
+export type PackDefinition = PackDef;
 
 export interface InstantEffect {
   type: string; // CREATE_DICE, DOUBLE_MONEY, TRADE_EQUIPMENT, CREATE_EQUIPMENT, etc.
@@ -87,14 +79,9 @@ export interface PackInstance {
   id: string;
 }
 
-// ─── Pack Definitions (loaded from JSON) ───
+// ─── Pack Definitions ───
 
-const PACK_DEFS: PackDefinition[] = packsData.map((p) => ({
-  ...p,
-  category: p.category as PackCategory,
-  tier: p.tier as PackTier,
-  color: parseInt(p.color),
-}));
+const PACK_DEFS: PackDefinition[] = packsData;
 
 let nextPackId = 0;
 
@@ -154,7 +141,7 @@ const SUPPLY_CARDS = supplyCardsData;
 const TRAIL_GUIDES = trailGuidesData;
 const FRONTIER_ENCOUNTERS = frontierEncountersData;
 
-type FrontierEntry = (typeof frontierEncountersData)[number];
+type FrontierEntry = FrontierEncounterDef;
 
 /** Ultra-rare cards excluded from normal pools; only appear via RARE_PACK_CARD rolls. */
 const RARE_PACK_CARDS: { id: string; packs: PackCategory[] }[] = [
@@ -187,7 +174,7 @@ export function tryRollRarePackCard(packCategory: PackCategory): FrontierEntry |
   return rollRarePackCard(packCategory);
 }
 
-function buildSupplyPackItem(s: (typeof SUPPLY_CARDS)[number]): PackItem {
+function buildSupplyPackItem(s: SupplyCardDef): PackItem {
   const item: PackItem = {
     id: s.id + '_' + Math.random().toString(36).slice(2, 6),
     name: s.name,
@@ -195,24 +182,19 @@ function buildSupplyPackItem(s: (typeof SUPPLY_CARDS)[number]): PackItem {
     category: 'supply' as PackCategory,
     supplyCardId: s.id,
   };
-  if ('diceSelection' in s && s.diceSelection) {
-    const ds = s.diceSelection as {
-      drawCount: number;
-      pickCount: number;
-      effectType: string;
-      effectParams: Record<string, unknown>;
-    };
+  if (s.diceSelection) {
+    const ds = s.diceSelection;
     item.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
-      effectType: ds.effectType as DiceSelectionEffectType,
-      effectParams: ds.effectParams as DiceSelectionEffectParams,
+      effectType: ds.effectType,
+      effectParams: ds.effectParams,
       cardName: s.name,
       description: s.description,
       skippable: true,
     };
   }
-  if ('instantEffect' in s && s.instantEffect) {
+  if (s.instantEffect) {
     item.instantEffect = s.instantEffect as InstantEffect;
   }
   return item;
@@ -226,24 +208,19 @@ function buildFrontierPackItem(fe: FrontierEntry): PackItem {
     category: 'frontier' as PackCategory,
     frontierEncounterId: fe.id,
   };
-  if ('diceSelection' in fe && fe.diceSelection) {
-    const ds = fe.diceSelection as {
-      drawCount: number;
-      pickCount: number;
-      effectType: string;
-      effectParams: Record<string, unknown>;
-    };
+  if (fe.diceSelection) {
+    const ds = fe.diceSelection;
     item.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
-      effectType: ds.effectType as DiceSelectionEffectType,
-      effectParams: ds.effectParams as DiceSelectionEffectParams,
+      effectType: ds.effectType,
+      effectParams: ds.effectParams,
       cardName: fe.name,
       description: fe.description,
       skippable: true,
     };
   }
-  if ('instantEffect' in fe && fe.instantEffect) {
+  if (fe.instantEffect) {
     item.instantEffect = fe.instantEffect as InstantEffect;
   }
   return item;

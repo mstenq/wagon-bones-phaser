@@ -49,18 +49,16 @@ export interface ConsumableInstance {
 
 // ─── Generation Helpers ───
 
-import supplyCardsData from '../data/supply_cards.json';
-import trailGuidesData from '../data/trail_guides.json';
-import frontierEncountersData from '../data/frontier_encounters.json';
-import { DiceSelectionEffectType, DiceSelectionEffectParams } from './DiceSelectionSystem';
-
+import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
+import trailGuidesData, { type TrailGuideDef } from '../data/trail_guides';
+import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
 const SUPPLY_CARDS = supplyCardsData;
 const TRAIL_GUIDES = trailGuidesData;
 const FRONTIER_ENCOUNTERS = frontierEncountersData;
 
-/** Create a ConsumableDef from a supply card JSON entry */
+/** Create a ConsumableDef from a supply card definition */
 export function createSupplyConsumableDef(
-  cardData: (typeof SUPPLY_CARDS)[number],
+  cardData: SupplyCardDef,
   aura?: ItemAura | null,
 ): ConsumableDef {
   const def: ConsumableDef = {
@@ -71,21 +69,16 @@ export function createSupplyConsumableDef(
     cost: 3,
     aura: aura ?? null,
   };
-  if ('instantEffect' in cardData && cardData.instantEffect) {
+  if (cardData.instantEffect) {
     def.instantEffect = cardData.instantEffect as InstantEffect;
   }
-  if ('diceSelection' in cardData && cardData.diceSelection) {
-    const ds = cardData.diceSelection as {
-      drawCount: number;
-      pickCount: number;
-      effectType: string;
-      effectParams: Record<string, unknown>;
-    };
+  if (cardData.diceSelection) {
+    const ds = cardData.diceSelection;
     def.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
-      effectType: ds.effectType as DiceSelectionEffectType,
-      effectParams: ds.effectParams as DiceSelectionEffectParams,
+      effectType: ds.effectType,
+      effectParams: ds.effectParams,
       cardName: cardData.name,
       description: cardData.description,
       skippable: true,
@@ -94,9 +87,9 @@ export function createSupplyConsumableDef(
   return def;
 }
 
-/** Create a ConsumableDef from a trail guide JSON entry */
+/** Create a ConsumableDef from a trail guide definition */
 export function createTrailGuideConsumableDef(
-  tgData: (typeof TRAIL_GUIDES)[number],
+  tgData: TrailGuideDef,
   aura?: ItemAura | null,
 ): ConsumableDef {
   return {
@@ -110,9 +103,9 @@ export function createTrailGuideConsumableDef(
   };
 }
 
-/** Create a ConsumableDef from a frontier encounter JSON entry */
+/** Create a ConsumableDef from a frontier encounter definition */
 export function createFrontierConsumableDef(
-  feData: (typeof FRONTIER_ENCOUNTERS)[number],
+  feData: FrontierEncounterDef,
   aura?: ItemAura | null,
 ): ConsumableDef {
   const def: ConsumableDef = {
@@ -123,21 +116,16 @@ export function createFrontierConsumableDef(
     cost: 4,
     aura: aura ?? null,
   };
-  if ('instantEffect' in feData && feData.instantEffect) {
+  if (feData.instantEffect) {
     def.instantEffect = feData.instantEffect as InstantEffect;
   }
-  if ('diceSelection' in feData && feData.diceSelection) {
-    const ds = feData.diceSelection as {
-      drawCount: number;
-      pickCount: number;
-      effectType: string;
-      effectParams: Record<string, unknown>;
-    };
+  if (feData.diceSelection) {
+    const ds = feData.diceSelection;
     def.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
-      effectType: ds.effectType as DiceSelectionEffectType,
-      effectParams: ds.effectParams as DiceSelectionEffectParams,
+      effectType: ds.effectType,
+      effectParams: ds.effectParams,
       cardName: feData.name,
       description: feData.description,
       skippable: true,

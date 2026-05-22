@@ -628,6 +628,7 @@ export class GameScene extends Scene {
             if (updated) sprite.setDieData(updated);
           }
           this.sortAndRepositionDice();
+          this.applyBossRollDiceState();
           this.updateRollButtons();
         },
       );

@@ -10,23 +10,8 @@ import type { BossDef } from './types';
 import { getAllEquipment, EquipmentDef, ItemAura } from './ItemsSystem';
 import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableDef } from './ConsumablesSystem';
 import { applyPermitEffect, getPermitById, PermitDef } from './PermitsSystem';
-import packsData from '../data/packs.json';
 import itemAuras from '../data/item_auras';
-
-export type PackCategory = 'dice' | 'supply' | 'trail_guide' | 'frontier' | 'equipment';
-export type PackTier = 'normal' | 'jumbo' | 'mega';
-
-export interface PackDefinition {
-  id: string;
-  category: PackCategory;
-  tier: PackTier;
-  name: string;
-  cost: number;
-  totalCards: number;
-  pickCount: number;
-  weight: number;
-  color: number;
-}
+import { getPackDefById, type PackDefinition } from './BoosterPackSystem';
 
 /** Check if dev mode is active (developer profession selected) */
 export function isDevMode(): boolean {
@@ -67,14 +52,7 @@ export function devLookupShopItem(id: string): DevLookupResult {
 
 /** Look up a pack definition by ID */
 export function devLookupPack(id: string): PackDefinition | null {
-  const pack = packsData.find((p) => p.id === id);
-  if (!pack) return null;
-  return {
-    ...pack,
-    category: pack.category as PackCategory,
-    tier: pack.tier as PackTier,
-    color: parseInt(pack.color),
-  };
+  return getPackDefById(id) ?? null;
 }
 
 /** Look up a permit by ID */

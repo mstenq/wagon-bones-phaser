@@ -3,33 +3,18 @@
 // Permits are permanent upgrades purchased from the shop, one per leg.
 // Each permit has 2 stages; stage 2 requires stage 1 to be purchased first.
 
-import permitsData from '../data/permits.json';
+import permitsData, {
+  getPermitById as findPermitById,
+  type PermitDef,
+  type PermitEffect,
+} from '../data/permits';
 import type { PlayerState } from './PlayerState';
 
-// ─── Types ───
-
-export interface PermitEffect {
-  type: string;
-  value?: number | string | boolean;
-  scoreLegReduction?: number;
-  dayPenalty?: number;
-  rerollPenalty?: number;
-}
-
-export interface PermitDef {
-  id: string;
-  name: string;
-  description: string;
-  cost: number;
-  stage: number;
-  pairId: string;
-  prerequisiteId: string | null;
-  effect: PermitEffect;
-}
+export type { PermitDef, PermitEffect };
 
 // ─── Data Access ───
 
-const ALL_PERMITS: PermitDef[] = permitsData as PermitDef[];
+const ALL_PERMITS: PermitDef[] = permitsData;
 
 /** Get all permit definitions */
 export function getAllPermits(): PermitDef[] {
@@ -38,7 +23,7 @@ export function getAllPermits(): PermitDef[] {
 
 /** Get a permit by its id */
 export function getPermitById(id: string): PermitDef | null {
-  return ALL_PERMITS.find((p) => p.id === id) ?? null;
+  return findPermitById(id) ?? null;
 }
 
 // ─── Availability Logic ───

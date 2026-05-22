@@ -1,11 +1,11 @@
 import { Scene } from 'phaser';
 import allItems from '../../data/items';
-import allTrailGuides from '../../data/trail_guides.json';
-import allSupplyCards from '../../data/supply_cards.json';
-import allFrontierEncounters from '../../data/frontier_encounters.json';
-import packsData from '../../data/packs.json';
-import permitsData from '../../data/permits.json';
-import professionsData from '../../data/professions.json';
+import allTrailGuides from '../../data/trail_guides';
+import allSupplyCards from '../../data/supply_cards';
+import allFrontierEncounters from '../../data/frontier_encounters';
+import packsData from '../../data/packs';
+import permitsData from '../../data/permits';
+import professionsData from '../../data/professions';
 import bosses from '../../data/bosses';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 import pipEnhancements from '../../data/pip_enhancements';

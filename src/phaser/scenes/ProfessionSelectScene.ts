@@ -8,7 +8,7 @@ import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
-import professionsData from '../../data/professions.json';
+import professionsData from '../../data/professions';
 
 const CARD_W = 190;
 const CARD_H = 310;
@@ -85,7 +85,7 @@ export class ProfessionSelectScene extends Scene {
   }
 
   private buildGrid(width: number, height: number): void {
-    const profs = professionsData as ProfessionDef[];
+    const profs = professionsData;
     const rows = Math.ceil(profs.length / COLS);
 
     // Center the grid

@@ -16,9 +16,9 @@ import {
 import { isEquipmentCursed } from '../ItemsSystem';
 import { applyDiceSelectionEffect, DiceSelectionConfig, shouldUpdateDisplayedDiceValue } from '../DiceSelectionSystem';
 import { HandType } from '../types';
-import supplyCardsData from '../../data/supply_cards.json';
-import trailGuidesData from '../../data/trail_guides.json';
-import frontierEncountersData from '../../data/frontier_encounters.json';
+import supplyCardsData from '../../data/supply_cards';
+import trailGuidesData from '../../data/trail_guides';
+import frontierEncountersData from '../../data/frontier_encounters';
 
 beforeEach(() => {
   resetDieIds();

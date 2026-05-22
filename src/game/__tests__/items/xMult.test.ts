@@ -15,7 +15,7 @@ import {
 } from '../../EquipmentEffects';
 import { executeConsumableEffect, createConsumableInstance, createTrailGuideConsumableDef } from '../../ConsumablesSystem';
 import { HandType } from '../../types';
-import trailGuidesData from '../../../data/trail_guides.json';
+import trailGuidesData from '../../../data/trail_guides';
 
 beforeEach(() => resetDieIds());
 
