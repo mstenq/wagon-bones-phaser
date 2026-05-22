@@ -39,11 +39,25 @@ export class ConsumableBar extends CardBar {
   protected createCardForItem(x: number, y: number, index: number): ItemCard {
     const consumable = getPlayerState().consumables[index];
     const texturePrefix = getConsumableTexturePrefix(consumable.def.category);
-    return new ItemCard(this.scene, x, y, consumable.def, {
+    const card = new ItemCard(
+      this.scene,
+      x,
+      y,
+      {
+        ...consumable.def,
+        display: () => ({
+          hint: [],
+          tooltip: [[{ text: consumable.def.description, style: 'text' }]],
+        }),
+      },
+      {
       mode: 'compact',
       cardScale: UI.CONSUMABLE_CARD_SCALE,
       texturePrefix,
-    });
+    },
+    );
+    card.setTooltipContext(null, getPlayerState());
+    return card;
   }
 
   protected buildActionTabs(card: ItemCard, index: number): CardActionTabConfig[] | null {

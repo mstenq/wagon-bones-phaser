@@ -108,11 +108,15 @@ function generateShopDie(mode: 'enhanced' | 'stickered'): { die: Die; displayDef
   const displayDef = {
     id: `shop_die_${die.id}`,
     name,
-    description: descParts.join('\n'),
     cost: DICE_SHOP_COST,
     rarity: 'uncommon' as string,
     effectType: 'DICE',
     effectParams: {},
+    display: () => ({
+      hint: [],
+      tooltip: [[{ text: descParts.join('\n'), style: 'text' }],
+      ],
+    }),
   } as unknown as EquipmentDef;
 
   return { die, displayDef };
@@ -285,12 +289,22 @@ export class ShopScene extends Scene {
         );
         displayDef = { ...shopItem.def, cost: purchaseCost };
       }
-      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, displayDef, {
+      const cardData = (displayDef as { display?: unknown }).display
+        ? displayDef
+        : {
+            ...displayDef,
+            display: () => ({
+              hint: [],
+              tooltip: [[{ text: (displayDef as { description?: string }).description ?? '', style: 'text' }]],
+            }),
+          };
+      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, cardData, {
         mode: 'shop',
         showCost: true,
         ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
         ...(texturePrefix != null ? { texturePrefix } : {}),
       });
+      card.setTooltipContext(null, player);
       card.setDepth(10);
 
       // If this stock item was already sold (e.g. before a permit rebuild), mark and skip
@@ -1043,11 +1057,14 @@ export class ShopScene extends Scene {
       const permitDisplayDef = {
         id: permit.id,
         name: permit.name,
-        description: permit.description,
         cost: this.getPermitCost(permit, player),
         rarity: 'permit' as string,
         effectType: 'PERMIT',
         effectParams: {},
+        display: () => ({
+          hint: [],
+          tooltip: [[{ text: permit.description, style: 'text' }]],
+        }),
       } as unknown as EquipmentDef;
 
       const permitItemCard = new ItemCard(this, voucherX, voucherY, permitDisplayDef, {
@@ -1058,6 +1075,7 @@ export class ShopScene extends Scene {
         cardScale: 1.2,
         tabAnchorX: 45,
       });
+      permitItemCard.setTooltipContext(null, player);
       permitItemCard.setDepth(10);
       permitItemCard.setAffordable(player.canAfford(permitDisplayDef.cost));
       this.setupPermitCardClick(permitItemCard, permit, isPrimary);

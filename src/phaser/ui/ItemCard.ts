@@ -7,7 +7,7 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../game/Constants';
 import type { ItemAura, EquipmentInstance } from '../../game/ItemsSystem';
-import type { HintSegment } from '../../game/ItemsSystem';
+import type { HintSegment, ItemDisplayResult } from '../../game/ItemsSystem';
 import { isEquipmentCursed, isEquipmentLeased, isEquipmentPerishable } from '../../game/ItemsSystem';
 import { getModifierTooltipLines } from '../../game/EquipmentModifierDisplay';
 import { addModifierBadgeImage } from './ModifierAssets';
@@ -21,12 +21,11 @@ import { applyAuraGlow, createAuraParticles } from './AuraFX';
 export interface CardData {
   id: string;
   name: string;
-  description: string;
   cost?: number;
   rarity?: string;
   aura?: ItemAura | null;
   cardTemplate?: CardTemplate;
-  hintDisplay?: (game: GameState | null, player: PlayerState) => HintSegment[][];
+  display: (game: GameState | null, player: PlayerState) => ItemDisplayResult;
 }
 
 export interface ItemCardOptions {
@@ -117,6 +116,8 @@ export class ItemCard extends GameObjects.Container {
   private modifierBadgeContainers: GameObjects.Container[] = [];
   private perishableBadgeContainer: GameObjects.Container | null = null;
   private leasedBadgeContainer: GameObjects.Container | null = null;
+  private tooltipGame: GameState | null = null;
+  private tooltipPlayer: PlayerState | null = null;
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
@@ -292,6 +293,11 @@ export class ItemCard extends GameObjects.Container {
       for (const obj of this.hintObjects) obj.destroy();
       this.hintObjects = [];
     }
+  }
+
+  setTooltipContext(game: GameState | null, player: PlayerState): void {
+    this.tooltipGame = game;
+    this.tooltipPlayer = player;
   }
 
   private drawBossDisabledOverlay(): void {
@@ -603,12 +609,17 @@ export class ItemCard extends GameObjects.Container {
     }
   }
 
+  private resolveDisplay(game: GameState | null, player: PlayerState): ItemDisplayResult {
+    return this._def.display(game, player);
+  }
+
   /** Render or update the hint rows below the card */
   updateHints(game: GameState | null, player: PlayerState): void {
+    this.setTooltipContext(game, player);
     if (this._suppressHints) return;
-    if (!this._def.hintDisplay && !this._def.aura) return;
+    if (!this._def.aura && this.resolveDisplay(game, player).hint.length === 0) return;
 
-    const baseRows = this._def.hintDisplay ? this._def.hintDisplay(game, player) : [];
+    const baseRows = this.resolveDisplay(game, player).hint;
     const auraRow = this.getAuraHintRow();
     const rows = [...(baseRows || [])];
     if (auraRow) rows.push(auraRow);
@@ -947,35 +958,16 @@ export class ItemCard extends GameObjects.Container {
   private showTooltip(): void {
     if (this._suppressTooltip || this._faceDown) return;
     if (this.tooltip) return;
+    if (!this.tooltipPlayer) return;
 
     const matrix = this.getWorldTransformMatrix();
     const worldX = matrix.tx;
     const worldY = matrix.ty;
 
     this.tooltip = this.scene.add.container(0, 0).setDepth(1000);
+    const tooltipRows = this.resolveDisplay(this.tooltipGame, this.tooltipPlayer).tooltip;
 
-    // Build tooltip text
-    const lines: string[] = [];
-    lines.push(this._def.name);
-    lines.push('');
-    lines.push(this._def.description);
-    if (this._def.rarity || this._def.cost !== undefined) {
-      lines.push('');
-      const rarityLabel = this._def.rarity ? (RARITY_LABELS[this._def.rarity] ?? this._def.rarity) : '';
-      const costLabel = this._def.cost !== undefined ? `Cost: $${this._def.cost}` : '';
-      lines.push([rarityLabel, costLabel].filter(Boolean).join('  ·  '));
-    }
     const rarityLabel = this._def.rarity ? (RARITY_LABELS[this._def.rarity] ?? this._def.rarity) : null;
-
-    const infoText = this.scene.add
-      .text(0, 0, lines.join('\n'), {
-        fontFamily: 'Arial',
-        fontSize: '13px',
-        color: '#dddddd',
-        lineSpacing: 4,
-        wordWrap: { width: 200 },
-      })
-      .setOrigin(0, 0);
 
     // Title styling
     const nameText = this.scene.add
@@ -987,18 +979,67 @@ export class ItemCard extends GameObjects.Container {
       })
       .setOrigin(0, 0);
 
-    const descText = this.scene.add
-      .text(TOOLTIP_PAD, TOOLTIP_PAD + nameText.height + 6, this._def.description, {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        color: '#cccccc',
-        lineSpacing: 3,
-        wordWrap: { width: 200 },
-      })
-      .setOrigin(0, 0);
+    let bottomY = TOOLTIP_PAD + nameText.height + 6;
+    const tooltipChildren: GameObjects.GameObject[] = [nameText];
+    let contentWidth = nameText.width;
 
-    let bottomY = TOOLTIP_PAD + nameText.height + 6 + descText.height;
-    const tooltipChildren: GameObjects.GameObject[] = [nameText, descText];
+    const tooltipFontSize = 12;
+    const segGap = 4;
+    const padX = 3;
+    const padY = 1;
+    const chipRadius = 3;
+    for (const row of tooltipRows) {
+      if (!row || row.length === 0) {
+        bottomY += 4;
+        continue;
+      }
+
+      const measurements: { w: number; h: number; hasBg: boolean }[] = [];
+      let rowWidth = 0;
+      let rowHeight = 0;
+      for (const seg of row) {
+        const colors = ItemCard.HINT_COLORS[seg.style] ?? ItemCard.HINT_COLORS.text;
+        const hasBg = colors.bg !== undefined;
+        const tmpText = this.scene.add.text(0, 0, seg.text, {
+          fontFamily: 'Arial',
+          fontSize: `${tooltipFontSize}px`,
+        });
+        const tw = tmpText.width;
+        const th = tmpText.height;
+        tmpText.destroy();
+        const w = hasBg ? tw + padX * 2 : tw;
+        measurements.push({ w, h: th, hasBg });
+        rowWidth += w;
+        rowHeight = Math.max(rowHeight, th + (hasBg ? padY * 2 : 0));
+      }
+      rowWidth += segGap * Math.max(0, row.length - 1);
+      contentWidth = Math.max(contentWidth, rowWidth);
+
+      const rowY = bottomY + rowHeight / 2;
+      let curX = TOOLTIP_PAD;
+      for (let i = 0; i < row.length; i++) {
+        const seg = row[i];
+        const colors = ItemCard.HINT_COLORS[seg.style] ?? ItemCard.HINT_COLORS.text;
+        const measurement = measurements[i];
+        if (measurement.hasBg) {
+          const chipG = this.scene.add.graphics();
+          chipG.fillStyle(colors.bg!, 0.9);
+          chipG.fillRoundedRect(curX, rowY - rowHeight / 2, measurement.w, rowHeight, chipRadius);
+          tooltipChildren.push(chipG);
+        }
+
+        const segText = this.scene.add
+          .text(curX + (measurement.hasBg ? padX : 0), rowY, seg.text, {
+            fontFamily: 'Arial',
+            fontSize: `${tooltipFontSize}px`,
+            color: colors.text,
+          })
+          .setOrigin(0, 0.5);
+        tooltipChildren.push(segText);
+        curX += measurement.w + segGap;
+      }
+      bottomY += rowHeight + 5;
+    }
 
     if (rarityLabel) {
       const rarityText = this.scene.add
@@ -1010,6 +1051,7 @@ export class ItemCard extends GameObjects.Container {
         .setOrigin(0, 0);
       bottomY = bottomY + 8 + rarityText.height;
       tooltipChildren.push(rarityText);
+      contentWidth = Math.max(contentWidth, rarityText.width);
     }
 
     // Aura info (if present on EquipmentDef)
@@ -1025,6 +1067,7 @@ export class ItemCard extends GameObjects.Container {
         .setOrigin(0, 0);
       bottomY = bottomY + 6 + auraText.height;
       tooltipChildren.push(auraText);
+      contentWidth = Math.max(contentWidth, auraText.width);
     }
 
     if (this._equipment) {
@@ -1040,19 +1083,12 @@ export class ItemCard extends GameObjects.Container {
           .setOrigin(0, 0);
         bottomY = bottomY + 6 + modText.height;
         tooltipChildren.push(modText);
+        contentWidth = Math.max(contentWidth, modText.width);
       }
     }
 
-    // Compute size
-    const contentWidth = tooltipChildren.reduce(
-      (max, child) => Math.max(max, (child as GameObjects.Text).width ?? 0),
-      0,
-    );
     const tooltipW = contentWidth + TOOLTIP_PAD * 2;
     const tooltipH = bottomY + TOOLTIP_PAD;
-
-    // Discard the multiline infoText — we built separate texts instead
-    infoText.destroy();
 
     // Background
     const bg = this.scene.add.graphics();

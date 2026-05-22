@@ -400,6 +400,7 @@ export class BoosterPackScene extends Scene {
     item: PackItem,
   ): { container: Phaser.GameObjects.Container; diceSprite: DiceSprite | null; itemCard: ItemCard | null } {
     const container = this.add.container(x, y);
+    const player = getPlayerState();
     const color = CATEGORY_COLORS[item.category] ?? 0x444444;
     let diceSprite: DiceSprite | null = null;
     let itemCard: ItemCard | null = null;
@@ -454,27 +455,52 @@ export class BoosterPackScene extends Scene {
         mode: 'inventory',
         equipment: item.equipmentPreview,
       });
+      itemCard.setTooltipContext(null, player);
       container.add(itemCard);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
-      const tgData = { ...item, id: item.trailGuideId };
+      const tgData = {
+        ...item,
+        id: item.trailGuideId,
+        display: () => ({
+          hint: [],
+          tooltip: [[{ text: item.description, style: 'text' }]],
+        }),
+      };
       itemCard = new ItemCard(this, 0, 0, tgData, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('trail_guide'),
       });
+      itemCard.setTooltipContext(null, player);
       container.add(itemCard);
     } else if (item.category === 'supply' && item.supplyCardId) {
-      const scData = { ...item, id: item.supplyCardId };
+      const scData = {
+        ...item,
+        id: item.supplyCardId,
+        display: () => ({
+          hint: [],
+          tooltip: [[{ text: item.description, style: 'text' }]],
+        }),
+      };
       itemCard = new ItemCard(this, 0, 0, scData, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('supply'),
       });
+      itemCard.setTooltipContext(null, player);
       container.add(itemCard);
     } else if (item.category === 'frontier' && item.frontierEncounterId) {
-      const feData = { ...item, id: item.frontierEncounterId };
+      const feData = {
+        ...item,
+        id: item.frontierEncounterId,
+        display: () => ({
+          hint: [],
+          tooltip: [[{ text: item.description, style: 'text' }]],
+        }),
+      };
       itemCard = new ItemCard(this, 0, 0, feData, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('frontier'),
       });
+      itemCard.setTooltipContext(null, player);
       container.add(itemCard);
     } else {
       const catLabel = item.category.replace('_', ' ').toUpperCase();

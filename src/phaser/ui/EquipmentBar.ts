@@ -54,6 +54,7 @@ export class EquipmentBar extends CardBar {
       card.setFaceDown(faceHidden);
       card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
       if (equip) card.updateModifierBadges(equip);
+      card.setTooltipContext(game, player);
       if (!hintsHidden) card.updateHints(game, player);
     }
   }

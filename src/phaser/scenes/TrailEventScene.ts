@@ -526,6 +526,7 @@ export class TrailEventScene extends Scene {
           cardScale,
           equipment: equipItem,
         });
+        card.setTooltipContext(null, player);
         card.setDepth(200);
 
         // Highlight on hover
