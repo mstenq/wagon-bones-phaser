@@ -1188,14 +1188,14 @@ const trailEvents: TrailEventDef[] = [
     "choices": [
       {
         "id": "mine",
-        "label": "Mine it (-2 rerolls)",
+        "label": "Mine it (-1 reroll)",
         "outcomes": [
           {
             "probability": 1,
             "effects": [
               {
                 "type": "LOSE_REROLLS",
-                "amount": 2
+                "amount": 1
               },
               {
                 "type": "GAIN_MONEY",
@@ -1209,6 +1209,16 @@ const trailEvents: TrailEventDef[] = [
                 "sticker": null
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "skip",
+        "label": "Skip it",
+        "outcomes": [
+          {
+            "probability": 1,
+            "effects": []
           }
         ]
       }

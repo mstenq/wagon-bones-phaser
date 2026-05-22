@@ -127,6 +127,17 @@ describe('Trail Events data integrity', () => {
   test('getTrailEventById returns null for unknown id', () => {
     expect(getTrailEventById('nonexistent')).toBeNull();
   });
+
+  test('gold_strike offers skip and mine costs 1 reroll', () => {
+    const event = getTrailEventById('gold_strike')!;
+    expect(event.category).toBe('positive');
+    const mine = event.choices.find((c) => c.id === 'mine')!;
+    const skip = event.choices.find((c) => c.id === 'skip')!;
+    expect(mine.label).toContain('-1 reroll');
+    expect(mine.outcomes[0].effects.find((e) => e.type === 'LOSE_REROLLS')?.amount).toBe(1);
+    expect(skip.label).toBe('Skip it');
+    expect(skip.outcomes[0].effects).toHaveLength(0);
+  });
 });
 
 // ─── Event Selection ───

@@ -55,7 +55,7 @@ This mirrors the Oregon Trail feel where the trail is *hard* but punctuated by m
 - **"Fire in a Wagon"** — Lose all supply/trail guide cards from your inventory, OR try to save the supplies. 50% chance of losing 2 days next turn to injury, 50% chance to gain a wooden dice with fire aura
 - **"Flooded Trail"** — Pay $5 to hire a ferry, OR risk it: 60% fine, 40% lose 1 random enhanced die
 - **"Found Fruit"** — Gain 1 random supply card (free provisions)
-- **"Gold Strike!"** — Lose 2 rerolls next leg to gain $10 and a gold die with holy aura
+- **"Gold Strike!"** — Mine for -1 reroll, $10, and a holy gold die, or skip
 - **"Hailstorm"** — wait it out and lose 1 day next turn, or chance it. 50% chance to lose an enhanced dice, 50% chance to gain 1 stone dice with ice aura
 - **"Heavy Fog"** — Next round you are unable to reroll on the first day (can't see where you're going), remaining days are normal
 - **"Locusts"** — Lose all supply cards in your inventory (eaten), OR sacrifice 1 equipment to protect them
