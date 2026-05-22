@@ -2,13 +2,20 @@
 // Applies owned equipment effects to scoring and config.
 
 import { Die, HandType, HandResult, ScoreResult, ScoreAnimEvent } from './types';
+import { getTrailGuideDefForHand } from './ConsumablesSystem';
 import { EquipmentInstance } from './ItemsSystem';
 import { getPlayerState } from './PlayerState';
-import { resolveCopyTarget } from './Constants';
+import { GAMEPLAY, resolveCopyTarget } from './Constants';
 import { resolveEffectParam } from './effectParams';
 import { effectRegistry, type ScoringPipelineContext } from './effects';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
-import { applyEquipmentAuras, applyHolyAuraXMult, forEachEquipmentResolved, hasStackedDeck } from './effects/helpers';
+import type { ScoringMutations } from './effects/types';
+import {
+  applyEquipmentAuras,
+  applyHolyAuraXMult,
+  forEachEquipmentResolved,
+  hasStackedDeck,
+} from './effects/helpers';
 import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
 
 export interface ScoringContext {
@@ -106,26 +113,7 @@ export { processEndOfRound } from './effects/lifecycle/onRoundEnd';
 
 // ─── Held-in-Hand Processing (Step 4) ───
 
-interface HeldInHandResult {
-  bonusMult: number;
-  xMult: number;
-  moneyEarned: number;
-  trailGuidesForHand: number; // blue_moon sticker: how many trail guides to grant for scored hand
-  animEvents: ScoreAnimEvent[];
-}
-
-/**
- * Process held-in-hand abilities for dice that were rolled but not scored.
- * Sequence per die (left to right): steel enhancement → equipment triggers → retriggers.
- * Retriggers: red_bullet sticker first, then Double Down equipment.
- */
-export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[]): HeldInHandResult {
-  let bonusMult = 0;
-  let xMult = 1;
-  let trailGuidesForHand = 0;
-  const animEvents: ScoreAnimEvent[] = [];
-
-  // Count retriggers from Double Down equipment (resolving copy items)
+function countHeldDoubleDownRetriggers(equipment: EquipmentInstance[]): number {
   const maxCopyDepthHeld = equipment.length;
   let doubleDownCount = 0;
   for (let i = 0; i < equipment.length; i++) {
@@ -139,6 +127,36 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
       doubleDownCount += (equip.def.effectParams.value as number) ?? 1;
     }
   }
+  return doubleDownCount;
+}
+
+function getHeldDieTriggerCount(die: Die, doubleDownCount: number): number {
+  return 1 + (die.sticker === 'red_bullet' ? 1 : 0) + doubleDownCount;
+}
+
+interface HeldInHandResult {
+  bonusMult: number;
+  xMult: number;
+  moneyEarned: number;
+  mutations: ScoringMutations;
+  animEvents: ScoreAnimEvent[];
+}
+
+/**
+ * Process held-in-hand abilities for dice that were rolled but not scored.
+ * Sequence per die (left to right): steel enhancement → equipment triggers → retriggers.
+ * Retriggers: red_bullet sticker first, then Double Down equipment.
+ */
+export function processHeldInHand(
+  heldDice: Die[],
+  equipment: EquipmentInstance[],
+  scoredHandType?: HandType,
+): HeldInHandResult {
+  let bonusMult = 0;
+  let xMult = 1;
+  const animEvents: ScoreAnimEvent[] = [];
+
+  const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
 
   const heldCtx: ScoringPipelineContext = {
     handResult: {
@@ -194,10 +212,7 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
   );
 
   for (const die of heldDice) {
-    // Calculate how many times this die triggers:
-    // 1 base + red_bullet sticker retrigger + Double Down retriggers
-    const hasRedBullet = die.sticker === 'red_bullet';
-    const triggers = 1 + (hasRedBullet ? 1 : 0) + doubleDownCount;
+    const triggers = getHeldDieTriggerCount(die, doubleDownCount);
 
     for (let t = 0; t < triggers; t++) {
       const triggerLabel = t === 0 ? '' : ` (retrigger ${t})`;
@@ -210,9 +225,19 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
       }
 
       // Sticker effects on held dice
-      if (die.sticker === 'blue_moon') {
-        trailGuidesForHand++;
-        console.log(`  [held] Die ${die.id}${triggerLabel}: BLUE_MOON +1 trail guide for scored hand`);
+      if (die.sticker === 'blue_moon' && scoredHandType) {
+        const tgDef = getTrailGuideDefForHand(scoredHandType);
+        heldCtx.mutations.consumablesGranted.push(tgDef.id);
+        animEvents.push({
+          target: { kind: 'die', dieId: die.id },
+          popupType: 'trail_guide',
+          value: 0,
+          dieId: die.id,
+          consumableId: tgDef.id,
+        });
+        console.log(
+          `  [held] Die ${die.id}${triggerLabel}: BLUE_MOON trail guide '${tgDef.name}' for ${scoredHandType}`,
+        );
       }
 
       // Equipment triggers on held dice
@@ -242,9 +267,36 @@ export function processHeldInHand(heldDice: Die[], equipment: EquipmentInstance[
   const moneyEarned = heldCtx.mutations.moneyEarned;
 
   console.log(
-    `  [held] Totals: bonusMult: ${bonusMult}, xMult: ${xMult}, money: $${moneyEarned}, trailGuides: ${trailGuidesForHand}`,
+    `  [held] Totals: bonusMult: ${bonusMult}, xMult: ${xMult}, money: $${moneyEarned}, consumables: ${heldCtx.mutations.consumablesGranted.length}`,
   );
-  return { bonusMult, xMult, moneyEarned, trailGuidesForHand, animEvents };
+  return { bonusMult, xMult, moneyEarned, mutations: heldCtx.mutations, animEvents };
+}
+
+/** Gold dice held (not scored) at round end — pays per trigger (red_bullet, Silver Bullets, etc.). */
+export function processGoldHeldAtRoundEnd(
+  heldDice: Die[],
+  equipment: EquipmentInstance[],
+): { moneyEarned: number; animEvents: ScoreAnimEvent[] } {
+  const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
+  const animEvents: ScoreAnimEvent[] = [];
+  let moneyEarned = 0;
+  const perTrigger = GAMEPLAY.GOLD_DICE_HELD_MONEY;
+
+  for (const die of heldDice) {
+    if (die.enhancement !== 'gold') continue;
+    const triggers = getHeldDieTriggerCount(die, doubleDownCount);
+    for (let t = 0; t < triggers; t++) {
+      moneyEarned += perTrigger;
+      animEvents.push({
+        target: { kind: 'die', dieId: die.id },
+        popupType: 'money',
+        value: perTrigger,
+        dieId: die.id,
+      });
+    }
+  }
+
+  return { moneyEarned, animEvents };
 }
 
 // ─── Helpers ───

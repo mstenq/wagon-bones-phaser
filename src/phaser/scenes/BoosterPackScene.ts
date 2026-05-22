@@ -169,6 +169,7 @@ export class BoosterPackScene extends Scene {
     this.consumableBar.on('consumable-changed', () => {
       this.sidebar.refreshMoney();
       this.dicePouch.refresh();
+      this.updateEquipHints();
     });
 
     // Execute consumable effect when used

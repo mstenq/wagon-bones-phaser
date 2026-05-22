@@ -29,7 +29,8 @@ import {
   processEquipmentOnDayEnd,
   findDeathPrevention,
 } from './EquipmentEffects';
-import { getRandomTrailGuideDef, getRandomSupplyDef } from './ConsumablesSystem';
+import { getRandomSupplyDef } from './ConsumablesSystem';
+import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import { applyScoringMutations } from './effects/applyMutations';
 import { createEmptyModifiers } from './TrailEventsSystem';
 import {
@@ -409,20 +410,20 @@ export class GameState {
     const heldDice = this.state.rolledDice.filter((d) => !scoredIds.has(d.id));
 
     // Step 4: Process held-in-hand abilities (steel dice, held equipment)
-    const heldResult = processHeldInHand(heldDice, player.equipment);
-    if (heldResult.moneyEarned > 0) {
-      player.economy.earn(heldResult.moneyEarned);
-    }
+    const heldResult = processHeldInHand(heldDice, player.equipment, handType);
 
     // Apply held-in-hand mult bonuses to the base result before independent equipment
     const heldMult = (baseResult.mult + heldResult.bonusMult) * heldResult.xMult;
+    const mergedMutations = createEmptyScoringMutations();
+    mergeMutations(mergedMutations, baseResult.mutations);
+    mergeMutations(mergedMutations, heldResult.mutations);
     const afterHeldResult: ScoreResult = {
       handResult: baseResult.handResult,
       totalValue: baseResult.totalValue,
       miles: (baseResult.handResult.baseMiles + baseResult.totalValue) * heldMult,
       mult: heldMult,
       animEvents: [...baseResult.animEvents, ...heldResult.animEvents],
-      mutations: baseResult.mutations,
+      mutations: mergedMutations,
     };
     console.log('[SCORE] After held-in-hand: mult:', afterHeldResult.mult, '| miles:', afterHeldResult.miles);
 
@@ -448,16 +449,6 @@ export class GameState {
     console.log('[SCORE] Final result: miles:', finalResult.miles, '| mult:', finalResult.mult);
 
   applyScoringMutations(finalResult.mutations);
-
-    // Process sticker rewards
-    // blue_moon: grant trail guides for the scored hand type
-    if (heldResult.trailGuidesForHand > 0) {
-      for (let i = 0; i < heldResult.trailGuidesForHand; i++) {
-        const tgDef = getRandomTrailGuideDef();
-        player.addConsumable(tgDef);
-      }
-      console.log(`[SCORE] Blue Moon: granted ${heldResult.trailGuidesForHand} trail guide(s)`);
-    }
 
     // Record hand played
     player.recordHandPlayed(handType);

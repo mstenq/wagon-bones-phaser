@@ -170,6 +170,20 @@ describe('SELL_XMULT_GAIN: Snake Oil Ledger', () => {
     expect(inst.state.xMult).toBe(1);
   });
 
+  test('resets via advanceRound after winning boss round', () => {
+    const player = setupGame({
+      equipment: [item('snake_oil_ledger')],
+    }).player;
+    player.round = 3;
+    processEquipmentOnSell(player.equipment);
+    expect(player.equipment[0].state.xMult).toBeCloseTo(1.25, 5);
+
+    player.advanceRound();
+    expect(player.round).toBe(1);
+    expect(player.leg).toBe(2);
+    expect(player.equipment[0].state.xMult).toBe(1);
+  });
+
   test('gains x0.25 when selling consumables', () => {
     const inst = item('snake_oil_ledger');
     // Selling consumables also triggers the sell hook

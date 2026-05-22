@@ -166,6 +166,14 @@ export function getRandomTrailGuideDef(aura?: ItemAura | null, excludeIds?: stri
   return createTrailGuideConsumableDef(tg, aura);
 }
 
+/** Trail guide for a specific hand type (blue moon held reward). */
+export function getTrailGuideDefForHand(handType: HandType, aura?: ItemAura | null): ConsumableDef {
+  const matching = TRAIL_GUIDES.filter((t) => t.handType === handType);
+  const pool = matching.length > 0 ? matching : TRAIL_GUIDES;
+  const tg = pool[Math.floor(Math.random() * pool.length)];
+  return createTrailGuideConsumableDef(tg, aura);
+}
+
 /** Get a random frontier encounter def (excludes pack-only ultra-rare cards). */
 export function getRandomFrontierDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
   let pool = FRONTIER_ENCOUNTERS.filter((f) => !PACK_ONLY_FRONTIER_IDS.has(f.id));

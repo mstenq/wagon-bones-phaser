@@ -23,7 +23,13 @@ import {
   getSupplyDefById,
 } from './ConsumablesSystem';
 import { getItemAuraById } from './ItemsSystem';
-import { processEquipmentOnSell, processEquipmentOnShopReroll, getConfigModifiers, processEquipmentOnDiceAdded } from './EquipmentEffects';
+import {
+  processEquipmentOnSell,
+  processEquipmentOnShopReroll,
+  getConfigModifiers,
+  processEquipmentOnDiceAdded,
+  processEquipmentOnBossDefeat,
+} from './EquipmentEffects';
 import { forEachEquipmentResolved, resolveEffectParam } from './effects/helpers';
 import { GAMEPLAY } from './Constants';
 import { PermitDef, applyPermitEffect, getPermitBossRerollLimit, getPermitShopRerollDiscount } from './PermitsSystem';
@@ -778,6 +784,8 @@ export class PlayerState {
   advanceRound(skipped: boolean = false): boolean {
     if (skipped) {
       this.roundsSkipped++;
+    } else if (this.isBossRound) {
+      processEquipmentOnBossDefeat(this.equipment);
     }
     this.round++;
     if (this.round > GAMEPLAY.ROUNDS_PER_LEG) {

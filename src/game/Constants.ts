@@ -41,6 +41,8 @@ export const GAMEPLAY = {
   INTEREST_CAP: 25, // default cap; vouchers can raise this
   /** Miles/score at or above this use Balatro-style scientific notation (e.g. 1.27e9) */
   SCORE_SCIENTIFIC_THRESHOLD: 1_000_000_000_000,
+  /** Money earned per trigger when a gold die is held (not scored) at round end */
+  GOLD_DICE_HELD_MONEY: 3,
 };
 
 export const DIFFICULTIES: DifficultyDef[] = [

@@ -195,6 +195,7 @@ export class ShopScene extends Scene {
     // Refresh displays when consumables change
     this.consumableBar.on('consumable-changed', () => {
       this.updateDisplays();
+      this.updateEquipHints();
     });
 
     // Execute consumable effect when used

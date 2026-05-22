@@ -100,7 +100,11 @@ effectRegistry.registerAdditive('MARKED_NO_SIX_MULT', (ctx, equip, index) => {
   const val = equip.state.mult ?? 0;
   if (val > 0) {
     ctx.bonusMult += val;
-    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: val });
+    ctx.animEvents.push({
+      target: { kind: 'equip', equipIndex: index },
+      popupType: 'mult',
+      value: val,
+    });
     console.log(`  [equip] ${equip.def.name}: +${val} mult (no 6s streak) (bonusMult: ${ctx.bonusMult})`);
   }
 });

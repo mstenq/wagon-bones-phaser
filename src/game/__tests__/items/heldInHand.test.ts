@@ -2,6 +2,8 @@ import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
 import { die, diceWithValue, item, calculateTestScore, resetDieIds } from '../testHelpers';
 import { HandType } from '../../types';
+import { GAMEPLAY } from '../../Constants';
+import { processGoldHeldAtRoundEnd } from '../../EquipmentEffects';
 
 beforeEach(() => resetDieIds());
 
@@ -286,5 +288,53 @@ describe('HELD_RETRIGGER: Silver Bullets', () => {
     const inst = item('silver_bullets');
     expect(inst.def.effectType).toBe('HELD_RETRIGGER');
     expect(inst.def.effectParams.value).toBe(1);
+  });
+});
+
+// ─── Gold dice held at round end ───
+
+describe('gold dice held at round end', () => {
+  test('earns $3 per held gold die', () => {
+    const result = processGoldHeldAtRoundEnd(
+      [die({ value: 4, enhancement: 'gold' })],
+      [],
+    );
+    expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY);
+    expect(result.animEvents).toHaveLength(1);
+    expect(result.animEvents[0].popupType).toBe('money');
+    expect(result.animEvents[0].value).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY);
+  });
+
+  test('ignores scored gold dice (only held list is passed)', () => {
+    const result = processGoldHeldAtRoundEnd([], []);
+    expect(result.moneyEarned).toBe(0);
+    expect(result.animEvents).toHaveLength(0);
+  });
+
+  test('red_bullet retriggers gold payout', () => {
+    const result = processGoldHeldAtRoundEnd(
+      [die({ value: 4, enhancement: 'gold', sticker: 'red_bullet' })],
+      [],
+    );
+    expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 2);
+    expect(result.animEvents).toHaveLength(2);
+  });
+
+  test('silver bullets retriggers gold payout', () => {
+    const result = processGoldHeldAtRoundEnd(
+      [die({ value: 4, enhancement: 'gold' })],
+      [item('silver_bullets')],
+    );
+    expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 2);
+    expect(result.animEvents).toHaveLength(2);
+  });
+
+  test('stacks red_bullet and silver bullets on one gold die', () => {
+    const result = processGoldHeldAtRoundEnd(
+      [die({ value: 4, enhancement: 'gold', sticker: 'red_bullet' })],
+      [item('silver_bullets')],
+    );
+    expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 3);
+    expect(result.animEvents).toHaveLength(3);
   });
 });

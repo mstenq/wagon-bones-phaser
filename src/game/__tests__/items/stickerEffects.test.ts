@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, item, calculateTestScore, resetDieIds } from '../testHelpers';
+import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
 
@@ -97,12 +98,27 @@ describe('golden_dollar sticker', () => {
 // ─── blue_moon: Grant trail guide when held ───
 
 describe('blue_moon sticker', () => {
-  test('grants a trail guide when held in hand', () => {
-    const { player } = calculateTestScore({
+  test('grants a trail guide for the scored hand when held in hand', () => {
+    const { player, result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       heldDice: [die({ value: 3, sticker: 'blue_moon' })],
     });
     expect(player.consumables.length).toBeGreaterThanOrEqual(1);
-    expect(player.consumables[0].def.category).toBe('trail_guide');
+    const tg = player.consumables.find((c) => c.def.category === 'trail_guide');
+    expect(tg).toBeDefined();
+    expect(tg!.def.handType).toBe(HandType.PAIR);
+    const moonEvent = result.animEvents.find((e) => e.popupType === 'trail_guide');
+    expect(moonEvent).toBeDefined();
+    expect(moonEvent!.consumableId).toBe(tg!.def.id);
+  });
+
+  test('silver bullets retriggers blue moon trail guide grant', () => {
+    const { player, result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, sticker: 'blue_moon' })],
+      equipment: [item('silver_bullets')],
+    });
+    expect(result.animEvents.filter((e) => e.popupType === 'trail_guide')).toHaveLength(2);
+    expect(player.consumables.filter((c) => c.def.category === 'trail_guide').length).toBe(2);
   });
 });

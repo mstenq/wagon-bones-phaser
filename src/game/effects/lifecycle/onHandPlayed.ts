@@ -44,8 +44,8 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       } else {
         const p = equip.def.effectParams as Record<string, unknown>;
         const professionId = player.profession?.id;
-        equip.state.mult =
-          (equip.state.mult ?? 0) + resolveEffectParam<number>(p, 'multPerHand', professionId);
+        const gain = resolveEffectParam<number>(p, 'multPerHand', professionId);
+        equip.state.mult = (equip.state.mult ?? 0) + gain;
       }
       break;
     }

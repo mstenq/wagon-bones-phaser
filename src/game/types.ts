@@ -67,7 +67,15 @@ export type ScoreAnimTarget =
   | { kind: 'equip'; equipIndex: number }
   | { kind: 'both'; dieId: string; equipIndex: number };
 
-export type ScoreAnimPopupType = 'miles' | 'mult' | 'xmult' | 'money' | 'supply' | 'strip' | 'enhance';
+export type ScoreAnimPopupType =
+  | 'miles'
+  | 'mult'
+  | 'xmult'
+  | 'money'
+  | 'supply'
+  | 'trail_guide'
+  | 'strip'
+  | 'enhance';
 
 export interface ScoreAnimEvent {
   /** Target to animate (die, equip card, or both) */
@@ -80,6 +88,8 @@ export interface ScoreAnimEvent {
   dieId?: string;
   /** Enhancement applied (for enhance popup) */
   enhancement?: DiceEnhancement;
+  /** Consumable def id when granting supply/trail guide (for bar fly-in animation) */
+  consumableId?: string;
 }
 
 export interface HandUpgradeInfo {

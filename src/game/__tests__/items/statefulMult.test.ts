@@ -53,6 +53,49 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
     processEquipmentOnHandPlayed([inst], HandType.PAIR, scoringDice);
     expect(inst.state.mult).toBe(2);
   });
+
+  test('scoring popup shows accumulated bank applied to mult', () => {
+    const inst = itemWithState('marked', { mult: 4 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+      profession: 'demon_hunter',
+    });
+    expect(inst.state.mult).toBe(6);
+    const markedAnim = result.animEvents.find(
+      (e) => e.popupType === 'mult' && e.target.kind === 'equip',
+    );
+    expect(markedAnim?.value).toBe(6);
+    expect(result.mult).toBe(7);
+  });
+
+  test('developer profession: one hand adds +1 to bank and popup', () => {
+    const inst = item('marked');
+    const { result, player } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+      profession: 'developer',
+    });
+    expect(inst.state.mult).toBe(1);
+    const markedAnim = result.animEvents.find(
+      (e) => e.popupType === 'mult' && e.target.kind === 'equip',
+    );
+    expect(markedAnim?.value).toBe(1);
+    expect(result.mult).toBe(2);
+    expect(player.profession?.id).toBe('developer');
+  });
+
+  test('mirror lake applies marked bank and marked applies it again', () => {
+    const marked = itemWithState('marked', { mult: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), marked],
+      profession: 'demon_hunter',
+    });
+    expect(marked.state.mult).toBe(4);
+    // PAIR base 1 + mirror(+4) + marked(+4)
+    expect(result.mult).toBe(9);
+  });
 });
 
 // ─── STATEFUL_ADD_MILES: Steam Engine ───

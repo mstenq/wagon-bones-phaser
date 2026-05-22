@@ -341,6 +341,19 @@ describe('Copy item round-start effects', () => {
     expect(result.mult).toBe(13);
   });
 
+  test('mirror lake copying marked applies bank without incrementing marked streak on copy slot', () => {
+    const marked = itemWithState('marked', { mult: 1 });
+    const mirrorLake = item('mirror_lake');
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [mirrorLake, marked],
+    });
+    expect(mirrorLake.state.mult).toBeUndefined();
+    expect(marked.state.mult).toBe(2);
+    // PAIR base 1 + mirror(+2) + marked(+2)
+    expect(result.mult).toBe(5);
+  });
+
   test('mirror lake copies trail repair kit stateful xMult when stacked', () => {
     const kit = item('trail_repair_kit');
     kit.state.xMult = 1.75;

@@ -1,10 +1,10 @@
 # Bugs noticed while playing
 - Selling Consumable cards needs to update Equipment bar cards (Snake Oil Ledger xmult doesn't update until after you drag and drop the cards to force a refresh currently)
-- Gold dice held in hand don't show animation at end of round showing you got money. I had one with a red_bullet sticker and it was hard to tell if it was working cause there was not indication
 -Snake Oil Ledger never reset after defeating boss
 - Second Helping only copies the last supply or trail_guide card (It should NOT copy frontier_encounter cards)
-- Marked - not sure if bug is specific to demon_hunter, but the mult was growing WAY too quickly. I think it was adding 7 for some reason.
-- Blue moon - should really show an animation event of the trail_guide being added to ConsumableBar before going to payout screen.
+- trail_event: "gold_strike" Positive event should have a skip it option, and the mine it should only be -1 rerolls. 
+- Mystery Crate - The new dice it adds at the first day should actually increase your hand size (First day only) by 1, and the new dice should be in your hand. This does not apply to quarry_stone even though they are similar cards.
+
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.

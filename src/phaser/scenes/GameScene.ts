@@ -36,7 +36,8 @@ import {
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playRollAnimation } from '../animations/RollAnimation';
-import { playScoreAnimation } from '../animations/ScoreAnimation';
+import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
+import { processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { getLoadedDiceMultiplier } from '../../game/Constants';
@@ -207,12 +208,14 @@ export class GameScene extends Scene {
     this.equipBar.on('equipment-changed', () => {
       this.sidebar.refreshMoney();
       this.dicePouch.refresh();
+      this.equipBar.updateHints(this.gameState, getPlayerState());
     });
 
     // Refresh displays when consumables change
     this.consumableBar.on('consumable-changed', () => {
       this.sidebar.refreshMoney();
       this.dicePouch.refresh();
+      this.equipBar.updateHints(this.gameState, getPlayerState());
     });
 
     // Execute consumable effect when used
@@ -678,11 +681,9 @@ export class GameScene extends Scene {
     if (this.animating) return;
 
     const scoredIds = new Set(this.gameState.state.selectedForScore.map((d) => d.id));
-
-    // Gold dice held in hand earn $3 each (before payout so interest sees updated balance)
-    const goldHeldCount = this.gameState.state.selectedForRoll.filter(
-      (d) => !scoredIds.has(d.id) && d.enhancement === 'gold',
-    ).length;
+    const heldDice = this.gameState.state.rolledDice.filter((d) => !scoredIds.has(d.id));
+    const player = getPlayerState();
+    const goldHeld = processGoldHeldAtRoundEnd(heldDice, player.equipment);
 
     const { outcome, destroyedEquipment } = this.gameState.endDay();
 
@@ -695,45 +696,75 @@ export class GameScene extends Scene {
     }
 
     if (outcome === 'won' || outcome === 'lost') {
-      const player = getPlayerState();
-      if (goldHeldCount > 0) {
-        player.economy.earn(goldHeldCount * 3);
-        this.showFloatingText(`$${goldHeldCount * 3} from gold dice!`, COLORS.GOLD);
-      }
-
-      const modifierResult = processEquipmentModifiersEndOfRound(player, { applyDestruction: false });
-      const hasDestroy =
-        modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
-
-      const showModifierFeedback = () => {
-        for (const { index, equipmentName, cost } of modifierResult.leasePaid) {
-          EventBus.emit(Events.LEASE_PAID, { equipmentName, index, cost });
-          this.showFloatingText(`-$${cost} lease: ${equipmentName}`, COLORS.GOLD);
+      const playGoldThenFinish = () => {
+        if (goldHeld.moneyEarned > 0) {
+          player.economy.earn(goldHeld.moneyEarned);
+          this.sidebar.refreshMoney();
         }
-        this.equipBar.flashLeasedUpkeepPaid(modifierResult.leasePaid.map((p) => p.index));
-
-        for (const { index, equipmentName } of modifierResult.perished) {
-          EventBus.emit(Events.EQUIPMENT_PERISHED, { equipmentName, index });
-        }
-        for (const { index, equipmentName } of modifierResult.leaseDefaulted) {
-          EventBus.emit(Events.LEASE_DEFAULTED, { equipmentName, index });
-        }
-
-        if (!hasDestroy) {
-          applyEquipmentModifierDestructions(player, modifierResult);
-          this.equipBar.refresh();
-        }
-        this.equipBar.updateHints(this.gameState, player);
-        this.equipBar.flashPerishableWarnings();
+        this.runRoundEndModifierFeedback(() => this.transitionAfterRoundEnd(outcome));
       };
 
-      if (hasDestroy) {
-        this.equipBar.animateModifierDestructions(modifierResult, showModifierFeedback);
+      if (goldHeld.animEvents.length > 0) {
+        this.animating = true;
+        playDieAnimEvents({
+          scene: this,
+          diceSprites: this.rollSprites,
+          events: goldHeld.animEvents,
+          onComplete: () => {
+            this.animating = false;
+            playGoldThenFinish();
+          },
+        });
       } else {
-        showModifierFeedback();
+        playGoldThenFinish();
       }
+      return;
     }
 
+    const carryover = new Map<string, { x: number; y: number; rotation: number }>();
+    for (const sprite of this.rollSprites) {
+      carryover.set(sprite.dieData.id, { x: sprite.x, y: sprite.y, rotation: sprite.rotation });
+    }
+    this.enterDrawPhase(true, carryover);
+  }
+
+  private runRoundEndModifierFeedback(onComplete: () => void): void {
+    const player = getPlayerState();
+    const modifierResult = processEquipmentModifiersEndOfRound(player, { applyDestruction: false });
+    const hasDestroy =
+      modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
+
+    const showModifierFeedback = () => {
+      for (const { index, equipmentName, cost } of modifierResult.leasePaid) {
+        EventBus.emit(Events.LEASE_PAID, { equipmentName, index, cost });
+        this.showFloatingText(`-$${cost} lease: ${equipmentName}`, COLORS.GOLD);
+      }
+      this.equipBar.flashLeasedUpkeepPaid(modifierResult.leasePaid.map((p) => p.index));
+
+      for (const { index, equipmentName } of modifierResult.perished) {
+        EventBus.emit(Events.EQUIPMENT_PERISHED, { equipmentName, index });
+      }
+      for (const { index, equipmentName } of modifierResult.leaseDefaulted) {
+        EventBus.emit(Events.LEASE_DEFAULTED, { equipmentName, index });
+      }
+
+      if (!hasDestroy) {
+        applyEquipmentModifierDestructions(player, modifierResult);
+        this.equipBar.refresh();
+      }
+      this.equipBar.updateHints(this.gameState, player);
+      this.equipBar.flashPerishableWarnings();
+      onComplete();
+    };
+
+    if (hasDestroy) {
+      this.equipBar.animateModifierDestructions(modifierResult, showModifierFeedback);
+    } else {
+      showModifierFeedback();
+    }
+  }
+
+  private transitionAfterRoundEnd(outcome: 'won' | 'lost'): void {
     if (outcome === 'won') {
       this.sound.play('sfx_win', { volume: 0.6 });
       const player = getPlayerState();
@@ -748,7 +779,7 @@ export class GameScene extends Scene {
         round: player.round,
         isVictory: player.isBossRound && player.leg === GAMEPLAY.LEGS,
       });
-    } else if (outcome === 'lost') {
+    } else {
       this.sound.play('sfx_negative', { volume: 0.5 });
       const player = getPlayerState();
       this.scene.start('GameOver', {
@@ -759,12 +790,6 @@ export class GameScene extends Scene {
         leg: player.leg,
         round: player.round,
       });
-    } else {
-      const carryover = new Map<string, { x: number; y: number; rotation: number }>();
-      for (const sprite of this.rollSprites) {
-        carryover.set(sprite.dieData.id, { x: sprite.x, y: sprite.y, rotation: sprite.rotation });
-      }
-      this.enterDrawPhase(true, carryover);
     }
   }
 

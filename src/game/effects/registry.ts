@@ -45,10 +45,8 @@ export class EffectRegistry {
   }
 
   registerLifecycle(phase: LifecyclePhase, handler: LifecycleHandler): void {
-    if (!this.lifecycleHandlers.has(phase)) {
-      this.lifecycleHandlers.set(phase, []);
-    }
-    this.lifecycleHandlers.get(phase)!.push(handler);
+    // One handler per phase (re-importing effect modules during dev must not stack duplicates).
+    this.lifecycleHandlers.set(phase, [handler]);
   }
 
   dispatchAdditive(effectType: string, ctx: Parameters<AdditiveEffectHandler>[0], equip: Parameters<AdditiveEffectHandler>[1], index: Parameters<AdditiveEffectHandler>[2]): void {
