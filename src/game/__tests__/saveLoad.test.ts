@@ -11,6 +11,7 @@ import {
   SAVE_VERSION,
   type GameSaveSnapshot,
 } from '../SaveLoad';
+import { selectTrailEvent } from '../TrailEventsSystem';
 import { HandType } from '../types';
 import bosses from '../../data/bosses';
 
@@ -197,6 +198,48 @@ describe('SaveLoad', () => {
 
   test('getProfessionById used in restore', () => {
     expect(getProfessionById('outlaw')).toBeDefined();
+  });
+
+  test('round-trips seenTrailEventIds through save/restore', () => {
+    const player = resetPlayerState();
+    player.applyProfession('outlaw');
+    player.seenTrailEventIds.add('wildflowers');
+    player.seenTrailEventIds.add('bad_mosquitos');
+
+    const snapshot = buildSaveSnapshot({ activeScene: 'RoundSelect' });
+    expect(snapshot.player.seenTrailEventIds).toContain('wildflowers');
+    expect(snapshot.player.seenTrailEventIds).toContain('bad_mosquitos');
+
+    applySaveSnapshot(snapshot);
+    const restored = getPlayerState();
+    expect(restored.seenTrailEventIds.has('wildflowers')).toBe(true);
+    expect(restored.seenTrailEventIds.has('bad_mosquitos')).toBe(true);
+  });
+
+  test('restored TrailEvent snapshot keeps event excluded from future selection', () => {
+    // Regression: with autosave on a 10s timer, a refresh could restore a
+    // snapshot whose seenTrailEventIds didn't yet include the event the player
+    // had just been shown. After the fix, the scene marks events seen at
+    // selection time and flushes the autosave, so the saved set is correct.
+    const player = resetPlayerState();
+    player.applyProfession('farmer');
+    player.leg = 1;
+    player.seenTrailEventIds.add('wildflowers');
+
+    const snapshot = buildSaveSnapshot({
+      activeScene: 'TrailEvent',
+      data: { eventId: 'wildflowers', resolved: false, spyglassRevealed: false },
+    });
+
+    applySaveSnapshot(snapshot);
+    const restored = getPlayerState();
+    expect(restored.seenTrailEventIds.has('wildflowers')).toBe(true);
+
+    // Any subsequent selection at this leg must skip wildflowers.
+    for (let i = 0; i < 200; i++) {
+      const picked = selectTrailEvent(restored, Math.random);
+      expect(picked.id).not.toBe('wildflowers');
+    }
   });
 
   test('startRound clears restored ROLL state for the next blind', () => {

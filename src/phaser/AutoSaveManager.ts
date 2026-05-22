@@ -70,6 +70,15 @@ function autoSaveTick(): void {
   }
 }
 
+/**
+ * Force an immediate autosave write for the currently active scene.
+ * Use at critical state-change boundaries (e.g. after a trail event resolves)
+ * to avoid losing in-memory state if the 10s timer hasn't fired yet.
+ */
+export function flushAutoSave(): void {
+  autoSaveTick();
+}
+
 /** Restore from localStorage on boot. Returns true if a scene was started. */
 export function tryRestoreAutoSaveOnBoot(hostScene: Scene): boolean {
   const snapshot = readAutoSaveFromStorage();

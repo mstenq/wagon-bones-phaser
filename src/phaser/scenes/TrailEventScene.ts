@@ -33,6 +33,7 @@ import {
   TrailEventEffect,
 } from '../../game/TrailEventsSystem';
 import type { TrailEventSaveData } from '../../game/SaveLoad';
+import { flushAutoSave } from '../AutoSaveManager';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -108,6 +109,8 @@ export class TrailEventScene extends Scene {
       this.resolved = restore.resolved;
       this.spyglassRevealed = restore.spyglassRevealed;
       this.pendingRestoreTrail = null;
+      // Restored event has already been shown to the player — never re-roll it.
+      player.seenTrailEventIds.add(event.id);
     }
 
     // Select / preview trail event (persist across resize restarts)
@@ -115,9 +118,12 @@ export class TrailEventScene extends Scene {
       if (hasScoutsSpyglass(player)) {
         if (!player.pendingTrailEvent) {
           player.pendingTrailEvent = selectTrailEvent(player);
+          // Commit the selection so autosave / refresh can't re-roll it.
+          player.seenTrailEventIds.add(player.pendingTrailEvent.id);
         }
         if (!this.spyglassRevealed) {
           this.buildSpyglassPreview(layout);
+          flushAutoSave();
           EventBus.emit(Events.SCENE_READY, this);
           return;
         }
@@ -125,7 +131,11 @@ export class TrailEventScene extends Scene {
         player.pendingTrailEvent = null;
       } else {
         this.currentEvent = selectTrailEvent(player);
+        player.seenTrailEventIds.add(this.currentEvent.id);
       }
+      // Persist the seen-set update immediately so a refresh within the
+      // 10s autosave window can't restore a snapshot that allows a repeat.
+      flushAutoSave();
     }
 
     if (hasScoutsSpyglass(player) && !this.spyglassRevealed) {
@@ -344,6 +354,11 @@ export class TrailEventScene extends Scene {
     if (result.modifiers.skipNextShop) {
       player.skipNextShop = true;
     }
+
+    // Persist the resolved state immediately. Without this flush, a refresh
+    // between resolveChoice and the next 10s autosave tick would restore the
+    // pre-resolution snapshot and the same event could appear again.
+    flushAutoSave();
 
     // Show result with animations
     this.showResult(result, enhancedDiceBeforeCount, equipmentBeforeCount);
