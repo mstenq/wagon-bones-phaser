@@ -145,7 +145,7 @@ Equipment is defined in `src/data/items.ts` with `effectType` + `effectParams`. 
 - **HeldDie** — `effectRegistry.registerHeldDie(effectType, handler)` — held dice
 - **Lifecycle** — `effectRegistry.registerLifecycle(phase, handler)` — see `LifecyclePhase` in `effects/types.ts`
 
-**Note:** `on-round-start` and `on-day-end` lifecycle phases exist in the type system; much of that behavior is still implemented in `EquipmentEffects.ts` / `effects/lifecycle/misc.ts` rather than per-item `registerLifecycle` calls. Check both places when adding round/day hooks.
+**Note:** Round/day lifecycle hooks live in `effects/lifecycle/onRoundStart.ts`, `onDayEnd.ts`, and `onRoundEnd.ts` (orchestrator + `registerLifecycle`). Add new round-start/day-end/end-round effect types there.
 
 #### Scoring Pipeline (`EquipmentEffects.ts`)
 

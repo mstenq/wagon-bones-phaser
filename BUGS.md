@@ -5,11 +5,11 @@
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.
-- Gambling Themed Item - 1 in 4 chance to get x4 mult and $10.
+- Gambling Themed Item - One Armed Bandit? - 1 in 4 chance to get x4 mult and $10.
 
 
 ## Code Feedback
-- lets convert the JSON data into JS arrays that are typed. It would make a lot of things much easier in our code base if we were sure about the shape of the data without doing checks.
+- ~~JSON → typed TS for trail guides, supply cards, packs, permits, professions~~ — done in `src/data/*.ts`; orphan `.json` copies removed.
 - Trail round modifiers wired (May 2026): `moneyPerDayLoss`, `disableRerollDay1`, `standardDiceDay1`, `diamondCrackDoubled`, `luckyOddsHalved`, `scoredDiceDestroyChance` + base diamond crack on score. `flatMilesPenalty` deferred (blizzard no longer promises flat miles); needs leg-scaled design before implementing.
 
 ## Balance Notes

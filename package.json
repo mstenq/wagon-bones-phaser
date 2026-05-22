@@ -1,24 +1,25 @@
 {
-  "name": "template-solidjs",
-  "description": "A Phaser 3 template using SolidJS.",
+  "name": "wagon-bones",
+  "description": "Balatro-inspired d12 dice roguelike on the Oregon Trail (Phaser 4 + SolidJS + Bun).",
   "version": "1.2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/phaserjs/template-solid.git"
+    "url": "git+https://github.com/mstenq/wagon-bones.git"
   },
-  "author": "Phaser Studio <support@phaser.io> (https://phaser.io/)",
   "license": "MIT",
   "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
   "bugs": {
-    "url": "https://github.com/phaserjs/template-solid/issues"
+    "url": "https://github.com/mstenq/wagon-bones/issues"
   },
-  "homepage": "https://github.com/phaserjs/template-solid#readme",
+  "homepage": "https://github.com/mstenq/wagon-bones#readme",
   "keywords": [
     "phaser",
-    "phaser3",
+    "phaser4",
     "solidjs",
     "vite",
-    "typescript"
+    "typescript",
+    "roguelike",
+    "dice"
   ],
   "scripts": {
     "dev": "node log.js dev & vite --config vite/config.dev.mjs",
@@ -27,7 +28,9 @@
     "build-nolog": "vite build --config vite/config.prod.mjs",
     "test": "bun test",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "check": "bun test && bun run format:check",
+    "ci": "bun run check && bun run build"
   },
   "dependencies": {
     "phaser": "4.0.0",

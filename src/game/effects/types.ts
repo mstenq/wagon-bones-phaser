@@ -86,24 +86,25 @@ export interface HeldDieEffectHandler {
 
 /** Lifecycle hook phases */
 export type LifecyclePhase =
-  | 'on-pre-scoring'       // Before per-die scoring (enhancement changes)
-  | 'on-hand-played'       // Before scoring starts
-  | 'after-hand-scored'    // After scoring completes
-  | 'on-reroll'            // When player rerolls dice
-  | 'on-shop-reroll'       // When player rerolls the shop
-  | 'on-shop-end'          // When the player leaves the shop
-  | 'on-sell'              // When player sells equipment
-  | 'on-day-end'           // At end of each day
-  | 'on-round-start'       // At start of each round
-  | 'on-dice-spent'        // When dice are moved to spent pool
-  | 'on-dice-added'        // When a new die is added
-  | 'on-supply-used'       // When a supply card is consumed
-  | 'on-pack-skipped'      // When a booster pack is skipped
-  | 'on-pack-opened'       // When a booster pack is opened
-  | 'on-lucky-trigger'     // When a lucky die triggers
+  | 'on-pre-scoring' // Before per-die scoring (enhancement changes)
+  | 'on-hand-played' // Before scoring starts
+  | 'after-hand-scored' // After scoring completes
+  | 'on-reroll' // When player rerolls dice
+  | 'on-shop-reroll' // When player rerolls the shop
+  | 'on-shop-end' // When the player leaves the shop
+  | 'on-sell' // When player sells equipment
+  | 'on-day-end' // At end of each day
+  | 'on-round-start' // At start of each round
+  | 'on-round-end' // At end of each round (payout / risky destroy)
+  | 'on-dice-spent' // When dice are moved to spent pool
+  | 'on-dice-added' // When a new die is added
+  | 'on-supply-used' // When a supply card is consumed
+  | 'on-pack-skipped' // When a booster pack is skipped
+  | 'on-pack-opened' // When a booster pack is opened
+  | 'on-lucky-trigger' // When a lucky die triggers
   | 'on-diamond-destroyed' // When a diamond die is destroyed
-  | 'on-dice-destroyed'    // When dice are removed from the collection
-  | 'on-boss-defeat';      // When a boss is defeated
+  | 'on-dice-destroyed' // When dice are removed from the collection
+  | 'on-boss-defeat'; // When a boss is defeated
 
 export interface LifecycleHandler {
   (equip: EquipmentInstance, ...args: unknown[]): unknown;

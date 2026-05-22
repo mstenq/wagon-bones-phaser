@@ -4,7 +4,7 @@ A Balatro-inspired dice roguelike set on the Oregon Trail. Roll dice, build hand
 
 ## Concept
 
-Instead of playing cards, you roll six-sided dice. Pips on scored dice count as base miles traveled. Multipliers work like Balatro's mult system. You must reach each landmark within a limited number of days, and each leg of the journey raises the target.
+Instead of playing cards, you roll **d12** dice (values 1–12). Each day you roll **8** dice from your hand and score **5**. Pips on scored dice count as base miles traveled. Multipliers work like Balatro's mult system. You must reach each landmark within a limited number of days, and each leg of the journey raises the target.
 
 **Key differences from Balatro:**
 
@@ -66,6 +66,14 @@ Dev server runs at `http://localhost:8080`.
 |---------|-------------|
 | `bun run dev` | Start development server |
 | `bun run build` | Production build to `dist/` |
+| `bun test` | Run game logic tests |
+| `bun run check` | Tests + format check |
+| `bun run ci` | check + production build |
+
+## Roadmap & issues
+
+- [IDEAS.md](IDEAS.md) — improvement backlog and technical debt
+- [BUGS.md](BUGS.md) — known bugs and balance notes
 
 ## Project Structure
 

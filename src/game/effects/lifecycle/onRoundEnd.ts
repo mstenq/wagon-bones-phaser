@@ -4,51 +4,69 @@ import type { EquipmentInstance } from '../../ItemsSystem';
 import { checkLoadedChance } from '../../Constants';
 import { getPlayerState } from '../../PlayerState';
 import { resolveEffectParam } from '../helpers';
+import { effectRegistry } from '../registry';
+import { dispatchLifecycle } from './dispatch';
+
+export interface RoundEndContext {
+  equipment: EquipmentInstance[];
+  moneyEarned: number;
+  destroyedIndices: number[];
+  index: number;
+}
+
+effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
+  const ctx = ctxUnknown as RoundEndContext;
+  const { effectType, effectParams } = equip.def;
+  const p = effectParams as Record<string, unknown>;
+
+  switch (effectType) {
+    case 'END_ROUND_MONEY': {
+      const professionId = getPlayerState().profession?.id;
+      ctx.moneyEarned += resolveEffectParam<number>(p, 'value', professionId);
+      break;
+    }
+    case 'END_ROUND_MONEY_SCALING': {
+      const base = p.base as number;
+      const perBoss = p.perBoss as number;
+      const bossesDefeated = (equip.state.bossesDefeated as number) ?? 0;
+      ctx.moneyEarned += base + perBoss * bossesDefeated;
+      break;
+    }
+    case 'ADD_MULT_RISKY':
+      if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
+        ctx.destroyedIndices.push(ctx.index);
+      }
+      break;
+    case 'XMULT_RISKY':
+      if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
+        ctx.destroyedIndices.push(ctx.index);
+      }
+      break;
+    case 'END_ROUND_SELL_VALUE_ALL': {
+      const bonus = (p.value as number) ?? 1;
+      for (const other of ctx.equipment) {
+        other.sellValue += bonus;
+      }
+      break;
+    }
+  }
+});
 
 export function processEndOfRound(equipment: EquipmentInstance[]): {
   moneyEarned: number;
   destroyedIndices: number[];
 } {
-  let moneyEarned = 0;
-  const destroyedIndices: number[] = [];
+  const ctx: RoundEndContext = {
+    equipment,
+    moneyEarned: 0,
+    destroyedIndices: [],
+    index: 0,
+  };
 
   for (let i = 0; i < equipment.length; i++) {
-    const equip = equipment[i];
-    const { effectType, effectParams } = equip.def;
-    const p = effectParams as Record<string, unknown>;
-
-    if (effectType === 'END_ROUND_MONEY') {
-      const professionId = getPlayerState().profession?.id;
-      moneyEarned += resolveEffectParam<number>(p, 'value', professionId);
-    }
-
-    if (effectType === 'END_ROUND_MONEY_SCALING') {
-      const base = p.base as number;
-      const perBoss = p.perBoss as number;
-      const bossesDefeated = (equip.state.bossesDefeated as number) ?? 0;
-      moneyEarned += base + perBoss * bossesDefeated;
-    }
-
-    if (effectType === 'ADD_MULT_RISKY') {
-      if (checkLoadedChance(p.destroyChance as [number, number], equipment)) {
-        destroyedIndices.push(i);
-      }
-    }
-
-    if (effectType === 'XMULT_RISKY') {
-      if (checkLoadedChance(p.destroyChance as [number, number], equipment)) {
-        destroyedIndices.push(i);
-      }
-    }
-
-    // Intentionally includes self — Raffle Ticket compounds its own sell value each round.
-    if (effectType === 'END_ROUND_SELL_VALUE_ALL') {
-      const bonus = (p.value as number) ?? 1;
-      for (const other of equipment) {
-        other.sellValue += bonus;
-      }
-    }
+    ctx.index = i;
+    dispatchLifecycle('on-round-end', equipment[i], ctx);
   }
 
-  return { moneyEarned, destroyedIndices };
+  return { moneyEarned: ctx.moneyEarned, destroyedIndices: ctx.destroyedIndices };
 }
