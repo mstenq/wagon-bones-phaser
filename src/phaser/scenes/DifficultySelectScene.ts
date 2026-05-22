@@ -62,14 +62,14 @@ export class DifficultySelectScene extends Scene {
 
     const backBtn = new Button(this, 72, 40, '← Back', 120, 36);
     backBtn.setDepth(100);
-    backBtn.onClick(() => this.scene.start('ProfessionSelect'));
+    backBtn.onClick(() => this.scene.start('ProfessionSelect', {}));
 
     const confirmBtn = new Button(this, width / 2, height - 40, 'Embark', 220, 48);
     confirmBtn.setDepth(100);
     confirmBtn.onClick(() => {
       getPlayerState().setDifficulty(this.selectedLevel);
       startAutoSaveLoop();
-      this.scene.start('RoundSelect');
+      this.scene.start('RoundSelect', {});
     });
 
     this.buildGrid(width);

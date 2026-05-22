@@ -98,7 +98,7 @@ export class BossTestModal extends GameObjects.Container {
     const startBoss = (boss: BossDef) => {
       devStartBossRound(boss.id);
       this.destroy();
-      scene.scene.start('Game');
+      scene.scene.start('Game', {});
     };
 
     for (const boss of bosses) {

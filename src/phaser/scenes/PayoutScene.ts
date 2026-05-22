@@ -68,11 +68,7 @@ export class PayoutScene extends Scene {
 
     // Miles scored
     this.add
-      .text(
-        width / 2,
-        height * 0.25,
-        `${formatScore(data.totalMiles)} / ${formatScore(data.targetMiles)} miles`,
-        {
+      .text(width / 2, height * 0.25, `${formatScore(data.totalMiles)} / ${formatScore(data.targetMiles)} miles`, {
         fontFamily: FONTS.PRIMARY,
         fontSize: '22px',
         color: TEXT_COLORS.SCORE_GREEN,

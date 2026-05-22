@@ -634,7 +634,12 @@ export class TrailEventScene extends Scene {
     buildCards();
   }
 
-  private animateDiceEffects(effects: TrailEventEffect[], cx: number, baseY: number, enhancedDiceBeforeCount: number): void {
+  private animateDiceEffects(
+    effects: TrailEventEffect[],
+    cx: number,
+    baseY: number,
+    enhancedDiceBeforeCount: number,
+  ): void {
     for (const effect of effects) {
       if (effect.type === 'LOSE_RANDOM_DICE') {
         // Only animate if there were enhanced dice to lose
@@ -667,9 +672,7 @@ export class TrailEventScene extends Scene {
     dieGfx.lineStyle(2, 0xff6666, 1);
     dieGfx.strokeRoundedRect(x - 18, y - 18, 36, 36, 6);
 
-    const dieText = this.add
-      .text(x, y, '💀', { fontSize: '18px' })
-      .setOrigin(0.5);
+    const dieText = this.add.text(x, y, '💀', { fontSize: '18px' }).setOrigin(0.5);
 
     // Fade out + scale down + slight red flash
     this.tweens.add({
@@ -688,9 +691,7 @@ export class TrailEventScene extends Scene {
 
     // Particle-like burst (simple approach: small text particles)
     for (let p = 0; p < 4; p++) {
-      const particle = this.add
-        .text(x, y, '•', { fontSize: '12px', color: '#ff4444' })
-        .setOrigin(0.5);
+      const particle = this.add.text(x, y, '•', { fontSize: '12px', color: '#ff4444' }).setOrigin(0.5);
       this.tweens.add({
         targets: particle,
         x: x + (Math.random() - 0.5) * 80,
@@ -718,9 +719,7 @@ export class TrailEventScene extends Scene {
     dieGfx.lineStyle(2, 0x66ff66, 1);
     dieGfx.strokeRoundedRect(x - 18, y - 18, 36, 36, 6);
 
-    const dieText = this.add
-      .text(x, y, '🎲', { fontSize: '18px' })
-      .setOrigin(0.5);
+    const dieText = this.add.text(x, y, '🎲', { fontSize: '18px' }).setOrigin(0.5);
 
     // Pop in
     dieGfx.setScale(0);

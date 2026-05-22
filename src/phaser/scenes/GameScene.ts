@@ -11,7 +11,11 @@ import type { GameRoundSaveData } from '../../game/SaveLoad';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { detectBestHand } from '../../game/DiceSystem';
 import { getPlayerState } from '../../game/PlayerState';
-import { hasActiveTrailRoundEffects, trailRoundEffectsFromModifiers, getPlayerTrailDebuffLines } from '../../game/TrailEventsSystem';
+import {
+  hasActiveTrailRoundEffects,
+  trailRoundEffectsFromModifiers,
+  getPlayerTrailDebuffLines,
+} from '../../game/TrailEventsSystem';
 import { applyEquipmentModifierDestructions, processEquipmentModifiersEndOfRound } from '../../game/EquipmentModifiers';
 import { isEquipmentLeased } from '../../game/ItemsSystem';
 import { consumeNextRoundTags } from '../../game/TagSystem';

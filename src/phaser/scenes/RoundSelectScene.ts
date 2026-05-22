@@ -112,11 +112,18 @@ export class RoundSelectScene extends Scene {
         return p.bossPermitRerollLimit !== 0 && p.canBossPermitReroll() && p.canAfford(GAMEPLAY.BOSS_REROLL_COST);
       },
       onTagHover: (tag, ax, ay) => {
-        this.tagTooltip.show(this, tag, ax, ay, {
-          minX: contentX + 4,
-          maxX: contentX + contentW - 4,
-          minY: contentTop + 4,
-        }, TOOLTIP_DEPTH);
+        this.tagTooltip.show(
+          this,
+          tag,
+          ax,
+          ay,
+          {
+            minX: contentX + 4,
+            maxX: contentX + contentW - 4,
+            minY: contentTop + 4,
+          },
+          TOOLTIP_DEPTH,
+        );
       },
       onTagHoverEnd: () => this.tagTooltip.hide(),
     });
@@ -124,7 +131,7 @@ export class RoundSelectScene extends Scene {
 
   private onPlay(): void {
     this.tagTooltip.hide();
-    this.scene.start('Game');
+    this.scene.start('Game', {});
   }
 
   private onSkip(): void {
@@ -200,11 +207,7 @@ export class RoundSelectScene extends Scene {
     return { x: colX + colW / 2, y: colY + colH / 2 };
   }
 
-  private playTagEarnedAnimation(
-    tag: TrailTagInstance,
-    round: number,
-    onComplete: () => void,
-  ): void {
+  private playTagEarnedAnimation(tag: TrailTagInstance, round: number, onComplete: () => void): void {
     const { x: fromX, y: fromY } = this.getRoundColumnCenter(round);
     const anchor = this.layout.tagStack.getStackAnchor();
     const color = TAG_FLY_COLORS[tag.def.category] ?? 0x888888;

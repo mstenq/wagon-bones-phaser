@@ -82,7 +82,7 @@ export class OptionsModal extends GameObjects.Container {
       this.destroy();
       clearAutoSave();
       resetPlayerState();
-      scene.scene.start('MainMenu');
+      scene.scene.start('MainMenu', {});
     });
     this.add(newRunBtn);
 
@@ -90,7 +90,7 @@ export class OptionsModal extends GameObjects.Container {
     const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 328, 'Main Menu', panelW - 60, 40);
     menuBtn.onClick(() => {
       this.destroy();
-      scene.scene.start('MainMenu');
+      scene.scene.start('MainMenu', {});
     });
     this.add(menuBtn);
 

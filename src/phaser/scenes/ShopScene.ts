@@ -123,8 +123,7 @@ function generateShopDie(mode: 'enhanced' | 'stickered'): { die: Die; displayDef
     effectParams: {},
     display: () => ({
       hint: [],
-      tooltip: [[{ text: descParts.join('\n'), style: 'text' }],
-      ],
+      tooltip: [[{ text: descParts.join('\n'), style: 'text' }]],
     }),
   } as unknown as EquipmentDef;
 
@@ -246,9 +245,10 @@ export class ShopScene extends Scene {
     } else if (!this.stockItems) {
       this.stockItems = this.generateMixedStock(player);
       if (!this.packs) {
-        this.packs = generateShopPacks(2, player.isFirstShopVisit()
-          ? { guaranteePackId: 'equipment_standard' }
-          : undefined);
+        this.packs = generateShopPacks(
+          2,
+          player.isFirstShopVisit() ? { guaranteePackId: 'equipment_standard' } : undefined,
+        );
       }
       const tagMods = processShopTags(player);
       this.applyShopTagMods(tagMods, player);
@@ -261,9 +261,10 @@ export class ShopScene extends Scene {
         player.bonusShopPermit = generateShopPermit(player.purchasedPermits);
       }
     } else if (!this.packs) {
-      this.packs = generateShopPacks(2, player.isFirstShopVisit()
-        ? { guaranteePackId: 'equipment_standard' }
-        : undefined);
+      this.packs = generateShopPacks(
+        2,
+        player.isFirstShopVisit() ? { guaranteePackId: 'equipment_standard' } : undefined,
+      );
     }
 
     this.scale.on('resize', this.onResize, this);
@@ -347,7 +348,7 @@ export class ShopScene extends Scene {
         processEquipmentOnShopEnd(getPlayerState().equipment);
         this.stockItems = null!;
         this.packs = null!;
-        this.scene.start('RoundSelect');
+        this.scene.start('RoundSelect', {});
       });
 
     this.rerollBtn = new Button(this, btnColX, cardCY1 + btnH / 2 + 8, `Reroll\n$${player.shopRerollCost}`, btnW, btnH);
@@ -370,7 +371,8 @@ export class ShopScene extends Scene {
       // Apply shop discount to displayed cost
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
       // Explorer's Guild: trail guides are free
-      const isTrailGuideFree = shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
+      const isTrailGuideFree =
+        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
       let displayDef = isTrailGuideFree
         ? { ...itemDef, cost: 0 }
         : shopDiscount > 0 && shopItem.type !== 'equipment'
@@ -417,7 +419,8 @@ export class ShopScene extends Scene {
         if (alreadyOwned) {
           card.markSold();
         } else {
-          const canAffordEquip = player.canAfford(discountedCost) &&
+          const canAffordEquip =
+            player.canAfford(discountedCost) &&
             (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
           card.setAffordable(canAffordEquip);
           this.setupShopCardClick(card, i);
@@ -460,7 +463,7 @@ export class ShopScene extends Scene {
     // Permit card (left side of box 2)
     const voucherW = BTN_COL_W - 16;
     const voucherH = CARD_H;
-    const voucherX = (contentL + BOX_PAD + voucherW / 2) + 50;
+    const voucherX = contentL + BOX_PAD + voucherW / 2 + 50;
     const voucherY = cardCY2;
 
     this.permitCard = null;
@@ -620,7 +623,7 @@ export class ShopScene extends Scene {
     if (card.sold) return;
     const player = getPlayerState();
     // Explorer's Guild: trail guides are free
-    const cost = (def.category === 'trail_guide' && player.trailGuidesFree) ? 0 : this.getDiscountedCost(def.cost);
+    const cost = def.category === 'trail_guide' && player.trailGuidesFree ? 0 : this.getDiscountedCost(def.cost);
     if (!player.canAfford(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
@@ -659,7 +662,7 @@ export class ShopScene extends Scene {
     if (card.sold) return;
     const player = getPlayerState();
     // Explorer's Guild: trail guides are free
-    const cost = (def.category === 'trail_guide' && player.trailGuidesFree) ? 0 : this.getDiscountedCost(def.cost);
+    const cost = def.category === 'trail_guide' && player.trailGuidesFree ? 0 : this.getDiscountedCost(def.cost);
     if (!player.trySpend(cost)) {
       this.showCardPopup(card, "Can't afford!");
       return;
@@ -929,17 +932,14 @@ export class ShopScene extends Scene {
       const shopItem = this.stockItems[i];
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
       // Explorer's Guild: trail guides are free
-      const isTrailGuideFree = shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
+      const isTrailGuideFree =
+        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
       let cost = isTrailGuideFree ? 0 : this.getDiscountedCost(itemDef.cost);
       if (shopItem.type === 'equipment') {
         const listPrice = getEquipmentListPrice(shopItem.def);
-        cost = getEquipmentPurchasePrice(
-          shopItem.def,
-          shopItem.preview.modifiers,
-          listPrice,
-          player.purchasedPermits,
-        );
-        const canAffordEquip = player.canAfford(cost) &&
+        cost = getEquipmentPurchasePrice(shopItem.def, shopItem.preview.modifiers, listPrice, player.purchasedPermits);
+        const canAffordEquip =
+          player.canAfford(cost) &&
           (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
         card.setAffordable(canAffordEquip);
       } else {
@@ -997,10 +997,7 @@ export class ShopScene extends Scene {
   }
 
   /** Apply tag modifications to freshly generated shop stock. */
-  private applyShopTagMods(
-    tagMods: ShopTagModifications,
-    player: ReturnType<typeof getPlayerState>,
-  ): void {
+  private applyShopTagMods(tagMods: ShopTagModifications, player: ReturnType<typeof getPlayerState>): void {
     applyInjectTagsToShopStock(this.stockItems, player);
 
     if (tagMods.freeShop) {
@@ -1121,7 +1118,10 @@ export class ShopScene extends Scene {
     let picked = categories[0].type;
     for (const cat of categories) {
       roll -= cat.weight;
-      if (roll <= 0) { picked = cat.type; break; }
+      if (roll <= 0) {
+        picked = cat.type;
+        break;
+      }
     }
     if (picked === 'equipment') {
       const [def] = generateShopStock(1, excludeIds);
@@ -1355,9 +1355,13 @@ export class ShopScene extends Scene {
 
   /** Add a small dev wrench icon at (x, y) that calls `onClick` when clicked */
   private addDevIcon(x: number, y: number, onClick: () => void): void {
-    const icon = this.add.text(x, y, '🔧', {
-      fontSize: '18px',
-    }).setOrigin(0.5).setDepth(300).setInteractive({ useHandCursor: true });
+    const icon = this.add
+      .text(x, y, '🔧', {
+        fontSize: '18px',
+      })
+      .setOrigin(0.5)
+      .setDepth(300)
+      .setInteractive({ useHandCursor: true });
     icon.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       pointer.event.stopPropagation();
       onClick();
@@ -1434,13 +1438,16 @@ export class ShopScene extends Scene {
   /** Show a brief dev-mode message at the center of the screen */
   private showDevMessage(msg: string): void {
     const { width, height } = this.scale;
-    const text = this.add.text(width / 2, height / 2, msg, {
-      fontFamily: 'sans-serif',
-      fontSize: '28px',
-      color: '#ff4444',
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(1000);
+    const text = this.add
+      .text(width / 2, height / 2, msg, {
+        fontFamily: 'sans-serif',
+        fontSize: '28px',
+        color: '#ff4444',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(1000);
     this.tweens.add({
       targets: text,
       y: text.y - 20,

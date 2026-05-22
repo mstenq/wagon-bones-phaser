@@ -1,6 +1,6 @@
 // ─── GameState (No Phaser imports) ───
 // Central state machine for a single round of Wagon Bones.
-// Owns the round lifecycle: DRAW → ROLL → SCORE → DAY_END → (repeat or ROUND_END).
+// Owns the round lifecycle: SELECT → ROLL → SCORE → DAY_END → (repeat or ROUND_END).
 // Emits callbacks so the rendering layer can react to state changes.
 
 import {

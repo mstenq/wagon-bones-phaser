@@ -88,7 +88,7 @@ export class ProfessionSelectScene extends Scene {
       const player = getPlayerState();
       player.applyProfession(this.selectedId);
       player.finalizeRunSetup();
-      this.scene.start('DifficultySelect');
+      this.scene.start('DifficultySelect', {});
     });
 
     // Build scrollable grid
@@ -177,12 +177,7 @@ export class ProfessionSelectScene extends Scene {
     this.scrollContainer.y = Phaser.Math.Clamp(newY, scrollAreaTop + scrollAreaH - this.contentHeight, scrollAreaTop);
   }
 
-  private createProfessionCard(
-    prof: ProfessionDef,
-    cx: number,
-    cy: number,
-    row: number,
-  ): Phaser.GameObjects.Container {
+  private createProfessionCard(prof: ProfessionDef, cx: number, cy: number, row: number): Phaser.GameObjects.Container {
     const container = this.add.container(cx, cy);
 
     // Card background

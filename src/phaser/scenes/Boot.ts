@@ -12,7 +12,7 @@ export class Boot extends Scene {
   create() {
     // Wait for web fonts to load before starting the game
     document.fonts.ready.then(() => {
-      this.scene.start('Preloader');
+      this.scene.start('Preloader', {});
     });
   }
 }

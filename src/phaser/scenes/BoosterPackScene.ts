@@ -39,11 +39,7 @@ import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
-import {
-  type BoosterPackSaveData,
-  deserializePackItem,
-  serializePackItem,
-} from '../../game/SaveLoad';
+import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import hands from '../../data/hands';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
@@ -116,13 +112,15 @@ export class BoosterPackScene extends Scene {
     super('BoosterPack');
   }
 
-  init(data: {
-    packDef?: PackDefinition;
-    packDefId?: string;
-    returnScene?: string;
-    free?: boolean;
-    restorePack?: BoosterPackSaveData;
-  } = {}) {
+  init(
+    data: {
+      packDef?: PackDefinition;
+      packDefId?: string;
+      returnScene?: string;
+      free?: boolean;
+      restorePack?: BoosterPackSaveData;
+    } = {},
+  ) {
     if (data.restorePack) {
       this.pendingRestorePack = data.restorePack;
       const def = getPackDefById(data.restorePack.packDefId);
@@ -982,11 +980,7 @@ export class BoosterPackScene extends Scene {
     } else if (item.category === 'equipment' && item.equipmentDef) {
       if (item.equipmentDef.aura?.id === 'ghost' || player.equipmentSlotsFree > 0) {
         player.equipment.push(
-          acquireEquipmentInstance(
-            item.equipmentDef,
-            player.purchasedPermits,
-            item.equipmentPreview?.modifiers,
-          ),
+          acquireEquipmentInstance(item.equipmentDef, player.purchasedPermits, item.equipmentPreview?.modifiers),
         );
       }
     } else if (item.category === 'dice' && item.die) {
@@ -1053,7 +1047,7 @@ export class BoosterPackScene extends Scene {
     if (this.picksRemaining <= 0) {
       this.clearDiceLineup();
       this.time.delayedCall(800, () => {
-        this.scene.start(this.returnScene);
+        this.scene.start(this.returnScene, {});
       });
     } else {
       this.refreshDiceLineup();
@@ -1196,7 +1190,7 @@ export class BoosterPackScene extends Scene {
   private onSkip(): void {
     const player = getPlayerState();
     processEquipmentOnPackSkipped(player.equipment);
-    this.scene.start(this.returnScene);
+    this.scene.start(this.returnScene, {});
   }
 
   private onResize(): void {

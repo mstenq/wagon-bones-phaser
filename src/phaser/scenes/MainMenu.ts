@@ -50,7 +50,7 @@ export class MainMenu extends Scene {
     new Button(this, width / 2, height * 0.57, 'Start Journey', 220, 52).onClick(() => {
       clearAutoSave();
       resetPlayerState();
-      this.scene.start('ProfessionSelect');
+      this.scene.start('ProfessionSelect', {});
     });
 
     EventBus.emit(Events.SCENE_READY, this);

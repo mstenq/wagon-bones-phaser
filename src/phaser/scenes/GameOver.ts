@@ -87,7 +87,7 @@ export class GameOver extends Scene {
     new Button(this, width / 2, height * 0.6, 'Play Again', 200, 48).onClick(() => {
       clearAutoSave();
       resetPlayerState();
-      this.scene.start('MainMenu');
+      this.scene.start('MainMenu', {});
     });
 
     EventBus.emit(Events.SCENE_READY, this);
