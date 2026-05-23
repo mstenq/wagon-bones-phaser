@@ -9,6 +9,7 @@ import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
 import { DiceSelectionConfig, drawDiceForSelection, applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
 import { Die } from '../../game/types';
+import { UI } from '../../game/Constants';
 
 interface DiceSpriteEntry {
   sprite: DiceSprite;
@@ -86,7 +87,7 @@ export class DiceSelectionScene extends Scene {
     this.updatePicksText();
 
     // Dice display
-    const DICE_SPACING = 84;
+    const DICE_SPACING = UI.DICE_SPACING;
     const totalWidth = (this.drawnDice.length - 1) * DICE_SPACING;
     const startX = width / 2 - totalWidth / 2;
     const diceY = height * 0.45;

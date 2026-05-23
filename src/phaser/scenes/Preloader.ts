@@ -9,6 +9,8 @@ import professionsData from '../../data/professions';
 import bosses from '../../data/bosses';
 import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
 import pipEnhancements from '../../data/pip_enhancements';
+import diceEnhancements from '../../data/dice_enhancements';
+import * as Phaser from 'phaser';
 import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
 import { initAudioPreferences } from '../../game/AudioPreferences';
 import { patchGameAudio } from '../GameAudio';
@@ -44,6 +46,12 @@ export class Preloader extends Scene {
     for (const sticker of pipEnhancements) {
       const filename = STICKER_FILE_MAP[sticker.id] ?? sticker.id;
       this.load.image(`sticker_${sticker.id}`, `assets/stickers/${filename}.png`);
+    }
+
+    // Load dice images
+    this.load.image('dice_standard', 'assets/dice/standard.png');
+    for (const enh of diceEnhancements) {
+      this.load.image(`dice_${enh.id}`, `assets/dice/${enh.id}.png`);
     }
 
     // Load pack images
@@ -148,6 +156,12 @@ export class Preloader extends Scene {
   create() {
     initAudioPreferences();
     patchGameAudio();
+
+    for (const key of ['dice_standard', ...diceEnhancements.map((e) => `dice_${e.id}`)]) {
+      if (this.textures.exists(key)) {
+        this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+      }
+    }
 
     hideLoadingOverlay();
 

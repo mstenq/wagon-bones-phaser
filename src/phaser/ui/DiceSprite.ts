@@ -17,58 +17,24 @@ const AURA_INFO = new Map(diceAuras.map((a) => [a.id, a]));
 const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
 
 const DICE_SIZE = DICE.SIZE;
-const BG_COLOR = DICE.BG_COLOR;
 const PIP_COLOR = DICE.PIP_COLOR;
 const SELECTED_STROKE = DICE.SELECTED_STROKE;
 const FORCED_STROKE = DICE.FORCED_STROKE;
-const DEFAULT_STROKE = DICE.DEFAULT_STROKE;
 const GRIMY_COLOR = DICE.GRIMY_COLOR;
 const TOOLTIP_PAD = 10;
 const TOOLTIP_BG_COLOR = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
 
-// Dodecahedron geometry constants
-const D12_INNER_RADIUS = 19; // Front face pentagon circumradius
-const D12_SHOULDER_RADIUS = 26; // Shoulder points (same angles as inner verts)
-const D12_TIP_RADIUS = 30; // Tip points (between inner verts)
-const D12_ROTATION = -90; // Starting angle so vertex points up
-
-/** Compute vertices of a regular pentagon */
-function pentagonVerts(cx: number, cy: number, radius: number, startAngleDeg: number): [number, number][] {
-  const verts: [number, number][] = [];
-  for (let i = 0; i < 5; i++) {
-    const angle = ((startAngleDeg + i * 72) * Math.PI) / 180;
-    verts.push([cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)]);
-  }
-  return verts;
-}
-
-/** Get the 10-point outer boundary (decagon) alternating tip and shoulder points */
-function dodecahedronOuterVerts(
-  cx: number,
-  cy: number,
-  rShoulder: number,
-  rTip: number,
-  startAngleDeg: number,
-): [number, number][] {
-  const verts: [number, number][] = [];
-  for (let i = 0; i < 5; i++) {
-    // Shoulder point (same angle as inner vertex)
-    const sAngle = ((startAngleDeg + i * 72) * Math.PI) / 180;
-    verts.push([cx + rShoulder * Math.cos(sAngle), cy + rShoulder * Math.sin(sAngle)]);
-    // Tip point (midpoint angle between inner vertices)
-    const tAngle = ((startAngleDeg + 36 + i * 72) * Math.PI) / 180;
-    verts.push([cx + rTip * Math.cos(tAngle), cy + rTip * Math.sin(tAngle)]);
-  }
-  return verts;
+function getDiceTextureKey(die: Die): string {
+  return die.enhancement ? `dice_${die.enhancement}` : 'dice_standard';
 }
 
 export class DiceSprite extends GameObjects.Container {
   static suppressTooltips = false;
-  private bg: GameObjects.Graphics;
+  private dieImage: GameObjects.Image;
+  private selectionGfx: GameObjects.Graphics;
   private valueText: GameObjects.Text;
   private stickerImage: GameObjects.Image | null = null;
-  private auraGfx: GameObjects.Graphics;
   private auraLabel: GameObjects.Text | null = null;
   private tooltip: GameObjects.Container | null = null;
   private auraTweens: Phaser.Tweens.Tween[] = [];
@@ -86,19 +52,19 @@ export class DiceSprite extends GameObjects.Container {
     this._dieData = dieData;
     this._showAuraLabel = options?.showAuraLabel ?? false;
 
-    this.auraGfx = scene.add.graphics();
-    this.bg = scene.add.graphics();
+    this.dieImage = scene.add.image(0, 0, 'dice_standard').setOrigin(0.5, 0.5);
+    this.selectionGfx = scene.add.graphics();
     this.valueText = scene.add
-      .text(0, 0, '', {
+      .text(0, DICE.VALUE_Y_OFFSET, '', {
         fontFamily: 'Arial Black',
-        fontSize: '18px',
+        fontSize: `${DICE.FONT_SIZE}px`,
         color: '#222222',
         stroke: '#00000033',
         strokeThickness: 1,
       })
       .setOrigin(0.5, 0.5);
     this.disabledOverlay = scene.add.graphics();
-    this.add([this.auraGfx, this.bg, this.valueText, this.disabledOverlay]);
+    this.add([this.dieImage, this.valueText, this.selectionGfx, this.disabledOverlay]);
 
     this.setSize(DICE_SIZE, DICE_SIZE);
     this.setInteractive(new Phaser.Geom.Rectangle(0, 0, DICE_SIZE, DICE_SIZE), Phaser.Geom.Rectangle.Contains);
@@ -150,7 +116,7 @@ export class DiceSprite extends GameObjects.Container {
   private drawDisabledOverlay(): void {
     this.disabledOverlay.clear();
     if (!this._disabled) return;
-    const r = D12_INNER_RADIUS * 0.85;
+    const r = DICE_SIZE / 2 - 2;
     this.disabledOverlay.lineStyle(4, 0xcc2222, 1);
     this.disabledOverlay.lineBetween(-r, -r, r, r);
     this.disabledOverlay.lineBetween(r, -r, -r, r);
@@ -162,111 +128,37 @@ export class DiceSprite extends GameObjects.Container {
   }
 
   private redraw(): void {
-    this.bg.clear();
-
     const isGrimy = this._dieData.isGrimy;
     const hasEnhancement = !!this._dieData.enhancement;
-    const bgColor = isGrimy
-      ? GRIMY_COLOR
-      : hasEnhancement
-        ? getEnhancementBgColor(this._dieData.enhancement!)
-        : BG_COLOR;
-    const strokeColor = this._forced ? FORCED_STROKE : this._selected ? SELECTED_STROKE : DEFAULT_STROKE;
-    const strokeWidth = this._selected || this._forced ? 3 : 1;
 
-    // Darker shade for side faces (angling away from viewer)
-    const sideColor = isGrimy
-      ? darkenColor(GRIMY_COLOR, 0.75)
-      : hasEnhancement
-        ? darkenColor(getEnhancementBgColor(this._dieData.enhancement!), 0.8)
-        : darkenColor(BG_COLOR, 0.82);
-    const edgeColor = isGrimy ? darkenColor(GRIMY_COLOR, 0.5) : darkenColor(bgColor, 0.6);
+    const key = getDiceTextureKey(this._dieData);
+    const textureKey = this.scene.textures.exists(key) ? key : 'dice_standard';
+    this.dieImage.setTexture(textureKey);
+    this.dieImage.setDisplaySize(DICE_SIZE, DICE_SIZE);
 
-    // Compute geometry
-    const inner = pentagonVerts(0, 0, D12_INNER_RADIUS, D12_ROTATION);
-    const shoulders = pentagonVerts(0, 0, D12_SHOULDER_RADIUS, D12_ROTATION);
-    const tips = pentagonVerts(0, 0, D12_TIP_RADIUS, D12_ROTATION + 36);
-    const outerDecagon = dodecahedronOuterVerts(0, 0, D12_SHOULDER_RADIUS, D12_TIP_RADIUS, D12_ROTATION);
-
-    // 1. Fill outer decagonal silhouette (die body)
-    this.bg.fillStyle(sideColor, 1);
-    this.bg.beginPath();
-    this.bg.moveTo(outerDecagon[0][0], outerDecagon[0][1]);
-    for (let i = 1; i < 10; i++) {
-      this.bg.lineTo(outerDecagon[i][0], outerDecagon[i][1]);
-    }
-    this.bg.closePath();
-    this.bg.fillPath();
-
-    // 2. Draw 5 side face pentagons with subtle shading variation
-    for (let k = 0; k < 5; k++) {
-      const next = (k + 1) % 5;
-      // Side face k: inner[k], shoulders[k], tips[k], shoulders[next], inner[next]
-      this.bg.fillStyle(sideColor, 1);
-      this.bg.beginPath();
-      this.bg.moveTo(inner[k][0], inner[k][1]);
-      this.bg.lineTo(shoulders[k][0], shoulders[k][1]);
-      this.bg.lineTo(tips[k][0], tips[k][1]);
-      this.bg.lineTo(shoulders[next][0], shoulders[next][1]);
-      this.bg.lineTo(inner[next][0], inner[next][1]);
-      this.bg.closePath();
-      this.bg.fillPath();
-
-      // Edge lines for side faces
-      this.bg.lineStyle(1, edgeColor, 0.6);
-      this.bg.beginPath();
-      this.bg.moveTo(inner[k][0], inner[k][1]);
-      this.bg.lineTo(shoulders[k][0], shoulders[k][1]);
-      this.bg.lineTo(tips[k][0], tips[k][1]);
-      this.bg.lineTo(shoulders[next][0], shoulders[next][1]);
-      this.bg.lineTo(inner[next][0], inner[next][1]);
-      this.bg.closePath();
-      this.bg.strokePath();
+    if (isGrimy) {
+      this.dieImage.setTint(GRIMY_COLOR);
+    } else {
+      this.dieImage.clearTint();
     }
 
-    // 3. Fill center pentagon (front face)
-    this.bg.fillStyle(bgColor, 1);
-    this.bg.beginPath();
-    this.bg.moveTo(inner[0][0], inner[0][1]);
-    for (let i = 1; i < 5; i++) {
-      this.bg.lineTo(inner[i][0], inner[i][1]);
-    }
-    this.bg.closePath();
-    this.bg.fillPath();
-
-    // Inner pentagon edge
-    this.bg.lineStyle(1, edgeColor, 0.8);
-    this.bg.beginPath();
-    this.bg.moveTo(inner[0][0], inner[0][1]);
-    for (let i = 1; i < 5; i++) {
-      this.bg.lineTo(inner[i][0], inner[i][1]);
-    }
-    this.bg.closePath();
-    this.bg.strokePath();
-
-    // 4. Outer stroke (selection indicator)
-    this.bg.lineStyle(strokeWidth, strokeColor, 1);
-    this.bg.beginPath();
-    this.bg.moveTo(outerDecagon[0][0], outerDecagon[0][1]);
-    for (let i = 1; i < 10; i++) {
-      this.bg.lineTo(outerDecagon[i][0], outerDecagon[i][1]);
-    }
-    this.bg.closePath();
-    this.bg.strokePath();
-
+    this.drawSelectionStroke();
 
     // Number text on front face (only if not grimy)
     if (!isGrimy && this._dieData.value > 0) {
-      const textColor = hasEnhancement ? getEnhancementPipColor(this._dieData.enhancement!) : PIP_COLOR;
       const enhInfo = hasEnhancement ? ENHANCEMENT_INFO.get(this._dieData.enhancement!) : null;
       const fontFamily = enhInfo?.fontFamily ?? 'Arial Black';
+      const textColor = enhInfo?.color
+        ? `#${enhInfo.color}`
+        : `#${PIP_COLOR.toString(16).padStart(6, '0')}`;
       this.valueText.setStyle({
         fontFamily,
-        fontSize: this._dieData.value >= 10 ? '21px' : '24px',
-        color: '#' + textColor.toString(16).padStart(6, '0'),
-        stroke: '#00000033',
-        strokeThickness: 1,
+        fontSize: this._dieData.value >= 10 ? `${DICE.FONT_SIZE_TWO_DIGIT}px` : `${DICE.FONT_SIZE}px`,
+        color: textColor,
+        stroke: enhInfo?.strokeColor ? `#${enhInfo.strokeColor}` : '#00000000',
+        strokeThickness: enhInfo?.strokeWidth ?? 0,
       });
+      this.valueText.setPosition(0, DICE.VALUE_Y_OFFSET);
       this.valueText.setText(`${this._dieData.value}`);
       this.valueText.setVisible(true);
     } else {
@@ -281,19 +173,29 @@ export class DiceSprite extends GameObjects.Container {
     if (!isGrimy && this._dieData.sticker) {
       const textureKey = `sticker_${this._dieData.sticker}`;
       if (this.scene.textures.exists(textureKey)) {
-        this.stickerImage = this.scene.add.image(10, 10, textureKey).setOrigin(0.5, 0.5);
-        // Scale down to fit on the die face (~18px target)
+        this.stickerImage = this.scene.add.image(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET, textureKey).setOrigin(0.5, 0.5);
+        // Scale down to fit on the die face
         const maxDim = Math.max(this.stickerImage.width, this.stickerImage.height);
-        const targetSize = 18;
+        const targetSize = DICE.STICKER_SIZE;
         this.stickerImage.setScale(targetSize / maxDim);
         this.add(this.stickerImage);
       }
     }
   }
 
+  private drawSelectionStroke(): void {
+    this.selectionGfx.clear();
+    if (!this._selected && !this._forced) return;
+
+    const strokeColor = this._forced ? FORCED_STROKE : SELECTED_STROKE;
+    const strokeWidth = 3;
+    const radius = DICE_SIZE / 2 - strokeWidth / 2;
+    this.selectionGfx.lineStyle(strokeWidth, strokeColor, 1);
+    this.selectionGfx.strokeCircle(0, 0, radius);
+  }
+
   private drawAuraFX(): void {
     // Clean up previous
-    this.auraGfx.clear();
     if (this.auraLabel) {
       this.auraLabel.destroy();
       this.auraLabel = null;
@@ -314,8 +216,8 @@ export class DiceSprite extends GameObjects.Container {
     const color = getAuraPrimary(aura);
     const info = AURA_INFO.get(aura);
 
-    // Phaser 4 glow filter on the die background
-    const glowResult = applyAuraGlow(this.scene, this.bg as any, aura, {
+    // Phaser 4 glow filter on the die image
+    const glowResult = applyAuraGlow(this.scene, this.dieImage as any, aura, {
       strength: 6,
       pulseMin: 0.4,
       pulseMax: 1,
@@ -447,61 +349,4 @@ export class DiceSprite extends GameObjects.Container {
     }
     super.destroy(fromScene);
   }
-}
-
-function getEnhancementColor(e: string): number {
-  const colors: Record<string, number> = {
-    bone: 0x8e8467,
-    lucky: 0x0e7512,
-    wooden: 0x6e5107,
-    steel: 0x575757,
-    gold: 0x897403,
-    loaded: 0x950a0a,
-    diamond: 0x00bcd4,
-    stone: 0x027685,
-  };
-  return colors[e] ?? 0xffffff;
-}
-
-/** Full background color for enhanced dice — tinted but visible */
-function getEnhancementBgColor(e: string): number {
-  const colors: Record<string, number> = {
-    bone: 0xd4c8b0, // warm cream/bone
-    lucky: 0xc8f0c8, // light green
-    wooden: 0xc4a055, // wood brown
-    steel: 0xa8a8b0, // steel grey
-    gold: 0xffe870, // bright gold
-    loaded: 0xf0a0a0, // soft red
-    diamond: 0xa0e8f0, // light cyan
-    stone: 0x888888, // dark grey
-  };
-  return colors[e] ?? BG_COLOR;
-}
-
-/** Pip color that contrasts with the enhancement background */
-function getEnhancementPipColor(e: string): number {
-  const colors: Record<string, number> = {
-    bone: 0x5a4a2a, // dark brown
-    lucky: 0x1a5a1a, // dark green
-    wooden: 0x3a2a00, // dark brown
-    steel: 0x2a2a3a, // dark blue-grey
-    gold: 0x8a6a00, // dark gold
-    loaded: 0x6a0000, // dark red
-    diamond: 0x004a5a, // dark teal
-    stone: 0x333333, // very dark grey
-  };
-  return colors[e] ?? PIP_COLOR;
-}
-
-/** Accent bar color (slightly darker than bg) */
-function getEnhancementLabelColor(e: string): number {
-  return getEnhancementColor(e);
-}
-
-/** Darken a hex color by a factor (0=black, 1=unchanged) */
-function darkenColor(color: number, factor: number): number {
-  const r = Math.floor(((color >> 16) & 0xff) * factor);
-  const g = Math.floor(((color >> 8) & 0xff) * factor);
-  const b = Math.floor((color & 0xff) * factor);
-  return (r << 16) | (g << 8) | b;
 }

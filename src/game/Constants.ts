@@ -294,7 +294,7 @@ export const UI = {
   // Game scene (main content area — right of sidebar)
   HAND_Y_RATIO: 0.72,
   ROLL_Y_RATIO: 0.5,
-  DICE_SPACING: 80,
+  DICE_SPACING: 96,
   DICE_ARC_HEIGHT: 12, // max Y lift at center of arc (px)
   DICE_ARC_ROTATION: 0.04, // max rotation at edges (radians, ~2.3°)
   FELT_PADDING: 12,
@@ -320,8 +320,14 @@ export const TAG_STACK = {
 
 // ─── Dice ───
 export const DICE = {
-  SIZE: 64,
+  SIZE: 80,
   RADIUS: 10,
+  /** Vertical offset for pip value text on the front face (negative = up) */
+  VALUE_Y_OFFSET: -3,
+  FONT_SIZE: 30,
+  FONT_SIZE_TWO_DIGIT: 26,
+  STICKER_OFFSET: 12,
+  STICKER_SIZE: 22,
   BG_COLOR: 0xf5f0e1,
   PIP_COLOR: 0x222222,
   SELECTED_STROKE: 0xffcc00,

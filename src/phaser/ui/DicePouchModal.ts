@@ -5,7 +5,7 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, UI, DICE } from '../../game/Constants';
 import { getPlayerState } from '../../game/PlayerState';
 import { Die } from '../../game/types';
 import { DiceSprite } from './DiceSprite';
@@ -153,6 +153,8 @@ export class DicePouchModal extends GameObjects.Container {
     const { panelX, panelY, panelW, panelH } = this;
     const startY = panelY + 80;
     const availH = panelH - 120;
+    const summaryY = startY + 12;
+    const gridStartY = summaryY + 22 + DICE.SIZE / 2;
 
     let dice = player.dice;
     if (this.filterMode === 'available') {
@@ -179,7 +181,8 @@ export class DicePouchModal extends GameObjects.Container {
     const markSpent = this.filterMode === 'all';
     const groups = this.groupDice(dice, markSpent);
 
-    const spacing = 88;
+    const spacing = 96;
+    const rowStep = DICE.SIZE + 28;
     const cols = Math.max(1, Math.floor((panelW - 40) / spacing));
     const totalGroups = groups.length;
     const totalW = (Math.min(totalGroups, cols) - 1) * spacing;
@@ -190,7 +193,7 @@ export class DicePouchModal extends GameObjects.Container {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = gridStartX + col * spacing;
-      const y = startY + 32 + row * (spacing + 10);
+      const y = gridStartY + row * rowStep;
 
       const sprite = new DiceSprite(this.scene, x, y, group.representative);
 
@@ -203,7 +206,7 @@ export class DicePouchModal extends GameObjects.Container {
       this.diceSprites.push(sprite);
 
       const countLabel = this.scene.add
-        .text(x, y + 36, getDiceGroupDisplayLabel(group.representative, group.dice.length), {
+        .text(x, y + DICE.SIZE / 2 + 12, getDiceGroupDisplayLabel(group.representative, group.dice.length), {
           fontFamily: FONTS.PRIMARY,
           fontSize: '12px',
           color: group.isSpent ? TEXT_COLORS.DISABLED : TEXT_COLORS.SECONDARY,
@@ -220,7 +223,7 @@ export class DicePouchModal extends GameObjects.Container {
       summaryParts.push(`${dice.length} dice`);
     }
     const countText = this.scene.add
-      .text(panelX + panelW / 2, startY + 8, summaryParts.join(''), {
+      .text(panelX + panelW / 2, summaryY, summaryParts.join(''), {
         fontFamily: FONTS.PRIMARY,
         fontSize: '12px',
         color: TEXT_COLORS.MUTED,
