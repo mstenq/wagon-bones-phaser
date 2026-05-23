@@ -43,7 +43,7 @@ import {
 import type { TrailEventDef } from '../data/trail_events';
 import trailGuidesData from '../data/trail_guides';
 import { getProfessionById, type ProfessionDef } from '../data/professions';
-import bosses from '../data/bosses';
+import bosses, { getBossDistanceMultiplier } from '../data/bosses';
 import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
 import { getTrailTagById } from '../data/trail_tags';
 import { resetRunRng, rngPick } from './RunRng';
@@ -72,6 +72,7 @@ export function computeTargetMiles(
   round: number,
   permitScoreReduction: number,
   difficulty: DifficultyLevel,
+  bossForLeg?: BossDef | null,
 ): number {
   const effectiveLegIndex = Math.max(0, leg - 1 - permitScoreReduction);
 
@@ -82,8 +83,17 @@ export function computeTargetMiles(
     targets = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH;
   }
 
-  const base = targets[effectiveLegIndex] ?? GAMEPLAY.TARGET_MILES;
-  const multiplier = GAMEPLAY.ROUND_MULTIPLIERS[round - 1] ?? 1;
+  const base = targets[effectiveLegIndex];
+  if (base === undefined) {
+    throw new Error(`No target miles for leg ${leg} (effective index ${effectiveLegIndex})`);
+  }
+  let multiplier = GAMEPLAY.ROUND_MULTIPLIERS[round - 1] ?? 1;
+  if (round === GAMEPLAY.ROUNDS_PER_LEG && bossForLeg) {
+    const bossMultiplier = getBossDistanceMultiplier(bossForLeg);
+    if (bossMultiplier !== null) {
+      multiplier = bossMultiplier;
+    }
+  }
   return Math.ceil(base * multiplier);
 }
 
@@ -690,7 +700,8 @@ export class PlayerState {
 
   /** Target miles for the current round (base × round multiplier, reduced by permit shortcuts) */
   get targetMiles(): number {
-    return computeTargetMiles(this.leg, this.round, this.permitScoreReduction, this.difficulty);
+    const boss = this.round === GAMEPLAY.ROUNDS_PER_LEG ? this.getBossForLeg(this.leg) : null;
+    return computeTargetMiles(this.leg, this.round, this.permitScoreReduction, this.difficulty, boss);
   }
 
   /** Calculate the payout breakdown for winning the current round */

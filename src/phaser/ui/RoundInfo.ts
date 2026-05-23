@@ -41,7 +41,8 @@ export function targetMilesForRound(
   permitScoreReduction: number,
   difficulty: DifficultyLevel = 1,
 ): number {
-  return computeTargetMiles(leg, round, permitScoreReduction, difficulty);
+  const boss = round === GAMEPLAY.ROUNDS_PER_LEG ? getPlayerState().getBossForLeg(leg) : null;
+  return computeTargetMiles(leg, round, permitScoreReduction, difficulty, boss);
 }
 
 export function getRoundColumnState(

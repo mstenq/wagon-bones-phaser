@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'bun:test';
 import { HandType, PhaseState } from '../types';
-import { setupGame, calculateTestScore, die, diceFromValues, item } from './testHelpers';
+import { GAMEPLAY } from '../Constants';
+import { setupGame, calculateTestScore, die, diceFromValues, item, setTestDifficulty } from './testHelpers';
 import {
   getBossRoundConfigMods,
   initBossRoundState,
@@ -20,18 +21,28 @@ import {
 import { detectBestHand } from '../DiceSystem';
 
 describe('Boss round config', () => {
-  test('Marathon: 4x target miles', () => {
-    const { game, player } = setupGame({ bossId: 'the_marathon' });
-    const baseTarget = player.targetMiles;
-    game.startRound({ targetMiles: baseTarget });
-    expect(game.config.targetMiles).toBe(Math.ceil(baseTarget * 4));
+  test('Marathon: 4x leg base (replaces round 3 2×, not stacked)', () => {
+    const { game, player } = setupGame({ bossId: 'the_marathon', leg: 2 });
+    setTestDifficulty(3);
+    const legBase = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[1];
+    expect(player.targetMiles).toBe(legBase * 4);
+    game.startRound({ targetMiles: player.targetMiles });
+    expect(game.config.targetMiles).toBe(legBase * 4);
   });
 
-  test('Finish Line: 6x target miles', () => {
+  test('Finish Line: 6x leg base on final leg', () => {
     const { game, player } = setupGame({ bossId: 'the_finish_line', leg: 8 });
-    const baseTarget = player.targetMiles;
-    game.startRound({ targetMiles: baseTarget });
-    expect(game.config.targetMiles).toBe(Math.ceil(baseTarget * 6));
+    const legBase = GAMEPLAY.TARGET_MILES_BY_LEG[7];
+    expect(player.targetMiles).toBe(legBase * 6);
+    game.startRound({ targetMiles: player.targetMiles });
+    expect(game.config.targetMiles).toBe(legBase * 6);
+  });
+
+  test('Standoff: 1x leg base on showdown (not 2×)', () => {
+    const { player } = setupGame({ bossId: 'the_standoff', leg: 2 });
+    setTestDifficulty(3);
+    const legBase = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[1];
+    expect(player.targetMiles).toBe(legBase);
   });
 
   test('Chain Gang: 0 rerolls', () => {

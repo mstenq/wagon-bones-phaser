@@ -31,6 +31,14 @@ export interface BossDef {
   minimumLeg?: number;
 }
 
+/** Distance multiplier for bosses that override round 3's default 2× (not stacked on top of it). */
+export function getBossDistanceMultiplier(boss: BossDef): number | null {
+  if (boss.effectType === 'DISTANCE_MULTIPLIER' || boss.effectType === 'SET_HANDS') {
+    return (boss.effectParams.multiplier as number) ?? 1;
+  }
+  return null;
+}
+
 // ─── Boss Definitions ───
 
 const bosses: BossDef[] = [

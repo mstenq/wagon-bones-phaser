@@ -93,14 +93,10 @@ export function getBossRoundConfigMods(): BossRoundConfigMods {
   const mods: BossRoundConfigMods = { ...NO_MODS };
 
   switch (boss.effectType) {
-    case 'DISTANCE_MULTIPLIER':
-      mods.targetMilesMultiplier = (boss.effectParams.multiplier as number) ?? 1;
-      break;
     case 'MODIFY_REROLLS':
       mods.setMaxRerolls = 0;
       break;
     case 'SET_HANDS':
-      mods.targetMilesMultiplier = (boss.effectParams.multiplier as number) ?? 1;
       mods.setMaxDays = (boss.effectParams.days as number) ?? 1;
       break;
   }
