@@ -371,6 +371,16 @@ export const ANIM = {
   CARD_DRAG_SWING_DAMPING: 0.75, // velocity damping per frame (lower = more responsive)
   CARD_DRAG_SETTLE_DURATION: 500, // ms to settle back after drop
   CARD_DRAG_LIFT_Y: -6, // Y offset while dragging (card lifts up)
+
+  /** Equipment fire-destruction VFX (Haunted Totem, Dynamite, Nitro, …) */
+  EQUIP_FIRE_DESTROY_BUILDUP_MS: 600,
+  EQUIP_FIRE_DESTROY_SLICE_MS: 400,
+  EQUIP_FIRE_DESTROY_CLEANUP_MS: 500,
+  EQUIP_FIRE_DESTROY_SOUND_FADE_MS: 300,
+  /** Pause after fire audio fades before chaining the next destruction or day-end step */
+  EQUIP_FIRE_DESTROY_COMPLETE_HOLD_MS: 400,
+  /** Extra pause after destruction VFX before leaving GameScene on round win/loss */
+  EQUIP_FIRE_DESTROY_ROUND_END_HOLD_MS: 600,
 };
 
 export const TRAIL_EVENT = {

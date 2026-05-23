@@ -111,6 +111,9 @@ export class GameScene extends Scene {
   // Animation lock
   private animating: boolean = false;
 
+  /** Ambient fire sounds from equipment destruction — stopped on scene shutdown */
+  private activeEquipDestroySounds: Phaser.Sound.BaseSound[] = [];
+
   // Drag-to-reorder (play area)
   private draggingSprite: DiceSprite | null = null;
   private wasDragging: boolean = false;
@@ -195,6 +198,7 @@ export class GameScene extends Scene {
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
       this.destroyLoadedDicePicker();
+      this.stopEquipDestroySounds();
       this.gameState = null!;
     });
 
@@ -899,12 +903,21 @@ export class GameScene extends Scene {
     if (deferredDestroyIndices.length > 0) {
       this.animating = true;
       this.animateEndOfRoundSelfDestructs(deferredDestroyIndices, () => {
-        this.animating = false;
         this.equipBar.refresh();
         for (const name of destroyedEquipment) {
           this.showFloatingText(`💥 ${name} destroyed!`, 0xff4444);
         }
-        afterDestroyedEquipmentFeedback();
+        const proceed = () => {
+          this.animating = false;
+          afterDestroyedEquipmentFeedback();
+        };
+        const holdMs =
+          outcome === 'won' || outcome === 'lost' ? ANIM.EQUIP_FIRE_DESTROY_ROUND_END_HOLD_MS : 0;
+        if (holdMs > 0) {
+          this.time.delayedCall(holdMs, proceed);
+        } else {
+          proceed();
+        }
       });
       return;
     }
@@ -1648,6 +1661,22 @@ export class GameScene extends Scene {
     this.sound.play('sfx_foil1', { volume: 0.4 });
   }
 
+  private trackEquipDestroySound(sound: Phaser.Sound.BaseSound): void {
+    this.activeEquipDestroySounds.push(sound);
+    sound.once('destroy', () => {
+      const i = this.activeEquipDestroySounds.indexOf(sound);
+      if (i >= 0) this.activeEquipDestroySounds.splice(i, 1);
+    });
+  }
+
+  private stopEquipDestroySounds(): void {
+    for (const sound of this.activeEquipDestroySounds) {
+      sound.stop();
+      sound.destroy();
+    }
+    this.activeEquipDestroySounds = [];
+  }
+
   /** Animate an equipment card being destroyed by fire (used by Funeral Pyre, Haunted Totem, etc.) */
   private animateEquipmentFireDestruction(sourceIndex: number, victimIndex: number, onComplete?: () => void): void {
     ensureAuraTextures(this);
@@ -1669,6 +1698,7 @@ export class GameScene extends Scene {
 
     // Phase 1: Fire aura glow on victim + ambient fire sound
     const fireSound = this.sound.add('sfx_ambient_fire', { volume: 1.5 });
+    this.trackEquipDestroySound(fireSound);
     fireSound.play();
 
     // Create fire particles on the victim card (in scene space)
@@ -1704,8 +1734,28 @@ export class GameScene extends Scene {
       },
     });
 
+    const finishDestruction = () => {
+      const player = getPlayerState();
+      player.equipment.splice(victimIndex, 1);
+      this.equipBar.refresh();
+      onComplete?.();
+    };
+
+    const fadeOutFireSound = (then: () => void) => {
+      this.tweens.add({
+        targets: fireSound,
+        volume: 0,
+        duration: ANIM.EQUIP_FIRE_DESTROY_SOUND_FADE_MS,
+        onComplete: () => {
+          fireSound.stop();
+          fireSound.destroy();
+          then();
+        },
+      });
+    };
+
     // Phase 2: After brief fire buildup, play slice and destroy
-    this.time.delayedCall(600, () => {
+    this.time.delayedCall(ANIM.EQUIP_FIRE_DESTROY_BUILDUP_MS, () => {
       this.sound.play('sfx_slice1', { volume: 0.7 });
 
       // Flash victim card red
@@ -1715,7 +1765,7 @@ export class GameScene extends Scene {
         scaleX: 0.3,
         scaleY: 0.3,
         rotation: victimCard.rotation + 0.3,
-        duration: 400,
+        duration: ANIM.EQUIP_FIRE_DESTROY_SLICE_MS,
         ease: 'Power2',
       });
 
@@ -1734,26 +1784,17 @@ export class GameScene extends Scene {
       sparkEmitter.setDepth(500);
       sparkEmitter.explode(20);
 
-      // Phase 3: Cleanup and actually remove equipment
-      this.time.delayedCall(500, () => {
+      // Phase 3: Stop particles, fade fire audio, then remove equipment
+      this.time.delayedCall(ANIM.EQUIP_FIRE_DESTROY_CLEANUP_MS, () => {
         fireEmitter.stop();
-        // Fade out the ambient fire sound
-        this.tweens.add({
-          targets: fireSound,
-          volume: 0,
-          duration: 300,
-          onComplete: () => fireSound.destroy(),
-        });
         this.time.delayedCall(1000, () => {
           fireEmitter.destroy();
           sparkEmitter.destroy();
         });
 
-        // Actually remove the equipment
-        const player = getPlayerState();
-        player.equipment.splice(victimIndex, 1);
-        this.equipBar.refresh();
-        onComplete?.();
+        fadeOutFireSound(() => {
+          this.time.delayedCall(ANIM.EQUIP_FIRE_DESTROY_COMPLETE_HOLD_MS, finishDestruction);
+        });
       });
     });
   }
