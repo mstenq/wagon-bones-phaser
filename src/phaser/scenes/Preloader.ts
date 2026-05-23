@@ -13,6 +13,7 @@ import diceEnhancements from '../../data/dice_enhancements';
 import * as Phaser from 'phaser';
 import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
 import { initAudioPreferences } from '../../game/AudioPreferences';
+import { initGameplayPreferences } from '../../game/GameplayPreferences';
 import { patchGameAudio } from '../GameAudio';
 
 // Map sticker IDs to their PNG filenames (when they differ)
@@ -155,6 +156,7 @@ export class Preloader extends Scene {
 
   create() {
     initAudioPreferences();
+    initGameplayPreferences();
     patchGameAudio();
 
     for (const key of ['dice_standard', ...diceEnhancements.map((e) => `dice_${e.id}`)]) {

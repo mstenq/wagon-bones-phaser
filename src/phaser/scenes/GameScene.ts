@@ -47,6 +47,7 @@ import { rngShuffle } from '../../game/RunRng';
 import { getLoadedDiceMultiplier } from '../../game/equipmentUtils';
 import { isDiceScoringDisabledByBoss, isDiceLockedByBoss, revealLandSlideHints } from '../../game/BossEffectsSystem';
 import { isDevMode } from '../../game/DevMode';
+import { getGameplayPreferences } from '../../game/GameplayPreferences';
 
 const DICE_SPACING = UI.DICE_SPACING;
 
@@ -203,7 +204,7 @@ export class GameScene extends Scene {
     });
 
     this.setupDragHandlers();
-    this.buildLayout();
+    this.buildLayout(false);
 
     // Animate round-start equipment destructions (Funeral Pyre, Haunted Totem, etc.)
     const pyrePlayer = getPlayerState();
@@ -231,7 +232,7 @@ export class GameScene extends Scene {
     }
   }
 
-  private buildLayout(): void {
+  private buildLayout(isRelayout: boolean = false): void {
     const { height } = this.scale;
 
     const layout = createLayout(this, { bgKey: 'bg_1' });
@@ -322,15 +323,15 @@ export class GameScene extends Scene {
     this.hideAllButtons();
 
     // Re-enter current phase
-    this.enterCurrentPhase();
+    this.enterCurrentPhase(isRelayout);
 
     EventBus.emit(Events.SCENE_READY, this);
   }
 
-  private enterCurrentPhase(): void {
+  private enterCurrentPhase(isRelayout: boolean = false): void {
     const phase = this.gameState.state.phase;
     if (phase === 'SELECT') {
-      this.enterDrawPhase();
+      this.enterDrawPhase(false, null, { autoRoll: !isRelayout });
     } else if (phase === 'ROLL') {
       this.enterRollPhaseLayout();
     } else if (phase === 'SCORE' || phase === 'DAY_END') {
@@ -340,7 +341,7 @@ export class GameScene extends Scene {
         this.onContinue();
       }
     } else {
-      this.enterDrawPhase();
+      this.enterDrawPhase(false, null, { autoRoll: !isRelayout });
     }
     this.updateHUD();
   }
@@ -352,7 +353,7 @@ export class GameScene extends Scene {
     this.availableStacks = [];
     this.playAreaSprites = [];
     this.children.removeAll(true);
-    this.buildLayout();
+    this.buildLayout(true);
   }
 
   // ─── Phase Rendering ───
@@ -360,19 +361,21 @@ export class GameScene extends Scene {
   private enterDrawPhase(
     animateFromPouch: boolean = false,
     carryoverPositions: Map<string, { x: number; y: number; rotation: number }> | null = null,
+    options: { autoRoll?: boolean } = {},
   ): void {
     this.clearSprites();
     this.selectedHandIds = new Set(this.gameState.state.hand.map((die) => die.id));
     this.hideAllButtons();
     this.sidebar.clearHandDisplay();
     this.sidebar.updateData({ milesBase: 0, mult: 0 });
-    this.enterDrawPhaseLayout(animateFromPouch, carryoverPositions);
+    this.enterDrawPhaseLayout(animateFromPouch, carryoverPositions, options);
   }
 
   /** Show the actual SELECT phase UI (called after refresh prompt is resolved or not needed) */
   private enterDrawPhaseLayout(
     animateFromPouch: boolean = false,
     carryoverPositions: Map<string, { x: number; y: number; rotation: number }> | null = null,
+    options: { autoRoll?: boolean } = {},
   ): void {
     const { height } = this.scale;
     this.playAreaY = height * UI.ROLL_Y_RATIO;
@@ -391,6 +394,10 @@ export class GameScene extends Scene {
       this.animating = true;
       let completed = 0;
       let newDiceIndex = 0;
+      const onPouchAnimDone = () => {
+        this.animating = false;
+        if (options.autoRoll) this.maybeAutoRollFirstHand();
+      };
       for (let i = 0; i < this.playAreaSprites.length; i++) {
         const sprite = this.playAreaSprites[i];
         const finalX = sprite.x;
@@ -427,7 +434,7 @@ export class GameScene extends Scene {
           onComplete: () => {
             completed++;
             if (completed >= this.playAreaSprites.length) {
-              this.animating = false;
+              onPouchAnimDone();
             }
           },
         });
@@ -448,6 +455,19 @@ export class GameScene extends Scene {
     this.instructionText.setText(`Roll ${hand.length} drawn dice (${spent} spent)`);
 
     this.updateHUD();
+
+    if (options.autoRoll && !animateFromPouch) {
+      this.time.delayedCall(0, () => this.maybeAutoRollFirstHand());
+    }
+  }
+
+  /** Auto-roll when the preference is on and the player is in the pre-roll SELECT phase. */
+  private maybeAutoRollFirstHand(): void {
+    if (!getGameplayPreferences().autoRollFirstHand) return;
+    if (this.animating) return;
+    if (this.gameState.state.phase !== 'SELECT') return;
+    if (this.gameState.state.hand.length === 0) return;
+    this.onReadyToRoll();
   }
 
   private enterRollPhase(): void {
@@ -882,7 +902,7 @@ export class GameScene extends Scene {
       for (const sprite of this.rollSprites) {
         carryover.set(sprite.dieData.id, { x: sprite.x, y: sprite.y, rotation: sprite.rotation });
       }
-      this.enterDrawPhase(true, carryover);
+      this.enterDrawPhase(true, carryover, { autoRoll: true });
     };
 
     if (deferredDestroyIndices.length > 0) {

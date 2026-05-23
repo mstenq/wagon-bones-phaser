@@ -1,7 +1,7 @@
 // ─── Audio preferences (No Phaser imports) ───
 // Persisted separately from auto-save / run state.
 
-import { GAMEPLAY } from './Constants';
+import { patchStoredUserPreferences, readStoredUserPreferences } from './PreferencesStorage';
 
 export interface AudioPreferences {
   musicEnabled: boolean;
@@ -16,10 +16,6 @@ export const DEFAULT_AUDIO_PREFERENCES: AudioPreferences = {
   sfxEnabled: true,
   sfxVolume: 1,
 };
-
-interface StoredPreferences {
-  audio?: Partial<AudioPreferences>;
-}
 
 let cached: AudioPreferences | null = null;
 
@@ -40,9 +36,7 @@ function normalizeAudio(partial?: Partial<AudioPreferences>): AudioPreferences {
 
 function readFromStorage(): AudioPreferences {
   try {
-    const raw = localStorage.getItem(GAMEPLAY.PREFERENCES_STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_AUDIO_PREFERENCES };
-    const parsed = JSON.parse(raw) as StoredPreferences;
+    const parsed = readStoredUserPreferences();
     return normalizeAudio(parsed.audio);
   } catch {
     return { ...DEFAULT_AUDIO_PREFERENCES };
@@ -50,12 +44,7 @@ function readFromStorage(): AudioPreferences {
 }
 
 function writeToStorage(prefs: AudioPreferences): void {
-  try {
-    const payload: StoredPreferences = { audio: prefs };
-    localStorage.setItem(GAMEPLAY.PREFERENCES_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // Quota exceeded or private browsing — ignore
-  }
+  patchStoredUserPreferences({ audio: prefs });
 }
 
 /** Load preferences from localStorage into memory (idempotent). */
