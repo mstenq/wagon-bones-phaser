@@ -351,7 +351,7 @@ function generateEquipmentPackContents(count: number): PackItem[] {
   return defs.map((def) => ({
     id: nextRunId(def.id),
     name: def.name,
-    description: def.description,
+    description: def.display(null, player).tooltip.map((line) => line.join(" ")).join('\n'),
     category: 'equipment' as PackCategory,
     equipmentDef: def,
     equipmentPreview: rollShopEquipmentPreview(def, player.purchasedPermits),
