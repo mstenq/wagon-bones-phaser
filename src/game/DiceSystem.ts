@@ -654,6 +654,8 @@ export function scoreHand(
     const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
     if (idx < 0) continue;
 
+    animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
+
     const wasDiamond = player.dice[idx].enhancement === 'diamond';
     const wasEnhanced = player.dice[idx].enhancement !== null;
     player.dice.splice(idx, 1);
@@ -671,6 +673,7 @@ export function scoreHand(
       if (rngFloat('dice') >= destroyChance) continue;
       const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
       if (idx < 0) continue;
+      animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
       const wasEnhanced = player.dice[idx].enhancement !== null;
       player.dice.splice(idx, 1);
       processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
@@ -694,6 +697,8 @@ export function scoreHand(
 
       const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
       if (idx < 0) continue;
+
+      animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
 
       const wasEnhanced = player.dice[idx].enhancement !== null;
       player.dice.splice(idx, 1);

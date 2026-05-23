@@ -75,7 +75,8 @@ export type ScoreAnimPopupType =
   | 'supply'
   | 'trail_guide'
   | 'strip'
-  | 'enhance';
+  | 'enhance'
+  | 'crack';
 
 export interface ScoreAnimEvent {
   /** Target to animate (die, equip card, or both) */

@@ -629,3 +629,32 @@ describe('resolveScoreDestroyChance', () => {
     expect(resolveScoreDestroyChance(die({ enhancement: 'diamond' }), [], doubled)).toEqual([2, 4]);
   });
 });
+
+describe('score crack animation events', () => {
+  test('emits crack event when a diamond die cracks during scoring', () => {
+    const diamond = die({ value: 8, enhancement: 'diamond' });
+    const { result, player } = calculateTestScore({
+      scoredDice: [diamond, die({ value: 8 })],
+      equipment: [item('loaded_dice'), item('loaded_dice')],
+    });
+
+    expect(result.animEvents.some((evt) => evt.popupType === 'crack' && evt.target.kind === 'die')).toBe(true);
+    expect(player.dice.some((d) => d.id === diamond.id)).toBe(false);
+  });
+
+  test('emits crack event when moonshine destroys a non-diamond enhanced die', () => {
+    const enhanced = die({ value: 9, enhancement: 'bone' });
+    const { result, player } = calculateTestScore({
+      scoredDice: [enhanced, die({ value: 9 })],
+      equipment: [item('moonshine'), item('loaded_dice'), item('loaded_dice'), item('loaded_dice')],
+    });
+
+    expect(
+      result.animEvents.some(
+        (evt) =>
+          evt.popupType === 'crack' && evt.target.kind === 'die' && evt.target.dieId === enhanced.id,
+      ),
+    ).toBe(true);
+    expect(player.dice.some((d) => d.id === enhanced.id)).toBe(false);
+  });
+});

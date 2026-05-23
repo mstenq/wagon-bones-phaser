@@ -11,6 +11,7 @@ import diceEnhancements from '../../data/dice_enhancements';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
+import { ensureAuraTextures } from '../ui/AuraFX';
 import { ANIM } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
 
@@ -22,6 +23,7 @@ const POPUP_XMULT_COLOR = '#ff4444';
 const POPUP_MONEY_COLOR = '#ffd700';
 const POPUP_SUPPLY_COLOR = '#9c27b0';
 const POPUP_ENHANCE_COLOR = '#55ddff';
+const POPUP_CRACK_COLOR = '#cfe4ff';
 
 const ENHANCEMENT_NAMES = new Map(diceEnhancements.map((e) => [e.id, e.name]));
 
@@ -101,7 +103,7 @@ function floatingText(
 function popupForDie(
   scene: Scene,
   sprite: DiceSprite,
-  type: 'miles' | 'mult' | 'xmult' | 'money' | 'supply' | 'trail_guide',
+  type: ScoreAnimPopupType,
   value: number,
 ): void {
   if (type === 'miles') {
@@ -116,6 +118,8 @@ function popupForDie(
     floatingText(scene, sprite.x, sprite.y, `+Supply Card`, POPUP_SUPPLY_COLOR, 'up');
   } else if (type === 'trail_guide') {
     floatingText(scene, sprite.x, sprite.y, `+Trail Guide`, POPUP_SUPPLY_COLOR, 'up');
+  } else if (type === 'crack') {
+    floatingText(scene, sprite.x, sprite.y, 'CRACK!', POPUP_CRACK_COLOR, 'up');
   }
 }
 
@@ -264,9 +268,67 @@ function getSoundForType(type: string, stepIdx: number): { key: string; config: 
       return { key: 'sfx_tarot1', config: { volume: 0.5 } };
     case 'enhance':
       return { key: 'sfx_foil1', config: { volume: 0.35 } };
+    case 'crack':
+      return { key: 'sfx_glass1', config: { volume: 0.6, detune: stepIdx * 20 } };
     default: // miles
       return { key: 'sfx_chips2', config: { volume: 0.3, detune: stepIdx * 80 } };
   }
+}
+
+function animateDieCrack(scene: Scene, sprite: DiceSprite, onComplete: () => void): void {
+  ensureAuraTextures(scene);
+  const matrix = sprite.getWorldTransformMatrix();
+  const worldX = matrix.tx;
+  const worldY = matrix.ty;
+
+  const shardEmitter = scene.add.particles(worldX, worldY, 'aura_soft', {
+    speed: { min: 70, max: 240 },
+    angle: { min: 0, max: 360 },
+    scale: { start: 0.35, end: 0 },
+    alpha: { start: 1, end: 0 },
+    lifespan: { min: 220, max: 520 },
+    frequency: -1,
+    quantity: 18,
+    tint: [0xddeeff, 0xb7d6ff, 0x9fc2ff, 0xffffff],
+    blendMode: 'ADD',
+  });
+  shardEmitter.setDepth(450);
+  shardEmitter.explode(18);
+
+  const mistEmitter = scene.add.particles(worldX, worldY, 'aura_soft', {
+    speed: { min: 10, max: 80 },
+    angle: { min: 0, max: 360 },
+    scale: { start: 0.3, end: 0 },
+    alpha: { start: 0.45, end: 0 },
+    lifespan: { min: 300, max: 700 },
+    frequency: -1,
+    quantity: 10,
+    tint: [0x9fc2ff, 0xcfe4ff, 0xffffff],
+    blendMode: 'NORMAL',
+  });
+  mistEmitter.setDepth(449);
+  mistEmitter.explode(10);
+
+  scene.tweens.add({
+    targets: sprite,
+    scaleX: 0.15,
+    scaleY: 0.15,
+    alpha: 0,
+    angle: sprite.angle + (Math.random() * 32 - 16),
+    y: sprite.y - 10,
+    duration: 220,
+    ease: 'Cubic.easeIn',
+    onComplete: () => {
+      sprite.setVisible(false);
+      sprite.disableInteractive();
+      sprite.setActive(false);
+      scene.time.delayedCall(500, () => {
+        shardEmitter.destroy();
+        mistEmitter.destroy();
+      });
+      onComplete();
+    },
+  });
 }
 
 export function playScoreAnimation(config: ScoreAnimationConfig): void {
@@ -415,6 +477,25 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         const sfx = getSoundForType('enhance', stepIdx);
         scene.sound.play(sfx.key, sfx.config);
         scene.time.delayedCall(200, done);
+        return;
+      }
+
+      // Special: die crack and shatter (diamond crack, moonshine, trail destroys)
+      if (popupType === 'crack') {
+        if (target.kind === 'die' || target.kind === 'both') {
+          const sprite = dieSpriteMap.get(target.dieId);
+          if (sprite) {
+            const sfx = getSoundForType('crack', stepIdx);
+            scene.sound.play(sfx.key, sfx.config);
+            popupForDie(scene, sprite, 'crack', value);
+            animateDieCrack(scene, sprite, () => {
+              dieSpriteMap.delete(target.dieId);
+              done();
+            });
+            return;
+          }
+        }
+        done();
         return;
       }
 
