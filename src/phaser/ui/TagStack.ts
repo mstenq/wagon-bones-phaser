@@ -136,10 +136,7 @@ export class TagStack extends GameObjects.Container {
     }
 
     container.setSize(BADGE_SIZE, BADGE_SIZE);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, BADGE_SIZE, BADGE_SIZE),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    container.setInteractive(new Phaser.Geom.Rectangle(0, 0, BADGE_SIZE, BADGE_SIZE), Phaser.Geom.Rectangle.Contains);
 
     container.on('pointerover', () => {
       this.drawBadgeBg(bg, color, true);
@@ -175,10 +172,7 @@ export class TagStack extends GameObjects.Container {
     container.add(text);
 
     container.setSize(BADGE_SIZE, BADGE_SIZE);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, BADGE_SIZE, BADGE_SIZE),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    container.setInteractive(new Phaser.Geom.Rectangle(0, 0, BADGE_SIZE, BADGE_SIZE), Phaser.Geom.Rectangle.Contains);
 
     container.on('pointerover', () => this.showTwinWagonTooltip(count, x, y));
     container.on('pointerout', () => this.hideTooltip());

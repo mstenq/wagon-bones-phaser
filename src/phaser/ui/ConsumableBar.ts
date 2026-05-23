@@ -51,10 +51,10 @@ export class ConsumableBar extends CardBar {
         }),
       },
       {
-      mode: 'compact',
-      cardScale: UI.CONSUMABLE_CARD_SCALE,
-      texturePrefix,
-    },
+        mode: 'compact',
+        cardScale: UI.CONSUMABLE_CARD_SCALE,
+        texturePrefix,
+      },
     );
     card.setTooltipContext(null, getPlayerState());
     return card;
@@ -68,9 +68,7 @@ export class ConsumableBar extends CardBar {
     const tabs: CardActionTabConfig[] = [];
 
     // Block USE for second_helpings when there's no valid target to clone
-    const canUse =
-      consumable.def.id !== 'second_helpings' ||
-      isSecondHelpingsCloneTarget(player.lastUsedConsumable);
+    const canUse = consumable.def.id !== 'second_helpings' || isSecondHelpingsCloneTarget(player.lastUsedConsumable);
     const canUseInScene = this.canUsePredicate ? this.canUsePredicate(consumable.def) : true;
 
     if (canUse && canUseInScene) {

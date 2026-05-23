@@ -60,12 +60,13 @@ export function drawDiceForSelection(count: number): Die[] {
   const player = getPlayerState();
   // drawCount 0 means "show handSize dice from non-spent pool"
   const effectiveCount = count > 0 ? count : player.handSize;
-  const pool = count > 0
-    ? rngShuffle('dice', player.dice)
-    : rngShuffle(
-        'dice',
-        player.dice.filter((d) => !player.spentDiceIds.has(d.id)),
-      );
+  const pool =
+    count > 0
+      ? rngShuffle('dice', player.dice)
+      : rngShuffle(
+          'dice',
+          player.dice.filter((d) => !player.spentDiceIds.has(d.id)),
+        );
   return pool.slice(0, Math.min(effectiveCount, pool.length)).map((d) => ({ ...d }));
 }
 

@@ -6,11 +6,7 @@ import { Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, TRAIL_EVENT } from '../../game/Constants';
 import { getPlayerState } from '../../game/PlayerState';
 import { getScoutsSpyglassInvestigateMiles } from '../../game/TrailEventsSystem';
-import {
-  computeCoverCrop,
-  trailEventSpyImageKey,
-  trailEventSpyImagePath,
-} from '../../game/trailEventAssets';
+import { computeCoverCrop, trailEventSpyImageKey, trailEventSpyImagePath } from '../../game/trailEventAssets';
 import { Button } from './Button';
 import type { LayoutResult } from './SceneLayout';
 
@@ -28,10 +24,7 @@ export class SpyglassTrailPreview {
 
   static show(
     scene: Scene,
-    layout: Pick<
-      LayoutResult,
-      'contentX' | 'contentW' | 'contentCX' | 'contentTop' | 'contentBottom'
-    >,
+    layout: Pick<LayoutResult, 'contentX' | 'contentW' | 'contentCX' | 'contentTop' | 'contentBottom'>,
     eventId: string,
     callbacks: SpyglassTrailPreviewCallbacks,
   ): SpyglassTrailPreview {
@@ -82,27 +75,15 @@ export class SpyglassTrailPreview {
 
     const btnW = Math.min(360, contentW - 48);
     const btnY = contentBottom - 96;
+    preview.track(new Button(scene, contentCX, btnY, 'Avoid', btnW, 44).setDepth(10).onClick(callbacks.onAvoid));
     preview.track(
-      new Button(scene, contentCX, btnY, 'Avoid', btnW, 44)
-        .setDepth(10)
-        .onClick(callbacks.onAvoid),
-    );
-    preview.track(
-      new Button(
-        scene,
-        contentCX,
-        btnY + 52,
-        `Investigate (+${investigateMiles} miles)`,
-        btnW,
-        44,
-      )
+      new Button(scene, contentCX, btnY + 52, `Investigate (+${investigateMiles} miles)`, btnW, 44)
         .setDepth(10)
         .onClick(callbacks.onInvestigate),
     );
 
     const imageKey = trailEventSpyImageKey(eventId);
-    const onReady = () =>
-      preview.showBakedCircleView(contentCX, circleY, viewDiameter, imageKey, eventId);
+    const onReady = () => preview.showBakedCircleView(contentCX, circleY, viewDiameter, imageKey, eventId);
     if (scene.textures.exists(imageKey)) {
       onReady();
     } else {
@@ -120,11 +101,7 @@ export class SpyglassTrailPreview {
     this.toDestroy.push(obj);
   }
 
-  private bakeCircularTexture(
-    sourceKey: string,
-    eventId: string,
-    diameter: number,
-  ): string | null {
+  private bakeCircularTexture(sourceKey: string, eventId: string, diameter: number): string | null {
     const bakedKey = `${BAKED_VIEW_PREFIX}${eventId}_${diameter}`;
     if (this.scene.textures.exists(bakedKey)) {
       return bakedKey;
@@ -159,13 +136,7 @@ export class SpyglassTrailPreview {
     return bakedKey;
   }
 
-  private showBakedCircleView(
-    cx: number,
-    cy: number,
-    diameter: number,
-    imageKey: string,
-    eventId: string,
-  ): void {
+  private showBakedCircleView(cx: number, cy: number, diameter: number, imageKey: string, eventId: string): void {
     const bakedKey = this.bakeCircularTexture(imageKey, eventId, diameter);
     if (!bakedKey) return;
 

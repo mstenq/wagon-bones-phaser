@@ -2,12 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { getAllTrailEvents } from '../TrailEventsSystem';
-import {
-  computeCoverScale,
-  computeCoverCrop,
-  trailEventImagePath,
-  trailEventSpyImagePath,
-} from '../trailEventAssets';
+import { computeCoverScale, computeCoverCrop, trailEventImagePath, trailEventSpyImagePath } from '../trailEventAssets';
 
 const PUBLIC = join(import.meta.dir, '../../../public');
 

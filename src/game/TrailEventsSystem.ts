@@ -20,7 +20,8 @@ import {
   getRandomFrontierDef,
   createConsumableInstance,
 } from './ConsumablesSystem';
-import { generateShopStock } from './ItemsSystem';
+import { generateShopStock, isEquipmentCursed } from './ItemsSystem';
+import { GAMEPLAY } from './Constants';
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { TRAIL_EVENT } from './Constants';
 import { resolveEffectParam } from './effectParams';
@@ -230,6 +231,28 @@ export function filterUnseenEvents(pool: TrailEventDef[], player: PlayerState): 
   return unseen.length > 0 ? unseen : pool;
 }
 
+const STANDOFF_BLOCKED_EFFECTS: TrailEventEffect['type'][] = ['DISABLE_REROLL_DAY1', 'LOSE_ALL_REROLLS'];
+
+/** True if any choice outcome on the event includes the given effect type. */
+export function eventHasEffect(event: TrailEventDef, effectType: TrailEventEffect['type']): boolean {
+  for (const choice of event.choices) {
+    for (const outcome of choice.outcomes) {
+      if (outcome.effects?.some((e) => e.type === effectType)) return true;
+    }
+  }
+  return false;
+}
+
+/** True when the next round is The Standoff boss (trail event fires after round 3 payout). */
+export function isStandoffBossRound(player: PlayerState): boolean {
+  return player.round === GAMEPLAY.ROUNDS_PER_LEG && player.getBossForLeg(player.leg)?.id === 'the_standoff';
+}
+
+function filterStandoffBlockedEvents(pool: TrailEventDef[]): TrailEventDef[] {
+  const filtered = pool.filter((e) => !STANDOFF_BLOCKED_EFFECTS.some((effectType) => eventHasEffect(e, effectType)));
+  return filtered.length > 0 ? filtered : pool;
+}
+
 /**
  * Select a random trail event from the weighted pool.
  * Filters demon_hunter events based on profession and minimumLeg.
@@ -251,13 +274,16 @@ export function selectTrailEvent(player: PlayerState, rng: () => number = () => 
     return weightedRandomPick(demonPool, rng);
   }
 
-  const standardPool = filterUnseenEvents(
+  let standardPool = filterUnseenEvents(
     filterEventsByLeg(
       ALL_EVENTS.filter((e) => !e.demonHunterOnly),
       leg,
     ),
     player,
   );
+  if (isStandoffBossRound(player)) {
+    standardPool = filterStandoffBlockedEvents(standardPool);
+  }
   return weightedRandomPick(standardPool, rng);
 }
 
@@ -501,11 +527,18 @@ export function applyEffect(
         player.economy.setBalance(player.economy.balance - lostAmount);
         break;
       }
-      const count = Math.min(effect.count ?? 0, player.equipment.length);
+      const eligibleIndices = player.equipment.map((e, i) => (isEquipmentCursed(e) ? -1 : i)).filter((i) => i >= 0);
+      if (eligibleIndices.length === 0) {
+        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP;
+        player.economy.setBalance(player.economy.balance - lostAmount);
+        break;
+      }
+      const count = Math.min(effect.count ?? 0, eligibleIndices.length);
       for (let i = 0; i < count; i++) {
-        if (player.equipment.length === 0) break;
-        const idx = Math.floor(rng() * player.equipment.length);
-        player.equipment.splice(idx, 1);
+        const remaining = player.equipment.map((e, idx) => (isEquipmentCursed(e) ? -1 : idx)).filter((idx) => idx >= 0);
+        if (remaining.length === 0) break;
+        const pick = remaining[Math.floor(rng() * remaining.length)];
+        player.equipment.splice(pick, 1);
       }
       break;
     }
@@ -633,7 +666,9 @@ export function applyEffect(
 
     case 'DESTROY_EQUIPMENT': {
       const idx = player.equipment.findIndex((e) => e.def.id === effect.id);
-      if (idx >= 0) player.equipment.splice(idx, 1);
+      if (idx >= 0 && !isEquipmentCursed(player.equipment[idx])) {
+        player.equipment.splice(idx, 1);
+      }
       break;
     }
 

@@ -20,6 +20,7 @@ interface DiceSpriteEntry {
 export class DiceSelectionScene extends Scene {
   private config: DiceSelectionConfig;
   private returnScene: string;
+  private returnSceneData: Record<string, unknown> = {};
   private drawnDice: Die[] = [];
   private entries: DiceSpriteEntry[] = [];
   private confirmBtn: Button;
@@ -30,12 +31,19 @@ export class DiceSelectionScene extends Scene {
     super('DiceSelection');
   }
 
-  init(data: { config?: DiceSelectionConfig; returnScene?: string } = {}) {
+  init(
+    data: {
+      config?: DiceSelectionConfig;
+      returnScene?: string;
+      returnSceneData?: Record<string, unknown>;
+    } = {},
+  ) {
     if (!data.config || !data.returnScene) {
       throw new Error('DiceSelectionScene requires config and returnScene in scene data');
     }
     this.config = data.config;
     this.returnScene = data.returnScene;
+    this.returnSceneData = data.returnSceneData ?? {};
   }
 
   create() {
@@ -209,12 +217,12 @@ export class DiceSelectionScene extends Scene {
     this.skipBtn.setEnabled(false);
 
     this.time.delayedCall(1200, () => {
-      this.scene.start(this.returnScene, {});
+      this.scene.start(this.returnScene, this.returnSceneData);
     });
   }
 
   private onSkip(): void {
-    this.scene.start(this.returnScene, {});
+    this.scene.start(this.returnScene, this.returnSceneData);
   }
 
   private onResize(): void {

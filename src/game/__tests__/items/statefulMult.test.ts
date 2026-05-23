@@ -1,7 +1,21 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
-import { processEquipmentOnHandPlayed, processEquipmentAfterHandScored, processEquipmentOnPackSkipped, processEquipmentOnSupplyUsed } from '../../EquipmentEffects';
+import {
+  die,
+  diceWithValue,
+  diceFromValues,
+  item,
+  itemWithState,
+  calculateTestScore,
+  setupGame,
+  resetDieIds,
+} from '../testHelpers';
+import {
+  processEquipmentOnHandPlayed,
+  processEquipmentAfterHandScored,
+  processEquipmentOnPackSkipped,
+  processEquipmentOnSupplyUsed,
+} from '../../EquipmentEffects';
 import { executeConsumableEffect, getRandomSupplyDef, getRandomTrailGuideDef } from '../../ConsumablesSystem';
 import { HandType } from '../../types';
 
@@ -62,9 +76,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
       profession: 'demon_hunter',
     });
     expect(inst.state.mult).toBe(6);
-    const markedAnim = result.animEvents.find(
-      (e) => e.popupType === 'mult' && e.target.kind === 'equip',
-    );
+    const markedAnim = result.animEvents.find((e) => e.popupType === 'mult' && e.target.kind === 'equip');
     expect(markedAnim?.value).toBe(6);
     expect(result.mult).toBe(7);
   });
@@ -77,9 +89,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
       profession: 'developer',
     });
     expect(inst.state.mult).toBe(1);
-    const markedAnim = result.animEvents.find(
-      (e) => e.popupType === 'mult' && e.target.kind === 'equip',
-    );
+    const markedAnim = result.animEvents.find((e) => e.popupType === 'mult' && e.target.kind === 'equip');
     expect(markedAnim?.value).toBe(1);
     expect(result.mult).toBe(2);
     expect(player.profession?.id).toBe('developer');

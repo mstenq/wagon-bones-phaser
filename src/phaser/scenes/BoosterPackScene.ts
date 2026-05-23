@@ -188,7 +188,7 @@ export class BoosterPackScene extends Scene {
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
-    this.consumableBar.setCanUsePredicate((def) => def.id !== 'raid');
+    this.consumableBar.setCanUsePredicate((def) => def.id !== 'raid' && !this.isPackDiceTargetingPending());
     this.dicePouch = layout.dicePouch;
     this.contentCX = layout.contentCX;
 
@@ -589,6 +589,12 @@ export class BoosterPackScene extends Scene {
 
     const clickHandler = () => {
       if (sprite.used || this.picksRemaining <= 0) return;
+
+      if (this.isPackDiceTargetingPending() && this.activeTabCard !== sprite) {
+        this.showFloatingText('Finish selecting dice first');
+        this.sound.play('sfx_cancel', { volume: 0.5 });
+        return;
+      }
 
       // Toggle: if this card already has tabs, dismiss
       if (this.activeTabCard === sprite) {
@@ -1206,7 +1212,14 @@ export class BoosterPackScene extends Scene {
     this.equipBar.updateHints(null, getPlayerState());
   }
 
+  private isPackDiceTargetingPending(): boolean {
+    if (!this.activeTabCard?.item.diceSelection) return false;
+    return this.selectedDiceIds.size < this.getActivePickCount();
+  }
+
   private handleConsumableUsed(consumed: ConsumableInstance): void {
+    if (this.isPackDiceTargetingPending()) return;
+
     const player = getPlayerState();
     const result = executeConsumableEffect(consumed, player);
 
@@ -1225,6 +1238,7 @@ export class BoosterPackScene extends Scene {
       this.scene.start('DiceSelection', {
         config: result.diceSelection,
         returnScene: 'BoosterPack',
+        returnSceneData: { restorePack: this.getSaveContext() },
       });
     }
 

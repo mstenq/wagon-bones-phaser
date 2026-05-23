@@ -4,11 +4,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import {
-  getAudioPreferences,
-  setAudioPreferences,
-  type AudioPreferences,
-} from '../../game/AudioPreferences';
+import { getAudioPreferences, setAudioPreferences, type AudioPreferences } from '../../game/AudioPreferences';
 import { applyBackgroundMusicPreferences } from '../BackgroundMusic';
 import { Button } from './Button';
 import { OptionsModal } from './OptionsModal';

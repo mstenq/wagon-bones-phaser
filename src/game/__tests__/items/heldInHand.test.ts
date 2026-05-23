@@ -295,10 +295,7 @@ describe('HELD_RETRIGGER: Silver Bullets', () => {
 
 describe('gold dice held at round end', () => {
   test('earns $3 per held gold die', () => {
-    const result = processGoldHeldAtRoundEnd(
-      [die({ value: 4, enhancement: 'gold' })],
-      [],
-    );
+    const result = processGoldHeldAtRoundEnd([die({ value: 4, enhancement: 'gold' })], []);
     expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY);
     expect(result.animEvents).toHaveLength(1);
     expect(result.animEvents[0].popupType).toBe('money');
@@ -312,19 +309,13 @@ describe('gold dice held at round end', () => {
   });
 
   test('red_bullet retriggers gold payout', () => {
-    const result = processGoldHeldAtRoundEnd(
-      [die({ value: 4, enhancement: 'gold', sticker: 'red_bullet' })],
-      [],
-    );
+    const result = processGoldHeldAtRoundEnd([die({ value: 4, enhancement: 'gold', sticker: 'red_bullet' })], []);
     expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 2);
     expect(result.animEvents).toHaveLength(2);
   });
 
   test('silver bullets retriggers gold payout', () => {
-    const result = processGoldHeldAtRoundEnd(
-      [die({ value: 4, enhancement: 'gold' })],
-      [item('silver_bullets')],
-    );
+    const result = processGoldHeldAtRoundEnd([die({ value: 4, enhancement: 'gold' })], [item('silver_bullets')]);
     expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 2);
     expect(result.animEvents).toHaveLength(2);
   });

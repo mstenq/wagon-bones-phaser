@@ -16,11 +16,7 @@ import { rngFloat, rngPick, type RngStream } from './RunRng';
 
 export type { EquipmentUnlockCondition } from './equipmentUnlock';
 
-export function isEquipmentUnlocked(
-  def: EquipmentDef,
-  game: GameState | null = null,
-  player?: PlayerState,
-): boolean {
+export function isEquipmentUnlocked(def: EquipmentDef, game: GameState | null = null, player?: PlayerState): boolean {
   if (!def.unlockCondition) return true;
   return def.unlockCondition(game, player ?? getPlayerState());
 }
@@ -38,6 +34,12 @@ export interface EquipmentDef {
   aura?: ItemAura | null;
   display: (game: GameState | null, player: PlayerState) => import('../data/items').ItemDisplayResult;
   unlockCondition?: (game: GameState | null, player: PlayerState) => boolean;
+  modifierImmunity?: EquipmentModifier[];
+}
+
+/** True when this equipment def cannot receive a given difficulty modifier roll. */
+export function isEquipmentModifierImmune(def: EquipmentDef, modifier: EquipmentModifier): boolean {
+  return def.modifierImmunity?.includes(modifier) ?? false;
 }
 
 export interface EquipmentInstance {
@@ -49,10 +51,7 @@ export interface EquipmentInstance {
   perishableRoundsLeft?: number;
 }
 
-export function hasEquipmentModifier(
-  instance: EquipmentInstance,
-  modifier: EquipmentModifier,
-): boolean {
+export function hasEquipmentModifier(instance: EquipmentInstance, modifier: EquipmentModifier): boolean {
   return instance.modifiers.includes(modifier);
 }
 
@@ -80,9 +79,7 @@ function getShopEquipmentPool(
   game: GameState | null = null,
   player?: PlayerState,
 ): EquipmentDef[] {
-  let pool = ITEMS_POOL.filter(
-    (i) => i.rarity !== LEGENDARY_RARITY && isEquipmentUnlocked(i, game, player),
-  );
+  let pool = ITEMS_POOL.filter((i) => i.rarity !== LEGENDARY_RARITY && isEquipmentUnlocked(i, game, player));
   if (excludeIds && excludeIds.length > 0) {
     const excluded = new Set(excludeIds);
     pool = pool.filter((i) => !excluded.has(i.id));
@@ -202,10 +199,7 @@ export function getEquipmentSellValue(def: EquipmentDef, purchasedPermitIds: str
 }
 
 /** Create an EquipmentInstance from a def, initializing state from initialState. */
-export function createEquipmentInstance(
-  def: EquipmentDef,
-  purchasedPermitIds: string[] = [],
-): EquipmentInstance {
+export function createEquipmentInstance(def: EquipmentDef, purchasedPermitIds: string[] = []): EquipmentInstance {
   return {
     def,
     sellValue: getEquipmentSellValue(def, purchasedPermitIds),

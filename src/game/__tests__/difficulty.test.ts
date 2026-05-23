@@ -1,10 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import {
-  resetPlayerState,
-  computeTargetMiles,
-  computeRoundReward,
-} from '../PlayerState';
+import { resetPlayerState, computeTargetMiles, computeRoundReward } from '../PlayerState';
 import { GAMEPLAY } from '../Constants';
 import { setTestDifficulty } from './testHelpers';
 
@@ -47,15 +43,9 @@ describe('Difficulty System', () => {
     test('deadly overrides rough at difficulty 6', () => {
       const leg = 3;
       const round = 1;
-      expect(computeTargetMiles(leg, round, 0, 6)).toBe(
-        GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY[leg - 1],
-      );
-      expect(computeTargetMiles(leg, round, 0, 3)).toBe(
-        GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[leg - 1],
-      );
-      expect(computeTargetMiles(leg, round, 0, 6)).not.toBe(
-        computeTargetMiles(leg, round, 0, 3),
-      );
+      expect(computeTargetMiles(leg, round, 0, 6)).toBe(GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY[leg - 1]);
+      expect(computeTargetMiles(leg, round, 0, 3)).toBe(GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[leg - 1]);
+      expect(computeTargetMiles(leg, round, 0, 6)).not.toBe(computeTargetMiles(leg, round, 0, 3));
     });
 
     test('permit score reduction lowers effective leg index for targets', () => {
@@ -140,9 +130,7 @@ describe('Difficulty System', () => {
       const player = resetPlayerState();
       player.leg = 2;
       player.round = 2;
-      expect(player.targetMiles).toBe(
-        Math.ceil(GAMEPLAY.TARGET_MILES_BY_LEG[1] * GAMEPLAY.ROUND_MULTIPLIERS[1]),
-      );
+      expect(player.targetMiles).toBe(Math.ceil(GAMEPLAY.TARGET_MILES_BY_LEG[1] * GAMEPLAY.ROUND_MULTIPLIERS[1]));
     });
 
     test('difficulty 3: rough targets on player state', () => {

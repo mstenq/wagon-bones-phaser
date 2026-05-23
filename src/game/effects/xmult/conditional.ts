@@ -8,7 +8,9 @@ effectRegistry.registerXMult('FINAL_DAY_XMULT', (ctx, equip, index) => {
   if (ctx.currentDay >= ctx.maxDays) {
     multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
-    console.log(`  [xmult] ${equip.def.name}: x${xVal} (final day ${ctx.currentDay}/${ctx.maxDays}) (xMult: ${ctx.xMult})`);
+    console.log(
+      `  [xmult] ${equip.def.name}: x${xVal} (final day ${ctx.currentDay}/${ctx.maxDays}) (xMult: ${ctx.xMult})`,
+    );
   } else {
     console.log(`  [xmult] ${equip.def.name}: inactive (day ${ctx.currentDay}/${ctx.maxDays})`);
   }
@@ -42,7 +44,9 @@ effectRegistry.registerXMult('ENHANCED_DICE_COUNT_XMULT', (ctx, equip, index) =>
   if (enhCount >= threshold) {
     multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
-    console.log(`  [xmult] ${equip.def.name}: x${xVal} (${enhCount} enhanced dice >= ${threshold}) (xMult: ${ctx.xMult})`);
+    console.log(
+      `  [xmult] ${equip.def.name}: x${xVal} (${enhCount} enhanced dice >= ${threshold}) (xMult: ${ctx.xMult})`,
+    );
   }
 });
 

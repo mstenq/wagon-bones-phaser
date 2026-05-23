@@ -154,6 +154,9 @@ export const CHANCES = {
 /** Frontier cards that only appear in booster packs — never shop, trail events, or random grants. */
 export const PACK_ONLY_FRONTIER_IDS = new Set(['pandoras_box', 'spiritual_journey']);
 
+/** Supply card ids excluded from booster pack generation (in-run only). */
+export const PACK_EXCLUDED_SUPPLY_IDS: string[] = ['medicine'];
+
 // ─── Shop Stock Category Weights ───
 // Controls the mix of equipment vs consumables in shop slots.
 // Each slot rolls independently from this weighted pool.
@@ -320,7 +323,7 @@ export const TAG_STACK = {
 
 // ─── Dice ───
 export const DICE = {
-  SIZE: 80,
+  SIZE: 75,
   RADIUS: 10,
   /** Vertical offset for pip value text on the front face (negative = up) */
   VALUE_Y_OFFSET: -3,

@@ -24,7 +24,7 @@ describe('purple_flower sticker', () => {
     expect(player.consumables.length).toBeGreaterThanOrEqual(2);
   });
 
-  test('bypasses consumable slot limit', () => {
+  test('third purple_flower retrigger does not exceed slot limit', () => {
     const { player } = calculateTestScore({
       scoredDice: [
         die({ value: 3, sticker: 'purple_flower' }),
@@ -32,8 +32,7 @@ describe('purple_flower sticker', () => {
         die({ value: 3, sticker: 'purple_flower' }),
       ],
     });
-    // Default max consumable slots is 2, but purple_flower should bypass
-    expect(player.consumables.length).toBe(3);
+    expect(player.consumables.length).toBe(2);
   });
 });
 

@@ -651,8 +651,7 @@ describe('score crack animation events', () => {
 
     expect(
       result.animEvents.some(
-        (evt) =>
-          evt.popupType === 'crack' && evt.target.kind === 'die' && evt.target.dieId === enhanced.id,
+        (evt) => evt.popupType === 'crack' && evt.target.kind === 'die' && evt.target.dieId === enhanced.id,
       ),
     ).toBe(true);
     expect(player.dice.some((d) => d.id === enhanced.id)).toBe(false);

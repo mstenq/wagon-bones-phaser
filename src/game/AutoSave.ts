@@ -2,11 +2,7 @@
 // Uses the same GameSaveSnapshot format as manual export/load.
 
 import { GAMEPLAY } from './Constants';
-import {
-  validateSaveSnapshot,
-  assertSaveIntegrity,
-  type GameSaveSnapshot,
-} from './SaveLoad';
+import { validateSaveSnapshot, assertSaveIntegrity, type GameSaveSnapshot } from './SaveLoad';
 
 export function writeAutoSaveToStorage(snapshot: GameSaveSnapshot): void {
   try {

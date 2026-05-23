@@ -1,6 +1,15 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
+import {
+  die,
+  diceWithValue,
+  diceFromValues,
+  item,
+  itemWithState,
+  calculateTestScore,
+  setupGame,
+  resetDieIds,
+} from '../testHelpers';
 import { processEquipmentOnHandPlayed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
@@ -119,7 +128,6 @@ describe('HAND_MULT: Deputy Brothers (two pair, +10)', () => {
     expect(result.mult).toBe(1);
   });
 });
-
 
 // ─── HAND_MILES Items ───
 

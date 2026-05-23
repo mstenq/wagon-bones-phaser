@@ -24,10 +24,7 @@ import {
   syncEquipmentDisplayOrder,
 } from '../../game/BossEffectsSystem';
 import { isEquipmentCursed, isEquipmentPerishable } from '../../game/ItemsSystem';
-import {
-  applyEquipmentModifierDestructions,
-  type EquipmentModifierRoundResult,
-} from '../../game/EquipmentModifiers';
+import { applyEquipmentModifierDestructions, type EquipmentModifierRoundResult } from '../../game/EquipmentModifiers';
 
 export class EquipmentBar extends CardBar {
   protected readonly cardScale = UI.EQUIP_CARD_SCALE;
@@ -60,10 +57,7 @@ export class EquipmentBar extends CardBar {
   }
 
   /** Animate perished/repossessed cards, then apply destruction and refresh. */
-  animateModifierDestructions(
-    result: EquipmentModifierRoundResult,
-    onComplete: () => void,
-  ): void {
+  animateModifierDestructions(result: EquipmentModifierRoundResult, onComplete: () => void): void {
     const entries = [
       ...result.perished.map((p) => ({ index: p.index, type: 'perished' as const })),
       ...result.leaseDefaulted.map((p) => ({ index: p.index, type: 'repossessed' as const })),
@@ -140,7 +134,8 @@ export class EquipmentBar extends CardBar {
       for (let i = 0; i < count; i++) {
         const ix = startX + i * spacing + 45;
         const iy = cy - 60;
-        const icon = this.scene.add.text(ix, iy, '🔧', { fontSize: '14px' })
+        const icon = this.scene.add
+          .text(ix, iy, '🔧', { fontSize: '14px' })
           .setOrigin(0.5)
           .setDepth(300)
           .setInteractive({ useHandCursor: true });
@@ -163,7 +158,7 @@ export class EquipmentBar extends CardBar {
     if (!equip) return;
 
     const auras = devGetAllAuras();
-    const options = ['none', ...auras.map(a => `${a.id} (${a.name})`)];
+    const options = ['none', ...auras.map((a) => `${a.id} (${a.name})`)];
     const current = equip.def.aura?.id ?? 'none';
     const choice = window.prompt(
       `Select aura for "${equip.def.name}"\nCurrent: ${current}\nOptions: ${options.join(', ')}`,

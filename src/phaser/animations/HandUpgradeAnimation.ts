@@ -42,7 +42,7 @@ export function playHandUpgradeAnimation(config: HandUpgradeAnimConfig): void {
 
 function animateOneUpgrade(scene: Scene, sidebar: Sidebar, upgrade: HandUpgradeInfo, onDone: () => void): void {
   const sidebarW = sidebar.getSidebarWidth();
-  const cx = (sidebarW / 2);
+  const cx = sidebarW / 2;
 
   // ─── Create overlay container positioned relative to sidebar ───
   const container = scene.add.container(sidebar.x, sidebar.y).setDepth(250);
@@ -51,7 +51,7 @@ function animateOneUpgrade(scene: Scene, sidebar: Sidebar, upgrade: HandUpgradeI
   const panelW = sidebarW - UI.SIDEBAR_PADDING * 2;
   const panelH = 100;
   // Position above the miles/mult pills area (use getHandUpgradeY from sidebar)
-  const panelY = (sidebar.getHandUpgradeY() - panelH / 2) + 20;
+  const panelY = sidebar.getHandUpgradeY() - panelH / 2 + 20;
   const panelX = UI.SIDEBAR_PADDING;
 
   const bg = scene.add.graphics();

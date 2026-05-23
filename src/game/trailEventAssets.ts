@@ -20,12 +20,7 @@ export function trailEventSpyImageKey(id: string): string {
 }
 
 /** Scale factor to cover a box (like CSS background-size: cover). */
-export function computeCoverScale(
-  imgW: number,
-  imgH: number,
-  boxW: number,
-  boxH: number,
-): number {
+export function computeCoverScale(imgW: number, imgH: number, boxW: number, boxH: number): number {
   if (imgW <= 0 || imgH <= 0 || boxW <= 0 || boxH <= 0) return 1;
   return Math.max(boxW / imgW, boxH / imgH);
 }
@@ -39,12 +34,7 @@ export interface CoverCropResult {
 }
 
 /** Cover-scale plus texture crop so the image fits a box exactly (no bleed). */
-export function computeCoverCrop(
-  imgW: number,
-  imgH: number,
-  boxW: number,
-  boxH: number,
-): CoverCropResult {
+export function computeCoverCrop(imgW: number, imgH: number, boxW: number, boxH: number): CoverCropResult {
   const scale = computeCoverScale(imgW, imgH, boxW, boxH);
   const cropW = boxW / scale;
   const cropH = boxH / scale;

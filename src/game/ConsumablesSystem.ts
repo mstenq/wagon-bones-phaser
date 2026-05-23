@@ -58,10 +58,7 @@ const TRAIL_GUIDES = trailGuidesData;
 const FRONTIER_ENCOUNTERS = frontierEncountersData;
 
 /** Create a ConsumableDef from a supply card definition */
-export function createSupplyConsumableDef(
-  cardData: SupplyCardDef,
-  aura?: ItemAura | null,
-): ConsumableDef {
+export function createSupplyConsumableDef(cardData: SupplyCardDef, aura?: ItemAura | null): ConsumableDef {
   const def: ConsumableDef = {
     id: cardData.id,
     name: cardData.name,
@@ -89,10 +86,7 @@ export function createSupplyConsumableDef(
 }
 
 /** Create a ConsumableDef from a trail guide definition */
-export function createTrailGuideConsumableDef(
-  tgData: TrailGuideDef,
-  aura?: ItemAura | null,
-): ConsumableDef {
+export function createTrailGuideConsumableDef(tgData: TrailGuideDef, aura?: ItemAura | null): ConsumableDef {
   return {
     id: tgData.id,
     name: tgData.name,
@@ -105,10 +99,7 @@ export function createTrailGuideConsumableDef(
 }
 
 /** Create a ConsumableDef from a frontier encounter definition */
-export function createFrontierConsumableDef(
-  feData: FrontierEncounterDef,
-  aura?: ItemAura | null,
-): ConsumableDef {
+export function createFrontierConsumableDef(feData: FrontierEncounterDef, aura?: ItemAura | null): ConsumableDef {
   const def: ConsumableDef = {
     id: feData.id,
     name: feData.name,
@@ -321,7 +312,8 @@ export function executeConsumableEffect(
   if (def.category === 'supply') {
     for (const equip of player.equipment) {
       if (equip.def.effectType === 'SUPPLY_USED_MULT') {
-        equip.state.mult = (equip.state.mult ?? 0) + ((equip.def.effectParams as Record<string, unknown>).value as number);
+        equip.state.mult =
+          (equip.state.mult ?? 0) + ((equip.def.effectParams as Record<string, unknown>).value as number);
       }
     }
   }
@@ -496,8 +488,7 @@ export function executeConsumableEffect(
         perishableRoundsLeft: source.perishableRoundsLeft,
       };
       const survivors = player.equipment.filter((e) => isEquipmentCursed(e));
-      const canAdd =
-        player.usedEquipmentSlots < player.maxEquipmentSlots || duplicated.def.aura?.id === 'ghost';
+      const canAdd = player.usedEquipmentSlots < player.maxEquipmentSlots || duplicated.def.aura?.id === 'ghost';
       if (canAdd) survivors.push(duplicated);
       player.equipment.splice(0, player.equipment.length, ...survivors);
       return { success: true };

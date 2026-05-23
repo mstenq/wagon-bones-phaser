@@ -6,7 +6,7 @@ import { rngFloat } from '../../RunRng';
 
 effectRegistry.registerHeldDie('HELD_LOWEST_MULT', (ctx, equip, _idx, die, _t) => {
   // Compute lowest value from held dice
-  const lowestValue = Math.min(...ctx.heldDice.map(d => d.value));
+  const lowestValue = Math.min(...ctx.heldDice.map((d) => d.value));
   if (die.value === lowestValue && die === ctx.heldDice.find((d) => d.value === lowestValue)) {
     const value = lowestValue * 2;
     ctx.bonusMult += value;

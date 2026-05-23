@@ -200,10 +200,7 @@ export class ItemCard extends GameObjects.Container {
   }
 
   /** Crumble/fade when destroyed by perishable expiry or lease default. */
-  animateModifierDestruction(
-    type: 'perished' | 'repossessed',
-    onComplete: () => void,
-  ): void {
+  animateModifierDestruction(type: 'perished' | 'repossessed', onComplete: () => void): void {
     this.hideTooltip();
     this.hideActionTabs(true);
     this.disableInteractive();
@@ -416,83 +413,83 @@ export class ItemCard extends GameObjects.Container {
         this.cardImage = img;
         this.add(img);
       } else {
-      const roundedKey = `${srcKey}_rounded_${Math.round(w)}x${Math.round(h)}`;
+        const roundedKey = `${srcKey}_rounded_${Math.round(w)}x${Math.round(h)}`;
 
-      if (!this.scene.textures.exists(roundedKey)) {
-        // Get source image
-        const srcImg = this.scene.textures.get(srcKey).getSourceImage() as HTMLImageElement;
+        if (!this.scene.textures.exists(roundedKey)) {
+          // Get source image
+          const srcImg = this.scene.textures.get(srcKey).getSourceImage() as HTMLImageElement;
 
-        // Create canvas texture at card dimensions
-        const canvasTex = this.scene.textures.createCanvas(roundedKey, w, h)!;
-        const ctx = canvasTex.getContext();
+          // Create canvas texture at card dimensions
+          const canvasTex = this.scene.textures.createCanvas(roundedKey, w, h)!;
+          const ctx = canvasTex.getContext();
 
-        // Clip to rounded rect path
-        ctx.beginPath();
-        ctx.moveTo(radius, 0);
-        ctx.lineTo(w - radius, 0);
-        ctx.arcTo(w, 0, w, radius, radius);
-        ctx.lineTo(w, h - radius);
-        ctx.arcTo(w, h, w - radius, h, radius);
-        ctx.lineTo(radius, h);
-        ctx.arcTo(0, h, 0, h - radius, radius);
-        ctx.lineTo(0, radius);
-        ctx.arcTo(0, 0, radius, 0, radius);
-        ctx.closePath();
-        ctx.clip();
+          // Clip to rounded rect path
+          ctx.beginPath();
+          ctx.moveTo(radius, 0);
+          ctx.lineTo(w - radius, 0);
+          ctx.arcTo(w, 0, w, radius, radius);
+          ctx.lineTo(w, h - radius);
+          ctx.arcTo(w, h, w - radius, h, radius);
+          ctx.lineTo(radius, h);
+          ctx.arcTo(0, h, 0, h - radius, radius);
+          ctx.lineTo(0, radius);
+          ctx.arcTo(0, 0, radius, 0, radius);
+          ctx.closePath();
+          ctx.clip();
 
-        // Draw source image cover-filling the card area
-        const imgScale = Math.max(w / srcImg.width, h / srcImg.height);
-        const drawW = srcImg.width * imgScale;
-        const drawH = srcImg.height * imgScale;
-        const dx = (w - drawW) / 2;
-        const dy = (h - drawH) / 2;
-        ctx.drawImage(srcImg, dx, dy, drawW, drawH);
+          // Draw source image cover-filling the card area
+          const imgScale = Math.max(w / srcImg.width, h / srcImg.height);
+          const drawW = srcImg.width * imgScale;
+          const drawH = srcImg.height * imgScale;
+          const dx = (w - drawW) / 2;
+          const dy = (h - drawH) / 2;
+          ctx.drawImage(srcImg, dx, dy, drawW, drawH);
 
-        canvasTex.refresh();
-      }
-
-      const img = this.scene.add.image(0, 0, roundedKey);
-      this.cardImage = img;
-      this.add(img);
-
-      // Render card template overlay on top of the image
-      if (this._def.cardTemplate) {
-        const overlayKey = `card_template_${this._def.cardTemplate}`;
-        if (this.scene.textures.exists(overlayKey)) {
-          const roundedOverlayKey = `${overlayKey}_rounded_${Math.round(w)}x${Math.round(h)}`;
-          if (!this.scene.textures.exists(roundedOverlayKey)) {
-            const overlaySrc = this.scene.textures.get(overlayKey).getSourceImage() as HTMLImageElement;
-            const overlayCanvas = this.scene.textures.createCanvas(roundedOverlayKey, w, h)!;
-            const oCtx = overlayCanvas.getContext();
-
-            // Same rounded rect clip as the base image
-            oCtx.beginPath();
-            oCtx.moveTo(radius, 0);
-            oCtx.lineTo(w - radius, 0);
-            oCtx.arcTo(w, 0, w, radius, radius);
-            oCtx.lineTo(w, h - radius);
-            oCtx.arcTo(w, h, w - radius, h, radius);
-            oCtx.lineTo(radius, h);
-            oCtx.arcTo(0, h, 0, h - radius, radius);
-            oCtx.lineTo(0, radius);
-            oCtx.arcTo(0, 0, radius, 0, radius);
-            oCtx.closePath();
-            oCtx.clip();
-
-            // Cover-fill the overlay
-            const oScale = Math.max(w / overlaySrc.width, h / overlaySrc.height);
-            const oDrawW = overlaySrc.width * oScale;
-            const oDrawH = overlaySrc.height * oScale;
-            const oDx = (w - oDrawW) / 2;
-            const oDy = (h - oDrawH) / 2;
-            oCtx.drawImage(overlaySrc, oDx, oDy, oDrawW, oDrawH);
-
-            overlayCanvas.refresh();
-          }
-          const overlay = this.scene.add.image(0, 0, roundedOverlayKey);
-          this.add(overlay);
+          canvasTex.refresh();
         }
-      }
+
+        const img = this.scene.add.image(0, 0, roundedKey);
+        this.cardImage = img;
+        this.add(img);
+
+        // Render card template overlay on top of the image
+        if (this._def.cardTemplate) {
+          const overlayKey = `card_template_${this._def.cardTemplate}`;
+          if (this.scene.textures.exists(overlayKey)) {
+            const roundedOverlayKey = `${overlayKey}_rounded_${Math.round(w)}x${Math.round(h)}`;
+            if (!this.scene.textures.exists(roundedOverlayKey)) {
+              const overlaySrc = this.scene.textures.get(overlayKey).getSourceImage() as HTMLImageElement;
+              const overlayCanvas = this.scene.textures.createCanvas(roundedOverlayKey, w, h)!;
+              const oCtx = overlayCanvas.getContext();
+
+              // Same rounded rect clip as the base image
+              oCtx.beginPath();
+              oCtx.moveTo(radius, 0);
+              oCtx.lineTo(w - radius, 0);
+              oCtx.arcTo(w, 0, w, radius, radius);
+              oCtx.lineTo(w, h - radius);
+              oCtx.arcTo(w, h, w - radius, h, radius);
+              oCtx.lineTo(radius, h);
+              oCtx.arcTo(0, h, 0, h - radius, radius);
+              oCtx.lineTo(0, radius);
+              oCtx.arcTo(0, 0, radius, 0, radius);
+              oCtx.closePath();
+              oCtx.clip();
+
+              // Cover-fill the overlay
+              const oScale = Math.max(w / overlaySrc.width, h / overlaySrc.height);
+              const oDrawW = overlaySrc.width * oScale;
+              const oDrawH = overlaySrc.height * oScale;
+              const oDx = (w - oDrawW) / 2;
+              const oDy = (h - oDrawH) / 2;
+              oCtx.drawImage(overlaySrc, oDx, oDy, oDrawW, oDrawH);
+
+              overlayCanvas.refresh();
+            }
+            const overlay = this.scene.add.image(0, 0, roundedOverlayKey);
+            this.add(overlay);
+          }
+        }
       }
     }
 
@@ -742,7 +739,7 @@ export class ItemCard extends GameObjects.Container {
         const tabContainer = this.scene.add.container(0, 0);
         tabContainer.setDepth(-1);
 
-        const tabY = hh + (btabH * i);
+        const tabY = hh + btabH * i;
 
         const bg = this.scene.add.graphics();
         bg.fillStyle(cfg.color, 0.95);

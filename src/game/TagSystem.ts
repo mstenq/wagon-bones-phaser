@@ -98,10 +98,7 @@ export function processImmediateTags(player = getPlayerState()): ImmediateTagRes
   return results;
 }
 
-function processImmediateMoneyTag(
-  tag: TrailTagInstance,
-  player = getPlayerState(),
-): ImmediateTagResult | null {
+function processImmediateMoneyTag(tag: TrailTagInstance, player = getPlayerState()): ImmediateTagResult | null {
   let amount = 0;
 
   for (let c = 0; c < tag.copies; c++) {
@@ -133,10 +130,7 @@ function processImmediateMoneyTag(
   return { tagDef: tag.def, copies: tag.copies, type: 'money', amount };
 }
 
-function processImmediateUpgradeTag(
-  tag: TrailTagInstance,
-  player = getPlayerState(),
-): ImmediateTagResult | null {
+function processImmediateUpgradeTag(tag: TrailTagInstance, player = getPlayerState()): ImmediateTagResult | null {
   if (tag.def.id !== 'tag_surveyor') return null;
 
   const handTypes = Object.values(HandType);
@@ -196,11 +190,7 @@ const INJECT_TAG_RARITY: Record<string, 'uncommon' | 'rare'> = {
 };
 
 /** Remove up to `copies` from pending shop tags with a given id. */
-export function consumeShopTagCopies(
-  tagId: string,
-  copies: number,
-  player = getPlayerState(),
-): number {
+export function consumeShopTagCopies(tagId: string, copies: number, player = getPlayerState()): number {
   let remaining = copies;
 
   player.pendingTags = player.pendingTags.flatMap((t) => {
@@ -221,11 +211,7 @@ export interface ShopStockRow {
 }
 
 /** Remove up to `copies` from stored aura tags and/or pending shop_aura tags. */
-export function consumeShopAuraTagCopies(
-  tagId: string,
-  copies: number,
-  player = getPlayerState(),
-): number {
+export function consumeShopAuraTagCopies(tagId: string, copies: number, player = getPlayerState()): number {
   let remaining = copies;
 
   player.storedAuraTags = player.storedAuraTags.flatMap((t) => {
@@ -262,17 +248,12 @@ export function getQueuedAuraTags(player = getPlayerState()): TrailTagInstance[]
 }
 
 /** Replace shop stock slots with free uncommon/rare equipment, up to shopSlots per visit. */
-export function applyInjectTagsToShopStock(
-  stockItems: ShopStockRow[],
-  player = getPlayerState(),
-): number {
+export function applyInjectTagsToShopStock(stockItems: ShopStockRow[], player = getPlayerState()): number {
   const maxSlots = Math.max(1, Math.min(player.shopSlots, stockItems.length));
   let applied = 0;
 
   while (applied < maxSlots) {
-    const injectTags = player
-      .getTagsByCategory('shop')
-      .filter((t) => t.def.id in INJECT_TAG_RARITY);
+    const injectTags = player.getTagsByCategory('shop').filter((t) => t.def.id in INJECT_TAG_RARITY);
     if (injectTags.length === 0) break;
 
     const tag = injectTags[0];
@@ -289,14 +270,8 @@ export function applyInjectTagsToShopStock(
 }
 
 /** Apply aura tags to base shop equipment, consuming only copies actually used. */
-export function applyAuraTagsToShopStock(
-  stockItems: ShopStockRow[],
-  player = getPlayerState(),
-): number {
-  const queue: TrailTagInstance[] = [
-    ...player.storedAuraTags,
-    ...player.getTagsByCategory('shop_aura'),
-  ];
+export function applyAuraTagsToShopStock(stockItems: ShopStockRow[], player = getPlayerState()): number {
+  const queue: TrailTagInstance[] = [...player.storedAuraTags, ...player.getTagsByCategory('shop_aura')];
   player.storedAuraTags = [];
 
   let totalApplied = 0;
@@ -383,10 +358,7 @@ export function getAuraTagDefForAuraId(auraId: string): TrailTagDef | undefined 
 }
 
 /** Junk Pile: create up to 2 Common equipment per copy (if space allows). */
-export function processJunkPileTag(
-  tag: TrailTagInstance,
-  player = getPlayerState(),
-): EquipmentDef[] {
+export function processJunkPileTag(tag: TrailTagInstance, player = getPlayerState()): EquipmentDef[] {
   const created: EquipmentDef[] = [];
   const count = 2 * tag.copies;
 

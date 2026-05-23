@@ -213,11 +213,18 @@ export class JourneyInfoModal extends GameObjects.Container {
         showActions: false,
         depth: 510,
         onTagHover: (tag, ax, ay) => {
-          this.tagTooltip.show(this.scene, tag, ax, ay, {
-            minX: this.panelX + 8,
-            maxX: this.panelX + this.panelW - 8,
-            minY: this.getContentArea().top,
-          }, 600);
+          this.tagTooltip.show(
+            this.scene,
+            tag,
+            ax,
+            ay,
+            {
+              minX: this.panelX + 8,
+              maxX: this.panelX + this.panelW - 8,
+              minY: this.getContentArea().top,
+            },
+            600,
+          );
         },
         onTagHoverEnd: () => this.tagTooltip.hide(),
       },
@@ -386,58 +393,52 @@ export class JourneyInfoModal extends GameObjects.Container {
         })
         .setOrigin(0.5);
       this.tabContent.add(emptyText);
-    } else for (let i = 0; i < player.purchasedPermits.length; i++) {
-      const permitId = player.purchasedPermits[i];
-      const permit = getPermitById(permitId);
-      if (!permit) continue;
+    } else
+      for (let i = 0; i < player.purchasedPermits.length; i++) {
+        const permitId = player.purchasedPermits[i];
+        const permit = getPermitById(permitId);
+        if (!permit) continue;
 
-      // Row background (alternating)
-      if (i % 2 === 0) {
-        const rowBg = scene.add.graphics();
-        rowBg.fillStyle(COLORS.SIDEBAR_SECTION, 0.5);
-        rowBg.fillRect(panelX + 16, rowY - 2, panelW - 32, rowH);
-        this.tabContent.add(rowBg);
+        // Row background (alternating)
+        if (i % 2 === 0) {
+          const rowBg = scene.add.graphics();
+          rowBg.fillStyle(COLORS.SIDEBAR_SECTION, 0.5);
+          rowBg.fillRect(panelX + 16, rowY - 2, panelW - 32, rowH);
+          this.tabContent.add(rowBg);
+        }
+
+        // Stage indicator
+        const stageText = scene.add
+          .text(panelX + 24, rowY + rowH / 2, `★${'★'.repeat(permit.stage - 1)}`, {
+            fontFamily: FONTS.PRIMARY,
+            fontSize: '12px',
+            color: '#aa88ff',
+          })
+          .setOrigin(0, 0.5);
+
+        const nameText = scene.add
+          .text(panelX + 60, rowY + rowH / 2 - 8, permit.name, {
+            fontFamily: FONTS.HEADING,
+            fontSize: '13px',
+            color: TEXT_COLORS.PRIMARY,
+          })
+          .setOrigin(0, 0.5);
+
+        const descText = scene.add
+          .text(panelX + 60, rowY + rowH / 2 + 8, permit.description, {
+            fontFamily: FONTS.PRIMARY,
+            fontSize: '11px',
+            color: TEXT_COLORS.SECONDARY,
+            wordWrap: { width: panelW - 100 },
+          })
+          .setOrigin(0, 0.5);
+
+        this.tabContent.add([stageText, nameText, descText]);
+        rowY += rowH;
       }
 
-      // Stage indicator
-      const stageText = scene.add
-        .text(panelX + 24, rowY + rowH / 2, `★${'★'.repeat(permit.stage - 1)}`, {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '12px',
-          color: '#aa88ff',
-        })
-        .setOrigin(0, 0.5);
-
-      const nameText = scene.add
-        .text(panelX + 60, rowY + rowH / 2 - 8, permit.name, {
-          fontFamily: FONTS.HEADING,
-          fontSize: '13px',
-          color: TEXT_COLORS.PRIMARY,
-        })
-        .setOrigin(0, 0.5);
-
-      const descText = scene.add
-        .text(panelX + 60, rowY + rowH / 2 + 8, permit.description, {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '11px',
-          color: TEXT_COLORS.SECONDARY,
-          wordWrap: { width: panelW - 100 },
-        })
-        .setOrigin(0, 0.5);
-
-      this.tabContent.add([stageText, nameText, descText]);
-      rowY += rowH;
-    }
-
     if (isDevMode()) {
-      const addBtn = new Button(
-        scene,
-        panelX + panelW / 2,
-        this.panelY + this.panelH - 78,
-        'Add Permit',
-        140,
-        32,
-      )
+      const addBtn = new Button(scene, panelX + panelW / 2, this.panelY + this.panelH - 78, 'Add Permit', 140, 32)
         .setColor(0x4a3a6b, 0x6a4a8b)
         .setDepth(510);
       addBtn.onClick(() => this.devAddPermit());

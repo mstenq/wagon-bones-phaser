@@ -49,22 +49,46 @@ export class EffectRegistry {
     this.lifecycleHandlers.set(phase, [handler]);
   }
 
-  dispatchAdditive(effectType: string, ctx: Parameters<AdditiveEffectHandler>[0], equip: Parameters<AdditiveEffectHandler>[1], index: Parameters<AdditiveEffectHandler>[2]): void {
+  dispatchAdditive(
+    effectType: string,
+    ctx: Parameters<AdditiveEffectHandler>[0],
+    equip: Parameters<AdditiveEffectHandler>[1],
+    index: Parameters<AdditiveEffectHandler>[2],
+  ): void {
     const handler = this.additiveHandlers.get(effectType);
     if (handler) handler(ctx, equip, index);
   }
 
-  dispatchXMult(effectType: string, ctx: Parameters<XMultEffectHandler>[0], equip: Parameters<XMultEffectHandler>[1], index: Parameters<XMultEffectHandler>[2]): void {
+  dispatchXMult(
+    effectType: string,
+    ctx: Parameters<XMultEffectHandler>[0],
+    equip: Parameters<XMultEffectHandler>[1],
+    index: Parameters<XMultEffectHandler>[2],
+  ): void {
     const handler = this.xmultHandlers.get(effectType);
     if (handler) handler(ctx, equip, index);
   }
 
-  dispatchPerDie(effectType: string, ctx: Parameters<PerDieEffectHandler>[0], equip: Parameters<PerDieEffectHandler>[1], index: Parameters<PerDieEffectHandler>[2], die: Parameters<PerDieEffectHandler>[3], triggerIdx: Parameters<PerDieEffectHandler>[4]): void {
+  dispatchPerDie(
+    effectType: string,
+    ctx: Parameters<PerDieEffectHandler>[0],
+    equip: Parameters<PerDieEffectHandler>[1],
+    index: Parameters<PerDieEffectHandler>[2],
+    die: Parameters<PerDieEffectHandler>[3],
+    triggerIdx: Parameters<PerDieEffectHandler>[4],
+  ): void {
     const handler = this.perDieHandlers.get(effectType);
     if (handler) handler(ctx, equip, index, die, triggerIdx);
   }
 
-  dispatchHeldDie(effectType: string, ctx: Parameters<HeldDieEffectHandler>[0], equip: Parameters<HeldDieEffectHandler>[1], index: Parameters<HeldDieEffectHandler>[2], die: Parameters<HeldDieEffectHandler>[3], triggerIdx: Parameters<HeldDieEffectHandler>[4]): void {
+  dispatchHeldDie(
+    effectType: string,
+    ctx: Parameters<HeldDieEffectHandler>[0],
+    equip: Parameters<HeldDieEffectHandler>[1],
+    index: Parameters<HeldDieEffectHandler>[2],
+    die: Parameters<HeldDieEffectHandler>[3],
+    triggerIdx: Parameters<HeldDieEffectHandler>[4],
+  ): void {
     const handler = this.heldDieHandlers.get(effectType);
     if (handler) handler(ctx, equip, index, die, triggerIdx);
   }

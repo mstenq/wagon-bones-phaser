@@ -138,7 +138,10 @@ export function findDeathPrevention(equipment: EquipmentInstance[], totalMiles: 
   return -1;
 }
 
-export function getScoredRetriggerCount(equipment: EquipmentInstance[], context?: { currentDay: number; maxDays: number }): number {
+export function getScoredRetriggerCount(
+  equipment: EquipmentInstance[],
+  context?: { currentDay: number; maxDays: number },
+): number {
   let count = 0;
   const maxCopyDepth = equipment.length;
   for (let i = 0; i < equipment.length; i++) {
@@ -168,12 +171,7 @@ export function hasStackedDeck(equipment: EquipmentInstance[]): boolean {
 }
 
 /** True if die matches a pip for equipment effects (Stacked Deck: loaded = all pips). */
-export function dieMatchesPip(
-  die: Die,
-  pip: number,
-  equipment: EquipmentInstance[],
-  stackedDeck?: boolean,
-): boolean {
+export function dieMatchesPip(die: Die, pip: number, equipment: EquipmentInstance[], stackedDeck?: boolean): boolean {
   if (die.value === pip) return true;
   if ((stackedDeck ?? hasStackedDeck(equipment)) && die.enhancement === 'loaded') return true;
   return false;

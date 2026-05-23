@@ -405,9 +405,7 @@ describe('profession starting dice', () => {
     const enhanced = player.dice.filter((d) => d.enhancement !== null);
     expect(enhanced).toHaveLength(8);
     const types = enhanced.map((d) => d.enhancement).sort();
-    expect(types).toEqual(
-      ['bone', 'diamond', 'gold', 'loaded', 'lucky', 'steel', 'stone', 'wooden'].sort(),
-    );
+    expect(types).toEqual(['bone', 'diamond', 'gold', 'loaded', 'lucky', 'steel', 'stone', 'wooden'].sort());
     expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(17);
   });
 
@@ -496,7 +494,14 @@ describe('Mirage CLONE effect', () => {
 describe('pre-roll consumable targeting regression', () => {
   test('loaded can enhance a drawn hand die before first roll', () => {
     const { game, player } = setupGame({
-      dice: [die({ value: 2 }), die({ value: 4 }), die({ value: 6 }), die({ value: 8 }), die({ value: 10 }), die({ value: 12 })],
+      dice: [
+        die({ value: 2 }),
+        die({ value: 4 }),
+        die({ value: 6 }),
+        die({ value: 8 }),
+        die({ value: 10 }),
+        die({ value: 12 }),
+      ],
       handSize: 5,
     });
     game.startRound();
@@ -696,7 +701,9 @@ describe('frontier encounter wiring and raid rules', () => {
 
   test('spiritual journey upgrades all hands via consumable execution path', () => {
     const player = resetPlayerState();
-    const beforeLevels = new Map(Object.values(HandType).map((handType) => [handType, player.getHandStats(handType).level]));
+    const beforeLevels = new Map(
+      Object.values(HandType).map((handType) => [handType, player.getHandStats(handType).level]),
+    );
     const def = getFrontierDefById('spiritual_journey')!;
 
     const result = executeConsumableEffect(createConsumableInstance(def), player);

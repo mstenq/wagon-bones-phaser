@@ -88,9 +88,7 @@ export function equipWithModifiers(id: string, modifiers: EquipmentModifier[]): 
         : Math.max(1, Math.floor(def.cost / 2)),
     state: def.initialState ? { ...def.initialState } : {},
     modifiers: [...modifiers],
-    perishableRoundsLeft: modifiers.includes('perishable')
-      ? EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS
-      : undefined,
+    perishableRoundsLeft: modifiers.includes('perishable') ? EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS : undefined,
   };
 }
 

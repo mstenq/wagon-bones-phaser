@@ -99,10 +99,7 @@ export interface LegRoundPanelsConfig {
 }
 
 /** Build three round columns for the current leg within a bounding box. */
-export function createLegRoundPanels(
-  scene: Scene,
-  config: LegRoundPanelsConfig,
-): RoundInfoPanel[] {
+export function createLegRoundPanels(scene: Scene, config: LegRoundPanelsConfig): RoundInfoPanel[] {
   const gap = config.gap ?? (config.compact ? 10 : 20);
   const colW = Math.min(config.compact ? 170 : 220, (config.bounds.width - gap * 2) / 3);
   const totalW = colW * 3 + gap * 2;
@@ -114,9 +111,7 @@ export function createLegRoundPanels(
     const state = getRoundColumnState(r, config.currentRound, config.skippedRoundsThisLeg);
     const isSkippable = r <= 2;
     const skipPreviewTag =
-      isSkippable && !config.skippedRoundsThisLeg.includes(r)
-        ? config.getSkipPreviewTagForRound?.(r)
-        : undefined;
+      isSkippable && !config.skippedRoundsThisLeg.includes(r) ? config.getSkipPreviewTagForRound?.(r) : undefined;
     const panel = new RoundInfoPanel(scene, x, config.bounds.y, colW, config.bounds.height, {
       round: r,
       state,
@@ -177,14 +172,7 @@ export function createLegRoundPanelsForPlayer(
 }
 
 export class RoundInfoPanel extends GameObjects.Container {
-  constructor(
-    scene: Scene,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    config: RoundInfoConfig,
-  ) {
+  constructor(scene: Scene, x: number, y: number, width: number, height: number, config: RoundInfoConfig) {
     super(scene, x, y);
     const depth = config.depth ?? 0;
     this.setDepth(depth);
@@ -390,12 +378,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     this.externalButtons.push(btn);
   }
 
-  private addRoundTagDisplay(
-    tag: TrailTagDef,
-    config: RoundInfoConfig,
-    tagY: number,
-    compact: boolean,
-  ): void {
+  private addRoundTagDisplay(tag: TrailTagDef, config: RoundInfoConfig, tagY: number, compact: boolean): void {
     const size = compact ? 28 : TAG_SIZE;
     const tagX = 16;
     this.addTagBadge(tagX, tagY, tag, size, config);
@@ -420,12 +403,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     this.add(badge);
   }
 
-  private addLabel(
-    x: number,
-    y: number,
-    content: string,
-    style: Phaser.Types.GameObjects.Text.TextStyle,
-  ): void {
+  private addLabel(x: number, y: number, content: string, style: Phaser.Types.GameObjects.Text.TextStyle): void {
     const text = this.scene.add
       .text(x, y, content, {
         fontFamily: FONTS.PRIMARY,
@@ -435,13 +413,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     this.add(text);
   }
 
-  private addTagBadge(
-    x: number,
-    y: number,
-    tag: TrailTagDef,
-    size: number,
-    config: RoundInfoConfig,
-  ): void {
+  private addTagBadge(x: number, y: number, tag: TrailTagDef, size: number, config: RoundInfoConfig): void {
     const color = TAG_CATEGORY_COLORS[tag.category] ?? 0x888888;
     const g = this.scene.add.graphics();
     g.fillStyle(color, 1);
@@ -453,9 +425,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     this.add(g);
 
     if (config.onTagHover) {
-      const zone = this.scene.add
-        .zone(x + size / 2, y + size / 2, size, size)
-        .setInteractive({ useHandCursor: true });
+      const zone = this.scene.add.zone(x + size / 2, y + size / 2, size, size).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => {
         const matrix = this.getWorldTransformMatrix();
         config.onTagHover!(tag, matrix.tx + x + size / 2, matrix.ty + y);

@@ -1,7 +1,16 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
 import { getTrailTagById } from '../../../data/trail_tags';
-import { die, diceWithValue, item, itemWithState, itemWithAura, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
+import {
+  die,
+  diceWithValue,
+  item,
+  itemWithState,
+  itemWithAura,
+  setupGame,
+  calculateTestScore,
+  resetDieIds,
+} from '../testHelpers';
 import {
   processEndOfRound,
   getConfigModifiers,
@@ -589,10 +598,7 @@ describe('XMULT_RISKY: Nitro (end of round)', () => {
 
 describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
   test('adds +25 miles per stone die in collection', () => {
-    const stoneDice = [
-      die({ value: 0, enhancement: 'stone' }),
-      die({ value: 0, enhancement: 'stone' }),
-    ];
+    const stoneDice = [die({ value: 0, enhancement: 'stone' }), die({ value: 0, enhancement: 'stone' })];
     const normalDice = diceWithValue(5, 2);
     // Include stone dice in the "all dice" pool
     const allDice = [...normalDice, ...stoneDice, ...diceWithValue(1, 48)];
@@ -687,6 +693,14 @@ describe('FIRST_DICE_RETRIGGER: Quick Draw', () => {
     // totalValue=20, baseMult=1+12=13
     expect(result.totalValue).toBe(20);
     expect(result.mult).toBe(13);
+  });
+
+  test('purple_flower on quick_draw retrigger respects consumable slot cap', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, sticker: 'purple_flower' }), die({ value: 5 })],
+      equipment: [item('quick_draw')],
+    });
+    expect(player.consumables.length).toBe(2);
   });
 });
 
@@ -914,7 +928,7 @@ describe('ROUND_START_SUPPLY: Supply Drop', () => {
 
 // ─── EXPLORER_GUILD ───
 
-describe('EXPLORER_GUILD: Explorer\'s Guild', () => {
+describe("EXPLORER_GUILD: Explorer's Guild", () => {
   test('has correct effect type', () => {
     const inst = item('explorers_guild');
     expect(inst.def.effectType).toBe('EXPLORER_GUILD');
@@ -1090,7 +1104,7 @@ describe('SAVINGS_ACCOUNT_INTEREST: Savings Account', () => {
 
 // ─── SELL_DISABLE_BOSS: Sheriff's Badge ───
 
-describe('SELL_DISABLE_BOSS: Sheriff\'s Badge', () => {
+describe("SELL_DISABLE_BOSS: Sheriff's Badge", () => {
   test('selling on boss round disables boss effect', () => {
     const { player } = setupGame({ equipment: [item('sheriffs_badge')] });
     player.round = 3;

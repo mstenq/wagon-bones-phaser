@@ -291,7 +291,7 @@ describe('Loaded Dice + Gold Pan (ENHANCED_SCORE_MONEY)', () => {
 
 // ─── Surveyor's Transit: HAND_UPGRADE_CHANCE ───
 
-describe('Loaded Dice + Surveyor\'s Transit (HAND_UPGRADE_CHANCE)', () => {
+describe("Loaded Dice + Surveyor's Transit (HAND_UPGRADE_CHANCE)", () => {
   test('doubles upgrade chance', () => {
     // Surveyor's Transit: chance [1, 4], with loaded → [2, 4] = 50%
     let upgraded = 0;
@@ -382,7 +382,7 @@ describe('Loaded Dice + Moonshine (ENHANCED_RETRIGGER)', () => {
     const rate = destroyed / runs;
     // Expected: 2/6 ≈ 0.333
     expect(rate).toBeGreaterThan(0.27);
-    expect(rate).toBeLessThan(0.40);
+    expect(rate).toBeLessThan(0.4);
   });
 
   test('doubles diamond destroy chance', () => {
@@ -401,7 +401,7 @@ describe('Loaded Dice + Moonshine (ENHANCED_RETRIGGER)', () => {
 
     const rate = destroyed / runs;
     // Expected: 2/3 ≈ 0.667
-    expect(rate).toBeGreaterThan(0.60);
+    expect(rate).toBeGreaterThan(0.6);
     expect(rate).toBeLessThan(0.74);
   });
 });
@@ -486,7 +486,7 @@ describe('Loaded Dice + Lucky dice enhancement', () => {
 
     const rate = moneyHits / runs;
     // Expected: 2/15 ≈ 0.133
-    expect(rate).toBeGreaterThan(0.10);
+    expect(rate).toBeGreaterThan(0.1);
     expect(rate).toBeLessThan(0.17);
   });
 
@@ -531,17 +531,13 @@ describe('Loaded Dice stacking (2 copies = 4x)', () => {
     const runs = 10000;
 
     for (let i = 0; i < runs; i++) {
-      const { destroyedIndices } = processEndOfRound([
-        item('dynamite'),
-        item('loaded_dice'),
-        item('loaded_dice'),
-      ]);
+      const { destroyedIndices } = processEndOfRound([item('dynamite'), item('loaded_dice'), item('loaded_dice')]);
       if (destroyedIndices.includes(0)) destroyed++;
     }
 
     const rate = destroyed / runs;
     // Expected: 4/6 ≈ 0.667
-    expect(rate).toBeGreaterThan(0.60);
+    expect(rate).toBeGreaterThan(0.6);
     expect(rate).toBeLessThan(0.73);
   });
 });

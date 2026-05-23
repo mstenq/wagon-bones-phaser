@@ -291,7 +291,14 @@ export class DifficultySelectScene extends Scene {
 
     redraw();
 
-    const hit = this.add.rectangle(checkboxX + checkboxSize / 2, rowY, checkboxSize + 10, checkboxSize + 10, 0x000000, 0);
+    const hit = this.add.rectangle(
+      checkboxX + checkboxSize / 2,
+      rowY,
+      checkboxSize + 10,
+      checkboxSize + 10,
+      0x000000,
+      0,
+    );
     hit.setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => {
       this.seededRunEnabled = !this.seededRunEnabled;

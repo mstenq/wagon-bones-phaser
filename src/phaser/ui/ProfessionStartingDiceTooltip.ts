@@ -37,13 +37,7 @@ export class ProfessionStartingDiceTooltip {
   private activeProfId: string | null = null;
   private scene: Scene | null = null;
 
-  show(
-    scene: Scene,
-    prof: ProfessionDef,
-    anchor: TooltipAnchor,
-    clamp: TooltipClampBounds,
-    depth = 160,
-  ): void {
+  show(scene: Scene, prof: ProfessionDef, anchor: TooltipAnchor, clamp: TooltipClampBounds, depth = 160): void {
     this.cancelHideTimer();
     this.scene = scene;
     if (this.activeProfId === prof.id && this.container) return;
@@ -155,9 +149,7 @@ export class ProfessionStartingDiceTooltip {
     panelX = Phaser.Math.Clamp(panelX, clamp.minX, clamp.maxX - panelW);
     panelY = Phaser.Math.Clamp(panelY, clamp.minY, clamp.maxY - panelH);
 
-    this.container = scene.add
-      .container(panelX, panelY, [bg, title, subtitle, diceContainer])
-      .setDepth(depth);
+    this.container = scene.add.container(panelX, panelY, [bg, title, subtitle, diceContainer]).setDepth(depth);
 
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, panelW, panelH), Phaser.Geom.Rectangle.Contains);
     bg.on('pointerover', () => this.cancelHideTimer());

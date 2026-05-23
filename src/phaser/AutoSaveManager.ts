@@ -4,11 +4,7 @@
 import type { Game, Scene } from 'phaser';
 import { GAMEPLAY } from '../game/Constants';
 import { getPlayerState } from '../game/PlayerState';
-import {
-  clearAutoSaveStorage,
-  readAutoSaveFromStorage,
-  writeAutoSaveToStorage,
-} from '../game/AutoSave';
+import { clearAutoSaveStorage, readAutoSaveFromStorage, writeAutoSaveToStorage } from '../game/AutoSave';
 import { buildSnapshotFromScene, restoreSnapshotToScene } from './SaveLoadIO';
 import { ensureBackgroundMusic } from './BackgroundMusic';
 import type { ActiveScene } from '../game/SaveLoad';

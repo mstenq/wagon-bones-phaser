@@ -11,12 +11,7 @@ import {
   processBossPayoutTags,
   processChangeOfGuardTags,
 } from '../TagSystem';
-import {
-  createEquipmentInstance,
-  getEquipmentListPrice,
-  getEquipmentSellValue,
-  getItemAuraById,
-} from '../ItemsSystem';
+import { createEquipmentInstance, getEquipmentListPrice, getEquipmentSellValue, getItemAuraById } from '../ItemsSystem';
 import { getEquipmentPurchasePrice } from '../EquipmentModifiers';
 import { EQUIPMENT_MODIFIER } from '../Constants';
 import { getPlayerState, resetPlayerState } from '../PlayerState';
@@ -233,12 +228,8 @@ describe('TagSystem', () => {
       };
       const listPrice = getEquipmentListPrice(def);
       expect(listPrice).toBeGreaterThan(0);
-      expect(
-        getEquipmentPurchasePrice(def, ['leased'], listPrice, []),
-      ).toBe(0);
-      expect(
-        getEquipmentPurchasePrice(def, ['leased'], listPrice, []),
-      ).not.toBe(EQUIPMENT_MODIFIER.LEASED_BUY_PRICE);
+      expect(getEquipmentPurchasePrice(def, ['leased'], listPrice, [])).toBe(0);
+      expect(getEquipmentPurchasePrice(def, ['leased'], listPrice, [])).not.toBe(EQUIPMENT_MODIFIER.LEASED_BUY_PRICE);
     });
 
     it('free icy aura equipment stays $0 at purchase', () => {
@@ -285,9 +276,7 @@ describe('TagSystem', () => {
         }
       }
       const listPrice = getEquipmentListPrice(stock[0].def);
-      expect(
-        getEquipmentPurchasePrice(stock[0].def, ['leased'], listPrice, []),
-      ).toBe(0);
+      expect(getEquipmentPurchasePrice(stock[0].def, ['leased'], listPrice, [])).toBe(0);
     });
   });
 

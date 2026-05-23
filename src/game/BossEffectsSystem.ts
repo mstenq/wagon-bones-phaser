@@ -123,9 +123,7 @@ export function applyBossOnDayStart(day: number): void {
 
   if (boss.effectType === 'DISABLE_RANDOM_EQUIPMENT') {
     const count = (boss.effectParams.count as number) ?? 1;
-    const available = player.equipment
-      .map((_, i) => i)
-      .filter((i) => !state.disabledEquipmentIndices.includes(i));
+    const available = player.equipment.map((_, i) => i).filter((i) => !state.disabledEquipmentIndices.includes(i));
     for (let n = 0; n < count && available.length > 0; n++) {
       const pick = available.splice(Math.floor(rngFloat('boss') * available.length), 1)[0];
       state.disabledEquipmentIndices.push(pick);
@@ -246,10 +244,7 @@ export function getBossAdjustedHandStats(_handType: HandType, stats: HandStats):
 }
 
 /** River: only straight hands score full value; others downgrade to high card */
-export function applyBossHandRestriction(
-  handResult: HandResult,
-  selectedDice: Die[],
-): HandResult {
+export function applyBossHandRestriction(handResult: HandResult, selectedDice: Die[]): HandResult {
   const boss = getActiveBoss();
   if (!boss || boss.effectType !== 'STRAIGHTS_ONLY') return handResult;
 

@@ -8,7 +8,13 @@ import {
   getEquipmentDefById,
   isEquipmentUnlocked,
 } from '../ItemsSystem';
-import { getRandomSupplyDef, getRandomTrailGuideDef, getRandomFrontierDef, getShopRandomFrontierDef, generateShopConsumables } from '../ConsumablesSystem';
+import {
+  getRandomSupplyDef,
+  getRandomTrailGuideDef,
+  getRandomFrontierDef,
+  getShopRandomFrontierDef,
+  generateShopConsumables,
+} from '../ConsumablesSystem';
 import { resetPlayerState } from '../PlayerState';
 import { die } from './testHelpers';
 

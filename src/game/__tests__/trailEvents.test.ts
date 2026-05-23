@@ -1,11 +1,13 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, diceWithValue, die, item, setTestDifficulty } from './testHelpers';
+import { resetDieIds, setupGame, diceWithValue, die, item, equipWithModifiers, setTestDifficulty } from './testHelpers';
 import { resetPlayerState } from '../PlayerState';
 import {
   getAllTrailEvents,
   getTrailEventById,
   selectTrailEvent,
+  eventHasEffect,
+  isStandoffBossRound,
   filterEventsByLeg,
   filterUnseenEvents,
   getTrailEventMinimumLeg,
@@ -25,7 +27,7 @@ import {
 } from '../TrailEventsSystem';
 import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
 import { GAMEPLAY, TRAIL_EVENT } from '../Constants';
-import { getEquipmentDefById } from '../ItemsSystem';
+import { getEquipmentDefById, isEquipmentCursed } from '../ItemsSystem';
 import { resolveEffectParam } from '../effectParams';
 import { PhaseState } from '../types';
 
@@ -250,6 +252,24 @@ describe('Trail Event selection', () => {
     const filtered = filterUnseenEvents(pool, player);
     expect(filtered.some((e) => e.id === pool[0].id)).toBe(false);
     expect(filtered.length).toBe(4);
+  });
+
+  test('before the_standoff boss, selectTrailEvent never returns heavy_fog', () => {
+    const player = resetPlayerState();
+    player.round = GAMEPLAY.ROUNDS_PER_LEG;
+    player.restoreBossAssignments(Array(GAMEPLAY.LEGS).fill('the_standoff'));
+    expect(isStandoffBossRound(player)).toBe(true);
+    expect(eventHasEffect(getTrailEventById('heavy_fog')!, 'DISABLE_REROLL_DAY1')).toBe(true);
+
+    for (let i = 0; i < 500; i++) {
+      const event = selectTrailEvent(player, Math.random);
+      expect(event.id).not.toBe('heavy_fog');
+    }
+  });
+
+  test('eventHasEffect detects LOSE_ALL_REROLLS on fallen_angel betray choice', () => {
+    const event = getTrailEventById('fallen_angel')!;
+    expect(eventHasEffect(event, 'LOSE_ALL_REROLLS')).toBe(true);
   });
 });
 
@@ -527,6 +547,27 @@ describe('Effect application', () => {
     player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
     applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
+    expect(player.equipment.length).toBe(1);
+  });
+
+  test('LOSE_RANDOM_EQUIPMENT does not remove cursed equipment', () => {
+    const player = resetPlayerState();
+    const cursed = equipWithModifiers('horseshoe', ['cursed']);
+    const normal = item('dynamite');
+    player.equipment = [cursed, normal];
+    const mods = createEmptyModifiers();
+    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
+    expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
+    expect(player.equipment.length).toBe(1);
+    expect(player.equipment[0].def.id).toBe('horseshoe');
+  });
+
+  test('DESTROY_EQUIPMENT no-op when target is cursed', () => {
+    const player = resetPlayerState();
+    const cursed = equipWithModifiers('horseshoe', ['cursed']);
+    player.equipment = [cursed];
+    const mods = createEmptyModifiers();
+    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'horseshoe' }, player, mods);
     expect(player.equipment.length).toBe(1);
   });
 

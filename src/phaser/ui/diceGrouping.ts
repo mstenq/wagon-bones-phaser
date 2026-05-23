@@ -32,8 +32,6 @@ export function groupDiceByVisualIdentity(dice: Die[], keySuffix = ''): DiceVisu
 
 /** Display name for a die group, e.g. "Gold" or "×3 Gold". */
 export function getDiceGroupDisplayLabel(die: Die, count: number): string {
-  const name = die.enhancement
-    ? (getDiceEnhancementById(die.enhancement)?.name ?? die.enhancement)
-    : 'Standard';
+  const name = die.enhancement ? (getDiceEnhancementById(die.enhancement)?.name ?? die.enhancement) : 'Standard';
   return count > 1 ? `×${count} ${name}` : name;
 }

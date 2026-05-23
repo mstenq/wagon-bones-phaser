@@ -9,7 +9,12 @@ effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => 
   if (die.enhancement === 'gold') {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     getPlayerState().economy.earn(value);
-    ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'money', value, dieId: die.id });
+    ctx.animEvents.push({
+      target: { kind: 'both', dieId: die.id, equipIndex: _idx },
+      popupType: 'money',
+      value,
+      dieId: die.id,
+    });
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: +$${value}`);
   }
 });
@@ -20,7 +25,12 @@ effectRegistry.registerPerDie('ENHANCED_SCORE_MONEY', (ctx, equip, _idx, die, _t
     if (checkLoadedChance(resolveChance(p, getPlayerState().profession?.id), ctx.equipment)) {
       const value = p.value as number;
       getPlayerState().economy.earn(value);
-      ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'money', value, dieId: die.id });
+      ctx.animEvents.push({
+        target: { kind: 'both', dieId: die.id, equipIndex: _idx },
+        popupType: 'money',
+        value,
+        dieId: die.id,
+      });
       console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: +$${value}`);
     }
   }
@@ -30,7 +40,12 @@ effectRegistry.registerPerDie('LUCKY_DICE_MONEY', (ctx, equip, _idx, die, _t) =>
   if (die.enhancement === 'lucky') {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     getPlayerState().economy.earn(value);
-    ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'money', value, dieId: die.id });
+    ctx.animEvents.push({
+      target: { kind: 'both', dieId: die.id, equipIndex: _idx },
+      popupType: 'money',
+      value,
+      dieId: die.id,
+    });
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: +$${value}`);
   }
 });
@@ -41,7 +56,12 @@ effectRegistry.registerPerDie('BONE_DICE_XMULT_CHANCE', (ctx, equip, _idx, die, 
     if (checkLoadedChance(p.chance as [number, number], ctx.equipment)) {
       const xVal = p.value as number;
       multiplyCtxXMult(ctx, xVal);
-      ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'xmult', value: xVal, dieId: die.id });
+      ctx.animEvents.push({
+        target: { kind: 'both', dieId: die.id, equipIndex: _idx },
+        popupType: 'xmult',
+        value: xVal,
+        dieId: die.id,
+      });
       console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal}`);
     }
   }
@@ -51,7 +71,12 @@ effectRegistry.registerPerDie('WOODEN_DICE_MILES', (ctx, equip, _idx, die, _t) =
   if (die.enhancement === 'wooden') {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     ctx.totalValue += value;
-    ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'miles', value, dieId: die.id });
+    ctx.animEvents.push({
+      target: { kind: 'both', dieId: die.id, equipIndex: _idx },
+      popupType: 'miles',
+      value,
+      dieId: die.id,
+    });
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: +${value} miles (totalValue: ${ctx.totalValue})`);
   }
 });
@@ -60,7 +85,12 @@ effectRegistry.registerPerDie('IRON_DICE_MULT', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement === 'steel') {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     ctx.bonusMult += value;
-    ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'mult', value, dieId: die.id });
+    ctx.animEvents.push({
+      target: { kind: 'both', dieId: die.id, equipIndex: _idx },
+      popupType: 'mult',
+      value,
+      dieId: die.id,
+    });
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: +${value} mult (bonusMult: ${ctx.bonusMult})`);
   }
 });

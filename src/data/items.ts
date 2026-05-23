@@ -45,7 +45,7 @@ export interface ItemDisplayResult {
 
 import type { GameState } from '../game/GameState';
 import type { PlayerState } from '../game/PlayerState';
-import { HandType } from '../game/types';
+import { HandType, type EquipmentModifier } from '../game/types';
 import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/Constants';
 import { resolveEffectParam, resolveChance } from '../game/effectParams';
 import {
@@ -68,6 +68,8 @@ export interface ItemDef {
   initialState?: Record<string, number>;
   display: (game: GameState | null, player: PlayerState) => ItemDisplayResult;
   unlockCondition?: EquipmentUnlockCondition;
+  /** Immune to difficulty modifier rolls (cursed / perishable / leased), not instance state. */
+  modifierImmunity?: EquipmentModifier[];
 }
 
 // ─── Helper constructors for readability ───
@@ -332,6 +334,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 5,
     rarity: 'common',
+    modifierImmunity: ['cursed'],
     effectType: 'ADD_MULT_RISKY',
     effectParams: { value: 15, destroyChance: [1, 6] },
     display: (_game, player) => ({
@@ -373,9 +376,7 @@ const items: ItemDef[] = [
         tooltip: [[text('Earn'), money('$4'), text('at end of round. Jesse Rawlins (Outlaw) earns'), money('$12')]],
       };
     },
-  },
-
-  // ─── Held-in-Hand Items ───
+  }, // ─── Held-in-Hand Items ───
   // Deprecated in favor of silver_bullets item
   // {
   //   id: 'double_down',
@@ -429,7 +430,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'common',
-
     effectType: 'HELD_ENHANCED_MONEY',
     effectParams: { chance: [1, 2], value: 1 },
     display: (game, player) => {
@@ -451,7 +451,6 @@ const items: ItemDef[] = [
         ],
       };
     },
-
     unlockCondition: unlockAnyEnhanced,
   },
   {
@@ -460,7 +459,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 5,
     rarity: 'common',
-
     effectType: 'HELD_PIP_MULT',
     effectParams: { pip: 11, value: 11 },
     display: (game, _player) => {
@@ -473,15 +471,14 @@ const items: ItemDef[] = [
         tooltip: [[text('Each '), mult('11'), text(' held in hand gives '), mult('+11 mult')]],
       };
     },
-  },
-
-  // ─── Phase 2 Items ───
+  }, // ─── Phase 2 Items ───
   {
     id: 'rabbits_foot',
     name: "Rabbit's Foot",
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
+    modifierImmunity: ['perishable'],
     unlockCondition: unlockByEnhancement('lucky'),
     effectType: 'LUCKY_TRIGGER_XMULT',
     effectParams: { value: 0.25 },
@@ -538,7 +535,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'SHOP_REROLL_MULT_GAIN',
     effectParams: { value: 2 },
     initialState: { mult: 0 },
@@ -558,7 +555,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 5,
     rarity: 'common',
-
+    modifierImmunity: ['cursed'],
     effectType: 'DECAYING_MULT',
     effectParams: { decayPerRound: 4, maxRounds: 5 },
     initialState: { mult: 20, roundsPlayed: 0 },
@@ -587,7 +584,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'HAND_MULT_GAIN',
     effectParams: {
       handType: HandType.TWO_PAIR,
@@ -623,7 +620,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'rare',
-
     effectType: 'LUCKY_NUMBER_PIP_XMULT',
     effectParams: { value: 1.5, professionOverrides: { gambler: { value: 2 } } },
     initialState: { pip: 7 },
@@ -650,7 +646,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['cursed'],
     effectType: 'DECAYING_XMULT',
     effectParams: { decayPerDie: 0.01 },
     initialState: { xMult: 2 },
@@ -670,7 +666,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['cursed'],
     effectType: 'SCORED_RETRIGGER_TIMED',
     effectParams: {},
     initialState: { daysRemaining: 10 },
@@ -707,7 +703,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 9,
     rarity: 'rare',
-
     effectType: 'SELL_XMULT_GAIN',
     effectParams: { value: 0.25 },
     initialState: { xMult: 1 },
@@ -729,14 +724,12 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'GOLD_DICE_MONEY',
     effectParams: { value: 4 },
     display: (_game, _player) => ({
       hint: [[money('+$4'), condition('per gold')]],
       tooltip: [[text('Played gold dice earn '), money('$4')]],
     }),
-
     unlockCondition: unlockByEnhancement('gold'),
   },
   {
@@ -745,7 +738,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 5,
     rarity: 'uncommon',
-
+    modifierImmunity: ['cursed'],
     effectType: 'PREVENT_DEATH',
     effectParams: { threshold: 0.25 },
     display: (_game, _player) => ({
@@ -765,7 +758,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'FINAL_DAY_XMULT',
     effectParams: { value: 3 },
     display: (game, _player) => {
@@ -785,7 +777,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 4,
     rarity: 'common',
-
     effectType: 'SELL_VALUE_AS_MULT',
     effectParams: {},
     display: (_game, player) => {
@@ -807,7 +798,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'deprecated',
-
     effectType: 'NONE',
     effectParams: {},
     display: (_game, _player) => ({
@@ -821,7 +811,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ROUND_START_ADD_DICE',
     effectParams: {},
     display: (_game, _player) => ({
@@ -835,7 +824,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'STATEFUL_XMULT',
     effectParams: { xMultGainPerNegation: 0.75 },
     initialState: { xMult: 1 },
@@ -869,7 +858,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'STATEFUL_ADD_MILES',
     effectParams: { investigateMiles: 20 },
     initialState: { miles: 0 },
@@ -906,7 +895,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 20,
     rarity: 'legendary',
-
     effectType: 'NONE',
     effectParams: {},
     display: (_game, _player) => ({
@@ -926,7 +914,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 20,
     rarity: 'legendary',
-
+    modifierImmunity: ['perishable'],
     effectType: 'ENHANCED_DESTROYED_XMULT',
     effectParams: { value: 1 },
     initialState: { xMult: 1 },
@@ -947,7 +935,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-noborder',
     cost: 20,
     rarity: 'legendary',
-
     effectType: 'PIP_XMULT',
     effectParams: { pip: 6, value: 2 },
     display: (_game, _player) => ({
@@ -961,7 +948,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 20,
     rarity: 'legendary',
-
     effectType: 'REROLL_COUNT_XMULT',
     effectParams: { threshold: 23, value: 1 },
     initialState: { xMult: 1, rerollsTotal: 0 },
@@ -988,7 +974,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-noborder',
     cost: 20,
     rarity: 'legendary',
-
     effectType: 'SHOP_END_GHOST_CONSUMABLE',
     effectParams: {},
     display: (_game, _player) => ({
@@ -1004,23 +989,19 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 20,
     rarity: 'legendary',
-
     effectType: 'ALL_RETRIGGER',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
       hint: [[text('Retrigger'), condition('all played & held')]],
       tooltip: [[text('Retriggers all played dice, and all held in hand effects')]],
     }),
-  },
-
-  // ─── Phase 3 Items ───
+  }, // ─── Phase 3 Items ───
   {
     id: 'twin_colts',
     name: 'Twin Colts',
     cardTemplate: 'white-text',
     cost: 4,
     rarity: 'common',
-
     effectType: 'HAND_MILES',
     effectParams: { handType: HandType.TWO_PAIR, value: 80 },
     display: (game, _player) => ({
@@ -1039,7 +1020,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'HAND_MILES',
     effectParams: { handType: HandType.FOUR_STRAIGHT, value: 80 },
     display: (game, _player) => ({
@@ -1064,7 +1044,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'HAND_MILES',
     effectParams: { handType: HandType.FIVE_STRAIGHT, value: 100 },
     display: (game, _player) => ({
@@ -1089,7 +1068,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'HELD_RETRIGGER',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
@@ -1103,7 +1081,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'ROUND_START_DESTROY_RIGHT',
     effectParams: {},
     initialState: { mult: 0 },
@@ -1125,7 +1103,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ROUND_START_ADD_STONE',
     effectParams: {},
     display: (_game, _player) => ({
@@ -1139,7 +1116,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'EVERY_NTH_HAND_XMULT',
     effectParams: { n: 6, value: 4 },
     initialState: { handsPlayed: 0 },
@@ -1162,7 +1138,6 @@ const items: ItemDef[] = [
     name: 'Wild Card',
     cost: 4,
     rarity: 'common',
-
     effectType: 'RANDOM_MULT',
     effectParams: { min: 0, max: 23 },
     display: (_game, _player) => ({
@@ -1176,7 +1151,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 1,
     rarity: 'common',
-
     effectType: 'BANK_NOTE',
     effectParams: { maxDebt: 20 },
     display: (_game, player) => {
@@ -1203,7 +1177,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'PIP_SUPPLY_CHANCE',
     effectParams: { pip: 1, chance: [1, 4], professionOverrides: { merchant: { chance: [1, 2] } } },
     display: (_game, player) => {
@@ -1228,7 +1201,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'FREE_SHOP_REROLL',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
@@ -1242,7 +1214,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'SCORED_RETRIGGER_FINAL_DAY',
     effectParams: {},
     display: (game, _player) => ({
@@ -1259,7 +1230,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'rare',
-
     effectType: 'SOLO_FIRST_DAY_ENHANCE',
     effectParams: {},
     display: (game, _player) => ({
@@ -1276,7 +1246,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'ENHANCEMENT_COUNT_XMULT',
     effectParams: { enhancement: 'steel', value: 0.2 },
     display: (_game, player) => {
@@ -1291,7 +1260,6 @@ const items: ItemDef[] = [
         tooltip: [[mult('x0.2'), text(' mult for each steel die in collection')]],
       };
     },
-
     unlockCondition: unlockByEnhancement('steel'),
   },
   {
@@ -1300,7 +1268,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 4,
     rarity: 'common',
-
     effectType: 'END_ROUND_MONEY_PER_REROLL',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
@@ -1313,7 +1280,6 @@ const items: ItemDef[] = [
     name: 'One-Eyed Jack',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'PIP_RETRIGGER',
     effectParams: { pip: 1 },
     display: (_game, _player) => ({
@@ -1327,7 +1293,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'ENHANCED_SCORE_MONEY',
     effectParams: { chance: [1, 2], value: 2, professionOverrides: { prospector: { chance: [1, 1] } } },
     display: (_game, player) => {
@@ -1349,17 +1314,13 @@ const items: ItemDef[] = [
         ],
       };
     },
-
     unlockCondition: unlockAnyEnhanced,
-  },
-
-  // ─── Phase 4 Items ───
+  }, // ─── Phase 4 Items ───
   {
     id: 'trail_journal',
     name: 'Trail Journal',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'HAND_TIMES_PLAYED_MULT',
     effectParams: {},
     display: (game, player) => {
@@ -1379,7 +1340,6 @@ const items: ItemDef[] = [
     cardTemplate: 'marked',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'MARKED_NO_SIX_MULT',
     effectParams: { multPerHand: 1, professionOverrides: { demon_hunter: { multPerHand: 2 } } },
     initialState: { mult: 0 },
@@ -1408,7 +1368,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'HAND_UPGRADE_CHANCE',
     effectParams: { chance: [1, 4], professionOverrides: { surveyor: { chance: [1, 2] } } },
     display: (_game, player) => {
@@ -1433,7 +1392,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'TRAIL_GUIDE_XMULT',
     effectParams: { value: 0.1, professionOverrides: { scout: { value: 0.2 } } },
     initialState: { xMult: 1 },
@@ -1467,7 +1426,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-
+    modifierImmunity: ['cursed'],
     effectType: 'STATEFUL_ADD_MILES',
     effectParams: { decayPerHand: 5 },
     initialState: { miles: 100 },
@@ -1487,7 +1446,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'rare',
-
     effectType: 'FIRST_DAY_SOLO_COPY',
     effectParams: {},
     display: (game, _player) => ({
@@ -1504,7 +1462,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 3,
     rarity: 'common',
-
     effectType: 'ALL_DICE_SCORE',
     effectParams: {},
     display: (_game, _player) => ({
@@ -1518,7 +1475,6 @@ const items: ItemDef[] = [
     cardTemplate: 'hellfire',
     cost: 6,
     rarity: 'rare',
-
     effectType: 'FIRST_HAND_ENHANCED_SIX',
     effectParams: {},
     display: (game, _player) => ({
@@ -1528,7 +1484,6 @@ const items: ItemDef[] = [
           : [[condition('First hand'), inactive('Inactive')]],
       tooltip: [[text('If first hand of round is an enhanced 6, destroy it and gain a Frontier Encounter card')]],
     }),
-
     unlockCondition: unlockAnyEnhanced,
   },
   {
@@ -1537,7 +1492,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'PERMANENT_DIE_MILES_GAIN',
     effectParams: { value: 5 },
     display: (_game, _player) => ({
@@ -1550,7 +1504,7 @@ const items: ItemDef[] = [
     name: 'Trail Tax',
     cost: 4,
     rarity: 'common',
-
+    modifierImmunity: ['perishable'],
     effectType: 'TRAIL_TAX',
     effectParams: { multPerDay: 2, multLostPerReroll: 1 },
     initialState: { mult: 0 },
@@ -1569,7 +1523,6 @@ const items: ItemDef[] = [
     name: 'Wanted Poster',
     cost: 4,
     rarity: 'common',
-
     effectType: 'WANTED_HAND_MONEY',
     effectParams: { value: 4, professionOverrides: { hunter: { value: 8 } } },
     initialState: { targetHand: 0 },
@@ -1589,16 +1542,14 @@ const items: ItemDef[] = [
         tooltip: [[text('Earn '), money(`$${amount}`), text(' when hand is '), condition(HAND_NAMES[handType] ?? '?')]],
       };
     },
-  },
-
-  // ─── Phase 5 Items ───
+  }, // ─── Phase 5 Items ───
   {
     id: 'nitro',
     name: 'Nitro',
     cardTemplate: 'white-text',
     cost: 4,
     rarity: 'rare',
-
+    modifierImmunity: ['cursed'],
     effectType: 'XMULT_RISKY',
     effectParams: { value: 3, destroyChance: [1, 1000] },
     display: (_game, player) => {
@@ -1615,7 +1566,6 @@ const items: ItemDef[] = [
         ],
       };
     },
-
     unlockCondition: unlockNitro,
   },
   {
@@ -1624,7 +1574,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'REPEAT_HAND_XMULT',
     effectParams: { value: 3 },
     display: (game, _player) => ({
@@ -1643,7 +1592,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline-noborder',
     cost: 5,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'STATEFUL_ADD_MULT',
     effectParams: { gainOnPackSkip: 3 },
     initialState: { mult: 0 },
@@ -1663,7 +1612,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 4,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'ROUND_START_XMULT_DESTROY',
     effectParams: { value: 0.5 },
     initialState: { xMult: 1 },
@@ -1689,7 +1638,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 4,
     rarity: 'common',
-
+    modifierImmunity: ['perishable'],
     effectType: 'EXACT_DICE_COUNT_MILES',
     effectParams: { count: 4, value: 4 },
     initialState: { miles: 0 },
@@ -1710,7 +1659,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ROUND_START_CREATE_EQUIPMENT',
     effectParams: { count: 2, rarity: 'common' },
     display: (_game, _player) => ({
@@ -1724,7 +1672,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 7,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'STATEFUL_XMULT',
     effectParams: { gainOnDiceAdded: 0.25 },
     initialState: { xMult: 1 },
@@ -1744,7 +1692,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text',
     cost: 8,
     rarity: 'uncommon',
-
     effectType: 'LOW_MONEY_SUPPLY',
     effectParams: { threshold: 4, professionOverrides: { doctor: { threshold: 8 } } },
     display: (_game, player) => {
@@ -1773,7 +1720,7 @@ const items: ItemDef[] = [
     name: 'Railroad Bonds',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'END_ROUND_MONEY_SCALING',
     effectParams: { base: 1, perBoss: 2 },
     initialState: { bossesDefeated: 0 },
@@ -1802,7 +1749,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'PACK_OPEN_SUPPLY_CHANCE',
     effectParams: { chance: [1, 2], professionOverrides: { cook: { chance: [1, 1] } } },
     display: (_game, player) => {
@@ -1828,7 +1774,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'SUPPLY_USED_MULT',
     effectParams: { value: 1 },
     display: (_game, player) => {
@@ -1847,7 +1792,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ENHANCEMENT_COUNT_MILES',
     effectParams: { enhancement: 'stone', value: 25 },
     display: (_game, player) => {
@@ -1860,7 +1804,6 @@ const items: ItemDef[] = [
         tooltip: [[miles('+25'), text(' miles for each stone die in collection')]],
       };
     },
-
     unlockCondition: unlockByEnhancement('stone'),
   },
   {
@@ -1869,7 +1812,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 4,
     rarity: 'common',
-
     effectType: 'ROUND_START_SELL_VALUE',
     effectParams: { value: 3 },
     display: (_game, player) => {
@@ -1888,7 +1830,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ROUND_START_DAYS_NO_REROLLS',
     effectParams: { days: 3 },
     display: (_game, _player) => ({
@@ -1902,7 +1843,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 5,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'HAND_MILES_GAIN',
     effectParams: { handType: HandType.FIVE_STRAIGHT, value: 15 },
     initialState: { miles: 0 },
@@ -1920,16 +1861,13 @@ const items: ItemDef[] = [
         ],
       };
     },
-  },
-
-  // ─── Phase 6 Items ───
+  }, // ─── Phase 6 Items ───
   {
     id: 'rail_splitter',
     name: 'Rail Splitter',
     cardTemplate: 'black-text-white-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'HAND_MULT',
     effectParams: { handType: HandType.FOUR_STRAIGHT, value: 8 },
     display: (game, _player) => ({
@@ -1964,7 +1902,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'rare',
-
     effectType: 'EMPTY_SLOT_XMULT',
     effectParams: { value: 1 },
     display: (_game, player) => {
@@ -1985,7 +1922,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'ENHANCEMENT_SCORED_MILES',
     effectParams: { enhancement: 'wooden', value: 30 },
     initialState: { miles: 0 },
@@ -1999,7 +1936,6 @@ const items: ItemDef[] = [
         tooltip: [[text('Gains '), miles('+30'), text(' miles for every Wood die scored')]],
       };
     },
-
     unlockCondition: unlockByEnhancement('wooden'),
   },
   {
@@ -2008,7 +1944,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-noborder',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ENHANCED_RETRIGGER',
     effectParams: { destroyChance: [1, 6], diamondDestroyChance: [1, 3] },
     display: (_game, player) => ({
@@ -2026,7 +1961,6 @@ const items: ItemDef[] = [
         ],
       ],
     }),
-
     unlockCondition: unlockAnyEnhanced,
   },
   {
@@ -2035,7 +1969,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ROUND_START_DESTROY_STANDARD_DICE',
     effectParams: { value: 3 },
     display: (_game, _player) => ({
@@ -2055,7 +1988,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ROUNDS_SKIPPED_XMULT',
     effectParams: { value: 0.25 },
     initialState: { roundsSkipped: 0 },
@@ -2079,7 +2011,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'FIRST_DICE_RETRIGGER',
     effectParams: { value: 2 },
     display: (_game, _player) => ({
@@ -2093,7 +2024,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-noborder',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'LAST_DICE_RETRIGGER',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
@@ -2107,7 +2037,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'LUCKY_DICE_MONEY',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
@@ -2121,7 +2050,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'BONE_DICE_XMULT_CHANCE',
     effectParams: { chance: [1, 2], value: 1.5 },
     display: (_game, player) => ({
@@ -2136,7 +2064,6 @@ const items: ItemDef[] = [
         ],
       ],
     }),
-
     unlockCondition: unlockByEnhancement('bone'),
   },
   {
@@ -2145,14 +2072,12 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'WOODEN_DICE_MILES',
     effectParams: { value: 50 },
     display: (_game, _player) => ({
       hint: [[miles('+50'), condition('per wooden')]],
       tooltip: [[text('Played wooden dice give '), miles('+50'), text(' miles when scored')]],
     }),
-
     unlockCondition: unlockByEnhancement('wooden'),
   },
   {
@@ -2161,14 +2086,12 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'IRON_DICE_MULT',
     effectParams: { value: 7 },
     display: (_game, _player) => ({
       hint: [[mult('+7'), condition('per steel')]],
       tooltip: [[text('Played iron dice give '), mult('+7'), text(' mult when scored')]],
     }),
-
     unlockCondition: unlockByEnhancement('steel'),
   },
   {
@@ -2177,7 +2100,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'DIAMOND_DESTROYED_XMULT',
     effectParams: { value: 0.75 },
     initialState: { xMult: 1 },
@@ -2193,7 +2116,6 @@ const items: ItemDef[] = [
         tooltip: [[text('Item gains '), mult('x0.75'), text(' mult for every diamond die that is destroyed')]],
       };
     },
-
     unlockCondition: unlockByEnhancement('diamond'),
   },
   {
@@ -2202,7 +2124,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'ALLOW_DUPLICATES',
     effectParams: {},
     display: (_game, _player) => ({
@@ -2222,7 +2143,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'RAINBOW_TRAIL_XMULT',
     effectParams: {},
     display: (game, _player) => {
@@ -2249,7 +2169,6 @@ const items: ItemDef[] = [
         ],
       };
     },
-
     unlockCondition: unlockTwoEnhancedTypes,
   },
   {
@@ -2258,7 +2177,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 4,
     rarity: 'uncommon',
-
     effectType: 'LOADED_DICE',
     effectParams: {},
     display: (_game, _player) => ({
@@ -2272,7 +2190,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 10,
     rarity: 'rare',
-
     effectType: 'COPY_RIGHT',
     effectParams: {},
     display: (_game, player) => {
@@ -2301,7 +2218,6 @@ const items: ItemDef[] = [
     cardTemplate: undefined,
     cost: 10,
     rarity: 'rare',
-
     effectType: 'COPY_LEFTMOST',
     effectParams: {},
     display: (_game, player) => {
@@ -2325,16 +2241,14 @@ const items: ItemDef[] = [
         ],
       };
     },
-  },
-
-  // ─── Phase 9 Items ───
+  }, // ─── Phase 9 Items ───
   {
     id: 'five_mile_marker',
     name: '5 Mile Marker',
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'PIP_SCORED_MILES_GAIN',
     effectParams: { pip: 5, value: 5 },
     initialState: { miles: 0 },
@@ -2354,7 +2268,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'TRAIL_BACKPACK',
     effectParams: { rerollsBonus: 2, rollSizePenalty: 1 },
     display: (_game, _player) => ({
@@ -2368,7 +2281,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'uncommon',
-
     effectType: 'HAND_CONTAINS_XMULT',
     effectParams: { handType: HandType.PAIR, value: 2 },
     display: (game, _player) => ({
@@ -2385,7 +2297,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'uncommon',
-
     effectType: 'HAND_CONTAINS_XMULT',
     effectParams: { handType: HandType.THREE_OF_A_KIND, value: 3 },
     display: (game, _player) => ({
@@ -2402,7 +2313,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'uncommon',
-
     effectType: 'HAND_CONTAINS_XMULT',
     effectParams: { handType: HandType.FOUR_OF_A_KIND, value: 4 },
     display: (game, _player) => ({
@@ -2419,7 +2329,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'uncommon',
-
     effectType: 'HAND_CONTAINS_XMULT',
     effectParams: { handType: HandType.FIVE_OF_A_KIND, value: 5 },
     display: (game, _player) => ({
@@ -2436,7 +2345,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'uncommon',
-
     effectType: 'HAND_CONTAINS_XMULT',
     effectParams: { handType: HandType.FIVE_STRAIGHT, value: 3 },
     display: (game, _player) => ({
@@ -2453,7 +2361,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'EXPRESS_TRAIN',
     effectParams: { miles: 250, rerollsPenalty: 2 },
     display: (_game, _player) => ({
@@ -2467,7 +2374,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 8,
     rarity: 'rare',
-
+    modifierImmunity: ['cursed'],
     effectType: 'PHANTOM_WAGON',
     effectParams: { roundsNeeded: 2 },
     initialState: { roundsHeld: 0 },
@@ -2491,7 +2398,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'TRAIL_ALMANAC_MONEY',
     effectParams: { value: 1 },
     display: (_game, player) => {
@@ -2511,7 +2417,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'ENHANCED_DICE_COUNT_XMULT',
     effectParams: { threshold: 16, value: 3 },
     display: (_game, player) => {
@@ -2534,7 +2439,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'ROUND_START_SUPPLY',
     effectParams: {},
     display: (_game, _player) => ({
@@ -2548,7 +2452,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 8,
     rarity: 'rare',
-
     effectType: 'EXPLORER_GUILD',
     effectParams: {},
     display: (_game, _player) => ({
@@ -2562,7 +2465,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 7,
     rarity: 'uncommon',
-
+    modifierImmunity: ['perishable'],
     effectType: 'GRAVEROBBER_XMULT',
     effectParams: { value: 0.1 },
     initialState: { xMult: 1 },
@@ -2575,7 +2478,6 @@ const items: ItemDef[] = [
         tooltip: [[text('Gains '), mult('x0.1'), text(' mult per scored enhanced dice, removes dice enhancement')]],
       };
     },
-
     unlockCondition: unlockAnyEnhanced,
   },
   {
@@ -2584,7 +2486,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-
     effectType: 'PACK_SADDLE',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
@@ -2598,7 +2499,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'COFFEE',
     effectParams: { handSizeBonus: 2, daysPenalty: 1 },
     display: (_game, _player) => ({
@@ -2612,7 +2512,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['cursed'],
     effectType: 'FLOUR_SACK',
     effectParams: { decayPerRound: 1, professionOverrides: { farmer: { decayPerRound: 0 } } },
     initialState: { handSizeBonus: 5 },
@@ -2647,16 +2547,13 @@ const items: ItemDef[] = [
         ],
       };
     },
-  },
-
-  // ─── Phase 10 Items ───
+  }, // ─── Phase 10 Items ───
   {
     id: 'oil_baron',
     name: 'Oil Baron',
     cardTemplate: 'white-text-black-outline',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'MULT_PER_MONEY_CHUNK',
     effectParams: { chunk: 5, value: 2 },
     display: (_game, player) => {
@@ -2675,7 +2572,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 8,
     rarity: 'rare',
-
+    modifierImmunity: ['perishable'],
     effectType: 'TRAILBLAZER_XMULT',
     effectParams: { value: 0.2 },
     initialState: { streak: 0 },
@@ -2704,7 +2601,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text',
     cost: 7,
     rarity: 'uncommon',
-
     effectType: 'SCORED_GOLD_CHANCE',
     effectParams: { chance: [1, 4] },
     display: (_game, player) => ({
@@ -2720,7 +2616,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text',
     cost: 5,
     rarity: 'uncommon',
-
+    modifierImmunity: ['cursed'],
     effectType: 'SELL_DISABLE_BOSS',
     effectParams: {},
     display: (_game, _player) => ({
@@ -2734,7 +2630,7 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text-white-outline',
     cost: 6,
     rarity: 'uncommon',
-
+    modifierImmunity: ['cursed'],
     effectType: 'SELL_GRANT_TAG',
     effectParams: { tagId: 'tag_twin_wagon' },
     display: (_game, _player) => ({
@@ -2748,7 +2644,6 @@ const items: ItemDef[] = [
     cardTemplate: 'black-text',
     cost: 5,
     rarity: 'common',
-
     effectType: 'FIRST_PIP_XMULT',
     effectParams: { pip: 2, value: 2 },
     display: (_game, _player) => ({
@@ -2762,7 +2657,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'END_ROUND_SELL_VALUE_ALL',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
@@ -2778,7 +2672,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-
     effectType: 'MULT_PER_MISSING_DICE',
     effectParams: { value: 10 },
     display: (_game, player) => {
@@ -2799,7 +2692,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text',
     cost: 5,
     rarity: 'uncommon',
-
     effectType: 'SAVINGS_ACCOUNT_INTEREST',
     effectParams: { perChunk: 5, value: 1, accountantBonus: 1 },
     display: (_game, player) => {
@@ -2834,7 +2726,7 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 5,
     rarity: 'common',
-
+    modifierImmunity: ['perishable'],
     effectType: 'DICE_DESTROYED_MILES_GAIN',
     effectParams: { value: 66 },
     initialState: { miles: 0 },
@@ -2855,7 +2747,6 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 8,
     rarity: 'rare',
-
     effectType: 'CONSECUTIVE_PIP_XMULT',
     effectParams: { pip: 8, increment: 0.5 },
     display: (_game, _player) => ({
@@ -2887,14 +2778,12 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 10,
     rarity: 'rare',
-
     effectType: 'STACKED_DECK',
     effectParams: {},
     display: (_game, _player) => ({
       hint: [[active('Loaded = all pips')]],
       tooltip: [[text('Loaded dice are considered all pip values for equipment effects')]],
     }),
-
     unlockCondition: unlockByEnhancement('loaded'),
   },
 ];

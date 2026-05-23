@@ -170,48 +170,46 @@ describe('SHOP_REROLL_MULT_GAIN: Bargain Bin', () => {
 // ─── DECAYING_MULT: Fading Memory ───
 
 describe('DECAYING_MULT: Fading Memory', () => {
-  test('after first round start has +16 mult (decayed from 20)', () => {
-    // startRound() calls processEquipmentOnRoundStart which decays -4 on first round
+  test('first scored round has +20 mult (no decay until round end)', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [item('fading_memory')],
     });
-    // PAIR: baseMult=1 + 16 = 17
-    expect(result.mult).toBe(17);
+    // PAIR: baseMult=1 + 20 = 21
+    expect(result.mult).toBe(21);
   });
 
-  test('loses -4 mult per round start', () => {
+  test('loses -4 mult per round end', () => {
     const inst = item('fading_memory');
-    processEquipmentOnRoundStart([inst]);
+    processEndOfRound([inst]);
     expect(inst.state.mult).toBe(16);
     expect(inst.state.roundsPlayed).toBe(1);
 
-    processEquipmentOnRoundStart([inst]);
+    processEndOfRound([inst]);
     expect(inst.state.mult).toBe(12);
     expect(inst.state.roundsPlayed).toBe(2);
   });
 
-  test('marked for destruction after 5 rounds', () => {
+  test('marked for destruction after 5 round ends', () => {
     const inst = item('fading_memory');
     for (let i = 0; i < 4; i++) {
-      const result = processEquipmentOnRoundStart([inst]);
+      const result = processEndOfRound([inst]);
       expect(result.destroyedIndices).toEqual([]);
     }
-    // 5th round
-    const result = processEquipmentOnRoundStart([inst]);
+    const result = processEndOfRound([inst]);
     expect(result.destroyedIndices).toContain(0);
   });
 
-  test('mult value after 4 round starts (3 manual + 1 from calculateTestScore)', () => {
+  test('mult value after 3 round ends then score', () => {
     const inst = item('fading_memory');
-    for (let i = 0; i < 3; i++) processEquipmentOnRoundStart([inst]);
-    // 20 - 3*4 = 8, then calculateTestScore's startRound decays another -4 → 4
+    for (let i = 0; i < 3; i++) processEndOfRound([inst]);
+    // 20 - 3*4 = 8
 
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.mult).toBe(5); // baseMult=1 + 4
+    expect(result.mult).toBe(9); // baseMult=1 + 8
   });
 });
 

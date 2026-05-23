@@ -520,9 +520,7 @@ export class GameScene extends Scene {
   }
 
   private syncSelectedForScore(): void {
-    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) =>
-      this.lockedDiceIds.has(d.id),
-    );
+    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
   }
 
   /** Shared: wire up click handlers on roll sprites (click to lock/unlock, drag to reorder) */
@@ -567,10 +565,7 @@ export class GameScene extends Scene {
   private createRollMarqueeZone(): void {
     this.destroyRollMarqueeZone();
     const { width, height, cx, cy } = this.getRollMarqueeZoneBounds();
-    this.rollMarqueeZone = this.add
-      .zone(cx, cy, width, height)
-      .setDepth(MARQUEE.ZONE_DEPTH)
-      .setInteractive();
+    this.rollMarqueeZone = this.add.zone(cx, cy, width, height).setDepth(MARQUEE.ZONE_DEPTH).setInteractive();
   }
 
   private setupRollMarqueeZone(): void {
@@ -609,12 +604,7 @@ export class GameScene extends Scene {
     this.input.off('pointerup', this.onMarqueePointerUp);
 
     if (this.marqueeActive) {
-      const rect = this.getMarqueeRect(
-        this.marqueeStartX,
-        this.marqueeStartY,
-        pointer.worldX,
-        pointer.worldY,
-      );
+      const rect = this.getMarqueeRect(this.marqueeStartX, this.marqueeStartY, pointer.worldX, pointer.worldY);
       const hits = this.getDiceInMarquee(rect);
       let playSound = true;
       for (const sprite of hits) {
@@ -645,12 +635,7 @@ export class GameScene extends Scene {
   }
 
   private getMarqueeRect(x1: number, y1: number, x2: number, y2: number): Phaser.Geom.Rectangle {
-    return new Phaser.Geom.Rectangle(
-      Math.min(x1, x2),
-      Math.min(y1, y2),
-      Math.abs(x2 - x1),
-      Math.abs(y2 - y1),
-    );
+    return new Phaser.Geom.Rectangle(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
   }
 
   private getDiceInMarquee(rect: Phaser.Geom.Rectangle): DiceSprite[] {
@@ -911,8 +896,7 @@ export class GameScene extends Scene {
           this.animating = false;
           afterDestroyedEquipmentFeedback();
         };
-        const holdMs =
-          outcome === 'won' || outcome === 'lost' ? ANIM.EQUIP_FIRE_DESTROY_ROUND_END_HOLD_MS : 0;
+        const holdMs = outcome === 'won' || outcome === 'lost' ? ANIM.EQUIP_FIRE_DESTROY_ROUND_END_HOLD_MS : 0;
         if (holdMs > 0) {
           this.time.delayedCall(holdMs, proceed);
         } else {
@@ -2419,6 +2403,7 @@ export class GameScene extends Scene {
   }
 
   private canUseConsumable(def: ConsumableDef): boolean {
+    if (this.consumableTargeting) return false;
     if (def.id !== 'raid') return true;
     return this.getVisibleConsumableDiceIds().length > 0;
   }

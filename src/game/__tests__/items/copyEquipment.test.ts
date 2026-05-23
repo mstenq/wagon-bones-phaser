@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import '../setup';
 import { calculateTestScore, die, diceWithValue, item, itemWithState, setupGame, resetDieIds } from '../testHelpers';
-import { processEndOfRound, processEquipmentOnHandPlayed, processEquipmentOnReroll, getScoredRetriggerCount, processEquipmentOnRoundStart, getConfigModifiers, processEquipmentAfterHandScored } from '../../EquipmentEffects';
+import {
+  processEndOfRound,
+  processEquipmentOnHandPlayed,
+  processEquipmentOnReroll,
+  getScoredRetriggerCount,
+  processEquipmentOnRoundStart,
+  getConfigModifiers,
+  processEquipmentAfterHandScored,
+} from '../../EquipmentEffects';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
 
@@ -487,7 +495,7 @@ describe('Mirror Lake copies ROUND_START_SUPPLY', () => {
   });
 });
 
-describe('Copy item HAND_UPGRADE_CHANCE (Surveyor\'s Transit)', () => {
+describe("Copy item HAND_UPGRADE_CHANCE (Surveyor's Transit)", () => {
   test('mirror lake copying surveyors_transit rolls upgrade chance', () => {
     const original = Math.random;
     Math.random = () => 0.1; // succeeds at 1 in 4
@@ -496,10 +504,7 @@ describe('Copy item HAND_UPGRADE_CHANCE (Surveyor\'s Transit)', () => {
         equipment: [item('mirror_lake'), item('surveyors_transit')],
       });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      const upgrades = processEquipmentAfterHandScored(
-        [item('mirror_lake'), item('surveyors_transit')],
-        HandType.PAIR,
-      );
+      const upgrades = processEquipmentAfterHandScored([item('mirror_lake'), item('surveyors_transit')], HandType.PAIR);
       // Mirror Lake copy + Surveyor's Transit each roll independently
       expect(upgrades.length).toBe(2);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 2);

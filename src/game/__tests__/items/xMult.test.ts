@@ -1,6 +1,15 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, diceFromValues, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
+import {
+  die,
+  diceWithValue,
+  diceFromValues,
+  item,
+  itemWithState,
+  calculateTestScore,
+  setupGame,
+  resetDieIds,
+} from '../testHelpers';
 import {
   processEquipmentOnLuckyTrigger,
   processEquipmentOnSell,
@@ -13,7 +22,11 @@ import {
   processEquipmentOnDiamondDestroyed,
   processEquipmentOnDiceDestroyed,
 } from '../../EquipmentEffects';
-import { executeConsumableEffect, createConsumableInstance, createTrailGuideConsumableDef } from '../../ConsumablesSystem';
+import {
+  executeConsumableEffect,
+  createConsumableInstance,
+  createTrailGuideConsumableDef,
+} from '../../ConsumablesSystem';
 import { HandType } from '../../types';
 import trailGuidesData from '../../../data/trail_guides';
 
@@ -313,9 +326,7 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
 
   test('scales with more steel dice in collection', () => {
     const scoredDice = diceWithValue(5, 2);
-    const steelInCollection = Array.from({ length: 5 }, (_, i) =>
-      die({ value: i + 1, enhancement: 'steel' }),
-    );
+    const steelInCollection = Array.from({ length: 5 }, (_, i) => die({ value: i + 1, enhancement: 'steel' }));
 
     const { game } = setupGame({
       equipment: [item('iron_furnace')],
@@ -593,7 +604,11 @@ describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
 
   test('x3 with 3 different enhancement types scored', () => {
     const { result } = calculateTestScore({
-      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'wooden' }), die({ value: 5, enhancement: 'steel' })],
+      scoredDice: [
+        die({ value: 5, enhancement: 'bone' }),
+        die({ value: 5, enhancement: 'wooden' }),
+        die({ value: 5, enhancement: 'steel' }),
+      ],
       equipment: [item('rainbow_trail')],
     });
     // THREE_OF_A_KIND: baseMult=3+4(bone) = 7, x3 from rainbow trail
@@ -752,9 +767,7 @@ describe('HAND_CONTAINS_XMULT: Snake River (5 straight, x3)', () => {
 describe('ENHANCED_DICE_COUNT_XMULT: Blessed Herd', () => {
   test('activates x3 when 16+ enhanced dice in collection', () => {
     const scoredDice = diceWithValue(5, 2);
-    const enhancedDice = Array.from({ length: 16 }, (_, i) =>
-      die({ value: i % 12 + 1, enhancement: 'wooden' }),
-    );
+    const enhancedDice = Array.from({ length: 16 }, (_, i) => die({ value: (i % 12) + 1, enhancement: 'wooden' }));
 
     const { game } = setupGame({
       equipment: [item('blessed_herd')],
@@ -775,9 +788,7 @@ describe('ENHANCED_DICE_COUNT_XMULT: Blessed Herd', () => {
 
   test('does not activate when fewer than 16 enhanced dice', () => {
     const scoredDice = diceWithValue(5, 2);
-    const enhancedDice = Array.from({ length: 10 }, (_, i) =>
-      die({ value: i % 12 + 1, enhancement: 'wooden' }),
-    );
+    const enhancedDice = Array.from({ length: 10 }, (_, i) => die({ value: (i % 12) + 1, enhancement: 'wooden' }));
 
     const { game } = setupGame({
       equipment: [item('blessed_herd')],

@@ -2,10 +2,7 @@
 // Typed supply card data following the trail_tags.ts pattern.
 // Each card may use dice selection, an instant effect, or explicit handler logic.
 
-import type {
-  DiceSelectionEffectParams,
-  DiceSelectionEffectType,
-} from '../game/DiceSelectionSystem';
+import type { DiceSelectionEffectParams, DiceSelectionEffectType } from '../game/DiceSelectionSystem';
 
 // ─── Types ───
 

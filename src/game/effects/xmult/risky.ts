@@ -41,7 +41,9 @@ effectRegistry.registerXMult('ENHANCEMENT_COUNT_XMULT', (ctx, equip, index) => {
     const xVal = 1 + enhCount * perValue;
     multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
-    console.log(`  [xmult] ${equip.def.name}: x${xVal.toFixed(1)} (${enhCount} ${enhancement} dice) (xMult: ${ctx.xMult})`);
+    console.log(
+      `  [xmult] ${equip.def.name}: x${xVal.toFixed(1)} (${enhCount} ${enhancement} dice) (xMult: ${ctx.xMult})`,
+    );
   }
 });
 
@@ -56,11 +58,7 @@ effectRegistry.registerXMult('REPEAT_HAND_XMULT', (ctx, equip, index) => {
 });
 
 effectRegistry.registerXMult('RAINBOW_TRAIL_XMULT', (ctx, equip, index) => {
-  const enhTypes = new Set(
-    ctx.scoringDice
-      .filter((d) => d.enhancement !== null)
-      .map((d) => d.enhancement),
-  );
+  const enhTypes = new Set(ctx.scoringDice.filter((d) => d.enhancement !== null).map((d) => d.enhancement));
   if (enhTypes.size >= 2) {
     const xVal = enhTypes.size;
     multiplyCtxXMult(ctx, xVal);

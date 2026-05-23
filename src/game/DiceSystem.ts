@@ -543,11 +543,12 @@ export function scoreHand(
       // Sticker effects (scored dice)
       if (die.sticker === 'purple_flower') {
         const supplyDef = getRandomSupplyDef();
-        player.consumables.push(createConsumableInstance(supplyDef));
-        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'supply', value: 0, dieId: die.id });
-        console.log(
-          `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER purple_flower: granted supply card '${supplyDef.name}'`,
-        );
+        if (player.addConsumable(supplyDef)) {
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'supply', value: 0, dieId: die.id });
+          console.log(
+            `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER purple_flower: granted supply card '${supplyDef.name}'`,
+          );
+        }
       }
 
       if (die.sticker === 'golden_dollar') {

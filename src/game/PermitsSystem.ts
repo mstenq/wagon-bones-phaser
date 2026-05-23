@@ -3,11 +3,7 @@
 // Permits are permanent upgrades purchased from the shop, one per leg.
 // Each permit has 2 stages; stage 2 requires stage 1 to be purchased first.
 
-import permitsData, {
-  getPermitById as findPermitById,
-  type PermitDef,
-  type PermitEffect,
-} from '../data/permits';
+import permitsData, { getPermitById as findPermitById, type PermitDef, type PermitEffect } from '../data/permits';
 import type { PlayerState } from './PlayerState';
 import { rngPick } from './RunRng';
 

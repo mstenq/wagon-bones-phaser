@@ -1,12 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import { HandType, PhaseState } from '../types';
-import {
-  setupGame,
-  calculateTestScore,
-  die,
-  diceFromValues,
-  item,
-} from './testHelpers';
+import { setupGame, calculateTestScore, die, diceFromValues, item } from './testHelpers';
 import {
   getBossRoundConfigMods,
   initBossRoundState,
@@ -305,7 +299,7 @@ describe('Boss assignment minimumLeg', () => {
     const { player } = setupGame({ leg: 1 });
     const boss = player.getBossForLeg(1);
     expect(boss).not.toBeNull();
-    expect((boss!.minimumLeg ?? 1)).toBeLessThanOrEqual(1);
+    expect(boss!.minimumLeg ?? 1).toBeLessThanOrEqual(1);
   });
 });
 

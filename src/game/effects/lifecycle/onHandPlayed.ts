@@ -26,8 +26,7 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       const p = equip.def.effectParams as Record<string, unknown>;
       if (handTypeMatches(handType as any, p.handType as string)) {
         const professionId = getPlayerState().profession?.id;
-        equip.state.mult =
-          (equip.state.mult ?? 0) + resolveEffectParam<number>(p, 'value', professionId);
+        equip.state.mult = (equip.state.mult ?? 0) + resolveEffectParam<number>(p, 'value', professionId);
       }
       break;
     }
@@ -37,8 +36,7 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
     case 'MARKED_NO_SIX_MULT': {
       const player = getPlayerState();
       const stackedDeck = hasStackedDeck(player.equipment);
-      const hasSix =
-        (scoringDice as Die[])?.some((d) => dieMatchesPip(d, 6, player.equipment, stackedDeck)) ?? false;
+      const hasSix = (scoringDice as Die[])?.some((d) => dieMatchesPip(d, 6, player.equipment, stackedDeck)) ?? false;
       if (hasSix) {
         equip.state.mult = 0;
       } else {

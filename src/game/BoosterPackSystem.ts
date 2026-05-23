@@ -12,12 +12,9 @@ import {
   DiceSelectionEffectParams,
   pickRandomAura,
 } from './DiceSelectionSystem';
-import { CHANCES, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS } from './Constants';
-import packsData, {
-  type PackCategory,
-  type PackDef,
-  type PackTier,
-} from '../data/packs';
+import { CHANCES, PACK_EXCLUDED_SUPPLY_IDS, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS } from './Constants';
+import type { PlayerState } from './PlayerState';
+import packsData, { type PackCategory, type PackDef, type PackTier } from '../data/packs';
 import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
 import trailGuidesData from '../data/trail_guides';
 import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
@@ -290,9 +287,20 @@ function generateDicePackContents(count: number): PackItem[] {
   return items;
 }
 
+/** True when Counterfeit Goods allows duplicate equipment in packs/shop. */
+export function playerAllowsDuplicateItems(player: PlayerState): boolean {
+  return player.equipment.some((e) => e.def.effectType === 'ALLOW_DUPLICATES');
+}
+
+/** Owned equipment ids excluded from pack stock, or undefined when duplicates are allowed. */
+export function getEquipmentPackExcludeIds(player: PlayerState): string[] | undefined {
+  return playerAllowsDuplicateItems(player) ? undefined : player.equipment.map((e) => e.def.id);
+}
+
 function generateSupplyPackContents(count: number): PackItem[] {
   const items: PackItem[] = [];
-  const normalCards = pickRandom(SUPPLY_CARDS, count, 'supplyPack');
+  const supplyPool = SUPPLY_CARDS.filter((s) => !PACK_EXCLUDED_SUPPLY_IDS.includes(s.id));
+  const normalCards = pickRandom(supplyPool, count, 'supplyPack');
   let normalIdx = 0;
 
   for (let i = 0; i < count; i++) {
@@ -347,11 +355,15 @@ function generateFrontierPackContents(count: number): PackItem[] {
 
 function generateEquipmentPackContents(count: number): PackItem[] {
   const player = getPlayerState();
-  const defs = generateShopStock(count);
+  const excludeIds = getEquipmentPackExcludeIds(player);
+  const defs = generateShopStock(count, excludeIds);
   return defs.map((def) => ({
     id: nextRunId(def.id),
     name: def.name,
-    description: def.display(null, player).tooltip.map((line) => line.join(" ")).join('\n'),
+    description: def
+      .display(null, player)
+      .tooltip.map((line) => line.join(' '))
+      .join('\n'),
     category: 'equipment' as PackCategory,
     equipmentDef: def,
     equipmentPreview: rollShopEquipmentPreview(def, player.purchasedPermits),

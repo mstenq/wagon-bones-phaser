@@ -4,10 +4,7 @@
 import * as Phaser from 'phaser';
 import type { Scene } from 'phaser';
 import { getAudioPreferences } from '../game/AudioPreferences';
-import {
-  applyBackgroundMusicPreferences,
-  BG_MUSIC_KEY,
-} from './BackgroundMusic';
+import { applyBackgroundMusicPreferences, BG_MUSIC_KEY } from './BackgroundMusic';
 
 const MUSIC_KEYS = new Set([BG_MUSIC_KEY]);
 
@@ -93,11 +90,7 @@ export function patchGameAudio(): void {
   const managerProto = Phaser.Sound.BaseSoundManager.prototype;
   const originalManagerPlay = managerProto.play;
 
-  managerProto.play = function (
-    this: Phaser.Sound.BaseSoundManager,
-    key: string,
-    extra?: SoundPlayExtra,
-  ): boolean {
+  managerProto.play = function (this: Phaser.Sound.BaseSoundManager, key: string, extra?: SoundPlayExtra): boolean {
     const prefs = getAudioPreferences();
 
     if (MUSIC_KEYS.has(key)) {
@@ -111,9 +104,7 @@ export function patchGameAudio(): void {
         }
         return true;
       }
-      const musicExtra: SoundPlayExtra = isSoundMarker(extra)
-        ? extra
-        : { ...(extra ?? {}), volume: prefs.musicVolume };
+      const musicExtra: SoundPlayExtra = isSoundMarker(extra) ? extra : { ...(extra ?? {}), volume: prefs.musicVolume };
       return originalManagerPlay.call(this, key, musicExtra);
     }
 

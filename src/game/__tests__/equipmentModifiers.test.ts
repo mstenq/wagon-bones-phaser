@@ -8,17 +8,30 @@ import {
   applyEquipmentModifierDestructions,
   getEquipmentPurchasePrice,
   acquireRewardEquipmentInstance,
-  CURSED_IMMUNE,
-  PERISHABLE_IMMUNE,
 } from '../EquipmentModifiers';
 import { getSupplyDefById, getFrontierDefById, useConsumableDirectly } from '../ConsumablesSystem';
-import { createEquipmentInstance, getAllEquipment } from '../ItemsSystem';
+import {
+  createEquipmentInstance,
+  getAllEquipment,
+  getEquipmentDefById,
+  isEquipmentModifierImmune,
+} from '../ItemsSystem';
 import { EQUIPMENT_MODIFIER } from '../Constants';
 import { equipWithModifiers, setTestDifficulty } from './testHelpers';
 import { getModifierTooltipLines, getModifierHintRows } from '../EquipmentModifierDisplay';
 
-function nonImmuneEquipmentId(): string {
-  return getAllEquipment().find((d) => !CURSED_IMMUNE.has(d.id) && !PERISHABLE_IMMUNE.has(d.id))!.id;
+function equipDef(id: string) {
+  const def = getEquipmentDefById(id);
+  if (!def) throw new Error(`Unknown equipment: ${id}`);
+  return def;
+}
+
+function nonImmuneEquipmentDef() {
+  const def = getAllEquipment().find(
+    (d) => !isEquipmentModifierImmune(d, 'cursed') && !isEquipmentModifierImmune(d, 'perishable'),
+  );
+  if (!def) throw new Error('No non-immune equipment in pool');
+  return def;
 }
 
 beforeEach(() => {
@@ -26,17 +39,26 @@ beforeEach(() => {
 });
 
 describe('Equipment Modifiers', () => {
+  describe('modifierImmunity on item defs', () => {
+    test('fading_memory is cursed-immune; stateful items are perishable-immune', () => {
+      expect(equipDef('fading_memory').modifierImmunity).toContain('cursed');
+      for (const id of ['scouts_spyglass', 'trail_repair_kit', 'graverobber', 'five_mile_marker'] as const) {
+        expect(equipDef(id).modifierImmunity).toContain('perishable');
+      }
+    });
+  });
+
   describe('rollEquipmentModifiers', () => {
     test('returns empty array below difficulty 4', () => {
-      expect(rollEquipmentModifiers(1, 'horseshoe')).toEqual([]);
-      expect(rollEquipmentModifiers(3, 'horseshoe')).toEqual([]);
+      expect(rollEquipmentModifiers(1, equipDef('horseshoe'))).toEqual([]);
+      expect(rollEquipmentModifiers(3, equipDef('horseshoe'))).toEqual([]);
     });
 
     test('can return cursed at difficulty 4+', () => {
-      const id = nonImmuneEquipmentId();
+      const def = nonImmuneEquipmentDef();
       let found = false;
       for (let i = 0; i < 3000; i++) {
-        if (rollEquipmentModifiers(4, id).includes('cursed')) {
+        if (rollEquipmentModifiers(4, def).includes('cursed')) {
           found = true;
           break;
         }
@@ -45,10 +67,10 @@ describe('Equipment Modifiers', () => {
     });
 
     test('can return perishable at difficulty 7+', () => {
-      const id = nonImmuneEquipmentId();
+      const def = nonImmuneEquipmentDef();
       let found = false;
       for (let i = 0; i < 3000; i++) {
-        if (rollEquipmentModifiers(7, id).includes('perishable')) {
+        if (rollEquipmentModifiers(7, def).includes('perishable')) {
           found = true;
           break;
         }
@@ -57,10 +79,10 @@ describe('Equipment Modifiers', () => {
     });
 
     test('can return leased at difficulty 8+', () => {
-      const id = nonImmuneEquipmentId();
+      const def = nonImmuneEquipmentDef();
       let found = false;
       for (let i = 0; i < 3000; i++) {
-        if (rollEquipmentModifiers(8, id).includes('leased')) {
+        if (rollEquipmentModifiers(8, def).includes('leased')) {
           found = true;
           break;
         }
@@ -69,9 +91,10 @@ describe('Equipment Modifiers', () => {
     });
 
     test('never returns cursed + perishable together', () => {
+      const def = equipDef('horseshoe');
       const trials = 5000;
       for (let i = 0; i < trials; i++) {
-        const mods = rollEquipmentModifiers(8, 'horseshoe');
+        const mods = rollEquipmentModifiers(8, def);
         if (mods.includes('cursed')) {
           expect(mods.includes('perishable')).toBe(false);
         }
@@ -79,10 +102,10 @@ describe('Equipment Modifiers', () => {
     });
 
     test('can return cursed + leased together', () => {
-      const id = nonImmuneEquipmentId();
+      const def = nonImmuneEquipmentDef();
       let found = false;
       for (let i = 0; i < 8000; i++) {
-        const mods = rollEquipmentModifiers(8, id);
+        const mods = rollEquipmentModifiers(8, def);
         if (mods.includes('cursed') && mods.includes('leased')) {
           expect(mods.includes('perishable')).toBe(false);
           found = true;
@@ -93,10 +116,10 @@ describe('Equipment Modifiers', () => {
     });
 
     test('can return perishable + leased together', () => {
-      const id = nonImmuneEquipmentId();
+      const def = nonImmuneEquipmentDef();
       let found = false;
       for (let i = 0; i < 8000; i++) {
-        const mods = rollEquipmentModifiers(8, id);
+        const mods = rollEquipmentModifiers(8, def);
         if (mods.includes('perishable') && mods.includes('leased')) {
           expect(mods.includes('cursed')).toBe(false);
           found = true;
@@ -107,25 +130,34 @@ describe('Equipment Modifiers', () => {
     });
 
     test('cursed is skipped for immune items', () => {
-      const immuneId = [...CURSED_IMMUNE][0];
+      const def = equipDef('dynamite');
       for (let i = 0; i < 2000; i++) {
-        expect(rollEquipmentModifiers(8, immuneId).includes('cursed')).toBe(false);
+        expect(rollEquipmentModifiers(8, def).includes('cursed')).toBe(false);
       }
     });
 
     test('perishable is skipped for immune items', () => {
-      const immuneId = [...PERISHABLE_IMMUNE][0];
+      const def = equipDef('scouts_spyglass');
       for (let i = 0; i < 2000; i++) {
-        expect(rollEquipmentModifiers(8, immuneId).includes('perishable')).toBe(false);
+        expect(rollEquipmentModifiers(8, def).includes('perishable')).toBe(false);
+      }
+    });
+
+    test('perishable is skipped for scouts_spyglass and trail_repair_kit', () => {
+      for (const id of ['scouts_spyglass', 'trail_repair_kit'] as const) {
+        const def = equipDef(id);
+        for (let i = 0; i < 2000; i++) {
+          expect(rollEquipmentModifiers(8, def).includes('perishable')).toBe(false);
+        }
       }
     });
 
     test('cursed spawns at approximately 30% at difficulty 4', () => {
-      const id = nonImmuneEquipmentId();
+      const def = nonImmuneEquipmentDef();
       let cursedCount = 0;
       const trials = 10_000;
       for (let i = 0; i < trials; i++) {
-        if (rollEquipmentModifiers(4, id).includes('cursed')) cursedCount++;
+        if (rollEquipmentModifiers(4, def).includes('cursed')) cursedCount++;
       }
       const rate = cursedCount / trials;
       expect(rate).toBeGreaterThan(0.25);
@@ -134,11 +166,13 @@ describe('Equipment Modifiers', () => {
 
     test('perishable spawns at approximately 30% at difficulty 7', () => {
       // Cursed-immune item so perishable rate is not reduced by cursed rolls first
-      const id = [...CURSED_IMMUNE].find((itemId) => !PERISHABLE_IMMUNE.has(itemId))!;
+      const def = getAllEquipment().find(
+        (d) => isEquipmentModifierImmune(d, 'cursed') && !isEquipmentModifierImmune(d, 'perishable'),
+      )!;
       let perishableCount = 0;
       const trials = 10_000;
       for (let i = 0; i < trials; i++) {
-        const mods = rollEquipmentModifiers(7, id);
+        const mods = rollEquipmentModifiers(7, def);
         if (mods.includes('perishable')) perishableCount++;
       }
       const rate = perishableCount / trials;
@@ -147,11 +181,11 @@ describe('Equipment Modifiers', () => {
     });
 
     test('leased spawns at approximately 30% at difficulty 8', () => {
-      const id = nonImmuneEquipmentId();
+      const def = nonImmuneEquipmentDef();
       let leasedCount = 0;
       const trials = 10_000;
       for (let i = 0; i < trials; i++) {
-        if (rollEquipmentModifiers(8, id).includes('leased')) leasedCount++;
+        if (rollEquipmentModifiers(8, def).includes('leased')) leasedCount++;
       }
       const rate = leasedCount / trials;
       expect(rate).toBeGreaterThan(0.25);
@@ -179,9 +213,7 @@ describe('Equipment Modifiers', () => {
 
     test('leased shop price is $1', () => {
       const def = getAllEquipment().find((d) => d.cost > 5)!;
-      expect(getEquipmentPurchasePrice(def, ['leased'], def.cost)).toBe(
-        EQUIPMENT_MODIFIER.LEASED_BUY_PRICE,
-      );
+      expect(getEquipmentPurchasePrice(def, ['leased'], def.cost)).toBe(EQUIPMENT_MODIFIER.LEASED_BUY_PRICE);
     });
 
     test('leased shop price is $0 when def.cost is overridden to free', () => {

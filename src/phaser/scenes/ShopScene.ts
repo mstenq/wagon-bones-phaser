@@ -863,6 +863,7 @@ export class ShopScene extends Scene {
       this.scene.start('DiceSelection', {
         config: result.diceSelection,
         returnScene: 'Shop',
+        returnSceneData: { restoreShop: this.getSaveContext() },
       });
     }
 

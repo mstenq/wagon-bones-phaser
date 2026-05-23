@@ -49,6 +49,15 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       }
       break;
     }
+    case 'DECAYING_MULT': {
+      const decay = equip.def.effectParams.decayPerRound as number;
+      equip.state.mult = (equip.state.mult ?? 0) - decay;
+      equip.state.roundsPlayed = (equip.state.roundsPlayed ?? 0) + 1;
+      if (equip.state.roundsPlayed >= (equip.def.effectParams.maxRounds as number)) {
+        ctx.destroyedIndices.push(ctx.index);
+      }
+      break;
+    }
   }
 });
 

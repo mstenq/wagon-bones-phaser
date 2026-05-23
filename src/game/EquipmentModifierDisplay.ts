@@ -3,12 +3,7 @@
 
 import { EQUIPMENT_MODIFIER } from './Constants';
 import type { HintSegment } from '../data/items';
-import {
-  EquipmentInstance,
-  isEquipmentCursed,
-  isEquipmentLeased,
-  isEquipmentPerishable,
-} from './ItemsSystem';
+import { EquipmentInstance, isEquipmentCursed, isEquipmentLeased, isEquipmentPerishable } from './ItemsSystem';
 
 export interface ModifierTooltipLine {
   text: string;

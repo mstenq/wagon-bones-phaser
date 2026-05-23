@@ -1,12 +1,17 @@
 import './setup';
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach, beforeEach } from 'bun:test';
 import {
   generatePackContents,
   generateShopPacks,
   tryRollRarePackCard,
+  playerAllowsDuplicateItems,
+  getEquipmentPackExcludeIds,
   type PackDefinition,
 } from '../BoosterPackSystem';
+import { generateShopStock, getAllEquipment } from '../ItemsSystem';
 import { CHANCES } from '../Constants';
+import { resetPlayerState, getPlayerState } from '../PlayerState';
+import { item } from './testHelpers';
 
 const frontierPack: PackDefinition = {
   id: 'frontier_standard',
@@ -70,5 +75,72 @@ describe('Rare pack card spawning', () => {
 
   test('RARE_PACK_CARD chance is 3/1000', () => {
     expect(CHANCES.RARE_PACK_CARD).toBeCloseTo(0.003, 6);
+  });
+});
+
+const equipmentPack: PackDefinition = {
+  id: 'equipment_standard',
+  category: 'equipment',
+  tier: 'normal',
+  name: 'Equipment Pack',
+  cost: 4,
+  totalCards: 3,
+  pickCount: 1,
+  weight: 0.6,
+  color: 0xb8860b,
+};
+
+const supplyPack: PackDefinition = {
+  id: 'supply_standard',
+  category: 'supply',
+  tier: 'normal',
+  name: 'Supply Pack',
+  cost: 4,
+  totalCards: 5,
+  pickCount: 1,
+  weight: 0.6,
+  color: 0x2e8b57,
+};
+
+describe('equipment pack duplicate filtering', () => {
+  beforeEach(() => resetPlayerState());
+
+  test('excludes owned equipment ids from pack stock', () => {
+    const player = getPlayerState();
+    player.equipment = [item('horseshoe')];
+    expect(playerAllowsDuplicateItems(player)).toBe(false);
+
+    for (let i = 0; i < 30; i++) {
+      const items = generatePackContents(equipmentPack);
+      for (const packItem of items) {
+        expect(packItem.equipmentDef?.id).not.toBe('horseshoe');
+      }
+    }
+  });
+
+  test('allows duplicates with counterfeit_goods', () => {
+    const player = getPlayerState();
+    player.equipment = [item('horseshoe'), item('counterfeit_goods')];
+    expect(playerAllowsDuplicateItems(player)).toBe(true);
+    expect(getEquipmentPackExcludeIds(player)).toBeUndefined();
+
+    // Owned horseshoe is not excluded from stock when duplicates are allowed
+    const excludeAllButHorseshoe = getAllEquipment()
+      .filter((d) => d.id !== 'horseshoe' && d.rarity !== 'legendary')
+      .map((d) => d.id);
+    const [picked] = generateShopStock(1, excludeAllButHorseshoe);
+    expect(picked?.id).toBe('horseshoe');
+  });
+});
+
+describe('supply pack medicine exclusion', () => {
+  test('supply packs never contain medicine', () => {
+    for (let i = 0; i < 50; i++) {
+      const items = generatePackContents(supplyPack);
+      for (const packItem of items) {
+        expect(packItem.supplyCardId).not.toBe('medicine');
+        expect(packItem.frontierEncounterId).not.toBe('medicine');
+      }
+    }
   });
 });

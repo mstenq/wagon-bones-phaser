@@ -69,7 +69,9 @@ effectRegistry.registerAdditive('MULT_PER_MONEY_CHUNK', (ctx, equip, index) => {
   if (total > 0) {
     ctx.bonusMult += total;
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: total });
-    console.log(`  [equip] ${equip.def.name}: +${total} mult ($${ctx.playerBalance} held) (bonusMult: ${ctx.bonusMult})`);
+    console.log(
+      `  [equip] ${equip.def.name}: +${total} mult ($${ctx.playerBalance} held) (bonusMult: ${ctx.bonusMult})`,
+    );
   }
 });
 
@@ -82,7 +84,9 @@ effectRegistry.registerAdditive('MULT_PER_MISSING_DICE', (ctx, equip, index) => 
     const total = missing * perDie;
     ctx.bonusMult += total;
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: total });
-    console.log(`  [equip] ${equip.def.name}: +${total} mult (${missing} dice below start) (bonusMult: ${ctx.bonusMult})`);
+    console.log(
+      `  [equip] ${equip.def.name}: +${total} mult (${missing} dice below start) (bonusMult: ${ctx.bonusMult})`,
+    );
   }
 });
 

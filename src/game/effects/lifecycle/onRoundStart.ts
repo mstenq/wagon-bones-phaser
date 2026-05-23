@@ -111,15 +111,6 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
         }
       }
       break;
-    case 'DECAYING_MULT': {
-      const decay = equip.def.effectParams.decayPerRound as number;
-      equip.state.mult = (equip.state.mult ?? 0) - decay;
-      equip.state.roundsPlayed = (equip.state.roundsPlayed ?? 0) + 1;
-      if (equip.state.roundsPlayed >= (equip.def.effectParams.maxRounds as number)) {
-        destroyedIndices.push(i);
-      }
-      break;
-    }
     case 'LUCKY_NUMBER_PIP_XMULT':
       equip.state.pip = rngInt('luckyNumber', 1, 12);
       break;

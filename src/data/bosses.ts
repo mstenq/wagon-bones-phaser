@@ -61,8 +61,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_ghost_town',
     name: 'The Ghost Town',
-    description:
-      'All played even dice values are disabled (no additional miles or enhancements will trigger)',
+    description: 'All played even dice values are disabled (no additional miles or enhancements will trigger)',
     effectType: 'DISABLE_VALUES',
     effectParams: { parity: 'even' },
     minimumLeg: 1,
@@ -70,8 +69,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_undertaker',
     name: 'The Undertaker',
-    description:
-      'All played odd dice values are disabled (no additional miles or enhancements will trigger)',
+    description: 'All played odd dice values are disabled (no additional miles or enhancements will trigger)',
     effectType: 'DISABLE_VALUES',
     effectParams: { parity: 'odd' },
     minimumLeg: 1,
@@ -95,8 +93,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_trickster',
     name: 'The Trickster',
-    description:
-      'Every played hand reduces trail knowledge by one before scoring. (Capped at level 1)',
+    description: 'Every played hand reduces trail knowledge by one before scoring. (Capped at level 1)',
     effectType: 'DOWNGRADE_TRAIL_KNOWLEDGE',
     effectParams: { amount: 1 },
     minimumLeg: 2,
@@ -160,8 +157,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_bounty',
     name: 'The Bounty',
-    description:
-      'Forces 1 dice to be selected/locked randomly each day after first roll (Cannot unselect)',
+    description: 'Forces 1 dice to be selected/locked randomly each day after first roll (Cannot unselect)',
     effectType: 'LOCK_RANDOM_DICE',
     effectParams: { count: 1 },
     minimumLeg: 8,

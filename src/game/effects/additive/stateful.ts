@@ -25,9 +25,7 @@ effectRegistry.registerAdditive('HAND_MULT_GAIN', (ctx, equip, index) => {
   if (val > 0) {
     ctx.bonusMult += val;
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: val });
-    console.log(
-      `  [equip] ${equip.def.name}: +${val} mult (accumulated) (bonusMult: ${ctx.bonusMult})`,
-    );
+    console.log(`  [equip] ${equip.def.name}: +${val} mult (accumulated) (bonusMult: ${ctx.bonusMult})`);
   }
 });
 
@@ -36,9 +34,7 @@ effectRegistry.registerAdditive('SHOP_REROLL_MULT_GAIN', (ctx, equip, index) => 
   if (val > 0) {
     ctx.bonusMult += val;
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: val });
-    console.log(
-      `  [equip] ${equip.def.name}: +${val} mult (reroll gains) (bonusMult: ${ctx.bonusMult})`,
-    );
+    console.log(`  [equip] ${equip.def.name}: +${val} mult (reroll gains) (bonusMult: ${ctx.bonusMult})`);
   }
 });
 
@@ -86,8 +82,6 @@ effectRegistry.registerAdditive('ENHANCED_SPENT_MILES_GAIN', (ctx, equip, index)
   if (val > 0) {
     ctx.bonusMiles += val;
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: val });
-    console.log(
-      `  [equip] ${equip.def.name}: +${val} miles (accumulated) (bonusMiles: ${ctx.bonusMiles})`,
-    );
+    console.log(`  [equip] ${equip.def.name}: +${val} miles (accumulated) (bonusMiles: ${ctx.bonusMiles})`);
   }
 });

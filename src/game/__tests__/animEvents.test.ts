@@ -80,11 +80,16 @@ describe('animEvents order: War Drums retrigger', () => {
     const dieIds = result.animEvents.map((e) => e.dieId);
     // Each die triggers twice consecutively
     expect(dieIds).toEqual([
-      dice[0].id, dice[0].id,
-      dice[1].id, dice[1].id,
-      dice[2].id, dice[2].id,
-      dice[3].id, dice[3].id,
-      dice[4].id, dice[4].id,
+      dice[0].id,
+      dice[0].id,
+      dice[1].id,
+      dice[1].id,
+      dice[2].id,
+      dice[2].id,
+      dice[3].id,
+      dice[3].id,
+      dice[4].id,
+      dice[4].id,
     ]);
   });
 
@@ -100,10 +105,7 @@ describe('animEvents order: War Drums retrigger', () => {
 
     const dieIds = result.animEvents.map((e) => e.dieId);
     // die0: 3 triggers (base + red_bullet + war_drums), die1: 2 triggers (base + war_drums)
-    expect(dieIds).toEqual([
-      dice[0].id, dice[0].id, dice[0].id,
-      dice[1].id, dice[1].id,
-    ]);
+    expect(dieIds).toEqual([dice[0].id, dice[0].id, dice[0].id, dice[1].id, dice[1].id]);
   });
 
   test('expired War Drums does not retrigger', () => {
@@ -163,7 +165,9 @@ describe('animEvents order: equipment effects per-die', () => {
     expect(eventsForDie0.length).toBe(2);
     expect(eventsForDie0[0].popupType).toBe('miles');
     expect(eventsForDie0[0].value).toBe(3);
-    expect(eventsForDie0[1]).toEqual(expect.objectContaining({ popupType: 'miles', value: 31, target: expect.objectContaining({ kind: 'both' }) }));
+    expect(eventsForDie0[1]).toEqual(
+      expect.objectContaining({ popupType: 'miles', value: 31, target: expect.objectContaining({ kind: 'both' }) }),
+    );
 
     expect(eventsForDie1.length).toBe(2);
     expect(eventsForDie2.length).toBe(2);
@@ -209,7 +213,9 @@ describe('animEvents: ordering', () => {
     });
 
     const heldDieIds = new Set(heldDice.map((d) => d.id));
-    const lastHeldIdx = result.animEvents.findLastIndex((e) => e.target.kind === 'die' && heldDieIds.has(e.target.dieId));
+    const lastHeldIdx = result.animEvents.findLastIndex(
+      (e) => e.target.kind === 'die' && heldDieIds.has(e.target.dieId),
+    );
     const firstEquipOnlyIdx = result.animEvents.findIndex((e) => e.target.kind === 'equip');
 
     if (lastHeldIdx !== -1 && firstEquipOnlyIdx !== -1) {

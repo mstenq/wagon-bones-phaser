@@ -100,12 +100,7 @@ function floatingText(
 }
 
 /** Format a floating popup for a scoring contribution */
-function popupForDie(
-  scene: Scene,
-  sprite: DiceSprite,
-  type: ScoreAnimPopupType,
-  value: number,
-): void {
+function popupForDie(scene: Scene, sprite: DiceSprite, type: ScoreAnimPopupType, value: number): void {
   if (type === 'miles') {
     floatingText(scene, sprite.x, sprite.y, `+${formatScore(value)} mi`, POPUP_MILES_COLOR, 'up');
   } else if (type === 'mult') {
@@ -409,7 +404,9 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       }
 
       const evt = events[eventIdx];
-      const dieId = evt.dieId ?? (evt.target.kind === 'die' ? evt.target.dieId : evt.target.kind === 'both' ? evt.target.dieId : null);
+      const dieId =
+        evt.dieId ??
+        (evt.target.kind === 'die' ? evt.target.dieId : evt.target.kind === 'both' ? evt.target.dieId : null);
 
       const finishEvent = () => {
         eventIdx++;
@@ -501,8 +498,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
       // Trail guide from blue moon — popup on die, then fly card into consumable bar
       if (popupType === 'trail_guide') {
-        const sprite =
-          target.kind === 'die' || target.kind === 'both' ? dieSpriteMap.get(target.dieId) : undefined;
+        const sprite = target.kind === 'die' || target.kind === 'both' ? dieSpriteMap.get(target.dieId) : undefined;
         const def = evt.consumableId ? getConsumableDefById(evt.consumableId) : null;
         if (sprite) {
           popupForDie(scene, sprite, 'trail_guide', value);

@@ -22,16 +22,7 @@ export interface HandStats {
   multPerLevel: number; // mult added per level (from trail guide data)
 }
 
-export type DiceEnhancement =
-  | 'bone'
-  | 'lucky'
-  | 'wooden'
-  | 'steel'
-  | 'gold'
-  | 'loaded'
-  | 'diamond'
-  | 'stone'
-  | null;
+export type DiceEnhancement = 'bone' | 'lucky' | 'wooden' | 'steel' | 'gold' | 'loaded' | 'diamond' | 'stone' | null;
 
 export type DiceSticker = 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_moon' | null;
 
@@ -161,7 +152,6 @@ export type GameEventType =
   | 'death-prevented';
 
 export type GameEventCallback = (data?: unknown) => void;
-
 
 // ─── Difficulty ───
 export type DifficultyLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;

@@ -148,9 +148,7 @@ export class DiceSprite extends GameObjects.Container {
     if (!isGrimy && this._dieData.value > 0) {
       const enhInfo = hasEnhancement ? ENHANCEMENT_INFO.get(this._dieData.enhancement!) : null;
       const fontFamily = enhInfo?.fontFamily ?? 'Arial Black';
-      const textColor = enhInfo?.color
-        ? `#${enhInfo.color}`
-        : `#${PIP_COLOR.toString(16).padStart(6, '0')}`;
+      const textColor = enhInfo?.color ? `#${enhInfo.color}` : `#${PIP_COLOR.toString(16).padStart(6, '0')}`;
       this.valueText.setStyle({
         fontFamily,
         fontSize: this._dieData.value >= 10 ? `${DICE.FONT_SIZE_TWO_DIGIT}px` : `${DICE.FONT_SIZE}px`,
@@ -173,7 +171,9 @@ export class DiceSprite extends GameObjects.Container {
     if (!isGrimy && this._dieData.sticker) {
       const textureKey = `sticker_${this._dieData.sticker}`;
       if (this.scene.textures.exists(textureKey)) {
-        this.stickerImage = this.scene.add.image(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET, textureKey).setOrigin(0.5, 0.5);
+        this.stickerImage = this.scene.add
+          .image(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET, textureKey)
+          .setOrigin(0.5, 0.5);
         // Scale down to fit on the die face
         const maxDim = Math.max(this.stickerImage.width, this.stickerImage.height);
         const targetSize = DICE.STICKER_SIZE;

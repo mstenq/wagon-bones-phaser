@@ -9,66 +9,32 @@ import {
   EquipmentInstance,
   isEquipmentCursed,
   isEquipmentLeased,
+  isEquipmentModifierImmune,
   isEquipmentPerishable,
 } from './ItemsSystem';
 import { getPlayerState, PlayerState } from './PlayerState';
 import { getDiscountedShopPrice } from './PermitsSystem';
 import { rngFloat } from './RunRng';
 
-/** Items immune to Cursed modifier */
-export const CURSED_IMMUNE = new Set([
-  'dynamite',
-  'nitro',
-  'bounty_contract',
-  'steam_engine',
-  'phantom_wagon',
-  'sheriffs_badge',
-  'guardian_totem',
-  'fading_memory',
-  'worn_deck',
-  'war_drums',
-  'flour_sack',
-]);
-
-/** Items immune to Perishable modifier */
-export const PERISHABLE_IMMUNE = new Set([
-  'bone_collector',
-  'rabbits_foot',
-  'bargain_bin',
-  'card_counter',
-  'book_of_the_dead',
-  'guide_lantern',
-  'tight_fist',
-  'haunted_totem',
-  'square_dance',
-  'new_blood',
-  'manifest_destiny',
-  'covered_wagon',
-  'diamond_coffin',
-  'five_mail_marker',
-  'grave_robber',
-  'six_feet_under',
-  'funeral_pyre',
-  'trail_tax',
-  'trailblazer',
-  'railroad_bonds',
-]);
-
 /**
  * Roll equipment modifiers based on current difficulty level.
  * Cursed is rolled first; Perishable is skipped if Cursed succeeded (incompatible).
  */
-export function rollEquipmentModifiers(difficulty: DifficultyLevel, itemId: string): EquipmentModifier[] {
+export function rollEquipmentModifiers(difficulty: DifficultyLevel, def: EquipmentDef): EquipmentModifier[] {
   const modifiers: EquipmentModifier[] = [];
 
-  if (difficulty >= 4 && !CURSED_IMMUNE.has(itemId) && rngFloat('equipment') < EQUIPMENT_MODIFIER.CURSED_RATE) {
+  if (
+    difficulty >= 4 &&
+    !isEquipmentModifierImmune(def, 'cursed') &&
+    rngFloat('equipment') < EQUIPMENT_MODIFIER.CURSED_RATE
+  ) {
     modifiers.push('cursed');
   }
 
   if (
     difficulty >= 7 &&
     !modifiers.includes('cursed') &&
-    !PERISHABLE_IMMUNE.has(itemId) &&
+    !isEquipmentModifierImmune(def, 'perishable') &&
     rngFloat('equipment') < EQUIPMENT_MODIFIER.PERISHABLE_RATE
   ) {
     modifiers.push('perishable');
@@ -100,13 +66,10 @@ export function applyModifiersToEquipment(instance: EquipmentInstance, modifiers
  * Roll modifiers for shop/pack display. Modifiers are fixed when stock is generated
  * and reused when the player acquires the item.
  */
-export function rollShopEquipmentPreview(
-  def: EquipmentDef,
-  purchasedPermitIds: string[] = [],
-): EquipmentInstance {
+export function rollShopEquipmentPreview(def: EquipmentDef, purchasedPermitIds: string[] = []): EquipmentInstance {
   const instance = createEquipmentInstance(def, purchasedPermitIds);
   const player = getPlayerState();
-  const modifiers = rollEquipmentModifiers(player.difficulty, def.id);
+  const modifiers = rollEquipmentModifiers(player.difficulty, def);
   applyModifiersToEquipment(instance, modifiers);
   return instance;
 }
@@ -121,8 +84,7 @@ export function acquireEquipmentInstance(
   modifiers?: EquipmentModifier[],
 ): EquipmentInstance {
   const instance = createEquipmentInstance(def, purchasedPermitIds);
-  const mods =
-    modifiers ?? rollEquipmentModifiers(getPlayerState().difficulty, def.id);
+  const mods = modifiers ?? rollEquipmentModifiers(getPlayerState().difficulty, def);
   applyModifiersToEquipment(instance, mods);
   return instance;
 }
@@ -161,15 +123,9 @@ export interface EquipmentModifierRoundResult {
  * Call when a round ends (win or loss), before payout interest is calculated.
  */
 /** Remove equipment marked for destruction in a modifier round result (indices captured before splice). */
-export function applyEquipmentModifierDestructions(
-  player: PlayerState,
-  result: EquipmentModifierRoundResult,
-): void {
+export function applyEquipmentModifierDestructions(player: PlayerState, result: EquipmentModifierRoundResult): void {
   const indices = [
-    ...new Set([
-      ...result.perished.map((p) => p.index),
-      ...result.leaseDefaulted.map((p) => p.index),
-    ]),
+    ...new Set([...result.perished.map((p) => p.index), ...result.leaseDefaulted.map((p) => p.index)]),
   ].sort((a, b) => b - a);
 
   for (const idx of indices) {

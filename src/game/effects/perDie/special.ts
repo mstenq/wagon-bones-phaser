@@ -18,7 +18,14 @@ effectRegistry.registerPerDie('PERMANENT_DIE_MILES_GAIN', (ctx, equip, _idx, die
 });
 
 effectRegistry.registerPerDie('PIP_SCORED_MILES_GAIN', (_ctx, equip, _idx, die, _t) => {
-  if (dieMatchesPip(die, (equip.def.effectParams as Record<string, unknown>).pip as number, _ctx.equipment, _ctx.hasStackedDeck)) {
+  if (
+    dieMatchesPip(
+      die,
+      (equip.def.effectParams as Record<string, unknown>).pip as number,
+      _ctx.equipment,
+      _ctx.hasStackedDeck,
+    )
+  ) {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     equip.state.miles = (equip.state.miles ?? 0) + value;
     console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: gained +${value} miles (now ${equip.state.miles})`);
