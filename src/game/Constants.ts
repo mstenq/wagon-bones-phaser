@@ -336,6 +336,15 @@ export const DICE = {
   GRIMY_COLOR: 0x6b5a3e,
 };
 
+// ─── Marquee selection (roll phase dice lock) ───
+export const MARQUEE = {
+  FILL_ALPHA: 0.15,
+  GFX_DEPTH: 25,
+  ZONE_DEPTH: 5,
+  /** Bottom strip reserved for action buttons, sort controls, and instruction text */
+  BOTTOM_RESERVE: 120,
+} as const;
+
 // ─── Animations ───
 export const ANIM = {
   ROLL_DURATION: 600,

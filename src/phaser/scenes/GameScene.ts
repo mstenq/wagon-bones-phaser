@@ -19,7 +19,7 @@ import {
 import { applyEquipmentModifierDestructions, processEquipmentModifiersEndOfRound } from '../../game/EquipmentModifiers';
 import { isEquipmentLeased } from '../../game/ItemsSystem';
 import { consumeNextRoundTags } from '../../game/TagSystem';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM, DICE, MARQUEE } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
@@ -118,6 +118,14 @@ export class GameScene extends Scene {
   private dragOffsetY: number = 0;
   private dragPrevX: number = 0;
   private dragVelocityX: number = 0;
+
+  // Marquee lock selection (ROLL phase, empty-space drag)
+  private rollMarqueeZone: Phaser.GameObjects.Zone | null = null;
+  private marqueeGfx: Phaser.GameObjects.Graphics | null = null;
+  private marqueeStartX: number = 0;
+  private marqueeStartY: number = 0;
+  private marqueeActive: boolean = false;
+  private marqueePointerId: number | null = null;
 
   // Loaded die target control
   private loadedDiceLabel: Phaser.GameObjects.Text;
@@ -294,6 +302,19 @@ export class GameScene extends Scene {
       this.setSortOrder('desc'),
     );
 
+    const hudDepth = 50;
+    for (const btn of [
+      this.readyBtn,
+      this.rollBtn,
+      this.scoreBtn,
+      this.rerollBtn,
+      this.continueBtn,
+      this.sortAscBtn,
+      this.sortDescBtn,
+    ]) {
+      btn.setDepth(hudDepth);
+    }
+
     this.hideAllButtons();
 
     // Re-enter current phase
@@ -441,6 +462,7 @@ export class GameScene extends Scene {
       this.animating = false;
       this.sortAndRepositionDice();
       this.setupRollSpriteInteraction();
+      this.setupRollMarqueeZone();
 
       this.rerollBtn.setVisible(true);
       this.scoreBtn.setVisible(true);
@@ -470,6 +492,35 @@ export class GameScene extends Scene {
     this.updateRollButtons();
   }
 
+  /** Toggle lock state for one rolled die (click or marquee batch). */
+  private toggleDiceLock(sprite: DiceSprite, playSound = true, updateButtons = true): void {
+    if (this.consumableTargeting) return;
+    const id = sprite.dieData.id;
+    if (isDiceLockedByBoss(id)) return;
+
+    const lockIdx = this.rollSprites.indexOf(sprite);
+    const lockIcon = this.lockIcons[lockIdx];
+    if (this.lockedDiceIds.has(id)) {
+      this.lockedDiceIds.delete(id);
+      sprite.setSelected(false);
+      if (lockIcon) lockIcon.setVisible(false);
+      if (playSound) this.sound.play('sfx_card_slide2', { volume: 0.25 });
+    } else {
+      this.lockedDiceIds.add(id);
+      sprite.setSelected(true);
+      if (lockIcon) lockIcon.setVisible(true);
+      if (playSound) this.sound.play('sfx_highlight1', { volume: 0.3 });
+    }
+    this.syncSelectedForScore();
+    if (updateButtons) this.updateRollButtons();
+  }
+
+  private syncSelectedForScore(): void {
+    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) =>
+      this.lockedDiceIds.has(d.id),
+    );
+  }
+
   /** Shared: wire up click handlers on roll sprites (click to lock/unlock, drag to reorder) */
   private setupRollSpriteInteraction(): void {
     for (let i = 0; i < this.rollSprites.length; i++) {
@@ -481,7 +532,7 @@ export class GameScene extends Scene {
       });
 
       sprite.on('pointerup', () => {
-        if (this.wasDragging || this.animating) return;
+        if (this.wasDragging || this.animating || this.marqueeActive) return;
 
         // Consumable targeting mode takes over click behavior
         if (this.consumableTargeting) {
@@ -489,28 +540,139 @@ export class GameScene extends Scene {
           return;
         }
 
-        const id = sprite.dieData.id;
-        if (isDiceLockedByBoss(id)) return;
-        const lockIdx = this.rollSprites.indexOf(sprite);
-        const lockIcon = this.lockIcons[lockIdx];
-        if (this.lockedDiceIds.has(id)) {
-          this.lockedDiceIds.delete(id);
-          sprite.setSelected(false);
-          if (lockIcon) lockIcon.setVisible(false);
-          this.sound.play('sfx_card_slide2', { volume: 0.25 });
-        } else {
-          this.lockedDiceIds.add(id);
-          sprite.setSelected(true);
-          if (lockIcon) lockIcon.setVisible(true);
-          this.sound.play('sfx_highlight1', { volume: 0.3 });
-        }
-        // Keep selectedForScore in sync with locked dice so equipment hints can read it
-        this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) =>
-          this.lockedDiceIds.has(d.id),
-        );
-        this.updateRollButtons();
+        this.toggleDiceLock(sprite);
       });
     }
+  }
+
+  private canUseMarquee(): boolean {
+    return (
+      !this.animating &&
+      !this.consumableTargeting &&
+      this.rollSprites.length > 0 &&
+      this.gameState.state.phase === 'ROLL'
+    );
+  }
+
+  private getRollMarqueeZoneBounds(): { width: number; height: number; cx: number; cy: number } {
+    const width = this.scale.width - this.sidebarW;
+    const height = this.scale.height - MARQUEE.BOTTOM_RESERVE;
+    return { width, height, cx: this.contentCX, cy: height / 2 };
+  }
+
+  private createRollMarqueeZone(): void {
+    this.destroyRollMarqueeZone();
+    const { width, height, cx, cy } = this.getRollMarqueeZoneBounds();
+    this.rollMarqueeZone = this.add
+      .zone(cx, cy, width, height)
+      .setDepth(MARQUEE.ZONE_DEPTH)
+      .setInteractive();
+  }
+
+  private setupRollMarqueeZone(): void {
+    this.createRollMarqueeZone();
+    if (!this.rollMarqueeZone) return;
+
+    this.rollMarqueeZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.canUseMarquee()) return;
+
+      this.marqueeStartX = pointer.worldX;
+      this.marqueeStartY = pointer.worldY;
+      this.marqueePointerId = pointer.id;
+      this.marqueeActive = false;
+
+      this.input.on('pointermove', this.onMarqueePointerMove);
+      this.input.on('pointerup', this.onMarqueePointerUp);
+    });
+  }
+
+  private onMarqueePointerMove = (pointer: Phaser.Input.Pointer): void => {
+    if (this.marqueePointerId === null || pointer.id !== this.marqueePointerId) return;
+
+    const dx = pointer.worldX - this.marqueeStartX;
+    const dy = pointer.worldY - this.marqueeStartY;
+    if (!this.marqueeActive && Math.hypot(dx, dy) < this.input.dragDistanceThreshold) return;
+
+    this.marqueeActive = true;
+    this.wasDragging = true;
+    this.drawMarqueeGfx(this.marqueeStartX, this.marqueeStartY, pointer.worldX, pointer.worldY);
+  };
+
+  private onMarqueePointerUp = (pointer: Phaser.Input.Pointer): void => {
+    if (this.marqueePointerId === null || pointer.id !== this.marqueePointerId) return;
+
+    this.input.off('pointermove', this.onMarqueePointerMove);
+    this.input.off('pointerup', this.onMarqueePointerUp);
+
+    if (this.marqueeActive) {
+      const rect = this.getMarqueeRect(
+        this.marqueeStartX,
+        this.marqueeStartY,
+        pointer.worldX,
+        pointer.worldY,
+      );
+      const hits = this.getDiceInMarquee(rect);
+      let playSound = true;
+      for (const sprite of hits) {
+        this.toggleDiceLock(sprite, playSound, false);
+        playSound = false;
+      }
+      if (hits.length > 0) this.updateRollButtons();
+    }
+
+    this.cleanupMarquee();
+  };
+
+  private drawMarqueeGfx(x1: number, y1: number, x2: number, y2: number): void {
+    if (!this.marqueeGfx) {
+      this.marqueeGfx = this.add.graphics().setDepth(MARQUEE.GFX_DEPTH);
+    }
+    const rect = this.getMarqueeRect(x1, y1, x2, y2);
+    this.marqueeGfx.clear();
+    this.marqueeGfx.fillStyle(DICE.SELECTED_STROKE, MARQUEE.FILL_ALPHA);
+    this.marqueeGfx.fillRect(rect.x, rect.y, rect.width, rect.height);
+    this.marqueeGfx.lineStyle(2, DICE.SELECTED_STROKE, 1);
+    this.marqueeGfx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+  }
+
+  private getDiceWorldBounds(sprite: DiceSprite): Phaser.Geom.Rectangle {
+    const half = DICE.SIZE / 2;
+    return new Phaser.Geom.Rectangle(sprite.x - half, sprite.y - half, DICE.SIZE, DICE.SIZE);
+  }
+
+  private getMarqueeRect(x1: number, y1: number, x2: number, y2: number): Phaser.Geom.Rectangle {
+    return new Phaser.Geom.Rectangle(
+      Math.min(x1, x2),
+      Math.min(y1, y2),
+      Math.abs(x2 - x1),
+      Math.abs(y2 - y1),
+    );
+  }
+
+  private getDiceInMarquee(rect: Phaser.Geom.Rectangle): DiceSprite[] {
+    const hits: DiceSprite[] = [];
+    for (const sprite of this.rollSprites) {
+      if (Phaser.Geom.Rectangle.Overlaps(rect, this.getDiceWorldBounds(sprite))) {
+        hits.push(sprite);
+      }
+    }
+    return hits;
+  }
+
+  private cleanupMarquee(): void {
+    this.marqueeGfx?.clear();
+    this.marqueeActive = false;
+    this.marqueePointerId = null;
+  }
+
+  private destroyRollMarqueeZone(): void {
+    this.input.off('pointermove', this.onMarqueePointerMove);
+    this.input.off('pointerup', this.onMarqueePointerUp);
+    this.cleanupMarquee();
+    this.marqueeGfx?.destroy();
+    this.marqueeGfx = null;
+    this.rollMarqueeZone?.destroy();
+    this.rollMarqueeZone = null;
   }
 
   /** Create lock icons below each roll sprite (hidden initially) */
@@ -544,6 +706,7 @@ export class GameScene extends Scene {
     this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
     this.createLockIcons();
     this.setupRollSpriteInteraction();
+    this.setupRollMarqueeZone();
 
     this.rerollBtn.setVisible(true);
     this.scoreBtn.setVisible(true);
@@ -850,6 +1013,7 @@ export class GameScene extends Scene {
     }
     for (const s of this.playAreaSprites) s.destroy();
     this.clearLockIcons();
+    this.destroyRollMarqueeZone();
     this.handSprites = [];
     this.rollSprites = [];
     this.availableStacks = [];
