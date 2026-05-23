@@ -250,13 +250,24 @@ export class DifficultySelectScene extends Scene {
   }
 
   private buildSeedControls(width: number, height: number): void {
-    const rowY = height - 92;
+    const rowY = height - 124;
     const checkboxSize = 22;
     const checkboxX = width / 2 - 210;
     const labelX = checkboxX + checkboxSize + 10;
+    const seedLabelX = width / 2 + 56;
+    const seedInputX = seedLabelX + 8;
+    const seedInputW = 240;
 
     const checkboxBg = this.add.graphics().setDepth(90);
     const checkboxMark = this.add.graphics().setDepth(91);
+    const seedLabel = this.add
+      .text(seedLabelX, rowY, 'Seed', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '14px',
+        color: TEXT_COLORS.MUTED,
+      })
+      .setOrigin(1, 0.5)
+      .setDepth(92);
     const redraw = () => {
       checkboxBg.clear();
       checkboxMark.clear();
@@ -272,6 +283,7 @@ export class DifficultySelectScene extends Scene {
         checkboxMark.lineTo(checkboxX + 17, rowY - 6);
         checkboxMark.strokePath();
       }
+      seedLabel.setVisible(this.seededRunEnabled);
       if (this.seedInput) {
         this.seedInput.style.display = this.seededRunEnabled ? 'block' : 'none';
       }
@@ -300,16 +312,7 @@ export class DifficultySelectScene extends Scene {
       redraw();
     });
 
-    this.add
-      .text(width / 2 + 72, rowY, 'Seed', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
-        color: TEXT_COLORS.MUTED,
-      })
-      .setOrigin(1, 0.5)
-      .setDepth(92);
-
-    this.seedInput = this.createSeedInput(width / 2 + 80, rowY - 16, 240, 32);
+    this.seedInput = this.createSeedInput(seedInputX, rowY - 16, seedInputW, 32);
     this.seedInput.value = '';
     this.seedInput.placeholder = 'Type a run seed';
     this.seedInput.maxLength = 32;
