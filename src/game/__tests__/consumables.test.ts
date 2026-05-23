@@ -17,7 +17,7 @@ import {
 } from '../ConsumablesSystem';
 import { isEquipmentCursed } from '../ItemsSystem';
 import { applyDiceSelectionEffect, DiceSelectionConfig, shouldUpdateDisplayedDiceValue } from '../DiceSelectionSystem';
-import { HandType } from '../types';
+import { DiceEnhancement, HandType } from '../types';
 import supplyCardsData from '../../data/supply_cards';
 import trailGuidesData from '../../data/trail_guides';
 import frontierEncountersData from '../../data/frontier_encounters';
@@ -381,39 +381,39 @@ describe('profession starting consumables', () => {
 // ─── Profession Starting Dice ───
 
 describe('profession starting dice', () => {
-  test('farmer starts with 5 profession dice and standard dice to 25 total', () => {
+  test(`farmer starts with 5 profession dice and standard dice to ${GAMEPLAY.STARTING_DICE} total`, () => {
     const { player } = setupGame({ profession: 'farmer' });
-    expect(player.dice).toHaveLength(25);
-    expect(player.startingDiceCount).toBe(25);
+    expect(player.dice).toHaveLength(GAMEPLAY.STARTING_DICE);
+    expect(player.startingDiceCount).toBe(GAMEPLAY.STARTING_DICE);
     expect(player.dice.filter((d) => d.enhancement === 'wooden')).toHaveLength(3);
     expect(player.dice.filter((d) => d.enhancement === 'steel')).toHaveLength(2);
-    expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(20);
+    expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 5);
   });
 
   test('banker starts with gold and diamond dice plus standard fill', () => {
     const { player } = setupGame({ profession: 'banker' });
-    expect(player.dice).toHaveLength(25);
+    expect(player.dice).toHaveLength(GAMEPLAY.STARTING_DICE);
     expect(player.dice.filter((d) => d.enhancement === 'gold')).toHaveLength(3);
     expect(player.dice.filter((d) => d.enhancement === 'diamond')).toHaveLength(2);
-    expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(20);
+    expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 5);
   });
 
   test('developer starts with one of each enhancement type plus standard fill', () => {
     const { player } = setupGame({ profession: 'developer' });
-    expect(player.dice).toHaveLength(25);
-    expect(player.startingDiceCount).toBe(25);
+    expect(player.dice).toHaveLength(GAMEPLAY.STARTING_DICE);
+    expect(player.startingDiceCount).toBe(GAMEPLAY.STARTING_DICE);
     const enhanced = player.dice.filter((d) => d.enhancement !== null);
     expect(enhanced).toHaveLength(8);
     const types = enhanced.map((d) => d.enhancement).sort();
-    expect(types).toEqual(['bone', 'diamond', 'gold', 'loaded', 'lucky', 'steel', 'stone', 'wooden'].sort());
-    expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(17);
+    expect(types).toEqual((['bone', 'diamond', 'gold', 'loaded', 'lucky', 'steel', 'stone', 'wooden'] as DiceEnhancement[]).sort());
+    expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 8);
   });
 
   test('setup without profession gets plain fallback pouch', () => {
     const { player } = setupGame();
-    expect(player.dice).toHaveLength(25);
+    expect(player.dice).toHaveLength(GAMEPLAY.STARTING_DICE);
     expect(player.dice.every((d) => d.enhancement === null)).toBe(true);
-    expect(player.startingDiceCount).toBe(25);
+    expect(player.startingDiceCount).toBe(GAMEPLAY.STARTING_DICE);
   });
 });
 
@@ -525,6 +525,7 @@ describe('pre-roll consumable targeting regression', () => {
 // ─── Bless Aura Weighting ───
 
 import itemAuras from '../../data/item_auras';
+import { GAMEPLAY } from '../Constants';
 
 describe('Bless supply card aura weighting', () => {
   test('bless applies weighted aura distribution matching item_auras data', () => {
