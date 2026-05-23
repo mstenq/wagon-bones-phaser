@@ -638,11 +638,15 @@ export class Sidebar extends GameObjects.Container {
     if (data.rerolls !== undefined) {
       this.rerollsText.setText(`${data.rerolls}`);
     }
-    if (data.leg !== undefined && data.totalLegs !== undefined) {
-      const roundLabel =
-        data.round !== undefined && data.totalRounds !== undefined
-          ? `Leg ${data.leg} - ${data.round}/${data.totalRounds}`
-          : `${data.leg} / ${data.totalLegs}`;
+    if (data.leg !== undefined) {
+      let roundLabel: string;
+      if (data.round !== undefined && data.totalRounds !== undefined) {
+        roundLabel = `Leg ${data.leg} - ${data.round}/${data.totalRounds}`;
+      } else if (data.totalLegs !== undefined) {
+        roundLabel = `${data.leg} / ${data.totalLegs}`;
+      } else {
+        roundLabel = `Leg ${data.leg}`;
+      }
       this.legText.setText(roundLabel);
     }
     if (data.targetMiles !== undefined) {

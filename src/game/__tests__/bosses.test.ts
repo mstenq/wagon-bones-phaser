@@ -1,6 +1,8 @@
 import { describe, test, expect } from 'bun:test';
 import { HandType, PhaseState } from '../types';
 import { GAMEPLAY } from '../Constants';
+import { getBaseTargetMilesForLeg } from '../../data/target_miles';
+import { isFinisherLeg } from '../../data/bosses';
 import { setupGame, calculateTestScore, die, diceFromValues, item, setTestDifficulty } from './testHelpers';
 import {
   getBossRoundConfigMods,
@@ -12,6 +14,7 @@ import {
   getBossAdjustedHandStats,
   applyBossHandRestriction,
   applyBossAfterScore,
+  applyBossOnDayStart,
   getBossRoundState,
   isBossEquipmentHintsHidden,
   revealLandSlideHints,
@@ -24,7 +27,7 @@ describe('Boss round config', () => {
   test('Marathon: 4x leg base (replaces round 3 2×, not stacked)', () => {
     const { game, player } = setupGame({ bossId: 'the_marathon', leg: 2 });
     setTestDifficulty(3);
-    const legBase = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[1];
+    const legBase = getBaseTargetMilesForLeg(2, 3);
     expect(player.targetMiles).toBe(legBase * 4);
     game.startRound({ targetMiles: player.targetMiles });
     expect(game.config.targetMiles).toBe(legBase * 4);
@@ -32,7 +35,7 @@ describe('Boss round config', () => {
 
   test('Finish Line: 6x leg base on final leg', () => {
     const { game, player } = setupGame({ bossId: 'the_finish_line', leg: 8 });
-    const legBase = GAMEPLAY.TARGET_MILES_BY_LEG[7];
+    const legBase = getBaseTargetMilesForLeg(8, 1);
     expect(player.targetMiles).toBe(legBase * 6);
     game.startRound({ targetMiles: player.targetMiles });
     expect(game.config.targetMiles).toBe(legBase * 6);
@@ -41,7 +44,7 @@ describe('Boss round config', () => {
   test('Standoff: 1x leg base on showdown (not 2×)', () => {
     const { player } = setupGame({ bossId: 'the_standoff', leg: 2 });
     setTestDifficulty(3);
-    const legBase = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH[1];
+    const legBase = getBaseTargetMilesForLeg(2, 3);
     expect(player.targetMiles).toBe(legBase);
   });
 
@@ -193,6 +196,26 @@ describe('SPEND_RANDOM_AFTER_SCORE: Inspector', () => {
 });
 
 describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
+  test('disables only one item per day and replaces previous day disable', () => {
+    setupGame({
+      bossId: 'the_jinx',
+      equipment: [item('horseshoe'), item('dynamite'), item('coffee')],
+    });
+    applyBossOnDayStart(1);
+    expect(getBossRoundState().disabledEquipmentIndices).toHaveLength(1);
+    applyBossOnDayStart(2);
+    expect(getBossRoundState().disabledEquipmentIndices).toHaveLength(1);
+    applyBossOnDayStart(3);
+    expect(getBossRoundState().disabledEquipmentIndices).toHaveLength(1);
+  });
+
+  test('disabled equipment re-enabled when boss round is not active', () => {
+    const { player } = setupGame({ bossId: 'the_jinx', equipment: [item('horseshoe')] });
+    getBossRoundState().disabledEquipmentIndices = [0];
+    player.round = 1;
+    expect(isEquipmentDisabledByBoss(0)).toBe(false);
+  });
+
   test('disabled equipment skipped in scoring', () => {
     const horseshoe = item('horseshoe');
     const { game, player } = setupGame({
@@ -266,6 +289,22 @@ describe('Boss assignment uniqueness', () => {
     const player = setupGame().player;
     const ids = Array.from({ length: 8 }, (_, i) => player.getBossForLeg(i + 1)?.id).filter(Boolean);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('finisher legs only assign finisher bosses', () => {
+    const player = setupGame().player;
+    player.assignBosses();
+    for (const leg of [8, 16, 24, 32]) {
+      expect(isFinisherLeg(leg)).toBe(true);
+      const boss = player.getBossForLeg(leg);
+      expect((boss?.minimumLeg ?? 1)).toBeGreaterThanOrEqual(8);
+    }
+  });
+
+  test('assignBosses covers all endless legs', () => {
+    const player = setupGame().player;
+    player.assignBosses();
+    expect(player.getBossAssignmentIds().length).toBe(GAMEPLAY.MAX_LEGS);
   });
 });
 

@@ -20,6 +20,7 @@ import {
 } from '../../game/TagSystem';
 import type { TrailTagInstance } from '../../game/types';
 import { getPackDefById } from '../../game/BoosterPackSystem';
+import { buildVictoryGameOverData } from './GameOver';
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
 
@@ -187,7 +188,7 @@ export class RoundSelectScene extends Scene {
     }
 
     if (player.journeyComplete) {
-      this.scene.start('GameOver', { won: true, victory: true });
+      this.scene.start('GameOver', buildVictoryGameOverData(0, player.targetMiles));
       return;
     }
 

@@ -87,7 +87,7 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
       daysRemaining: player.effectiveDays,
       rerolls: player.effectiveRerolls,
       leg: player.leg,
-      totalLegs: GAMEPLAY.LEGS,
+      totalLegs: player.endlessMode ? undefined : GAMEPLAY.LEGS,
       round: player.round,
       totalRounds: GAMEPLAY.ROUNDS_PER_LEG,
       targetMiles: player.targetMiles,

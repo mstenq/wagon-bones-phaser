@@ -387,10 +387,8 @@ describe('Permit effects: SHORTCUT', () => {
     const player = resetPlayerState();
     player.economy.setBalance(20);
     player.leg = 3;
-    // Without permit: leg 3 index = 2 → TARGET_MILES_BY_LEG[2]
     const baseMiles = player.targetMiles;
     player.buyPermit(getPermitById('shortcut_trail')!);
-    // With permit: effective leg index = max(0, 2 - 1) = 1 → TARGET_MILES_BY_LEG[1]
     const reducedMiles = player.targetMiles;
     expect(reducedMiles).toBeLessThan(baseMiles);
   });

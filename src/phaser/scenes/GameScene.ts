@@ -1013,7 +1013,7 @@ export class GameScene extends Scene {
         rerollsRemaining,
         leg: player.leg,
         round: player.round,
-        isVictory: player.isBossRound && player.leg === GAMEPLAY.LEGS,
+        isVictory: player.isBossRound && player.leg === GAMEPLAY.LEGS && !player.endlessMode,
       });
     } else {
       this.sound.play('sfx_negative', { volume: 0.5 });
@@ -1209,7 +1209,7 @@ export class GameScene extends Scene {
       daysRemaining: this.gameState.config.maxDays - s.day + 1,
       rerolls: s.rerollsRemaining,
       leg: player.leg,
-      totalLegs: GAMEPLAY.LEGS,
+      totalLegs: player.endlessMode ? undefined : GAMEPLAY.LEGS,
       round: player.round,
       totalRounds: GAMEPLAY.ROUNDS_PER_LEG,
       targetMiles: this.gameState.config.targetMiles,

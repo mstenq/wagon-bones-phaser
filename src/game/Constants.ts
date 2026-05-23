@@ -25,12 +25,9 @@ export const GAMEPLAY = {
   SHOP_SLOTS: 2,
   SHOP_REROLL_COST: 5,
   BOSS_REROLL_COST: 10,
-  LEGS: 8,
+  LEGS: 8, // story-complete threshold (8-leg Oregon Trail)
+  MAX_LEGS: 39, // endless mode cap (see src/data/target_miles.ts)
   ROUNDS_PER_LEG: 3,
-  // Target miles per leg (index 0 = leg 1). Base value — multiplied by round multiplier.
-  TARGET_MILES_BY_LEG: [300, 800, 2000, 5000, 11_000, 20_000, 35_000, 50_000], // for Normal difficulty
-  TARGET_MILES_BY_LEG_ROUGH: [300, 900, 2600, 8000, 20000, 36000, 60000, 100_000], // for Rough Trail difficulty
-  TARGET_MILES_BY_LEG_DEADLY: [300, 1000, 3200, 9000, 25000, 60000, 110_000, 200_000], // for Deadly Frontier difficulty
   // Round difficulty multiplier within a leg (round 1 = 1x, round 2 = 1.5x, round 3/boss = 2x)
   ROUND_MULTIPLIERS: [1, 1.5, 2],
   // Money earned for completing each round (index 0 = round 1)
@@ -38,8 +35,8 @@ export const GAMEPLAY = {
   // Interest: $1 per INTEREST_PER dollars held, capped at INTEREST_CAP
   INTEREST_PER: 5,
   INTEREST_CAP: 25, // default cap; vouchers can raise this
-  /** Miles/score at or above this use Balatro-style scientific notation (e.g. 1.27e9) */
-  SCORE_SCIENTIFIC_THRESHOLD: 1_000_000_000_000,
+  /** Miles/score at or above this use Balatro-style scientific notation (e.g. 1.27e11) */
+  SCORE_SCIENTIFIC_THRESHOLD: 1e11,
   /** Decimal places for mult/miles products (avoids float drift in scoring math) */
   SCORE_MATH_DECIMALS: 2,
   /** Money earned per trigger when a gold die is held (not scored) at round end */

@@ -43,7 +43,8 @@ import {
 import type { TrailEventDef } from '../data/trail_events';
 import trailGuidesData from '../data/trail_guides';
 import { getProfessionById, type ProfessionDef } from '../data/professions';
-import bosses, { getBossDistanceMultiplier } from '../data/bosses';
+import bosses, { getBossDistanceMultiplier, getEligibleBossesForLeg } from '../data/bosses';
+import { getBaseTargetMilesForLeg } from '../data/target_miles';
 import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
 import { getTrailTagById } from '../data/trail_tags';
 import { resetRunRng, rngPick } from './RunRng';
@@ -74,19 +75,8 @@ export function computeTargetMiles(
   difficulty: DifficultyLevel,
   bossForLeg?: BossDef | null,
 ): number {
-  const effectiveLegIndex = Math.max(0, leg - 1 - permitScoreReduction);
-
-  let targets = GAMEPLAY.TARGET_MILES_BY_LEG;
-  if (difficulty >= 6) {
-    targets = GAMEPLAY.TARGET_MILES_BY_LEG_DEADLY;
-  } else if (difficulty >= 3) {
-    targets = GAMEPLAY.TARGET_MILES_BY_LEG_ROUGH;
-  }
-
-  const base = targets[effectiveLegIndex];
-  if (base === undefined) {
-    throw new Error(`No target miles for leg ${leg} (effective index ${effectiveLegIndex})`);
-  }
+  const effectiveLeg = leg - permitScoreReduction;
+  const base = getBaseTargetMilesForLeg(effectiveLeg, difficulty);
   let multiplier = GAMEPLAY.ROUND_MULTIPLIERS[round - 1] ?? 1;
   if (round === GAMEPLAY.ROUNDS_PER_LEG && bossForLeg) {
     const bossMultiplier = getBossDistanceMultiplier(bossForLeg);
@@ -163,6 +153,10 @@ export class PlayerState {
   bossRerollsUsedThisLeg: number = 0; // permit boss rerolls consumed this leg
   /** Set when Dynamite self-destructs at end of round; unlocks Nitro in shops. */
   dynamiteSelfDestructed: boolean = false;
+  /** Player chose to continue past the 8-leg story on the victory screen. */
+  endlessMode: boolean = false;
+  /** Beat leg 8 boss but has not yet chosen Keep Wandering or Make Camp. */
+  storyVictoryPending: boolean = false;
 
   private bossAssignments: BossDef[] = []; // one boss per leg, assigned at game start
   private nextDieId: number = 0; // monotonic counter for unique die IDs
@@ -576,11 +570,11 @@ export class PlayerState {
     const allBosses = bosses;
     const usedInFirstEight = new Set<string>();
 
-    for (let leg = 1; leg <= GAMEPLAY.LEGS; leg++) {
-      let eligible = allBosses.filter((b) => (b.minimumLeg ?? 1) <= leg);
+    for (let leg = 1; leg <= GAMEPLAY.MAX_LEGS; leg++) {
+      let eligible = getEligibleBossesForLeg(leg);
 
       // Legs 1–8: each boss appears at most once; leg 9+ may repeat
-      if (leg <= 8) {
+      if (leg <= GAMEPLAY.LEGS) {
         const unused = eligible.filter((b) => !usedInFirstEight.has(b.id));
         if (unused.length > 0) eligible = unused;
         else {
@@ -594,7 +588,7 @@ export class PlayerState {
         continue;
       }
       const pick = rngPick('meta', eligible);
-      if (leg <= 8) usedInFirstEight.add(pick.id);
+      if (leg <= GAMEPLAY.LEGS) usedInFirstEight.add(pick.id);
       this.bossAssignments.push(pick);
     }
   }
@@ -608,9 +602,9 @@ export class PlayerState {
   rerollBossForLeg(leg: number = this.leg): boolean {
     const allBosses = bosses;
     const current = this.bossAssignments[leg - 1];
-    let eligible = allBosses.filter((b) => (b.minimumLeg ?? 1) <= leg && b.id !== current?.id);
+    let eligible = getEligibleBossesForLeg(leg).filter((b) => b.id !== current?.id);
 
-    if (leg <= 8) {
+    if (leg <= GAMEPLAY.LEGS) {
       const usedElsewhere = new Set(
         this.bossAssignments.map((b, i) => (i !== leg - 1 ? b?.id : undefined)).filter((id): id is string => !!id),
       );
@@ -772,9 +766,16 @@ export class PlayerState {
     };
   }
 
-  /** Whether the entire journey is complete */
+  /** Whether to show story victory or hard endless end (not blocked after Keep Wandering). */
   get journeyComplete(): boolean {
-    return this.leg > GAMEPLAY.LEGS;
+    if (this.leg > GAMEPLAY.MAX_LEGS) return true;
+    if (this.storyVictoryPending && !this.endlessMode) return true;
+    return false;
+  }
+
+  /** Story (8-leg) arc finished — player may opt into endless mode. */
+  get storyVictoryOffered(): boolean {
+    return this.storyVictoryPending && !this.endlessMode;
   }
 
   /** Add a tag to the pending queue. Twin Wagon increases copies. */
@@ -841,7 +842,11 @@ export class PlayerState {
     this.round++;
     if (this.round > GAMEPLAY.ROUNDS_PER_LEG) {
       this.round = 1;
+      const prevLeg = this.leg;
       this.leg++;
+      if (prevLeg === GAMEPLAY.LEGS && !this.endlessMode) {
+        this.storyVictoryPending = true;
+      }
       this.skippedRoundsThisLeg = [];
       this.skippedRoundTags = {};
       this.roundSkipPreviewTags = {};
@@ -911,6 +916,8 @@ export class PlayerState {
     this.roundSkipPreviewTags = {};
     this.bossRerollsUsedThisLeg = 0;
     this.dynamiteSelfDestructed = false;
+    this.endlessMode = false;
+    this.storyVictoryPending = false;
     this.pendingTrailEvent = null;
     this.seenTrailEventIds = new Set();
     this.trailEventModifiers = createEmptyModifiers();

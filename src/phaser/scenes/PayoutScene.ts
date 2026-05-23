@@ -12,6 +12,7 @@ import { processBossPayoutTags, grantTag } from '../../game/TagSystem';
 import { getTrailTagById } from '../../data/trail_tags';
 import { formatScore } from '../../game/formatScore';
 import { Button } from '../ui/Button';
+import { buildVictoryGameOverData } from './GameOver';
 
 export interface PayoutData {
   totalMiles: number;
@@ -158,14 +159,7 @@ export class PayoutScene extends Scene {
       const journeyDone = player.advanceRound();
 
       if (journeyDone) {
-        this.scene.start('GameOver', {
-          won: true,
-          victory: true,
-          totalMiles: data.totalMiles,
-          targetMiles: data.targetMiles,
-          leg: GAMEPLAY.LEGS,
-          round: GAMEPLAY.ROUNDS_PER_LEG,
-        });
+        this.scene.start('GameOver', buildVictoryGameOverData(data.totalMiles, data.targetMiles));
       } else {
         this.scene.start('TrailEvent', {});
       }
