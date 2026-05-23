@@ -15,10 +15,12 @@ import { getTrailEventById, selectTrailEvent } from '../TrailEventsSystem';
 import { item } from './testHelpers';
 import { HandType } from '../types';
 import bosses from '../../data/bosses';
+import { getRunSeed, initRunRng, rngFloat } from '../RunRng';
 
 describe('SaveLoad', () => {
   test('round-trips player state for RoundSelect scene', () => {
     const player = resetPlayerState();
+    initRunRng('save-seed');
     player.applyProfession('outlaw');
     player.setDifficulty(3);
     player.leg = 2;
@@ -28,6 +30,8 @@ describe('SaveLoad', () => {
 
     const snapshot = buildSaveSnapshot({ activeScene: 'RoundSelect' });
     expect(snapshot.version).toBe(SAVE_VERSION);
+    expect(snapshot.runSeed).toBe('save-seed');
+    expect(snapshot.rngState.idCounter).toBe(0);
     expect(snapshot.player.professionId).toBe('outlaw');
     expect(snapshot.player.difficulty).toBe(3);
     expect(snapshot.player.balance).toBe(17);
@@ -43,6 +47,19 @@ describe('SaveLoad', () => {
     expect(restored.round).toBe(2);
     expect(restored.economy.balance).toBe(17);
     expect(restored.getHandStats(HandType.PAIR).level).toBe(3);
+  });
+
+  test('restores rng stream progression from save snapshot', () => {
+    resetPlayerState();
+    initRunRng('progress-seed');
+    rngFloat('shop');
+    const snapshot = buildSaveSnapshot({ activeScene: 'RoundSelect' });
+    const expectedNext = rngFloat('shop');
+
+    applySaveSnapshot(snapshot);
+
+    expect(getRunSeed()).toBe('progress-seed');
+    expect(rngFloat('shop')).toBe(expectedNext);
   });
 
   test('round-trips Game scene with mid-round state', () => {

@@ -6,6 +6,7 @@ import { Die, HandResult, HandStats, HandType } from './types';
 import { getPlayerState } from './PlayerState';
 import { isBossEffectNegated, dieMatchesParity } from './effects/helpers';
 import { buildHandResult } from './DiceSystem';
+import { rngFloat, rngShuffle } from './RunRng';
 
 export interface BossRoundConfigMods {
   targetMilesMultiplier: number;
@@ -73,13 +74,10 @@ export function initBossRoundState(): void {
   switch (boss.effectType) {
     case 'HIDE_EQUIPMENT': {
       const player = getPlayerState();
-      const indices = player.equipment.map((_, i) => i);
-      // Fisher-Yates shuffle
-      for (let i = indices.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [indices[i], indices[j]] = [indices[j], indices[i]];
-      }
-      state.equipmentDisplayOrder = indices;
+      state.equipmentDisplayOrder = rngShuffle(
+        'boss',
+        player.equipment.map((_, i) => i),
+      );
       state.equipmentHidden = true;
       state.landSlideRevealed = false;
       break;
@@ -129,7 +127,7 @@ export function applyBossOnDayStart(day: number): void {
       .map((_, i) => i)
       .filter((i) => !state.disabledEquipmentIndices.includes(i));
     for (let n = 0; n < count && available.length > 0; n++) {
-      const pick = available.splice(Math.floor(Math.random() * available.length), 1)[0];
+      const pick = available.splice(Math.floor(rngFloat('boss') * available.length), 1)[0];
       state.disabledEquipmentIndices.push(pick);
     }
   }
@@ -149,7 +147,7 @@ export function applyBossAfterRoll(rolledDice: Die[]): void {
   const count = (boss.effectParams.count as number) ?? 1;
   const pool = [...rolledDice];
   for (let i = 0; i < count && pool.length > 0; i++) {
-    const idx = Math.floor(Math.random() * pool.length);
+    const idx = Math.floor(rngFloat('boss') * pool.length);
     const [picked] = pool.splice(idx, 1);
     state.lockedDiceIds.push(picked.id);
   }
@@ -311,7 +309,7 @@ export function applyBossAfterScore(): void {
     const toSpend: string[] = [];
     const pool = [...available];
     for (let i = 0; i < count && pool.length > 0; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
+      const idx = Math.floor(rngFloat('boss') * pool.length);
       toSpend.push(pool.splice(idx, 1)[0].id);
     }
     if (toSpend.length > 0) player.markDiceSpent(toSpend);
@@ -346,7 +344,7 @@ export function syncEquipmentDisplayOrder(): void {
     if (!present.has(i)) missing.push(i);
   }
   for (const idx of missing) {
-    const slot = Math.floor(Math.random() * (order.length + 1));
+    const slot = Math.floor(rngFloat('boss') * (order.length + 1));
     order.splice(slot, 0, idx);
   }
   state.equipmentDisplayOrder = order;
