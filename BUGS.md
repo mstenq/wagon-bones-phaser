@@ -1,5 +1,6 @@
 # Bugs noticed while playing
-
+- The Jinx Boss disabled a random equipment item the first day then just disabled another item the next day without reanabling the first item. Only one piece of equipment a day should be disabled.
+- When I clicked "Keep W
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.
