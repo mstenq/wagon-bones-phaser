@@ -14,7 +14,6 @@ gold_tooth: should only unlock when you have at least 1 gold dice
 spare_wagon_parts: don't like effect. Instead it should prevent negative trail events completely. For every negative event gains x0.75 mult.
 scouts_spyglass: don't like the effect. Instead should let you upcoming trail event type (positive/negative/animal/weather) and let you decide to avoid event or do the event. Avoiding the event adds +50 miles to the item.
 rail_splitter: should probably be 10 mult
-4 straight: adjust stats to be equal to 2-pair
 covered_wagon: already have wood_axe, I think we just deprecate covered_wagon.
 
 

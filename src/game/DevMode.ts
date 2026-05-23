@@ -1,5 +1,5 @@
 // ─── Dev Mode Utilities ───
-// Helpers for the developer profession's item-swap functionality.
+// Dev tools (shop swap, boss test, etc.) when developer profession is selected or ?devmode=true.
 
 import { getPlayerState } from './PlayerState';
 import { GAMEPLAY } from './Constants';
@@ -13,8 +13,23 @@ import { applyPermitEffect, getPermitById, PermitDef } from './PermitsSystem';
 import itemAuras from '../data/item_auras';
 import { getPackDefById, type PackDefinition } from './BoosterPackSystem';
 
-/** Check if dev mode is active (developer profession selected) */
+let urlDevModeEnabled = false;
+
+/** Read ?devmode=true from the page URL (call once at app bootstrap). */
+export function initDevModeFromUrl(): void {
+  if (typeof window === 'undefined') return;
+  const params = new URLSearchParams(window.location.search);
+  urlDevModeEnabled = params.get('devmode') === 'true';
+}
+
+/** Test-only override for URL dev mode flag. */
+export function setUrlDevModeForTests(enabled: boolean): void {
+  urlDevModeEnabled = enabled;
+}
+
+/** Check if dev mode is active (developer profession or ?devmode=true). */
 export function isDevMode(): boolean {
+  if (urlDevModeEnabled) return true;
   const player = getPlayerState();
   return player.profession?.id === 'developer';
 }
