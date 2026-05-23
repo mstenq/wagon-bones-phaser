@@ -517,9 +517,29 @@ export class GameState {
 
   // ─── DAY_END ───
 
+  /** Remove end-of-round self-destruct equipment (Dynamite, Nitro). Used after Phaser destruction animation. */
+  applyEndOfRoundDestructions(indices: number[]): void {
+    const player = getPlayerState();
+    for (const idx of [...indices].sort((a, b) => b - a)) {
+      if (player.equipment[idx]?.def.id === 'dynamite') {
+        player.dynamiteSelfDestructed = true;
+      }
+      player.equipment.splice(idx, 1);
+    }
+  }
+
   /** Advance to next day or end the round. */
-  endDay(): { outcome: 'next-day' | 'won' | 'lost'; destroyedEquipment: string[] } {
-    if (this.state.phase !== 'DAY_END') return { outcome: 'lost', destroyedEquipment: [] };
+  endDay(options?: {
+    /** Defer splicing so GameScene can play destruction animation (Dynamite, Nitro). */
+    deferEquipmentDestructionAnimation?: boolean;
+  }): {
+    outcome: 'next-day' | 'won' | 'lost';
+    destroyedEquipment: string[];
+    deferredDestroyIndices: number[];
+  } {
+    if (this.state.phase !== 'DAY_END') {
+      return { outcome: 'lost', destroyedEquipment: [], deferredDestroyIndices: [] };
+    }
 
     // Process end-of-round equipment effects (destruction only)
     // END_ROUND_MONEY is handled by the payout system, not here.
@@ -527,14 +547,17 @@ export class GameState {
     const endEffects = processEndOfRound(player.equipment);
     // Capture destroyed equipment names before splicing
     const destroyedEquipment = endEffects.destroyedIndices.map((i) => player.equipment[i].def.name);
-    for (const idx of endEffects.destroyedIndices) {
-      if (player.equipment[idx]?.def.id === 'dynamite') {
-        player.dynamiteSelfDestructed = true;
+    const deferAnimation = options?.deferEquipmentDestructionAnimation ?? false;
+    const deferredDestroyIndices = deferAnimation ? [...endEffects.destroyedIndices] : [];
+
+    if (deferAnimation) {
+      for (const idx of endEffects.destroyedIndices) {
+        if (player.equipment[idx]?.def.id === 'dynamite') {
+          player.dynamiteSelfDestructed = true;
+        }
       }
-    }
-    // Destroy risky equipment (iterate in reverse to keep indices valid)
-    for (const idx of endEffects.destroyedIndices.sort((a, b) => b - a)) {
-      player.equipment.splice(idx, 1);
+    } else {
+      this.applyEndOfRoundDestructions(endEffects.destroyedIndices);
     }
 
     // Mark dice as spent:
@@ -559,7 +582,7 @@ export class GameState {
       this.state.phase = 'ROUND_END';
       this.emit('round-won', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
       this.emit('phase-change', this.state.phase);
-      return { outcome: 'won', destroyedEquipment };
+      return { outcome: 'won', destroyedEquipment, deferredDestroyIndices };
     }
 
     if (this.state.day >= this.config.maxDays) {
@@ -576,7 +599,7 @@ export class GameState {
         this.state.phase = 'ROUND_END';
         this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
         this.emit('phase-change', this.state.phase);
-        return { outcome: 'lost', destroyedEquipment };
+        return { outcome: 'lost', destroyedEquipment, deferredDestroyIndices };
       }
     }
 
@@ -587,7 +610,7 @@ export class GameState {
       this.state.phase = 'ROUND_END';
       this.emit('round-lost', { totalMiles: this.state.totalMiles, target: this.config.targetMiles });
       this.emit('phase-change', this.state.phase);
-      return { outcome: 'lost', destroyedEquipment };
+      return { outcome: 'lost', destroyedEquipment, deferredDestroyIndices };
     }
 
     // Trail: per-day money loss when advancing to the next day
@@ -618,6 +641,6 @@ export class GameState {
     this.emit('day-ended', { day: this.state.day });
     this.emit('phase-change', this.state.phase);
     this.emit('hand-updated', this.state.hand);
-    return { outcome: 'next-day', destroyedEquipment };
+    return { outcome: 'next-day', destroyedEquipment, deferredDestroyIndices };
   }
 }

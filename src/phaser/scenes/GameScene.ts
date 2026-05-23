@@ -879,9 +879,36 @@ export class GameScene extends Scene {
     const player = getPlayerState();
     const goldHeld = processGoldHeldAtRoundEnd(heldDice, player.equipment);
 
-    const { outcome, destroyedEquipment } = this.gameState.endDay();
+    const { outcome, destroyedEquipment, deferredDestroyIndices } = this.gameState.endDay({
+      deferEquipmentDestructionAnimation: true,
+    });
 
-    // Show destroyed equipment animation (e.g. dynamite explosion)
+    const afterDestroyedEquipmentFeedback = () => {
+      if (outcome === 'won' || outcome === 'lost') {
+        this.finishDayEndAfterEquipmentDestroyed(outcome, goldHeld, player);
+        return;
+      }
+
+      const carryover = new Map<string, { x: number; y: number; rotation: number }>();
+      for (const sprite of this.rollSprites) {
+        carryover.set(sprite.dieData.id, { x: sprite.x, y: sprite.y, rotation: sprite.rotation });
+      }
+      this.enterDrawPhase(true, carryover);
+    };
+
+    if (deferredDestroyIndices.length > 0) {
+      this.animating = true;
+      this.animateEndOfRoundSelfDestructs(deferredDestroyIndices, () => {
+        this.animating = false;
+        this.equipBar.refresh();
+        for (const name of destroyedEquipment) {
+          this.showFloatingText(`💥 ${name} destroyed!`, 0xff4444);
+        }
+        afterDestroyedEquipmentFeedback();
+      });
+      return;
+    }
+
     if (destroyedEquipment.length > 0) {
       this.equipBar.refresh();
       for (const name of destroyedEquipment) {
@@ -889,37 +916,36 @@ export class GameScene extends Scene {
       }
     }
 
-    if (outcome === 'won' || outcome === 'lost') {
-      const playGoldThenFinish = () => {
-        if (goldHeld.moneyEarned > 0) {
-          player.economy.earn(goldHeld.moneyEarned);
-          this.sidebar.refreshMoney();
-        }
-        this.runRoundEndModifierFeedback(() => this.transitionAfterRoundEnd(outcome));
-      };
+    afterDestroyedEquipmentFeedback();
+  }
 
-      if (goldHeld.animEvents.length > 0) {
-        this.animating = true;
-        playDieAnimEvents({
-          scene: this,
-          diceSprites: this.rollSprites,
-          events: goldHeld.animEvents,
-          onComplete: () => {
-            this.animating = false;
-            playGoldThenFinish();
-          },
-        });
-      } else {
-        playGoldThenFinish();
+  private finishDayEndAfterEquipmentDestroyed(
+    outcome: 'won' | 'lost',
+    goldHeld: ReturnType<typeof processGoldHeldAtRoundEnd>,
+    player: ReturnType<typeof getPlayerState>,
+  ): void {
+    const playGoldThenFinish = () => {
+      if (goldHeld.moneyEarned > 0) {
+        player.economy.earn(goldHeld.moneyEarned);
+        this.sidebar.refreshMoney();
       }
-      return;
-    }
+      this.runRoundEndModifierFeedback(() => this.transitionAfterRoundEnd(outcome));
+    };
 
-    const carryover = new Map<string, { x: number; y: number; rotation: number }>();
-    for (const sprite of this.rollSprites) {
-      carryover.set(sprite.dieData.id, { x: sprite.x, y: sprite.y, rotation: sprite.rotation });
+    if (goldHeld.animEvents.length > 0) {
+      this.animating = true;
+      playDieAnimEvents({
+        scene: this,
+        diceSprites: this.rollSprites,
+        events: goldHeld.animEvents,
+        onComplete: () => {
+          this.animating = false;
+          playGoldThenFinish();
+        },
+      });
+    } else {
+      playGoldThenFinish();
     }
-    this.enterDrawPhase(true, carryover);
   }
 
   private runRoundEndModifierFeedback(onComplete: () => void): void {
@@ -1748,6 +1774,24 @@ export class GameScene extends Scene {
       // Small delay between sequential destructions
       this.time.delayedCall(200, () => {
         this.animateRoundStartDestructions(remaining);
+      });
+    });
+  }
+
+  /** Animate end-of-round self-destructs (Dynamite, Nitro) using the same fire burst as Haunted Totem. */
+  private animateEndOfRoundSelfDestructs(indices: number[], onComplete: () => void): void {
+    const sorted = [...indices].sort((a, b) => a - b);
+    if (sorted.length === 0) {
+      onComplete();
+      return;
+    }
+
+    const idx = sorted[0];
+    const remaining = sorted.slice(1).map((i) => (i > idx ? i - 1 : i));
+
+    this.animateEquipmentFireDestruction(idx, idx, () => {
+      this.time.delayedCall(200, () => {
+        this.animateEndOfRoundSelfDestructs(remaining, onComplete);
       });
     });
   }
