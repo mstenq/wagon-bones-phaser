@@ -48,6 +48,8 @@ export const GAMEPLAY = {
   AUTOSAVE_INTERVAL_MS: 10_000,
   /** localStorage key for the auto-save snapshot */
   AUTOSAVE_STORAGE_KEY: 'wagon-bones-autosave',
+  /** localStorage key for the snapshot before the last autosave change (debug retesting) */
+  AUTOSAVE_PREV_STORAGE_KEY: 'wagon-bones-autosave-prev',
   /** localStorage key for user preferences (audio, etc.) — not part of auto-save */
   PREFERENCES_STORAGE_KEY: 'wagon-bones-preferences',
 };

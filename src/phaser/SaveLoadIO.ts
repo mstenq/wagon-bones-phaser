@@ -17,18 +17,38 @@ import { GameScene } from './scenes/GameScene';
 import { ShopScene } from './scenes/ShopScene';
 import { BoosterPackScene } from './scenes/BoosterPackScene';
 import { TrailEventScene } from './scenes/TrailEventScene';
+import { readPreviousAutoSaveFromStorage } from '../game/AutoSave';
 import { startAutoSaveLoop } from './AutoSaveManager';
 import { ensureBackgroundMusic } from './BackgroundMusic';
 
-export function downloadSave(snapshot: GameSaveSnapshot): void {
+export function downloadSave(snapshot: GameSaveSnapshot, filename?: string): void {
   const json = JSON.stringify(snapshot, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = getSaveFilename(snapshot);
+  a.download = filename ?? getSaveFilename(snapshot);
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function sanitizeDebugSaveFilename(name: string): string {
+  const trimmed = name.trim() || 'debug';
+  return trimmed.replace(/[<>:"/\\|?*]/g, '-');
+}
+
+export function exportPreviousAutoSaveFromStorage(): void {
+  const snapshot = readPreviousAutoSaveFromStorage();
+  if (!snapshot) {
+    window.alert('No previous save state available.');
+    return;
+  }
+
+  const name = window.prompt('Name this debug save:', '');
+  if (name === null) return;
+
+  const filename = `${sanitizeDebugSaveFilename(name)}.json`;
+  downloadSave(snapshot, filename);
 }
 
 export function pickAndParseSave(): Promise<GameSaveSnapshot> {
