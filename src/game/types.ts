@@ -121,7 +121,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   maxRerolls: GAMEPLAY.MAX_REROLLS,
   rollSize: GAMEPLAY.ROLL_SIZE,
   scoreSize: GAMEPLAY.SCORE_SIZE,
-  targetMiles: GAMEPLAY.TARGET_MILES,
+  targetMiles: 300, // leg 1 base; rounds set player.targetMiles via computeTargetMiles
 };
 
 export interface RoundState {

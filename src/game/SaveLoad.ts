@@ -91,6 +91,8 @@ export interface PlayerSaveData {
   roundSkipPreviewTags: Record<number, string>;
   bossRerollsUsedThisLeg: number;
   dynamiteSelfDestructed: boolean;
+  endlessMode?: boolean;
+  storyVictoryPending?: boolean;
   bossAssignmentIds: string[];
   nextDieId: number;
 }
@@ -268,6 +270,8 @@ function serializePlayer(player: PlayerState): PlayerSaveData {
     roundSkipPreviewTags,
     bossRerollsUsedThisLeg: player.bossRerollsUsedThisLeg,
     dynamiteSelfDestructed: player.dynamiteSelfDestructed,
+    endlessMode: player.endlessMode,
+    storyVictoryPending: player.storyVictoryPending,
     bossAssignmentIds: player.getBossAssignmentIds(),
     nextDieId: player.getNextDieIdForSave(),
   };
@@ -371,6 +375,8 @@ function applyPlayerSaveData(data: PlayerSaveData): void {
   }
   player.bossRerollsUsedThisLeg = data.bossRerollsUsedThisLeg;
   player.dynamiteSelfDestructed = data.dynamiteSelfDestructed;
+  player.endlessMode = data.endlessMode ?? false;
+  player.storyVictoryPending = data.storyVictoryPending ?? false;
   player.restoreBossAssignments(data.bossAssignmentIds);
   player.setNextDieIdForRestore(data.nextDieId);
 }

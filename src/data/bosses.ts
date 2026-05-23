@@ -190,6 +190,21 @@ const bosses: BossDef[] = [
 
 export default bosses;
 
+const FINISHER_MINIMUM_LEG = 8;
+
+/** Legs that use only finisher bosses (minimumLeg 8+) on the boss round. */
+export function isFinisherLeg(leg: number): boolean {
+  return leg > 0 && leg % 8 === 0;
+}
+
+/** Bosses eligible for a leg (finisher legs → finisher pool only). */
+export function getEligibleBossesForLeg(leg: number): BossDef[] {
+  if (isFinisherLeg(leg)) {
+    return bosses.filter((b) => (b.minimumLeg ?? 1) >= FINISHER_MINIMUM_LEG);
+  }
+  return bosses.filter((b) => (b.minimumLeg ?? 1) <= leg);
+}
+
 // ─── Lookup Helpers ───
 
 /** Find a boss definition by ID */

@@ -1,15 +1,19 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { resetPlayerState } from '../../game/PlayerState';
-import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
+import { getPlayerState, resetPlayerState } from '../../game/PlayerState';
+import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
 import { Button } from '../ui/Button';
 import { clearAutoSave } from '../AutoSaveManager';
 import { getRunSeed } from '../../game/RunRng';
 
-interface GameOverData {
+export interface GameOverData {
   won: boolean;
   victory?: boolean;
+  /** Story complete — offer Keep Wandering (autosave preserved until Make Camp). */
+  offerEndless?: boolean;
+  /** Endless run cleared all legs (no continue). */
+  endlessComplete?: boolean;
   totalMiles: number;
   targetMiles: number;
   leg?: number;
@@ -24,7 +28,9 @@ export class GameOver extends Scene {
   private sceneData: GameOverData;
 
   create(data: GameOverData) {
-    clearAutoSave();
+    if (!data.offerEndless) {
+      clearAutoSave();
+    }
     this.sceneData = data;
     const { width, height } = this.scale;
 
@@ -35,8 +41,16 @@ export class GameOver extends Scene {
     bg.fillStyle(data.won ? COLORS.BG_WIN : COLORS.BG_LOSE, 1);
     bg.fillRect(0, 0, width, height);
 
-    const isVictory = data.won && data.victory;
-    const title = isVictory ? 'JOURNEY COMPLETE!' : data.won ? 'LANDMARK REACHED!' : 'TRAIL ENDS HERE';
+    const isStoryVictory = data.won && data.victory && data.offerEndless;
+    const isEndlessComplete = data.won && data.victory && data.endlessComplete;
+    const isVictory = isStoryVictory || isEndlessComplete;
+    const title = isStoryVictory
+      ? 'JOURNEY COMPLETE!'
+      : isEndlessComplete
+        ? 'THE HORIZON FADES'
+        : data.won
+          ? 'LANDMARK REACHED!'
+          : 'TRAIL ENDS HERE';
     const color = data.won ? TEXT_COLORS.WIN : TEXT_COLORS.LOSE;
 
     this.add
@@ -50,9 +64,18 @@ export class GameOver extends Scene {
       })
       .setOrigin(0.5);
 
-    if (isVictory) {
+    if (isStoryVictory) {
       this.add
-        .text(width / 2, height * 0.41, 'You conquered all 8 legs of the trail!', {
+        .text(width / 2, height * 0.41, 'You conquered all 8 legs of the trail!\nThe frontier still beckons…', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '22px',
+          color: TEXT_COLORS.GOLD,
+          align: 'center',
+        })
+        .setOrigin(0.5);
+    } else if (isEndlessComplete) {
+      this.add
+        .text(width / 2, height * 0.41, `You wandered through all ${GAMEPLAY.MAX_LEGS} legs.`, {
           fontFamily: FONTS.PRIMARY,
           fontSize: '22px',
           color: TEXT_COLORS.GOLD,
@@ -86,6 +109,7 @@ export class GameOver extends Scene {
     }
 
     const runSeed = getRunSeed();
+    let btnBaseY = height * 0.6;
     if (runSeed) {
       const seedY = height * infoY + (legLabel ? 70 : 44);
       this.add
@@ -102,13 +126,28 @@ export class GameOver extends Scene {
         if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
         void navigator.clipboard.writeText(runSeed);
       });
+      btnBaseY = Math.max(btnBaseY, seedY + 90);
     }
 
-    new Button(this, width / 2, height * 0.6, 'Play Again', 200, 48).onClick(() => {
-      clearAutoSave();
-      resetPlayerState();
-      this.scene.start('MainMenu', {});
-    });
+    if (isStoryVictory) {
+      new Button(this, width / 2, btnBaseY, 'Keep Wandering', 220, 48).onClick(() => {
+        const player = getPlayerState();
+        player.endlessMode = true;
+        player.storyVictoryPending = false;
+        this.scene.start('TrailEvent', {});
+      });
+      new Button(this, width / 2, btnBaseY + 58, 'Make Camp', 220, 48).onClick(() => {
+        clearAutoSave();
+        resetPlayerState();
+        this.scene.start('MainMenu', {});
+      });
+    } else {
+      new Button(this, width / 2, btnBaseY, 'Play Again', 200, 48).onClick(() => {
+        clearAutoSave();
+        resetPlayerState();
+        this.scene.start('MainMenu', {});
+      });
+    }
 
     EventBus.emit(Events.SCENE_READY, this);
   }
@@ -116,4 +155,32 @@ export class GameOver extends Scene {
   private onResize(): void {
     this.scene.restart(this.sceneData);
   }
+}
+
+/** Build GameOver scene data after a round win that ends the journey arc. */
+export function buildVictoryGameOverData(
+  totalMiles: number,
+  targetMiles: number,
+): GameOverData {
+  const player = getPlayerState();
+  if (player.storyVictoryOffered) {
+    return {
+      won: true,
+      victory: true,
+      offerEndless: true,
+      totalMiles,
+      targetMiles,
+      leg: GAMEPLAY.LEGS,
+      round: GAMEPLAY.ROUNDS_PER_LEG,
+    };
+  }
+  return {
+    won: true,
+    victory: true,
+    endlessComplete: player.leg > GAMEPLAY.MAX_LEGS,
+    totalMiles,
+    targetMiles,
+    leg: player.leg > GAMEPLAY.MAX_LEGS ? GAMEPLAY.MAX_LEGS : player.leg - 1,
+    round: GAMEPLAY.ROUNDS_PER_LEG,
+  };
 }
