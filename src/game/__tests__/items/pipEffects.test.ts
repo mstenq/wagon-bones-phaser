@@ -305,8 +305,8 @@ describe('WOODEN_DICE_MILES: Wood Axe', () => {
       scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
       equipment: [item('wood_axe')],
     });
-    // PAIR: baseMiles=10, totalValue: 5+10(wooden enh)+50(wood axe)+5 = 70, miles=(10+70)*1=80
-    expect(result.miles).toBe(80);
+    // PAIR: baseMiles=10, totalValue: 5+30(wooden enh)+50(wood axe)+5 = 90, miles=(10+90)*1=100
+    expect(result.miles).toBe(100);
   });
 
   test('multiple wooden dice each get bonus', () => {
@@ -314,8 +314,8 @@ describe('WOODEN_DICE_MILES: Wood Axe', () => {
       scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5, enhancement: 'wooden' })],
       equipment: [item('wood_axe')],
     });
-    // PAIR: baseMiles=10, totalValue: (5+10+50)+(5+10+50)=130, miles=(10+130)*1=140
-    expect(result.miles).toBe(140);
+    // PAIR: baseMiles=10, totalValue: (5+30+50)+(5+30+50)=170, miles=(10+170)*1=180
+    expect(result.miles).toBe(180);
   });
 
   test('no bonus from non-wooden dice', () => {
@@ -430,7 +430,7 @@ describe('BONE_DICE_XMULT_CHANCE: Bone Charm', () => {
     });
     // PAIR: baseMult=1, no bone charm trigger, xMult stays 1
     // The mult should only include base (1) — no x1.5
-    // wooden gives +10 miles but no mult
+    // wooden gives +30 miles but no mult
     expect(result.mult).toBe(1);
   });
 });

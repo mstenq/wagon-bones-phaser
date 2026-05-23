@@ -165,15 +165,15 @@ describe('dice enhancements', () => {
     expect(result.miles).toBe(180);
   });
 
-  test('wooden dice add +10 miles per die', () => {
+  test('wooden dice add +30 miles per die', () => {
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 3, enhancement: 'wooden' }), die({ value: 3, enhancement: 'wooden' })],
     });
     // PAIR: baseMiles=10, baseMult=1
-    // totalValue = 3 + 3 + 10 + 10 = 26 (each wooden adds +10 value)
-    // miles = (10 + 26) * 1 = 36
-    expect(result.totalValue).toBe(26);
-    expect(result.miles).toBe(36);
+    // totalValue = 3 + 3 + 30 + 30 = 66 (each wooden adds +30 value)
+    // miles = (10 + 66) * 1 = 76
+    expect(result.totalValue).toBe(66);
+    expect(result.miles).toBe(76);
   });
 
   test('diamond dice apply x2 mult', () => {

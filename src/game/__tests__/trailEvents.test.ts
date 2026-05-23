@@ -1040,7 +1040,7 @@ describe('Round modifier integration', () => {
     game.state.day = 2;
     game.selectForScore([wooden.id, plain.id]);
     const day2 = game.calculateScore()!;
-    expect(day2.totalValue).toBe(20);
+    expect(day2.totalValue).toBe(40);
   });
 
   test('diamond crack destroys scored diamond dice', () => {

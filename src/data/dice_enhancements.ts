@@ -41,7 +41,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
   {
     id: 'wooden',
     name: 'Wooden',
-    description: '+10 base miles',
+    description: '+30 base miles',
     color: 'efcc95',
     strokeColor: '120902',
     strokeWidth: 2,

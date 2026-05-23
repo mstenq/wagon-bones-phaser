@@ -860,10 +860,10 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     });
 
     // PAIR base miles = 10, die values = 5 + 5 = 10, total value = 20
-    // Wooden would add +10 miles but graverobber strips it first
+    // Wooden would add +30 miles but graverobber strips it first
     // Graverobber gains x0.1 → xMult = 1.1
-    // Final miles = 20 * (1 * 1.1) = 22 (no +10 from wooden, but xMult applies)
-    // Without graverobber, wooden would give: (10 + 10 + 10) * 1 = 30
+    // Final miles = 20 * (1 * 1.1) = 22 (no +30 from wooden, but xMult applies)
+    // Without graverobber, wooden would give: (10 + 10 + 30) * 1 = 50
     expect(result.miles).toBeCloseTo(22, 5);
   });
 

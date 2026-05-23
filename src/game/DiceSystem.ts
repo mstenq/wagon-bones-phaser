@@ -493,9 +493,9 @@ export function scoreHand(
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} BONE: +4 mult (bonusMult: ${bonusMult})`);
           break;
         case 'wooden':
-          totalValue += 10;
-          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: 10, dieId: die.id });
-          console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} WOODEN: +10 miles (totalValue: ${totalValue})`);
+          totalValue += 30;
+          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: 30, dieId: die.id });
+          console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} WOODEN: +30 miles (totalValue: ${totalValue})`);
           break;
         case 'diamond':
           xMult = multiplyScore(xMult, 2);
