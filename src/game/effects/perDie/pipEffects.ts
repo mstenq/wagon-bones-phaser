@@ -1,7 +1,7 @@
 // ─── PIP_MULT, PIP_MILES, PIP_SUPPLY_CHANCE, LUCKY_NUMBER_PIP_XMULT ───
 
 import { effectRegistry } from '../registry';
-import { checkLoadedChance } from '../../Constants';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { getPlayerState } from '../../PlayerState';
 import { dieMatchesPip, multiplyCtxXMult, resolveChance, resolveEffectParam } from '../helpers';

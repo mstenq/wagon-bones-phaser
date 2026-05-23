@@ -590,7 +590,6 @@ export function applyEffect(
           enhancement,
           sticker: (effect.sticker as DiceSticker) ?? null,
           aura: (effect.aura as DiceAura) ?? null,
-          isGrimy: false,
           bonusMiles: 0,
         });
       }

@@ -9,7 +9,8 @@ import { effectRegistry, getScoredRetriggerCount } from './effects';
 import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from './EquipmentEffects';
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
-import { GAMEPLAY, resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './Constants';
+import { GAMEPLAY } from './Constants';
+import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './equipmentUtils';
 import { getEnhancementScoreDestroyChance } from '../data/dice_enhancements';
 import { dieMatchesPip, hasStackedDeck, multiplyCtxXMult } from './effects/helpers';
 import { multiplyScore } from './scoreMath';
@@ -64,7 +65,6 @@ export function createDie(overrides?: Partial<Die>): Die {
     enhancement: null,
     sticker: null,
     aura: null,
-    isGrimy: false,
     bonusMiles: 0,
     ...overrides,
   };

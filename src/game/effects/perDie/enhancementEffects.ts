@@ -2,7 +2,7 @@
 
 import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
-import { checkLoadedChance } from '../../Constants';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { multiplyCtxXMult, resolveChance } from '../helpers';
 
 effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => {

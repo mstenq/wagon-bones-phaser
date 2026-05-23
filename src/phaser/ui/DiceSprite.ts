@@ -20,7 +20,6 @@ const DICE_SIZE = DICE.SIZE;
 const PIP_COLOR = DICE.PIP_COLOR;
 const SELECTED_STROKE = DICE.SELECTED_STROKE;
 const FORCED_STROKE = DICE.FORCED_STROKE;
-const GRIMY_COLOR = DICE.GRIMY_COLOR;
 const TOOLTIP_PAD = 10;
 const TOOLTIP_BG_COLOR = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
@@ -128,24 +127,17 @@ export class DiceSprite extends GameObjects.Container {
   }
 
   private redraw(): void {
-    const isGrimy = this._dieData.isGrimy;
     const hasEnhancement = !!this._dieData.enhancement;
 
     const key = getDiceTextureKey(this._dieData);
     const textureKey = this.scene.textures.exists(key) ? key : 'dice_standard';
     this.dieImage.setTexture(textureKey);
     this.dieImage.setDisplaySize(DICE_SIZE, DICE_SIZE);
-
-    if (isGrimy) {
-      this.dieImage.setTint(GRIMY_COLOR);
-    } else {
-      this.dieImage.clearTint();
-    }
+    this.dieImage.clearTint();
 
     this.drawSelectionStroke();
 
-    // Number text on front face (only if not grimy)
-    if (!isGrimy && this._dieData.value > 0) {
+    if (this._dieData.value > 0) {
       const enhInfo = hasEnhancement ? ENHANCEMENT_INFO.get(this._dieData.enhancement!) : null;
       const fontFamily = enhInfo?.fontFamily ?? 'Arial Black';
       const textColor = enhInfo?.color ? `#${enhInfo.color}` : `#${PIP_COLOR.toString(16).padStart(6, '0')}`;
@@ -168,7 +160,7 @@ export class DiceSprite extends GameObjects.Container {
       this.stickerImage.destroy();
       this.stickerImage = null;
     }
-    if (!isGrimy && this._dieData.sticker) {
+    if (this._dieData.sticker) {
       const textureKey = `sticker_${this._dieData.sticker}`;
       if (this.scene.textures.exists(textureKey)) {
         this.stickerImage = this.scene.add
@@ -276,10 +268,6 @@ export class DiceSprite extends GameObjects.Container {
       if (info) {
         lines.push(`${info.name} Aura: ${info.description}`);
       }
-    }
-
-    if (this._dieData.isGrimy) {
-      lines.push('Grimy (face hidden)');
     }
 
     // Sticker info

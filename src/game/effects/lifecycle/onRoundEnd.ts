@@ -1,7 +1,7 @@
 // ─── End-of-round lifecycle helpers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
-import { checkLoadedChance } from '../../Constants';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { getPlayerState } from '../../PlayerState';
 import { resolveEffectParam } from '../helpers';
 import { effectRegistry } from '../registry';

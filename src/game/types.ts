@@ -34,7 +34,6 @@ export interface Die {
   enhancement: DiceEnhancement;
   sticker: DiceSticker; // whole-die effect (like Balatro seals)
   aura: DiceAura;
-  isGrimy: boolean; // face hidden until selected
   bonusMiles: number; // permanent miles bonus (e.g. from Cowboy Boots)
 }
 

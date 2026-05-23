@@ -6,7 +6,7 @@ import {
   processEquipmentAfterHandScored,
   processEquipmentOnPackOpened,
 } from '../../EquipmentEffects';
-import { getLoadedDiceMultiplier } from '../../Constants';
+import { getLoadedDiceMultiplier } from '../../equipmentUtils';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
 import { getItemAuraById } from '../../ItemsSystem';
 import { HandType } from '../../types';

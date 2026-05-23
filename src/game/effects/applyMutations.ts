@@ -115,7 +115,6 @@ export function applyScoringMutations(mutations: ScoringMutations): void {
         enhancement: diePartial.enhancement ?? null,
         sticker: diePartial.sticker ?? null,
         aura: diePartial.aura ?? null,
-        isGrimy: diePartial.isGrimy ?? false,
         bonusMiles: diePartial.bonusMiles ?? 0,
       });
     }

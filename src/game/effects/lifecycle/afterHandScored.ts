@@ -3,7 +3,7 @@
 import { Die, HandDefinition, HandType, HandUpgradeInfo } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { getPlayerState } from '../../PlayerState';
-import { checkLoadedChance } from '../../Constants';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { forEachEquipmentResolved, resolveChance, resolveEffectParam } from '../helpers';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import hands from '../../../data/hands';

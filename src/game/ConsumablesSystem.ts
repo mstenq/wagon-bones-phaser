@@ -9,7 +9,8 @@ import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition, HandUpgradeInfo } from './types';
 import hands from '../data/hands';
-import { checkLoadedChance, PACK_ONLY_FRONTIER_IDS } from './Constants';
+import { PACK_ONLY_FRONTIER_IDS } from './Constants';
+import { checkLoadedChance } from './equipmentUtils';
 import { resolveEffectParam } from './effects/helpers';
 import { rngFloat, rngPick, rngShuffle } from './RunRng';
 

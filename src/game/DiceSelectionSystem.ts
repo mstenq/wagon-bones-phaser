@@ -140,7 +140,6 @@ function applyClone(player: ReturnType<typeof getPlayerState>, selectedDice: Die
   left.enhancement = right.enhancement;
   left.sticker = right.sticker;
   left.aura = right.aura;
-  left.isGrimy = right.isGrimy;
 
   return `Cloned ${right.enhancement ?? 'standard'} die`;
 }

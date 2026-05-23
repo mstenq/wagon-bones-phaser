@@ -2,7 +2,7 @@
 
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { getPlayerState } from '../../PlayerState';
-import { checkLoadedChance } from '../../Constants';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { resolveChance } from '../helpers';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';

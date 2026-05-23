@@ -1,7 +1,7 @@
 // ─── Shared Utility Functions ───
 
 import { EquipmentInstance } from '../ItemsSystem';
-import { resolveCopyTarget } from '../Constants';
+import { resolveCopyTarget } from '../equipmentUtils';
 import { Die, HandType } from '../types';
 import { getPlayerState } from '../PlayerState';
 import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';

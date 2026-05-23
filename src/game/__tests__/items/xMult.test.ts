@@ -511,7 +511,7 @@ describe('STATEFUL_XMULT: New Blood', () => {
   test('integrates with player addDie', () => {
     const inst = item('new_blood');
     const { player } = setupGame({ equipment: [inst] });
-    player.addDie({ id: '', value: 5, enhancement: null, sticker: null, aura: null, isGrimy: false, bonusMiles: 0 });
+    player.addDie({ id: '', value: 5, enhancement: null, sticker: null, aura: null, bonusMiles: 0 });
     expect(inst.state.xMult).toBeCloseTo(1.25, 5);
   });
 });

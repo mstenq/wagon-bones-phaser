@@ -7,7 +7,7 @@ import type { ScoringMutations } from '../types';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { forEachEquipmentResolved } from '../helpers';
-import { checkLoadedChance } from '../../Constants';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { rngPick } from '../../RunRng';
 
 interface PreScoringContext {

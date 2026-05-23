@@ -44,7 +44,7 @@ import { processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { rngShuffle } from '../../game/RunRng';
-import { getLoadedDiceMultiplier } from '../../game/Constants';
+import { getLoadedDiceMultiplier } from '../../game/equipmentUtils';
 import { isDiceScoringDisabledByBoss, isDiceLockedByBoss, revealLandSlideHints } from '../../game/BossEffectsSystem';
 import { isDevMode } from '../../game/DevMode';
 
@@ -1420,7 +1420,7 @@ export class GameScene extends Scene {
 
   /** Generate a grouping key for dice with the same properties (ignoring current face value) */
   private getDiceGroupKey(die: Die): string {
-    return `${die.enhancement || ''}|${die.aura || ''}|${die.sticker || ''}|${die.isGrimy}`;
+    return `${die.enhancement || ''}|${die.aura || ''}|${die.sticker || ''}`;
   }
 
   /** Calculate target X positions for all non-empty stacks */

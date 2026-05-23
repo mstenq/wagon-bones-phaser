@@ -104,7 +104,6 @@ export function die(overrides: Partial<Die> = {}): Die {
     enhancement: null,
     sticker: null,
     aura: null,
-    isGrimy: false,
     bonusMiles: 0,
     ...overrides,
   };

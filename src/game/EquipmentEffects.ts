@@ -5,7 +5,8 @@ import { Die, HandType, HandResult, ScoreResult, ScoreAnimEvent } from './types'
 import { getTrailGuideDefForHand } from './ConsumablesSystem';
 import { EquipmentInstance } from './ItemsSystem';
 import { getPlayerState } from './PlayerState';
-import { GAMEPLAY, resolveCopyTarget } from './Constants';
+import { GAMEPLAY } from './Constants';
+import { resolveCopyTarget } from './equipmentUtils';
 import { effectRegistry, type ScoringPipelineContext } from './effects';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import type { ScoringMutations } from './effects/types';

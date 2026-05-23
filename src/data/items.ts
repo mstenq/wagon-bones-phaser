@@ -46,7 +46,7 @@ export interface ItemDisplayResult {
 import type { GameState } from '../game/GameState';
 import type { PlayerState } from '../game/PlayerState';
 import { HandType, type EquipmentModifier } from '../game/types';
-import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/Constants';
+import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/equipmentUtils';
 import { resolveEffectParam, resolveChance } from '../game/effectParams';
 import {
   unlockAnyEnhanced,

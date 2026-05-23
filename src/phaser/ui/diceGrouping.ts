@@ -12,7 +12,7 @@ export interface DiceVisualGroup {
 
 /** Grouping key for dice with the same visual properties (ignores face value). */
 export function getDiceGroupKey(die: Die): string {
-  return `${die.enhancement || ''}|${die.aura || ''}|${die.sticker || ''}|${die.isGrimy}`;
+  return `${die.enhancement || ''}|${die.aura || ''}|${die.sticker || ''}`;
 }
 
 /** Group dice by visual identity. Optional suffix splits groups (e.g. spent vs available). */

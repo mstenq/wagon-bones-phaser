@@ -4,7 +4,7 @@ import { HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { getPlayerState } from '../../PlayerState';
 import { resolveEffectParam } from '../../effectParams';
-import { resolveCopyTarget } from '../../Constants';
+import { resolveCopyTarget } from '../../equipmentUtils';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 import { processEquipmentOnDiceDestroyed } from './onDiceDestroyed';
