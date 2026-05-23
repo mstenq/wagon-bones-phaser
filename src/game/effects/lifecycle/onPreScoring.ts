@@ -8,6 +8,7 @@ import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { forEachEquipmentResolved } from '../helpers';
 import { checkLoadedChance } from '../../Constants';
+import { rngPick } from '../../RunRng';
 
 interface PreScoringContext {
   scoringDice: Die[];
@@ -46,7 +47,7 @@ effectRegistry.registerLifecycle('on-pre-scoring', (equip, ctx, equipIndex) => {
       const target = scoringDice[0];
       if (target.enhancement !== null) break;
       const enhancements: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond'];
-      const enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];
+      const enhancement = rngPick('equipment', enhancements);
       mutations.diceEnhanced.push({ id: target.id, enhancement });
       animEvents.push({
         target: { kind: 'both', dieId: target.id, equipIndex: eIdx },

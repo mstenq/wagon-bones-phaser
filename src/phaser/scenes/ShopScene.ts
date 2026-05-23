@@ -65,6 +65,7 @@ import {
 import { getPackDefById } from '../../game/BoosterPackSystem';
 import { getConsumableDefById } from '../../game/ConsumablesSystem';
 import { getEquipmentDefById } from '../../game/ItemsSystem';
+import { rngFloat, rngPick } from '../../game/RunRng';
 
 const CARD_SPACING = 185;
 
@@ -99,11 +100,11 @@ const DICE_SHOP_COST = 5;
 
 /** Generate a single enhanced die for the shop */
 function generateShopDie(mode: 'enhanced' | 'stickered'): { die: Die; displayDef: EquipmentDef } {
-  const enhancement = SHOP_ENHANCEMENTS[Math.floor(Math.random() * SHOP_ENHANCEMENTS.length)];
+  const enhancement = rngPick('shop', SHOP_ENHANCEMENTS);
   const die = createDie({ enhancement });
 
   if (mode === 'stickered') {
-    die.sticker = ALL_STICKERS[Math.floor(Math.random() * ALL_STICKERS.length)];
+    die.sticker = rngPick('sticker', ALL_STICKERS);
   }
 
   const enhInfo = enhancement ? ENHANCEMENT_INFO.get(enhancement) : null;
@@ -1061,7 +1062,7 @@ export class ShopScene extends Scene {
     const remainingSlots = slotCount - items.length;
 
     for (let i = 0; i < remainingSlots; i++) {
-      let roll = Math.random() * totalWeight;
+      let roll = rngFloat('shop') * totalWeight;
       let picked = categories[0].type;
       for (const cat of categories) {
         roll -= cat.weight;
@@ -1114,7 +1115,7 @@ export class ShopScene extends Scene {
       categories.push({ type: 'frontier', weight: SHOP_WEIGHTS.frontier });
     }
     const totalWeight = categories.reduce((sum, c) => sum + c.weight, 0);
-    let roll = Math.random() * totalWeight;
+    let roll = rngFloat('shop') * totalWeight;
     let picked = categories[0].type;
     for (const cat of categories) {
       roll -= cat.weight;

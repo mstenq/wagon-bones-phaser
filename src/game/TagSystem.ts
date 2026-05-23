@@ -7,6 +7,7 @@ import { generateRandomEquipment, EquipmentDef, getItemAuraById } from './ItemsS
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { getTrailTagById } from '../data/trail_tags';
 import trailTags, { TrailTagDef, TrailTagInstance, TagCategory } from '../data/trail_tags';
+import { rngFloat, rngPick } from './RunRng';
 
 const ALL_TAGS: TrailTagDef[] = trailTags;
 
@@ -19,7 +20,7 @@ export function getTagPool(leg: number): TrailTagDef[] {
 export function selectRandomTag(leg: number): TrailTagDef {
   const pool = getTagPool(leg);
   const totalWeight = pool.reduce((sum, t) => sum + t.weight, 0);
-  let roll = Math.random() * totalWeight;
+  let roll = rngFloat('tags') * totalWeight;
 
   for (const tag of pool) {
     roll -= tag.weight;
@@ -139,7 +140,7 @@ function processImmediateUpgradeTag(
   if (tag.def.id !== 'tag_surveyor') return null;
 
   const handTypes = Object.values(HandType);
-  const randomHand = handTypes[Math.floor(Math.random() * handTypes.length)];
+  const randomHand = rngPick('tags', handTypes);
   const levels = 3 * tag.copies;
   player.upgradeHandLevel(randomHand, levels);
 

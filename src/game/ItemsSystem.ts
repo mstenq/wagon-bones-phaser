@@ -12,6 +12,7 @@ import type { EquipmentModifier } from './types';
 import { getDiscountedShopPrice } from './PermitsSystem';
 import { CHANCES } from './Constants';
 import { getPlayerState } from './PlayerState';
+import { rngFloat, rngPick, type RngStream } from './RunRng';
 
 export type { EquipmentUnlockCondition } from './equipmentUnlock';
 
@@ -100,7 +101,7 @@ export function getItemAuraById(id: string): ItemAura | null {
 /** Roll for a random aura. Returns null most of the time. */
 export function rollRandomItemAura(): ItemAura | null {
   for (const aura of ITEM_AURAS) {
-    if (Math.random() < aura.chance) return { ...aura };
+    if (rngFloat('shop') < aura.chance) return { ...aura };
   }
   return null;
 }
@@ -141,7 +142,7 @@ export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string
       if (filtered.length > 0) candidates = filtered;
     }
 
-    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    const picked = rngPick('shop', candidates);
     stock.push(applyRandomAura({ ...picked }));
     usedIds.add(picked.id);
   }
@@ -154,7 +155,7 @@ export function getAllEquipment(): EquipmentDef[] {
   return ITEMS_POOL;
 }
 
-function pickWeightedEquipmentRarity(pool: EquipmentDef[]): string | null {
+function pickWeightedEquipmentRarity(pool: EquipmentDef[], stream: RngStream = 'shop'): string | null {
   const rarityWeights: Array<{ rarity: string; weight: number }> = [
     { rarity: 'rare', weight: CHANCES.RARE },
     { rarity: 'uncommon', weight: CHANCES.UNCOMMON },
@@ -164,7 +165,7 @@ function pickWeightedEquipmentRarity(pool: EquipmentDef[]): string | null {
   const totalWeight = rarityWeights.reduce((sum, entry) => sum + entry.weight, 0);
   if (totalWeight <= 0) return null;
 
-  let roll = Math.random() * totalWeight;
+  let roll = rngFloat(stream) * totalWeight;
   for (const entry of rarityWeights) {
     if (roll < entry.weight) return entry.rarity;
     roll -= entry.weight;
@@ -215,6 +216,12 @@ export function createEquipmentInstance(
 
 export function generateRandomEquipment(options?: { rarity?: string; excludeRarity?: string }): EquipmentDef {
   let pool = ITEMS_POOL.filter((i) => isEquipmentUnlocked(i));
+  const stream: RngStream =
+    options?.rarity === 'rare'
+      ? 'createRare'
+      : options?.rarity === 'legendary'
+        ? 'createLegendary'
+        : 'createRandomEquipment';
 
   // Legendaries are only granted via explicit rarity (e.g. Pandora's Box)
   if (options?.rarity !== LEGENDARY_RARITY) {
@@ -232,13 +239,13 @@ export function generateRandomEquipment(options?: { rarity?: string; excludeRari
   }
 
   if (!options?.rarity) {
-    const rarity = pickWeightedEquipmentRarity(pool);
+    const rarity = pickWeightedEquipmentRarity(pool, stream);
     if (rarity) {
       const filtered = pool.filter((i) => i.rarity === rarity);
       if (filtered.length > 0) pool = filtered;
     }
   }
 
-  const picked = pool[Math.floor(Math.random() * pool.length)];
+  const picked = rngPick(stream, pool);
   return applyRandomAura({ ...picked });
 }

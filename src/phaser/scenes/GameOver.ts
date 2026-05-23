@@ -5,6 +5,7 @@ import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
 import { Button } from '../ui/Button';
 import { clearAutoSave } from '../AutoSaveManager';
+import { getRunSeed } from '../../game/RunRng';
 
 interface GameOverData {
   won: boolean;
@@ -82,6 +83,25 @@ export class GameOver extends Scene {
           align: 'center',
         })
         .setOrigin(0.5);
+    }
+
+    const runSeed = getRunSeed();
+    if (runSeed) {
+      const seedY = height * infoY + (legLabel ? 70 : 44);
+      this.add
+        .text(width / 2, seedY, `Seed: ${runSeed}`, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '16px',
+          color: TEXT_COLORS.MUTED,
+          align: 'center',
+        })
+        .setOrigin(0.5);
+
+      const copyBtn = new Button(this, width / 2, seedY + 34, 'Copy Seed', 150, 36);
+      copyBtn.onClick(() => {
+        if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+        void navigator.clipboard.writeText(runSeed);
+      });
     }
 
     new Button(this, width / 2, height * 0.6, 'Play Again', 200, 48).onClick(() => {

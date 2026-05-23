@@ -7,6 +7,7 @@ import { getPlayerState } from './PlayerState';
 import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 import { CHANCES } from './Constants';
 import diceAuras from '../data/dice_auras';
+import { rngFloat, rngShuffle } from './RunRng';
 
 // ─── Effect Types ───
 
@@ -60,8 +61,11 @@ export function drawDiceForSelection(count: number): Die[] {
   // drawCount 0 means "show handSize dice from non-spent pool"
   const effectiveCount = count > 0 ? count : player.handSize;
   const pool = count > 0
-    ? [...player.dice].sort(() => Math.random() - 0.5)
-    : [...player.dice].filter((d) => !player.spentDiceIds.has(d.id)).sort(() => Math.random() - 0.5);
+    ? rngShuffle('dice', player.dice)
+    : rngShuffle(
+        'dice',
+        player.dice.filter((d) => !player.spentDiceIds.has(d.id)),
+      );
   return pool.slice(0, Math.min(effectiveCount, pool.length)).map((d) => ({ ...d }));
 }
 
@@ -144,7 +148,7 @@ function applyClone(player: ReturnType<typeof getPlayerState>, selectedDice: Die
 
 /** Weighted random aura — thresholds from Constants.CHANCES */
 export function pickRandomAura(): DiceAura {
-  const roll = Math.random();
+  const roll = rngFloat('consumables');
   if (roll < CHANCES.AURA_HOLY) return 'holy';
   if (roll < CHANCES.AURA_HOLY + CHANCES.AURA_FIRE) return 'fire';
   return 'icy';

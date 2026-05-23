@@ -11,6 +11,7 @@ import { HandType, HandDefinition, HandUpgradeInfo } from './types';
 import hands from '../data/hands';
 import { checkLoadedChance, PACK_ONLY_FRONTIER_IDS } from './Constants';
 import { resolveEffectParam } from './effects/helpers';
+import { rngFloat, rngPick, rngShuffle } from './RunRng';
 
 const HAND_TABLE: HandDefinition[] = hands;
 
@@ -150,7 +151,7 @@ export function getRandomSupplyDef(aura?: ItemAura | null, excludeIds?: string[]
     pool = pool.filter((c) => !excluded.has(c.id));
   }
   if (pool.length === 0) pool = SUPPLY_CARDS; // fallback if all excluded
-  const card = pool[Math.floor(Math.random() * pool.length)];
+  const card = rngPick('consumables', pool);
   return createSupplyConsumableDef(card, aura);
 }
 
@@ -162,7 +163,7 @@ export function getRandomTrailGuideDef(aura?: ItemAura | null, excludeIds?: stri
     pool = pool.filter((t) => !excluded.has(t.id));
   }
   if (pool.length === 0) pool = TRAIL_GUIDES; // fallback if all excluded
-  const tg = pool[Math.floor(Math.random() * pool.length)];
+  const tg = rngPick('consumables', pool);
   return createTrailGuideConsumableDef(tg, aura);
 }
 
@@ -170,7 +171,7 @@ export function getRandomTrailGuideDef(aura?: ItemAura | null, excludeIds?: stri
 export function getTrailGuideDefForHand(handType: HandType, aura?: ItemAura | null): ConsumableDef {
   const matching = TRAIL_GUIDES.filter((t) => t.handType === handType);
   const pool = matching.length > 0 ? matching : TRAIL_GUIDES;
-  const tg = pool[Math.floor(Math.random() * pool.length)];
+  const tg = rngPick('consumables', pool);
   return createTrailGuideConsumableDef(tg, aura);
 }
 
@@ -182,7 +183,7 @@ export function getRandomFrontierDef(aura?: ItemAura | null, excludeIds?: string
     pool = pool.filter((f) => !excluded.has(f.id));
   }
   if (pool.length === 0) pool = FRONTIER_ENCOUNTERS.filter((f) => !PACK_ONLY_FRONTIER_IDS.has(f.id));
-  const fe = pool[Math.floor(Math.random() * pool.length)];
+  const fe = rngPick('consumables', pool);
   return createFrontierConsumableDef(fe, aura);
 }
 
@@ -257,7 +258,7 @@ export function generateShopConsumables(count: number, options?: { includeFronti
   }
 
   // Shuffle and pick
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const shuffled = rngShuffle('consumables', pool);
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
@@ -421,8 +422,8 @@ export function executeConsumableEffect(
       if (!checkLoadedChance([1, 4], player.equipment)) return { success: true };
       const blessableAuras = (['fire', 'icy', 'holy'] as const).map((id) => getItemAuraById(id)!);
       const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
-      const target = unblessed[Math.floor(Math.random() * unblessed.length)];
-      const roll = Math.random() * totalWeight;
+      const target = rngPick('consumables', unblessed);
+      const roll = rngFloat('consumables') * totalWeight;
       let cumulative = 0;
       for (const aura of blessableAuras) {
         cumulative += aura.chance;
@@ -438,7 +439,7 @@ export function executeConsumableEffect(
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
       const holyAura = getItemAuraById('holy');
       if (!holyAura) return { success: true };
-      const chosenIdx = Math.floor(Math.random() * player.equipment.length);
+      const chosenIdx = Math.floor(rngFloat('consumables') * player.equipment.length);
       const chosen = player.equipment[chosenIdx];
       chosen.def = { ...chosen.def, aura: holyAura };
       const survivors = player.equipment.filter((e, i) => i === chosenIdx || isEquipmentCursed(e));
@@ -449,7 +450,7 @@ export function executeConsumableEffect(
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
       const ghostAura = getItemAuraById('ghost');
       if (!ghostAura) return { success: true };
-      const chosenIdx = Math.floor(Math.random() * player.equipment.length);
+      const chosenIdx = Math.floor(rngFloat('consumables') * player.equipment.length);
       const chosen = player.equipment[chosenIdx];
       chosen.def = { ...chosen.def, aura: ghostAura };
       player.trailEventModifiers.rerollPenalty += 1;
@@ -465,7 +466,7 @@ export function executeConsumableEffect(
         return { success: false, failReason: 'No visible dice available for Raid!' };
       }
 
-      const toDestroy = [...visibleDice].sort(() => Math.random() - 0.5).slice(0, Math.min(5, visibleDice.length));
+      const toDestroy = rngShuffle('consumables', visibleDice).slice(0, Math.min(5, visibleDice.length));
       const destroyIds = new Set(toDestroy.map((d) => d.id));
       const enhancedCount = toDestroy.filter((d) => d.enhancement !== null).length;
       const before = player.dice.length;
@@ -486,7 +487,7 @@ export function executeConsumableEffect(
     case 'skin_walker': {
       // Copy random item; destroy non-cursed others (cursed items survive, copy keeps modifiers)
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
-      const source = player.equipment[Math.floor(Math.random() * player.equipment.length)];
+      const source = rngPick('consumables', player.equipment);
       const duplicated: EquipmentInstance = {
         def: source.def.aura?.id === 'ghost' ? { ...source.def, aura: undefined } : { ...source.def },
         sellValue: source.sellValue,

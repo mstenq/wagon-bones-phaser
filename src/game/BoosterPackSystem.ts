@@ -23,6 +23,7 @@ import trailGuidesData from '../data/trail_guides';
 import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
 import diceEnhancements from '../data/dice_enhancements';
 import pipEnhancements from '../data/pip_enhancements';
+import { nextRunId, rngFloat, rngPick, rngShuffle, type RngStream } from './RunRng';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
 const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
@@ -34,8 +35,8 @@ const ALL_STICKERS: DiceSticker[] = ['purple_flower', 'red_bullet', 'golden_doll
 /** Randomly apply a sticker to a die (small chance) */
 function applyRandomSticker(die: Die): void {
   if (die.sticker) return; // already has one
-  if (Math.random() >= CHANCES.STICKER_EFFECT) return;
-  die.sticker = ALL_STICKERS[Math.floor(Math.random() * ALL_STICKERS.length)];
+  if (rngFloat('sticker') >= CHANCES.STICKER_EFFECT) return;
+  die.sticker = rngPick('sticker', ALL_STICKERS);
 }
 
 // ─── Types ───
@@ -99,6 +100,19 @@ function getEffectiveWeight(def: PackDefinition): number {
   return def.weight * catMult * tierMult;
 }
 
+function packCategoryStream(packCategory: PackCategory): RngStream {
+  switch (packCategory) {
+    case 'supply':
+      return 'supplyPack';
+    case 'trail_guide':
+      return 'trailPack';
+    case 'frontier':
+      return 'frontierPack';
+    default:
+      return 'pack';
+  }
+}
+
 export interface GenerateShopPacksOptions {
   /** Force at least one shop pack slot to use this pack id (e.g. first-shop equipment pack). */
   guaranteePackId?: string;
@@ -111,7 +125,7 @@ export function generateShopPacks(count: number = 2, options?: GenerateShopPacks
   const packs: PackInstance[] = [];
 
   for (let i = 0; i < count; i++) {
-    let roll = Math.random() * totalWeight;
+    let roll = rngFloat('pack') * totalWeight;
     let picked = PACK_DEFS[0];
     for (let j = 0; j < PACK_DEFS.length; j++) {
       roll -= effectiveWeights[j];
@@ -153,15 +167,16 @@ export const RARE_PACK_CARD_IDS = PACK_ONLY_FRONTIER_IDS;
 
 const STANDARD_FRONTIER_POOL = FRONTIER_ENCOUNTERS.filter((fe) => !PACK_ONLY_FRONTIER_IDS.has(fe.id));
 
-function pickRandom<T>(arr: T[], count: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+function pickRandom<T>(arr: T[], count: number, stream: RngStream): T[] {
+  const shuffled = rngShuffle(stream, arr);
   return shuffled.slice(0, Math.min(count, arr.length));
 }
 
 function rollRarePackCard(packCategory: PackCategory): FrontierEntry | null {
+  const stream = packCategoryStream(packCategory);
   for (const rare of RARE_PACK_CARDS) {
     if (!rare.packs.includes(packCategory)) continue;
-    if (Math.random() < CHANCES.RARE_PACK_CARD) {
+    if (rngFloat(stream) < CHANCES.RARE_PACK_CARD) {
       const fe = FRONTIER_ENCOUNTERS.find((f) => f.id === rare.id);
       if (fe) return fe;
     }
@@ -176,7 +191,7 @@ export function tryRollRarePackCard(packCategory: PackCategory): FrontierEntry |
 
 function buildSupplyPackItem(s: SupplyCardDef): PackItem {
   const item: PackItem = {
-    id: s.id + '_' + Math.random().toString(36).slice(2, 6),
+    id: nextRunId(s.id),
     name: s.name,
     description: s.description,
     category: 'supply' as PackCategory,
@@ -202,7 +217,7 @@ function buildSupplyPackItem(s: SupplyCardDef): PackItem {
 
 function buildFrontierPackItem(fe: FrontierEntry): PackItem {
   const item: PackItem = {
-    id: fe.id + '_' + Math.random().toString(36).slice(2, 6),
+    id: nextRunId(fe.id),
     name: fe.name,
     description: fe.description,
     category: 'frontier' as PackCategory,
@@ -247,12 +262,12 @@ function generateDicePackContents(count: number): PackItem[] {
   const enhancements = diceEnhancements.map((e) => e.id);
 
   for (let i = 0; i < count; i++) {
-    const enhancement = enhancements[Math.floor(Math.random() * enhancements.length)];
+    const enhancement = rngPick('pack', enhancements);
     const die = createDie({ enhancement: enhancement as Die['enhancement'] });
     applyRandomSticker(die);
 
     // Random aura chance
-    if (Math.random() < CHANCES.DICE_AURA) {
+    if (rngFloat('pack') < CHANCES.DICE_AURA) {
       die.aura = pickRandomAura();
     }
 
@@ -277,7 +292,7 @@ function generateDicePackContents(count: number): PackItem[] {
 
 function generateSupplyPackContents(count: number): PackItem[] {
   const items: PackItem[] = [];
-  const normalCards = pickRandom(SUPPLY_CARDS, count);
+  const normalCards = pickRandom(SUPPLY_CARDS, count, 'supplyPack');
   let normalIdx = 0;
 
   for (let i = 0; i < count; i++) {
@@ -293,7 +308,7 @@ function generateSupplyPackContents(count: number): PackItem[] {
 
 function generateTrailGuidePackContents(count: number): PackItem[] {
   const items: PackItem[] = [];
-  const normalCards = pickRandom(TRAIL_GUIDES, count);
+  const normalCards = pickRandom(TRAIL_GUIDES, count, 'trailPack');
   let normalIdx = 0;
 
   for (let i = 0; i < count; i++) {
@@ -304,7 +319,7 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
     }
     const tg = normalCards[normalIdx++];
     items.push({
-      id: tg.id + '_' + Math.random().toString(36).slice(2, 6),
+      id: nextRunId(tg.id),
       name: tg.name,
       description: tg.description,
       category: 'trail_guide' as PackCategory,
@@ -316,7 +331,7 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
 
 function generateFrontierPackContents(count: number): PackItem[] {
   const items: PackItem[] = [];
-  const normalCards = pickRandom(STANDARD_FRONTIER_POOL, count);
+  const normalCards = pickRandom(STANDARD_FRONTIER_POOL, count, 'frontierPack');
   let normalIdx = 0;
 
   for (let i = 0; i < count; i++) {
@@ -334,7 +349,7 @@ function generateEquipmentPackContents(count: number): PackItem[] {
   const player = getPlayerState();
   const defs = generateShopStock(count);
   return defs.map((def) => ({
-    id: def.id + '_' + Math.random().toString(36).slice(2, 6),
+    id: nextRunId(def.id),
     name: def.name,
     description: def.description,
     category: 'equipment' as PackCategory,

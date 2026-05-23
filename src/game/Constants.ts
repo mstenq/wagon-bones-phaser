@@ -3,6 +3,7 @@
 // When tuning gameplay or visuals, change values here — not in game logic.
 
 import type { DifficultyDef } from './types';
+import { rngFloat, type RngStream } from './RunRng';
 
 // ─── Game Canvas ───
 export const GAME = {
@@ -412,10 +413,14 @@ export function getLoadedDiceMultiplier(equipment: { def: { effectType: string }
  * Takes a [numerator, denominator] chance tuple and the equipment array.
  * Returns true if the check succeeds.
  */
-export function checkLoadedChance(chance: [number, number], equipment: { def: { effectType: string } }[]): boolean {
+export function checkLoadedChance(
+  chance: [number, number],
+  equipment: { def: { effectType: string } }[],
+  stream: RngStream = 'loadedDice',
+): boolean {
   const [num, den] = chance;
   const ldm = getLoadedDiceMultiplier(equipment);
-  return Math.random() < (num * ldm) / den;
+  return rngFloat(stream) < (num * ldm) / den;
 }
 
 /**

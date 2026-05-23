@@ -43,6 +43,7 @@ import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from
 import hands from '../../data/hands';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
+import { rngShuffle } from '../../game/RunRng';
 
 const HAND_TABLE: HandDefinition[] = hands;
 import trailGuidesData from '../../data/trail_guides';
@@ -299,7 +300,7 @@ export class BoosterPackScene extends Scene {
 
     // Draw handSize random non-spent dice
     const nonSpent = player.dice.filter((d) => !player.spentDiceIds.has(d.id));
-    const shuffled = [...nonSpent].sort(() => Math.random() - 0.5);
+    const shuffled = rngShuffle('dice', nonSpent);
     this.lineupDice = shuffled.slice(0, Math.min(player.handSize, shuffled.length));
 
     if (this.lineupDice.length === 0) return;
@@ -350,7 +351,7 @@ export class BoosterPackScene extends Scene {
 
     const player = getPlayerState();
     const nonSpent = player.dice.filter((d) => !player.spentDiceIds.has(d.id));
-    const shuffled = [...nonSpent].sort(() => Math.random() - 0.5);
+    const shuffled = rngShuffle('dice', nonSpent);
     this.lineupDice = shuffled.slice(0, Math.min(player.handSize, shuffled.length));
 
     if (this.lineupDice.length === 0) return;

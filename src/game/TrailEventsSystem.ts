@@ -25,6 +25,7 @@ import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { TRAIL_EVENT } from './Constants';
 import { resolveEffectParam } from './effectParams';
 import type { EquipmentInstance } from './ItemsSystem';
+import { rngFloat, rngShuffle } from './RunRng';
 
 export type {
   TrailEventCategory,
@@ -234,7 +235,7 @@ export function filterUnseenEvents(pool: TrailEventDef[], player: PlayerState): 
  * Filters demon_hunter events based on profession and minimumLeg.
  * When playing as demon_hunter, ~30% chance to draw from exclusive pool.
  */
-export function selectTrailEvent(player: PlayerState, rng: () => number = Math.random): TrailEventDef {
+export function selectTrailEvent(player: PlayerState, rng: () => number = () => rngFloat('trail')): TrailEventDef {
   const isDemonHunter = player.profession?.id === 'demon_hunter';
   const leg = player.leg;
 
@@ -337,7 +338,7 @@ export function resolveChoice(
   event: TrailEventDef,
   choiceId: string,
   player: PlayerState,
-  rng: () => number = Math.random,
+  rng: () => number = () => rngFloat('trail'),
 ): TrailEventResult {
   const choice = event.choices.find((c) => c.id === choiceId);
   if (!choice) {
@@ -360,7 +361,7 @@ export function resolveChoice(
       if (trailRepairKit) trailRepairKitNegatedEvent = true;
       continue;
     }
-    applyEffect(effect, player, modifiers);
+    applyEffect(effect, player, modifiers, rng);
   }
 
   if (trailRepairKit && trailRepairKitNegatedEvent) {
@@ -432,7 +433,12 @@ export function isNegativeEffect(effect: TrailEventEffect): boolean {
  * Apply a single effect to the player state and/or accumulate modifiers.
  * Some effects are immediate (money, dice), others are deferred (day penalties for next round).
  */
-export function applyEffect(effect: TrailEventEffect, player: PlayerState, modifiers: TrailEventModifiers): void {
+export function applyEffect(
+  effect: TrailEventEffect,
+  player: PlayerState,
+  modifiers: TrailEventModifiers,
+  rng: () => number = () => rngFloat('trail'),
+): void {
   switch (effect.type) {
     case 'LOSE_MONEY':
       player.economy.spend(Math.min(effect.amount ?? 0, player.economy.balance));
@@ -481,7 +487,7 @@ export function applyEffect(effect: TrailEventEffect, player: PlayerState, modif
       for (let i = 0; i < count; i++) {
         const remaining = player.dice.filter((d) => d.enhancement !== null || d.sticker !== null || d.aura !== null);
         if (remaining.length === 0) break;
-        const pick = remaining[Math.floor(Math.random() * remaining.length)];
+        const pick = remaining[Math.floor(rng() * remaining.length)];
         const idx = player.dice.indexOf(pick);
         if (idx >= 0) player.dice.splice(idx, 1);
       }
@@ -498,7 +504,7 @@ export function applyEffect(effect: TrailEventEffect, player: PlayerState, modif
       const count = Math.min(effect.count ?? 0, player.equipment.length);
       for (let i = 0; i < count; i++) {
         if (player.equipment.length === 0) break;
-        const idx = Math.floor(Math.random() * player.equipment.length);
+        const idx = Math.floor(rng() * player.equipment.length);
         player.equipment.splice(idx, 1);
       }
       break;
@@ -527,7 +533,7 @@ export function applyEffect(effect: TrailEventEffect, player: PlayerState, modif
           .map((c, idx) => (c.def.category === 'supply' || c.def.category === 'trail_guide' ? idx : -1))
           .filter((idx) => idx >= 0);
         if (supplyIndices.length === 0) break;
-        const removeIdx = supplyIndices[Math.floor(Math.random() * supplyIndices.length)];
+        const removeIdx = supplyIndices[Math.floor(rng() * supplyIndices.length)];
         player.consumables.splice(removeIdx, 1);
       }
       break;
@@ -547,7 +553,7 @@ export function applyEffect(effect: TrailEventEffect, player: PlayerState, modif
         const enhancement = (effect.enhancement as DiceEnhancement) ?? null;
         player.addDie({
           id: '', // PlayerState.addDie assigns a proper id
-          value: enhancement === 'stone' ? 0 : Math.ceil(Math.random() * 12),
+          value: enhancement === 'stone' ? 0 : Math.floor(rng() * 12) + 1,
           enhancement,
           sticker: (effect.sticker as DiceSticker) ?? null,
           aura: (effect.aura as DiceAura) ?? null,
@@ -633,7 +639,7 @@ export function applyEffect(effect: TrailEventEffect, player: PlayerState, modif
 
     case 'ADD_AURA_TO_RANDOM_DICE': {
       const count = Math.min(effect.count ?? 0, player.dice.length);
-      const shuffled = [...player.dice].sort(() => Math.random() - 0.5);
+      const shuffled = rngShuffle('trail', player.dice);
       for (let i = 0; i < count; i++) {
         if (shuffled[i]) {
           shuffled[i].aura = (effect.aura as DiceAura) ?? null;

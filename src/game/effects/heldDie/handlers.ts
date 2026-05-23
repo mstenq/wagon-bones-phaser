@@ -2,6 +2,7 @@
 
 import { effectRegistry } from '../registry';
 import { dieMatchesPip, multiplyCtxXMult } from '../helpers';
+import { rngFloat } from '../../RunRng';
 
 effectRegistry.registerHeldDie('HELD_LOWEST_MULT', (ctx, equip, _idx, die, _t) => {
   // Compute lowest value from held dice
@@ -38,7 +39,7 @@ effectRegistry.registerHeldDie('HELD_ENHANCED_MONEY', (ctx, equip, _idx, die, _t
   if (die.enhancement !== null) {
     const p = equip.def.effectParams as Record<string, unknown>;
     const [num, den] = p.chance as [number, number];
-    if (Math.random() < num / den) {
+    if (rngFloat('equipment') < num / den) {
       const value = p.value as number;
       ctx.mutations.moneyEarned += value;
       ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'money', value });

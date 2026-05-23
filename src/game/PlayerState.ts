@@ -46,6 +46,7 @@ import { getProfessionById, type ProfessionDef } from '../data/professions';
 import bosses from '../data/bosses';
 import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
 import { getTrailTagById } from '../data/trail_tags';
+import { resetRunRng, rngPick } from './RunRng';
 
 export type { ProfessionDef } from '../data/professions';
 
@@ -169,7 +170,6 @@ export class PlayerState {
     this.round = 1;
     this.interestCap = GAMEPLAY.INTEREST_CAP;
     this.handStats = PlayerState.createDefaultHandStats();
-    this.assignBosses();
   }
 
   setDifficulty(level: DifficultyLevel): void {
@@ -477,7 +477,7 @@ export class PlayerState {
         // Find other equipment to duplicate (exclude self)
         const others = this.equipment.filter((_, idx) => idx !== index);
         if (others.length > 0) {
-          const source = others[Math.floor(Math.random() * others.length)];
+          const source = rngPick('equipment', others);
           // Duplicate the item, removing ghost aura if present
           const duplicated: EquipmentInstance = {
             def: source.def.aura?.id === 'ghost' ? { ...source.def, aura: undefined } : { ...source.def },
@@ -561,7 +561,7 @@ export class PlayerState {
   }
 
   /** Randomly assign one eligible boss per leg (respects minimumLeg, no repeats in legs 1–8) */
-  private assignBosses(): void {
+  assignBosses(): void {
     this.bossAssignments = [];
     const allBosses = bosses;
     const usedInFirstEight = new Set<string>();
@@ -583,7 +583,7 @@ export class PlayerState {
         this.bossAssignments.push(allBosses[0]);
         continue;
       }
-      const pick = eligible[Math.floor(Math.random() * eligible.length)];
+      const pick = rngPick('meta', eligible);
       if (leg <= 8) usedInFirstEight.add(pick.id);
       this.bossAssignments.push(pick);
     }
@@ -609,7 +609,7 @@ export class PlayerState {
     }
 
     if (eligible.length === 0) return false;
-    this.bossAssignments[leg - 1] = eligible[Math.floor(Math.random() * eligible.length)];
+    this.bossAssignments[leg - 1] = rngPick('meta', eligible);
     return true;
   }
 
@@ -638,16 +638,19 @@ export class PlayerState {
   /** Get the boss for the current leg (only active on round 3) */
   get currentBoss(): BossDef | null {
     if (this.round !== GAMEPLAY.ROUNDS_PER_LEG) return null;
+    if (this.bossAssignments.length === 0) this.assignBosses();
     return this.bossAssignments[this.leg - 1] ?? null;
   }
 
   /** Get the boss assigned to a specific leg */
   getBossForLeg(leg: number): BossDef | null {
+    if (this.bossAssignments.length === 0) this.assignBosses();
     return this.bossAssignments[leg - 1] ?? null;
   }
 
   /** Boss IDs per leg (for save/load). */
   getBossAssignmentIds(): string[] {
+    if (this.bossAssignments.length === 0) this.assignBosses();
     return this.bossAssignments.map((b) => b.id);
   }
 
@@ -902,7 +905,7 @@ export class PlayerState {
     this.trailEventModifiers = createEmptyModifiers();
     this.trailRoundEffects = createEmptyTrailRoundEffects();
     this.skipNextShop = false;
-    this.assignBosses();
+    this.bossAssignments = [];
   }
 }
 
@@ -915,6 +918,7 @@ export function getPlayerState(): PlayerState {
 }
 
 export function resetPlayerState(): PlayerState {
+  resetRunRng();
   _instance = new PlayerState();
   return _instance;
 }

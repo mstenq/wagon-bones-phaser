@@ -33,6 +33,7 @@ import {
 import { getRandomSupplyDef } from './ConsumablesSystem';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import { applyScoringMutations } from './effects/applyMutations';
+import { rngPick } from './RunRng';
 import { createEmptyModifiers, trailRoundEffectsFromModifiers } from './TrailEventsSystem';
 import {
   getBossRoundConfigMods,
@@ -102,8 +103,10 @@ export class GameState {
 
   private drawRandomHand(player = getPlayerState()): Die[] {
     const available = player.availableDice;
-    const drawCount = Math.min(this.config.rollSize, available.length);
-    const drawn = drawFromPouch(available, drawCount).drawn;
+    const pendingHandSet = new Set(player.pendingHandDiceIds);
+    const basePool = available.filter((d) => !pendingHandSet.has(d.id));
+    const drawCount = Math.min(this.config.rollSize, basePool.length);
+    const drawn = drawFromPouch(basePool, drawCount).drawn;
     const handIds = new Set(drawn.map((d) => d.id));
 
     // Day 1: Mystery Crate dice are extra cards in hand (not Quarry Stone)
@@ -232,7 +235,7 @@ export class GameState {
     // Mystery Crate (and mirror/echo copies): add dice with random stickers at round start
     const mysteryStickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
     for (let i = 0; i < roundStartEffects.stickerDiceToAdd; i++) {
-      const sticker = mysteryStickers[Math.floor(Math.random() * mysteryStickers.length)];
+      const sticker = rngPick('sticker', [...mysteryStickers]);
       const added = player.addDie(createDie({ sticker }));
       player.pendingNewDiceIds.push(added.id);
       player.pendingHandDiceIds.push(added.id);

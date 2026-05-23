@@ -32,6 +32,7 @@ import {
   TrailEventResult,
   TrailEventEffect,
 } from '../../game/TrailEventsSystem';
+import { rngFloat } from '../../game/RunRng';
 import type { TrailEventSaveData } from '../../game/SaveLoad';
 import { flushAutoSave } from '../AutoSaveManager';
 import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
@@ -355,7 +356,7 @@ export class TrailEventScene extends Scene {
     }
 
     // Resolve the choice
-    const result = resolveChoice(this.currentEvent, choice.id, player, Math.random);
+    const result = resolveChoice(this.currentEvent, choice.id, player, () => rngFloat('trail'));
 
     // Store modifiers on player for next round
     player.trailEventModifiers = result.modifiers;

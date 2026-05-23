@@ -18,8 +18,9 @@ import type { BossRoundState } from './BossEffectsSystem';
 import type { TrailTagInstance } from '../data/trail_tags';
 import bosses from '../data/bosses';
 import { type PackItem, type PackCategory } from './BoosterPackSystem';
+import { getRunRngState, getRunSeed, restoreRunRng, type RunRngState } from './RunRng';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export type ActiveScene = 'Game' | 'Shop' | 'BoosterPack' | 'TrailEvent' | 'RoundSelect';
 
@@ -150,6 +151,8 @@ export interface GameSaveSnapshot {
   version: number;
   exportedAt: string;
   activeScene: ActiveScene;
+  runSeed: string;
+  rngState: RunRngState;
   player: PlayerSaveData;
   scene?: SceneSaveData;
 }
@@ -378,6 +381,8 @@ export function buildSaveSnapshot(context: SceneSaveContext): GameSaveSnapshot {
     version: SAVE_VERSION,
     exportedAt: new Date().toISOString(),
     activeScene: context.activeScene,
+    runSeed: getRunSeed(),
+    rngState: getRunRngState(),
     player: serializePlayer(player),
   };
 
@@ -393,6 +398,8 @@ export function validateSaveSnapshot(data: unknown): GameSaveSnapshot | null {
   const snap = data as GameSaveSnapshot;
   if (snap.version !== SAVE_VERSION) return null;
   if (!ACTIVE_SCENES.includes(snap.activeScene)) return null;
+  if (typeof snap.runSeed !== 'string') return null;
+  if (!snap.rngState || typeof snap.rngState !== 'object') return null;
   if (!snap.player || typeof snap.player !== 'object') return null;
   if (typeof snap.player.balance !== 'number') return null;
   if (!Array.isArray(snap.player.dice)) return null;
@@ -410,6 +417,7 @@ export function applySaveSnapshot(snapshot: GameSaveSnapshot): {
 
   assertSaveIntegrity(snapshot);
   resetPlayerState();
+  restoreRunRng(snapshot.runSeed, snapshot.rngState);
   applyPlayerSaveData(snapshot.player);
 
   const sceneData: Record<string, unknown> = {};

@@ -9,6 +9,7 @@ import permitsData, {
   type PermitEffect,
 } from '../data/permits';
 import type { PlayerState } from './PlayerState';
+import { rngPick } from './RunRng';
 
 export type { PermitDef, PermitEffect };
 
@@ -54,7 +55,7 @@ export function getAvailablePermits(purchasedIds: string[]): PermitDef[] {
 export function generateShopPermit(purchasedIds: string[]): PermitDef | null {
   const available = getAvailablePermits(purchasedIds);
   if (available.length === 0) return null;
-  return available[Math.floor(Math.random() * available.length)];
+  return rngPick('shop', available);
 }
 
 // ─── Effect Application ───

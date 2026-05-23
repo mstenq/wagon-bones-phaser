@@ -5,6 +5,7 @@ import { getItemAuraById } from '../../ItemsSystem';
 import { getPlayerState } from '../../PlayerState';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
+import { rngPick } from '../../RunRng';
 
 effectRegistry.registerLifecycle('on-shop-end', (equip) => {
   if (equip.def.effectType !== 'SHOP_END_GHOST_CONSUMABLE') return;
@@ -12,7 +13,7 @@ effectRegistry.registerLifecycle('on-shop-end', (equip) => {
   const player = getPlayerState();
   if (player.consumables.length === 0) return;
 
-  const source = player.consumables[Math.floor(Math.random() * player.consumables.length)];
+  const source = rngPick('equipment', player.consumables);
   const ghostAura = getItemAuraById('ghost');
   if (!ghostAura) return;
 

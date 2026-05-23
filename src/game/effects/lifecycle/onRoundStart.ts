@@ -8,6 +8,7 @@ import { resolveCopyTarget } from '../../Constants';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 import { processEquipmentOnDiceDestroyed } from './onDiceDestroyed';
+import { rngInt, rngPick } from '../../RunRng';
 
 /** A single animated equipment destruction: source triggered victim's removal */
 export interface AnimatedDestruction {
@@ -62,7 +63,7 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
           .map((_, idx) => idx)
           .filter((idx) => idx !== i && !destroyedIndices.includes(idx) && !pendingAnimatedDestroy.has(idx));
         if (otherIndices.length > 0) {
-          const victimIdx = otherIndices[Math.floor(Math.random() * otherIndices.length)];
+          const victimIdx = rngPick('equipment', otherIndices);
           pendingAnimatedDestroy.add(victimIdx);
           ctx.animatedDestructions.push({ sourceIdx: i, victimIdx });
         }
@@ -91,7 +92,7 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
     }
     case 'WANTED_HAND_MONEY': {
       const handTypes = Object.values(HandType);
-      equip.state.targetHand = Math.floor(Math.random() * handTypes.length);
+      equip.state.targetHand = rngInt('wantedHand', 0, handTypes.length - 1);
       break;
     }
     case 'ROUND_START_DESTROY_RIGHT':
@@ -120,7 +121,7 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
       break;
     }
     case 'LUCKY_NUMBER_PIP_XMULT':
-      equip.state.pip = Math.ceil(Math.random() * 12);
+      equip.state.pip = rngInt('luckyNumber', 1, 12);
       break;
     case 'REPEAT_HAND_XMULT':
       for (const key of Object.keys(equip.state)) {

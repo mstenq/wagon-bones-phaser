@@ -43,6 +43,7 @@ import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimat
 import { processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
+import { rngShuffle } from '../../game/RunRng';
 import { getLoadedDiceMultiplier } from '../../game/Constants';
 import { isDiceScoringDisabledByBoss, isDiceLockedByBoss, revealLandSlideHints } from '../../game/BossEffectsSystem';
 import { isDevMode } from '../../game/DevMode';
@@ -2328,7 +2329,10 @@ export class GameScene extends Scene {
       return Promise.resolve();
     }
 
-    const refillPool = player.availableDice.filter((d) => !currentIds.has(d.id)).sort(() => Math.random() - 0.5);
+    const refillPool = rngShuffle(
+      'dice',
+      player.availableDice.filter((d) => !currentIds.has(d.id)),
+    );
     const toAdd = refillPool.slice(0, needed);
     if (toAdd.length === 0) return Promise.resolve();
 

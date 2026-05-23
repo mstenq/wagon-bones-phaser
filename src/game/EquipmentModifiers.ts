@@ -13,6 +13,7 @@ import {
 } from './ItemsSystem';
 import { getPlayerState, PlayerState } from './PlayerState';
 import { getDiscountedShopPrice } from './PermitsSystem';
+import { rngFloat } from './RunRng';
 
 /** Items immune to Cursed modifier */
 export const CURSED_IMMUNE = new Set([
@@ -60,7 +61,7 @@ export const PERISHABLE_IMMUNE = new Set([
 export function rollEquipmentModifiers(difficulty: DifficultyLevel, itemId: string): EquipmentModifier[] {
   const modifiers: EquipmentModifier[] = [];
 
-  if (difficulty >= 4 && !CURSED_IMMUNE.has(itemId) && Math.random() < EQUIPMENT_MODIFIER.CURSED_RATE) {
+  if (difficulty >= 4 && !CURSED_IMMUNE.has(itemId) && rngFloat('equipment') < EQUIPMENT_MODIFIER.CURSED_RATE) {
     modifiers.push('cursed');
   }
 
@@ -68,12 +69,12 @@ export function rollEquipmentModifiers(difficulty: DifficultyLevel, itemId: stri
     difficulty >= 7 &&
     !modifiers.includes('cursed') &&
     !PERISHABLE_IMMUNE.has(itemId) &&
-    Math.random() < EQUIPMENT_MODIFIER.PERISHABLE_RATE
+    rngFloat('equipment') < EQUIPMENT_MODIFIER.PERISHABLE_RATE
   ) {
     modifiers.push('perishable');
   }
 
-  if (difficulty >= 8 && Math.random() < EQUIPMENT_MODIFIER.LEASED_RATE) {
+  if (difficulty >= 8 && rngFloat('equipment') < EQUIPMENT_MODIFIER.LEASED_RATE) {
     modifiers.push('leased');
   }
 

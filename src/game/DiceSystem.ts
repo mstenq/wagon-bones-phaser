@@ -16,6 +16,7 @@ import { multiplyScore } from './scoreMath';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
 import type { TrailRoundEffects } from './TrailEventsSystem';
+import { rngFloat, rngInt, rngPick, rngShuffle } from './RunRng';
 
 const HAND_TABLE: HandDefinition[] = hands;
 
@@ -59,7 +60,7 @@ let nextDieId = 0;
 export function createDie(overrides?: Partial<Die>): Die {
   const die: Die = {
     id: `die_${nextDieId++}`,
-    value: Math.ceil(Math.random() * 12),
+    value: rngInt('dice', 1, 12),
     enhancement: null,
     sticker: null,
     aura: null,
@@ -100,10 +101,10 @@ export function rollDie(die: Die): Die {
   if (die.enhancement === 'loaded' && loadedTarget !== null) {
     const loadedChance = Math.min(1, getLoadedDiceMultiplier(player.equipment) / 6);
     const otherFaces = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((face) => face !== loadedTarget);
-    if (Math.random() < loadedChance) return { ...die, value: loadedTarget };
-    return { ...die, value: otherFaces[Math.floor(Math.random() * otherFaces.length)] };
+    if (rngFloat('loadedDice') < loadedChance) return { ...die, value: loadedTarget };
+    return { ...die, value: rngPick('loadedDice', otherFaces) };
   }
-  return { ...die, value: Math.ceil(Math.random() * 12) };
+  return { ...die, value: rngInt('dice', 1, 12) };
 }
 
 export function rollDice(dice: Die[]): Die[] {
@@ -113,7 +114,7 @@ export function rollDice(dice: Die[]): Die[] {
 // ─── Pouch Management ───
 
 export function drawFromPouch(pouch: Die[], count: number): { drawn: Die[]; remaining: Die[] } {
-  const shuffled = [...pouch].sort(() => Math.random() - 0.5);
+  const shuffled = rngShuffle('dice', pouch);
   return {
     drawn: shuffled.slice(0, count),
     remaining: shuffled.slice(count),
@@ -504,13 +505,13 @@ export function scoreHand(
         case 'lucky': {
           const luckyMultChance: [number, number] = trailRound.luckyOddsHalved ? [1, 10] : [1, 5];
           const luckyMoneyChance: [number, number] = trailRound.luckyOddsHalved ? [1, 30] : [1, 15];
-          if (checkLoadedChance(luckyMultChance, equipment)) {
+          if (checkLoadedChance(luckyMultChance, equipment, 'luckyDice')) {
             bonusMult += 20;
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
             for (const e of equipment) dispatchLifecycle('on-lucky-trigger', e);
           }
-          if (checkLoadedChance(luckyMoneyChance, equipment)) {
+          if (checkLoadedChance(luckyMoneyChance, equipment, 'luckyDice')) {
             player.economy.earn(20);
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit $20!`);
@@ -648,7 +649,7 @@ export function scoreHand(
   for (const scoredDie of handResult.scoringDice) {
     const destroyChance = resolveScoreDestroyChance(scoredDie, equipment, trailRound);
     if (!destroyChance) continue;
-    if (!checkLoadedChance(destroyChance, equipment)) continue;
+    if (!checkLoadedChance(destroyChance, equipment, 'diamondDice')) continue;
 
     const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
     if (idx < 0) continue;
@@ -667,7 +668,7 @@ export function scoreHand(
   const destroyChance = trailRound.scoredDiceDestroyChance;
   if (destroyChance > 0) {
     for (const scoredDie of handResult.scoringDice) {
-      if (Math.random() >= destroyChance) continue;
+      if (rngFloat('dice') >= destroyChance) continue;
       const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
       if (idx < 0) continue;
       const wasEnhanced = player.dice[idx].enhancement !== null;
