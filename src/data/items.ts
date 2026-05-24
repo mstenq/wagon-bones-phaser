@@ -635,7 +635,7 @@ const items: ItemDef[] = [
       return {
         hint,
         tooltip: [
-          [text('Each played '), condition(String(pip)), text(' gives '), mult(`x${xVal}`), text(' mult when scored.')],
+          [text('Each played '), condition(String(pip)), text(' gives '), mult(`x${xVal}`), text(' mult when scored. Number changes each round.')],
         ],
       };
     },

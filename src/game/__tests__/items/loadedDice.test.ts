@@ -1,10 +1,11 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, item, itemWithState, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
 import {
   processEndOfRound,
   processEquipmentAfterHandScored,
   processEquipmentOnPackOpened,
+  processEquipmentOnRoundStart,
 } from '../../EquipmentEffects';
 import { getLoadedDiceMultiplier } from '../../equipmentUtils';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
@@ -131,6 +132,41 @@ describe('loaded enhancement rolling', () => {
     const rate = targetHits / trials;
     expect(rate).toBeGreaterThan(0.31);
     expect(rate).toBeLessThan(0.36);
+  });
+
+  test('sync with lucky number uses lucky pip for loaded rolls', () => {
+    const player = getPlayerState();
+    const lucky = itemWithState('lucky_number', { pip: 5 });
+    player.equipment = [lucky];
+    player.setLoadedDieSyncLucky(true);
+    expect(player.getResolvedLoadedDieTarget()).toBe(5);
+
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const rolled = rollDie(die({ enhancement: 'loaded', value: 0 }));
+      expect(rolled.value).toBe(5);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('round start updates loaded target when synced to lucky number', () => {
+    const player = getPlayerState();
+    const lucky = item('lucky_number');
+    player.equipment = [lucky];
+    player.setLoadedDieSyncLucky(true);
+    processEquipmentOnRoundStart([lucky]);
+    expect(player.loadedDieTarget).toBe(lucky.state.pip);
+    expect(player.getResolvedLoadedDieTarget()).toBe(lucky.state.pip);
+  });
+
+  test('picking a loaded face disables lucky sync', () => {
+    const player = getPlayerState();
+    player.equipment = [item('lucky_number')];
+    player.setLoadedDieSyncLucky(true);
+    player.setLoadedDieTarget(3);
+    expect(player.loadedDieSyncLucky).toBe(false);
   });
 
   test('enough Loaded Dice equipment can guarantee the selected face', () => {

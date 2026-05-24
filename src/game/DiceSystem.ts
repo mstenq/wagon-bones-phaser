@@ -97,7 +97,7 @@ export function rollDie(die: Die): Die {
   // Stone dice never get a numeric value
   if (die.enhancement === 'stone') return { ...die, value: 0 };
   const player = getPlayerState();
-  const loadedTarget = player.loadedDieTarget;
+  const loadedTarget = player.getResolvedLoadedDieTarget();
   if (die.enhancement === 'loaded' && loadedTarget !== null) {
     const loadedChance = Math.min(1, getLoadedDiceMultiplier(player.equipment) / 6);
     const otherFaces = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((face) => face !== loadedTarget);

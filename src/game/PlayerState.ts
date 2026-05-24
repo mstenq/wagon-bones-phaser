@@ -99,6 +99,8 @@ export class PlayerState {
   economy: Economy;
   dice: Die[]; // all dice the player owns
   loadedDieTarget: number | null = null; // selected face for loaded enhancement dice
+  /** When true, loaded face follows Lucky Number each round (requires lucky_number equipment). */
+  loadedDieSyncLucky = false;
   spentDiceIds: Set<string> = new Set(); // dice used this round (persists across days, reset when round ends)
   equipment: EquipmentInstance[];
   maxEquipmentSlots: number;
@@ -364,11 +366,49 @@ export class PlayerState {
     return true;
   }
 
+  hasLuckyNumberEquipment(): boolean {
+    return this.equipment.some((e) => e.def.id === 'lucky_number');
+  }
+
+  getLuckyNumberPip(): number | null {
+    const lucky = this.equipment.find((e) => e.def.id === 'lucky_number');
+    const pip = lucky?.state.pip;
+    if (typeof pip !== 'number' || pip < 1 || pip > 12) return null;
+    return pip;
+  }
+
+  /** Face used for loaded enhancement rolls (manual pick or synced lucky pip). */
+  getResolvedLoadedDieTarget(): number | null {
+    if (this.loadedDieSyncLucky && this.hasLuckyNumberEquipment()) {
+      return this.getLuckyNumberPip() ?? this.loadedDieTarget;
+    }
+    return this.loadedDieTarget;
+  }
+
+  setLoadedDieSyncLucky(sync: boolean): void {
+    if (!sync) {
+      this.loadedDieSyncLucky = false;
+      return;
+    }
+    if (!this.hasLuckyNumberEquipment()) return;
+    this.loadedDieSyncLucky = true;
+    const pip = this.getLuckyNumberPip();
+    if (pip !== null) this.loadedDieTarget = pip;
+  }
+
+  /** Called when Lucky Number rolls a new pip at round start. */
+  applyLoadedDieFromLuckyNumber(pip: number): void {
+    if (!this.loadedDieSyncLucky) return;
+    this.loadedDieTarget = Math.max(1, Math.min(12, Math.floor(pip)));
+  }
+
   setLoadedDieTarget(value: number | null): void {
     if (value === null) {
       this.loadedDieTarget = null;
+      this.loadedDieSyncLucky = false;
       return;
     }
+    this.loadedDieSyncLucky = false;
     this.loadedDieTarget = Math.max(1, Math.min(12, Math.floor(value)));
   }
 

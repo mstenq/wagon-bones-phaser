@@ -43,6 +43,7 @@ export interface PlayerSaveData {
   balance: number;
   dice: Die[];
   loadedDieTarget: number | null;
+  loadedDieSyncLucky?: boolean;
   spentDiceIds: string[];
   equipment: SerializedEquipmentInstance[];
   maxEquipmentSlots: number;
@@ -231,6 +232,7 @@ function serializePlayer(player: PlayerState): PlayerSaveData {
     balance: player.economy.balance,
     dice: player.dice.map((d) => ({ ...d })),
     loadedDieTarget: player.loadedDieTarget,
+    loadedDieSyncLucky: player.loadedDieSyncLucky,
     spentDiceIds: [...player.spentDiceIds],
     equipment: player.equipment.map(serializeEquipmentInstance),
     maxEquipmentSlots: player.maxEquipmentSlots,
@@ -313,6 +315,10 @@ function applyPlayerSaveData(data: PlayerSaveData): void {
   player.economy.setBalance(data.balance);
   player.dice = data.dice.map((d) => ({ ...d }));
   player.loadedDieTarget = data.loadedDieTarget;
+  player.loadedDieSyncLucky = data.loadedDieSyncLucky ?? false;
+  if (player.loadedDieSyncLucky && !player.hasLuckyNumberEquipment()) {
+    player.loadedDieSyncLucky = false;
+  }
   player.spentDiceIds = new Set(data.spentDiceIds);
   player.equipment = data.equipment.map(deserializeEquipmentInstance);
   player.maxEquipmentSlots = data.maxEquipmentSlots;

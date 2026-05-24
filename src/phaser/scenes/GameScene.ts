@@ -1287,6 +1287,8 @@ export class GameScene extends Scene {
 
   private adjustLoadedDieTarget(delta: number): void {
     const player = getPlayerState();
+    if (player.loadedDieSyncLucky) return;
+
     const current = player.loadedDieTarget;
 
     let nextValue: number | null;
@@ -1305,11 +1307,19 @@ export class GameScene extends Scene {
     if (!this.loadedDiceValueText || !this.loadedDiceDecBtn || !this.loadedDiceIncBtn || !this.loadedDiceValueBg)
       return;
 
-    const target = getPlayerState().loadedDieTarget;
-    this.loadedDiceValueText.setText(target === null ? '-' : String(target));
-    this.loadedDiceValueText.setColor(target === null ? TEXT_COLORS.SECONDARY : TEXT_COLORS.PRIMARY);
-    this.loadedDiceDecBtn.setEnabled(target !== null);
-    this.loadedDiceIncBtn.setEnabled(target === null || target < 12);
+    const player = getPlayerState();
+    const syncLucky = player.loadedDieSyncLucky && player.hasLuckyNumberEquipment();
+    const target = player.getResolvedLoadedDieTarget();
+
+    if (syncLucky) {
+      this.loadedDiceValueText.setText('🍀');
+      this.loadedDiceValueText.setColor(TEXT_COLORS.GOLD);
+    } else {
+      this.loadedDiceValueText.setText(target === null ? '-' : String(target));
+      this.loadedDiceValueText.setColor(target === null ? TEXT_COLORS.SECONDARY : TEXT_COLORS.PRIMARY);
+    }
+    this.loadedDiceDecBtn.setEnabled(!syncLucky && target !== null);
+    this.loadedDiceIncBtn.setEnabled(!syncLucky && (target === null || target < 12));
 
     this.loadedDiceValueBg.clear();
     this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
@@ -1351,8 +1361,10 @@ export class GameScene extends Scene {
   private buildLoadedDicePicker(): Phaser.GameObjects.Container {
     const controlX = this.loadedDiceValueHitArea.x;
     const controlY = this.loadedDiceValueHitArea.y;
+    const player = getPlayerState();
+    const showLuckySync = player.hasLuckyNumberEquipment();
     const panelWidth = 208;
-    const panelHeight = 214;
+    const panelHeight = showLuckySync ? 248 : 214;
     const panelX = Phaser.Math.Clamp(controlX - panelWidth / 2, this.sidebarW + 12, this.scale.width - panelWidth - 12);
     const panelY = controlY - panelHeight - 14;
     const panelCenterX = panelX + panelWidth / 2;
@@ -1392,7 +1404,8 @@ export class GameScene extends Scene {
     const gridWidth = cols * cellWidth + (cols - 1) * cellGap;
     const gridStartX = panelX + (panelWidth - gridWidth) / 2 + cellWidth / 2;
     const gridStartY = panelY + 72 + cellHeight / 2;
-    const selected = getPlayerState().loadedDieTarget;
+    const syncLucky = player.loadedDieSyncLucky && showLuckySync;
+    const selected = syncLucky ? null : player.loadedDieTarget;
 
     for (let value = 1; value <= 12; value++) {
       const col = (value - 1) % cols;
@@ -1417,13 +1430,39 @@ export class GameScene extends Scene {
       picker.add(button);
     }
 
-    const clearBtn = new Button(this, panelCenterX, panelY + panelHeight - 24, 'Clear', 86, 26).onClick(() => {
+    let clearBtnY = panelY + panelHeight - 24;
+    if (showLuckySync) {
+      const syncBtnY = panelY + panelHeight - 58;
+      const syncBtn = new Button(
+        this,
+        panelCenterX,
+        syncBtnY,
+        'Sync Loaded Die with Lucky Number',
+        panelWidth - 28,
+        26,
+      ).onClick(
+        () => {
+          getPlayerState().setLoadedDieSyncLucky(true);
+          this.destroyLoadedDicePicker();
+        },
+      );
+      syncBtn.setDepth(501);
+      (syncBtn as any).label?.setFontSize?.(10);
+      if (syncLucky) {
+        syncBtn.setColor(COLORS.GOLD, COLORS.GOLD);
+        syncBtn.setEnabled(false);
+      }
+      picker.add(syncBtn);
+      clearBtnY = panelY + panelHeight - 24;
+    }
+
+    const clearBtn = new Button(this, panelCenterX, clearBtnY, 'Clear', 86, 26).onClick(() => {
       getPlayerState().setLoadedDieTarget(null);
       this.destroyLoadedDicePicker();
     });
     clearBtn.setDepth(501);
     (clearBtn as any).label?.setFontSize?.(13);
-    clearBtn.setEnabled(selected !== null);
+    clearBtn.setEnabled(syncLucky || selected !== null);
     picker.add(clearBtn);
 
     return picker;

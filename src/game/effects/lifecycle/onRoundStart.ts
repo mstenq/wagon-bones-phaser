@@ -111,9 +111,12 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
         }
       }
       break;
-    case 'LUCKY_NUMBER_PIP_XMULT':
-      equip.state.pip = rngInt('luckyNumber', 1, 12);
+    case 'LUCKY_NUMBER_PIP_XMULT': {
+      const pip = rngInt('luckyNumber', 1, 12);
+      equip.state.pip = pip;
+      getPlayerState().applyLoadedDieFromLuckyNumber(pip);
       break;
+    }
     case 'REPEAT_HAND_XMULT':
       for (const key of Object.keys(equip.state)) {
         if (key.startsWith('round_')) {
