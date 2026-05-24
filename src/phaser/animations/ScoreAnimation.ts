@@ -25,6 +25,7 @@ const POPUP_MONEY_COLOR = '#ffd700';
 const POPUP_SUPPLY_COLOR = '#9c27b0';
 const POPUP_ENHANCE_COLOR = '#55ddff';
 const POPUP_CRACK_COLOR = '#cfe4ff';
+const POPUP_BALANCE_COLOR = '#e8c547';
 
 const ENHANCEMENT_NAMES = new Map(diceEnhancements.map((e) => [e.id, e.name]));
 
@@ -266,6 +267,8 @@ function getSoundForType(type: string, stepIdx: number): { key: string; config: 
       return { key: 'sfx_foil1', config: { volume: 0.35 } };
     case 'crack':
       return { key: 'sfx_glass1', config: { volume: 0.6, detune: stepIdx * 20 } };
+    case 'balance':
+      return { key: 'sfx_multhit1', config: { volume: 0.45, detune: -50 } };
     default: // miles
       return { key: 'sfx_chips2', config: { volume: 0.3, detune: stepIdx * 80 } };
   }
@@ -512,6 +515,27 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
           consumableBar.refresh();
           done();
         }
+        return;
+      }
+
+      // Accountant profession: average miles and mult before final multiply
+      if (popupType === 'balance') {
+        const balanced = D(evt.decimalValue ?? value);
+        const milesPos = sidebar.getMilesPillWorldPos();
+        const multPos = sidebar.getMultPillWorldPos();
+        const midX = (milesPos.x + multPos.x) / 2;
+        const midY = (milesPos.y + multPos.y) / 2;
+        floatingText(scene, midX, midY, 'Balance!', POPUP_BALANCE_COLOR, 'up');
+        scene.sound.play('sfx_multhit1', { volume: 0.45, detune: -50 });
+        scene.time.delayedCall(180, () => {
+          sidebar.setMilesAnimated(balanced);
+          sidebar.setMultAnimated(balanced);
+          sidebar.shakeMilesPill();
+          sidebar.shakeMultPill(true);
+          currentMiles = balanced;
+          currentMult = balanced;
+          scene.time.delayedCall(450, done);
+        });
         return;
       }
 

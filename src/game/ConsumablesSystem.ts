@@ -281,9 +281,9 @@ export interface UseConsumableResult {
   /** Reason for failure */
   failReason?: string;
   /** Hand upgrade info for animation (trail guides, etc.) */
-  handUpgrade?: import('./types').HandUpgradeInfo;
+  handUpgrade?: HandUpgradeInfo;
   /** Multi-hand upgrade info for effects like Spiritual Journey */
-  handUpgrades?: import('./types').HandUpgradeInfo[];
+  handUpgrades?: HandUpgradeInfo[];
   /** Optional animation events for non-scoring consumable effects */
   consumableAnimEvents?: ConsumableAnimEvent[];
 }

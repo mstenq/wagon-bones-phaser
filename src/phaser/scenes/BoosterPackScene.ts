@@ -28,7 +28,7 @@ import {
 } from '../../game/ConsumablesSystem';
 import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
 import { processEquipmentOnPackSkipped, processEquipmentOnPackOpened } from '../../game/EquipmentEffects';
-import { Die, HandType, HandDefinition } from '../../game/types';
+import { Die, HandType, HandDefinition, HandUpgradeInfo } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
@@ -1148,7 +1148,7 @@ export class BoosterPackScene extends Scene {
         break;
       }
       case 'UPGRADE_ALL_HANDS': {
-        const upgrades: import('../../game/types').HandUpgradeInfo[] = [];
+        const upgrades: HandUpgradeInfo[] = [];
         for (const type of Object.values(HandType)) {
           const stats = player.getHandStats(type);
           const handDef = HAND_TABLE.find((h) => h.type === type)!;

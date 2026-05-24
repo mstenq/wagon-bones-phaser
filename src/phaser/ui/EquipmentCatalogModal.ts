@@ -7,6 +7,7 @@ import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { getAllEquipment, type EquipmentDef } from '../../game/ItemsSystem';
 import { getPlayerState } from '../../game/PlayerState';
+import type { CardTemplate } from '../../data/items';
 import { Button } from './Button';
 import { ItemCard } from './ItemCard';
 
@@ -249,7 +250,7 @@ export class EquipmentCatalogModal extends GameObjects.Container {
       cost: def.cost,
       rarity: def.rarity,
       aura: def.aura,
-      cardTemplate: (def as { cardTemplate?: import('../../data/items').CardTemplate }).cardTemplate,
+      cardTemplate: (def as { cardTemplate?: CardTemplate }).cardTemplate,
       display: def.display,
     };
     const card = new ItemCard(scene, x, y, cardData, {

@@ -12,7 +12,7 @@ import {
   SAVE_VERSION,
   type GameSaveSnapshot,
 } from '../SaveLoad';
-import { D } from '../scoreMath';
+import { D, type Decimal } from '../scoreMath';
 import { getTrailEventById, selectTrailEvent } from '../TrailEventsSystem';
 import { item } from './testHelpers';
 import { HandType } from '../types';
@@ -100,7 +100,7 @@ describe('SaveLoad', () => {
 
     const { scene, sceneData } = applySaveSnapshot(snapshot);
     expect(scene).toBe('Game');
-    expect((sceneData as { restore: { state: { totalMiles: import('../decimal').Decimal } } }).restore.state.totalMiles).toBeMiles(42);
+    expect((sceneData as { restore: { state: { totalMiles: Decimal } } }).restore.state.totalMiles).toBeMiles(42);
 
     const restoredPlayer = getPlayerState();
     expect(restoredPlayer.equipment[0]?.def.id).toBe('coffee');

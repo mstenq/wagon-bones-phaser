@@ -5,7 +5,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import { formatScore, formatMult } from '../../game/formatScore';
+import { formatScore, formatScoreComponent, formatMult } from '../../game/formatScore';
 import type { DecimalSource } from '../../game/decimal';
 import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
 import type { BossDef } from '../../game/types';
@@ -615,7 +615,7 @@ export class Sidebar extends GameObjects.Container {
   updateData(data: Partial<SidebarData>): void {
     if (data.title !== undefined) this.titleText.setText(data.title);
     if (data.roundScore !== undefined) this.roundScoreText.setText(formatScore(data.roundScore));
-    if (data.milesBase !== undefined) this.milesBaseText.setText(formatScore(data.milesBase));
+    if (data.milesBase !== undefined) this.milesBaseText.setText(formatScoreComponent(data.milesBase));
     if (data.mult !== undefined) this.multText.setText(formatMult(data.mult));
     if (data.handName !== undefined) {
       if (data.handName) {
@@ -778,7 +778,7 @@ export class Sidebar extends GameObjects.Container {
 
   /** Set miles value with a pop animation on the blue pill */
   setMilesAnimated(value: DecimalSource): void {
-    this.milesBaseText.setText(formatScore(value));
+    this.milesBaseText.setText(formatScoreComponent(value));
     this.scene.tweens.add({
       targets: this.milesBaseText,
       scaleX: 1.3,
@@ -804,7 +804,7 @@ export class Sidebar extends GameObjects.Container {
 
   /** Set round score with a pop animation */
   setRoundScoreAnimated(value: DecimalSource): void {
-    this.roundScoreText.setText(formatScore(value));
+    this.roundScoreText.setText(formatScoreComponent(value));
     this.scene.tweens.add({
       targets: this.roundScoreText,
       scaleX: 1.3,

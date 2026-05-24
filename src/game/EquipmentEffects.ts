@@ -17,7 +17,8 @@ import {
   hasStackedDeck,
   multiplyCtxXMult,
 } from './effects/helpers';
-import { addScore, multiplyScore, D, ZERO, ONE } from './scoreMath';
+import { addScore, multiplyScore, balanceMilesAndMult, ZERO, ONE } from './scoreMath';
+import type { Decimal } from './decimal';
 import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
 export { processEquipmentOnRoundStart, type AnimatedDestruction } from './effects/lifecycle/onRoundStart';
 
@@ -97,10 +98,30 @@ export function applyEquipmentEffects(
   );
   finalMult = multiplyScore(finalMult, ctx.xMult);
 
-  const finalMiles = multiplyScore(addScore(addScore(baseMiles, totalValue), ctx.bonusMiles), finalMult);
-  console.log(
-    `  [equip] Final: (${baseMiles} base + ${totalValue} value + ${ctx.bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`,
-  );
+  const milesComponent = addScore(addScore(baseMiles, totalValue), ctx.bonusMiles);
+  const player = getPlayerState();
+  const balanceProfession = !!(player.profession?.modifiers as Record<string, unknown>)?.balanceMilesAndMult;
+  let finalMiles = multiplyScore(milesComponent, finalMult);
+
+  if (balanceProfession) {
+    const preBalanceMult = finalMult;
+    const { balanced, miles } = balanceMilesAndMult(milesComponent, finalMult);
+    finalMult = balanced;
+    finalMiles = miles;
+    animEvents.push({
+      target: { kind: 'balance' },
+      popupType: 'balance',
+      value: balanced.toNumber(),
+      decimalValue: balanced,
+    });
+    console.log(
+      `  [equip] Accountant balance: (${milesComponent} mi, ${preBalanceMult} mult) → ${balanced} × ${balanced} = ${finalMiles} miles`,
+    );
+  } else {
+    console.log(
+      `  [equip] Final: (${baseMiles} base + ${totalValue} value + ${ctx.bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`,
+    );
+  }
 
   return {
     handResult: baseResult.handResult,
@@ -138,8 +159,8 @@ function getHeldDieTriggerCount(die: Die, doubleDownCount: number): number {
 }
 
 interface HeldInHandResult {
-  bonusMult: import('./decimal').Decimal;
-  xMult: import('./decimal').Decimal;
+  bonusMult: Decimal;
+  xMult: Decimal;
   moneyEarned: number;
   mutations: ScoringMutations;
   animEvents: ScoreAnimEvent[];

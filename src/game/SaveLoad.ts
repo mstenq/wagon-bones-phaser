@@ -17,7 +17,8 @@ import { createEmptyTrailRoundEffects, type TrailEventModifiers, type TrailRound
 import type { BossRoundState } from './BossEffectsSystem';
 import type { TrailTagInstance } from '../data/trail_tags';
 import bosses from '../data/bosses';
-import { type PackItem, type PackCategory } from './BoosterPackSystem';
+import { type PackItem, type PackCategory, type InstantEffect } from './BoosterPackSystem';
+import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import { getRunRngState, getRunSeed, restoreRunRng, type RunRngState } from './RunRng';
 import { milesToSave, milesFromSave } from './scoreMath';
 import type { Decimal } from './decimal';
@@ -147,8 +148,8 @@ export interface SerializedPackItem {
   supplyCardId?: string;
   trailGuideId?: string;
   frontierEncounterId?: string;
-  diceSelection?: import('./DiceSelectionSystem').DiceSelectionConfig;
-  instantEffect?: import('./BoosterPackSystem').InstantEffect;
+  diceSelection?: DiceSelectionConfig;
+  instantEffect?: InstantEffect;
 }
 
 export interface BoosterPackSaveData {

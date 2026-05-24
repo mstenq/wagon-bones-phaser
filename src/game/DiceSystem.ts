@@ -5,7 +5,7 @@ import { Die, DiceEnhancement, HandType, HandResult, HandDefinition, ScoreResult
 import hands from '../data/hands';
 import { getPlayerState } from './PlayerState';
 import type { EquipmentInstance } from './ItemsSystem';
-import { effectRegistry, getScoredRetriggerCount } from './effects';
+import { effectRegistry, getScoredRetriggerCount, type ScoringPipelineContext } from './effects';
 import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from './EquipmentEffects';
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
@@ -363,7 +363,7 @@ export function scoreHand(
   const stackedDeck = hasStackedDeck(equipment);
 
   // Create pipeline context for per-die handlers
-  const pipelineCtx: import('./effects/types').ScoringPipelineContext = {
+  const pipelineCtx: ScoringPipelineContext = {
     handResult,
     scoringDice: handResult.scoringDice,
     heldDice: [],

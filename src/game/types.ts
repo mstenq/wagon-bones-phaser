@@ -1,6 +1,6 @@
 import { GAMEPLAY } from './Constants';
 import type { ScoringMutations } from './effects/types';
-import type { Decimal } from './decimal';
+import type { Decimal, DecimalSource } from './decimal';
 import { D } from './decimal';
 
 export type PhaseState = 'SELECT' | 'ROLL' | 'SCORE' | 'DAY_END' | 'ROUND_END';
@@ -57,7 +57,8 @@ export interface HandResult {
 export type ScoreAnimTarget =
   | { kind: 'die'; dieId: string }
   | { kind: 'equip'; equipIndex: number }
-  | { kind: 'both'; dieId: string; equipIndex: number };
+  | { kind: 'both'; dieId: string; equipIndex: number }
+  | { kind: 'balance' };
 
 export type ScoreAnimPopupType =
   | 'miles'
@@ -68,7 +69,8 @@ export type ScoreAnimPopupType =
   | 'trail_guide'
   | 'strip'
   | 'enhance'
-  | 'crack';
+  | 'crack'
+  | 'balance';
 
 export interface ScoreAnimEvent {
   /** Target to animate (die, equip card, or both) */
@@ -77,6 +79,8 @@ export interface ScoreAnimEvent {
   popupType: ScoreAnimPopupType;
   /** Value to display in popup (+5 mult, x2, $3, etc.) */
   value: number;
+  /** Precise value for balance step (when number `value` is insufficient) */
+  decimalValue?: DecimalSource;
   /** Optional: which die is currently being "scored" (for per-die grouping) */
   dieId?: string;
   /** Enhancement applied (for enhance popup) */

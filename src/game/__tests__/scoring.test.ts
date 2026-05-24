@@ -11,7 +11,7 @@ import {
   resetDieIds,
 } from './testHelpers';
 import { HandType } from '../types';
-import { eq, gt } from '../scoreMath';
+import { eq, gt, balanceMilesAndMult } from '../scoreMath';
 import { resolveScoreDestroyChance } from '../DiceSystem';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
@@ -656,5 +656,35 @@ describe('score crack animation events', () => {
       ),
     ).toBe(true);
     expect(player.dice.some((d) => d.id === enhanced.id)).toBe(false);
+  });
+});
+
+describe('accountant profession', () => {
+  test('balanceMilesAndMult averages miles and mult before multiplying', () => {
+    const { balanced, miles } = balanceMilesAndMult(10, 4);
+    expect(balanced).toBeMiles(7);
+    expect(miles).toBeMiles(49);
+  });
+
+  test('applies balance during full scoring pipeline', () => {
+    const { result: normal } = calculateTestScore({
+      scoredDice: [die({ value: 5 })],
+      equipment: [item('horseshoe')],
+    });
+    const { result: balanced } = calculateTestScore({
+      profession: 'accountant',
+      scoredDice: [die({ value: 5 })],
+      equipment: [item('horseshoe')],
+    });
+
+    // HIGH_VALUE: (5 base + 5 value) × (1 + 4 horseshoe) = 50
+    expect(normal.miles).toBeMiles(50);
+    expect(normal.mult).toBeMult(5);
+
+    // Accountant: average(10, 5) = 7.5 → 7.5 × 7.5 = 56.25
+    expect(balanced.miles).toBeMiles(56.25);
+    expect(balanced.mult).toBeMult(7.5);
+    expect(balanced.animEvents.some((evt) => evt.popupType === 'balance')).toBe(true);
+    expect(gt(balanced.miles, normal.miles)).toBe(true);
   });
 });

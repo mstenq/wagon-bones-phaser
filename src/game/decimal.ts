@@ -34,6 +34,10 @@ export function addScore(a: DecimalSource, b: DecimalSource): Decimal {
   return roundScore(D(a).plus(b));
 }
 
+export function divideScore(a: DecimalSource, b: DecimalSource): Decimal {
+  return roundScore(D(a).div(b));
+}
+
 export function floorScore(value: DecimalSource): Decimal {
   return D(value).floor();
 }

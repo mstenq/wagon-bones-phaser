@@ -109,6 +109,10 @@ Equipment UI hints: items use `display(game, player)` on each def (returns `Item
 
 ## Key Patterns
 
+### TypeScript
+
+- **No inline type imports.** Never use `import('./module').Type` or `import('../foo').Bar` in type positions. Add a proper top-level `import type { Foo } from './module'` (or a value import when needed) and reference `Foo` directly.
+
 ### Score Animation (Event-Driven)
 
 Game logic emits `ScoreAnimEvent[]` during scoring. The Phaser layer plays them back — **no logic duplication**.

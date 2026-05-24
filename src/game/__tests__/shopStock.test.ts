@@ -207,23 +207,28 @@ describe('Shop stock exclusion', () => {
 
   test('locked equipment is excluded from shop stock', () => {
     const player = resetPlayerState();
-    let foundNitro = false;
-    for (let i = 0; i < 200; i++) {
+    const nitro = getEquipmentDefById('nitro')!;
+    const excludeAllButNitro = getAllEquipment()
+      .filter((item) => item.id !== 'nitro')
+      .map((item) => item.id);
+
+    expect(isEquipmentUnlocked(nitro, null, player)).toBe(false);
+
+    // While locked, nitro cannot appear even when every other item is excluded.
+    const lockedStock = generateShopStock(1, excludeAllButNitro);
+    expect(lockedStock[0]?.id).toBe('horseshoe');
+
+    for (let i = 0; i < 50; i++) {
       const stock = generateShopStock(5);
-      if (stock.some((item) => item.id === 'nitro')) foundNitro = true;
+      expect(stock.some((item) => item.id === 'nitro')).toBe(false);
     }
-    expect(foundNitro).toBe(false);
 
     player.dynamiteSelfDestructed = true;
-    let foundAfterUnlock = false;
-    for (let i = 0; i < 200; i++) {
-      const stock = generateShopStock(5);
-      if (stock.some((item) => item.id === 'nitro')) {
-        foundAfterUnlock = true;
-        break;
-      }
-    }
-    expect(foundAfterUnlock).toBe(true);
+    expect(isEquipmentUnlocked(nitro, null, player)).toBe(true);
+
+    // After unlock, nitro is the only eligible pick when everything else is excluded.
+    const unlockedStock = generateShopStock(1, excludeAllButNitro);
+    expect(unlockedStock[0]?.id).toBe('nitro');
   });
 
   test('isEquipmentUnlocked gates enhancement-specific items', () => {

@@ -4,7 +4,8 @@
 import allItems from '../data/items';
 import itemAuras, { type ItemAura } from '../data/item_auras';
 
-export type { HintSegment, HintStyle, ItemDisplayResult } from '../data/items';
+export type { HintSegment, HintStyle, ItemDisplayResult, CardTemplate } from '../data/items';
+import type { ItemDisplayResult } from '../data/items';
 
 import type { GameState } from './GameState';
 import type { PlayerState } from './PlayerState';
@@ -32,7 +33,7 @@ export interface EquipmentDef {
   effectParams: Record<string, unknown>;
   initialState?: Record<string, number>;
   aura?: ItemAura | null;
-  display: (game: GameState | null, player: PlayerState) => import('../data/items').ItemDisplayResult;
+  display: (game: GameState | null, player: PlayerState) => ItemDisplayResult;
   unlockCondition?: (game: GameState | null, player: PlayerState) => boolean;
   modifierImmunity?: EquipmentModifier[];
 }

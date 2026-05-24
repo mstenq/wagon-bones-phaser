@@ -11,7 +11,7 @@ import {
   processBossPayoutTags,
   processChangeOfGuardTags,
 } from '../TagSystem';
-import { createEquipmentInstance, getEquipmentListPrice, getEquipmentSellValue, getItemAuraById } from '../ItemsSystem';
+import { createEquipmentInstance, getEquipmentListPrice, getEquipmentSellValue, getItemAuraById, type EquipmentDef } from '../ItemsSystem';
 import { getEquipmentPurchasePrice } from '../EquipmentModifiers';
 import { EQUIPMENT_MODIFIER } from '../Constants';
 import { getPlayerState, resetPlayerState } from '../PlayerState';
@@ -150,8 +150,8 @@ describe('TagSystem', () => {
       expect(player.pendingTags.length).toBe(1);
 
       const stock = [
-        { type: 'consumable', def: { id: 'a', cost: 3 } as import('../ItemsSystem').EquipmentDef },
-        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'consumable', def: { id: 'a', cost: 3 } as EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as EquipmentDef },
       ];
       applyInjectTagsToShopStock(stock, player);
       expect(stock[0].type).toBe('equipment');
@@ -169,8 +169,8 @@ describe('TagSystem', () => {
       player.pendingTags.push({ def: rare, copies: 2 });
 
       const stock = [
-        { type: 'equipment', def: { id: 'a', cost: 5 } as import('../ItemsSystem').EquipmentDef },
-        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'equipment', def: { id: 'a', cost: 5 } as EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as EquipmentDef },
       ];
       applyInjectTagsToShopStock(stock, player);
       expect(stock.every((s) => s.def.cost === 0)).toBe(true);
@@ -186,8 +186,8 @@ describe('TagSystem', () => {
       expect(player.pendingTags[0].copies).toBe(1);
 
       const stock = [
-        { type: 'equipment', def: { id: 'a', cost: 5 } as import('../ItemsSystem').EquipmentDef },
-        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'equipment', def: { id: 'a', cost: 5 } as EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as EquipmentDef },
       ];
       applyAuraTagsToShopStock(stock, player);
       expect(stock[0].def.aura?.id).toBe('fire');
@@ -200,8 +200,8 @@ describe('TagSystem', () => {
       const tag = ALL_TAGS.find((t) => t.id === 'tag_fire')!;
       player.pendingTags.push({ def: tag, copies: 4 });
       const stock = [
-        { type: 'equipment', def: { id: 'a', cost: 5 } as import('../ItemsSystem').EquipmentDef },
-        { type: 'equipment', def: { id: 'b', cost: 5 } as import('../ItemsSystem').EquipmentDef },
+        { type: 'equipment', def: { id: 'a', cost: 5 } as EquipmentDef },
+        { type: 'equipment', def: { id: 'b', cost: 5 } as EquipmentDef },
       ];
       applyAuraTagsToShopStock(stock, player);
       expect(stock.filter((s) => s.def.aura?.id === 'fire').length).toBe(2);
@@ -267,7 +267,7 @@ describe('TagSystem', () => {
             description: '',
             effectType: 'ADD_MULT',
             effectParams: {},
-          } as import('../ItemsSystem').EquipmentDef,
+          } as EquipmentDef,
         },
       ];
       for (const item of stock) {
