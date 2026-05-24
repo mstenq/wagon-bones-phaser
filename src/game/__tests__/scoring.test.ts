@@ -16,7 +16,8 @@ import { resolveScoreDestroyChance } from '../DiceSystem';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
 import { resetPlayerState } from '../PlayerState';
-import { detectBestHand, rollDie } from '../DiceSystem';
+import { detectBestHand, rollDie, setDieEnhancement } from '../DiceSystem';
+import { initRunRng } from '../RunRng';
 import { GAMEPLAY } from '../Constants';
 
 beforeEach(() => {
@@ -599,6 +600,28 @@ describe('Stone dice', () => {
     const rolled = rollDie(normal);
     expect(rolled.value).toBeGreaterThan(0);
     expect(rolled.value).toBeLessThanOrEqual(12);
+  });
+
+  test('setDieEnhancement rolls face when leaving stone', () => {
+    initRunRng('stone-leave-seed');
+    const d = die({ enhancement: 'stone', value: 0 });
+    setDieEnhancement(d, 'gold');
+    expect(d.enhancement).toBe('gold');
+    expect(d.value).toBeGreaterThanOrEqual(1);
+    expect(d.value).toBeLessThanOrEqual(12);
+  });
+
+  test('setDieEnhancement sets value 0 when becoming stone', () => {
+    const d = die({ value: 8 });
+    setDieEnhancement(d, 'stone');
+    expect(d.enhancement).toBe('stone');
+    expect(d.value).toBe(0);
+  });
+
+  test('setDieEnhancement does not change face when swapping non-stone types', () => {
+    const d = die({ value: 8, enhancement: 'wooden' });
+    setDieEnhancement(d, 'gold');
+    expect(d.value).toBe(8);
   });
 });
 

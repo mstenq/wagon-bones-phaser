@@ -520,6 +520,28 @@ describe('pre-roll consumable targeting regression', () => {
     const updated = player.dice.find((d) => d.id === target.id);
     expect(updated?.enhancement).toBe('loaded');
   });
+
+  test('enhancing stone dice assigns a random face value', () => {
+    const player = resetPlayerState();
+    const stoneDie = die({ enhancement: 'stone', value: 0 });
+    player.dice = [stoneDie];
+
+    const config: DiceSelectionConfig = {
+      drawCount: 1,
+      pickCount: 1,
+      effectType: 'ENHANCE',
+      effectParams: { enhancement: 'loaded' },
+      cardName: 'Loaded',
+      description: 'test',
+      skippable: false,
+    };
+
+    applyDiceSelectionEffect(config, [stoneDie]);
+
+    expect(stoneDie.enhancement).toBe('loaded');
+    expect(stoneDie.value).toBeGreaterThanOrEqual(1);
+    expect(stoneDie.value).toBeLessThanOrEqual(12);
+  });
 });
 
 // ─── Bless Aura Weighting ───

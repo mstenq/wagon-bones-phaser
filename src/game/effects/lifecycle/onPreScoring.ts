@@ -45,7 +45,6 @@ effectRegistry.registerLifecycle('on-pre-scoring', (equip, ctx, equipIndex) => {
     case 'SOLO_FIRST_DAY_ENHANCE': {
       if (currentDay !== 1 || scoringDice.length !== 1) break;
       const target = scoringDice[0];
-      if (target.enhancement !== null) break;
       const enhancements: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond'];
       const enhancement = rngPick('equipment', enhancements);
       mutations.diceEnhanced.push({ id: target.id, enhancement });

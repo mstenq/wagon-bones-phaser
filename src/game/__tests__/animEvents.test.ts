@@ -272,4 +272,39 @@ describe('animEvents: enhance popup', () => {
       Math.random = original;
     }
   });
+
+  test('golden_spike on stone die rolls a face when turned gold', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const stoneDie = die({ value: 0, enhancement: 'stone' });
+      calculateTestScore({
+        scoredDice: [stoneDie, die({ value: 5 })],
+        equipment: [item('stacked_deck'), item('golden_spike')],
+      });
+      expect(stoneDie.enhancement).toBe('gold');
+      expect(stoneDie.value).toBeGreaterThanOrEqual(1);
+      expect(stoneDie.value).toBeLessThanOrEqual(12);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('lucky_find enhances solo stone die on day 1', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const stoneDie = die({ value: 0, enhancement: 'stone' });
+      const { result } = calculateTestScore({
+        scoredDice: [stoneDie],
+        equipment: [item('lucky_find')],
+        currentDay: 1,
+      });
+      expect(result.handResult.scoringDice[0].enhancement).toBe('bone');
+      expect(stoneDie.value).toBeGreaterThanOrEqual(1);
+      expect(stoneDie.value).toBeLessThanOrEqual(12);
+    } finally {
+      Math.random = original;
+    }
+  });
 });

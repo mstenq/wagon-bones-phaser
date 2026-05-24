@@ -4,6 +4,7 @@
 
 import { Die, DiceAura, DiceEnhancement, DiceSticker } from './types';
 import { getPlayerState } from './PlayerState';
+import { setDieEnhancement } from './DiceSystem';
 import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 import { CHANCES } from './Constants';
 import diceAuras from '../data/dice_auras';
@@ -136,8 +137,8 @@ function applyClone(player: ReturnType<typeof getPlayerState>, selectedDice: Die
   const right = player.dice.find((d) => d.id === selectedDice[1].id);
   if (!left || !right) return 'Dice not found';
 
-  // Left becomes a copy of right (keep left's id and current value)
-  left.enhancement = right.enhancement;
+  // Left becomes a copy of right (keep left's id; face value follows enhancement rules)
+  setDieEnhancement(left, right.enhancement);
   left.sticker = right.sticker;
   left.aura = right.aura;
 
@@ -177,7 +178,7 @@ function applyEnhance(
   for (const die of selectedDice) {
     const original = player.dice.find((d) => d.id === die.id);
     if (!original) continue;
-    original.enhancement = enhancement;
+    setDieEnhancement(original, enhancement);
     count++;
   }
   return `Enhanced ${count} dice to ${enhancement ?? 'standard'}`;

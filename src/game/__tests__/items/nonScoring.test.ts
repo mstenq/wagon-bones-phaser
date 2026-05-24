@@ -385,6 +385,23 @@ describe('SOLO_FIRST_DAY_ENHANCE: Lucky Find', () => {
     const inst = item('lucky_find');
     expect(inst.def.effectType).toBe('SOLO_FIRST_DAY_ENHANCE');
   });
+
+  test('replaces existing enhancement when solo scoring on day 1', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const steelDie = die({ value: 7, enhancement: 'steel' });
+      const { result } = calculateTestScore({
+        scoredDice: [steelDie],
+        equipment: [item('lucky_find')],
+        currentDay: 1,
+      });
+      expect(result.handResult.scoringDice[0].enhancement).toBe('bone');
+      expect(steelDie.enhancement).toBe('bone');
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 // ─── HAND_UPGRADE_CHANCE: Surveyor's Transit ───

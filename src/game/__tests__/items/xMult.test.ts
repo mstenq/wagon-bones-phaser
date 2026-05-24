@@ -867,6 +867,20 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     expect(result.miles).toBeMilesCloseTo(22, 5);
   });
 
+  test('stripping stone to standard rolls a face value', () => {
+    const stoneDie = die({ value: 0, enhancement: 'stone' });
+    const inst = item('graverobber');
+
+    calculateTestScore({
+      scoredDice: [stoneDie, die({ value: 5 })],
+      equipment: [inst],
+    });
+
+    expect(stoneDie.enhancement).toBeNull();
+    expect(stoneDie.value).toBeGreaterThanOrEqual(1);
+    expect(stoneDie.value).toBeLessThanOrEqual(12);
+  });
+
   test('does not gain xMult from non-enhanced dice', () => {
     const inst = item('graverobber');
     calculateTestScore({

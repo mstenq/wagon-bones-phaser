@@ -2,6 +2,7 @@
 
 import { getPlayerState } from '../PlayerState';
 import { getConsumableDefById } from '../ConsumablesSystem';
+import { setDieEnhancement } from '../DiceSystem';
 import { Die } from '../types';
 import { ScoringMutations } from './types';
 import { processEquipmentOnDiceDestroyed } from './lifecycle/onDiceDestroyed';
@@ -60,9 +61,9 @@ export function applyDiceEnhancementMutations(mutations: ScoringMutations, scori
   const player = getPlayerState();
   for (const { id, enhancement } of mutations.diceEnhanced) {
     const scored = scoringDice.find((d) => d.id === id);
-    if (scored) scored.enhancement = enhancement;
+    if (scored) setDieEnhancement(scored, enhancement);
     const pouchDie = player.dice.find((d) => d.id === id);
-    if (pouchDie) pouchDie.enhancement = enhancement;
+    if (pouchDie) setDieEnhancement(pouchDie, enhancement);
   }
 }
 
@@ -94,9 +95,7 @@ export function applyScoringMutations(mutations: ScoringMutations): void {
   // Dice enhanced during scoring
   for (const { id, enhancement } of mutations.diceEnhanced) {
     const die = player.dice.find((d) => d.id === id);
-    if (die) {
-      die.enhancement = enhancement;
-    }
+    if (die) setDieEnhancement(die, enhancement);
   }
 
   // Consumables granted during scoring

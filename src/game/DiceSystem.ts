@@ -72,6 +72,20 @@ export function createDie(overrides?: Partial<Die>): Die {
   return die;
 }
 
+/**
+ * Change a die's enhancement and fix its face value when entering or leaving stone.
+ * Stone dice always use value 0; leaving stone rolls a new d12 face.
+ */
+export function setDieEnhancement(die: Die, enhancement: DiceEnhancement): void {
+  const wasStone = die.enhancement === 'stone';
+  die.enhancement = enhancement;
+  if (enhancement === 'stone') {
+    die.value = 0;
+  } else if (wasStone) {
+    die.value = rngInt('dice', 1, 12);
+  }
+}
+
 export function createPouch(count: number): Die[] {
   return Array.from({ length: count }, () => createDie());
 }
@@ -332,11 +346,10 @@ export function scoreHand(
         console.log(
           `  [scoreHand] Graverobber: stripped ${die.enhancement} from die ${die.id}, xMult now ${equip.state.xMult}`,
         );
-        // Strip from the scored die (rolled copy)
-        die.enhancement = null;
-        // Strip from the actual pouch die
+        // Strip from the scored die (rolled copy) and pouch die
+        setDieEnhancement(die, null);
         const pouchDie = player.dice.find((d) => d.id === die.id);
-        if (pouchDie) pouchDie.enhancement = null;
+        if (pouchDie) setDieEnhancement(pouchDie, null);
       }
     }
   }
