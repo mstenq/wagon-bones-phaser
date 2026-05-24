@@ -49,6 +49,8 @@ export const GAMEPLAY = {
   AUTOSAVE_PREV_STORAGE_KEY: 'wagon-bones-autosave-prev',
   /** localStorage key for user preferences (audio, etc.) — not part of auto-save */
   PREFERENCES_STORAGE_KEY: 'wagon-bones-preferences',
+  /** localStorage key for cross-run user stats (per-profession difficulty progression) */
+  USER_STATS_STORAGE_KEY: 'wagon-bones-user-stats',
 };
 
 export const DIFFICULTIES: DifficultyDef[] = [

@@ -14,6 +14,7 @@ import { formatScore } from '../../game/formatScore';
 import type { DecimalSource } from '../../game/decimal';
 import { Button } from '../ui/Button';
 import { buildVictoryGameOverData } from './GameOver';
+import { recordStoryVictory } from '../../game/UserStats';
 
 export interface PayoutData {
   totalMiles: DecimalSource;
@@ -160,6 +161,9 @@ export class PayoutScene extends Scene {
       const journeyDone = player.advanceRound();
 
       if (journeyDone) {
+        if (player.storyVictoryOffered && player.profession?.id) {
+          recordStoryVictory(player.profession.id, player.difficulty);
+        }
         this.scene.start('GameOver', buildVictoryGameOverData(data.totalMiles, data.targetMiles));
       } else {
         this.scene.start('TrailEvent', {});

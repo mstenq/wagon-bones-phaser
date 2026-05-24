@@ -11,6 +11,7 @@ import { Button } from '../ui/Button';
 import { addDifficultyImage } from '../ui/DifficultyAssets';
 import { startAutoSaveLoop } from '../AutoSaveManager';
 import { generateRunSeed, initRunRng } from '../../game/RunRng';
+import { getHighestUnlockedDifficulty, isDifficultyUnlocked } from '../../game/UserStats';
 
 const CARD_W = 230;
 const CARD_H = 288;
@@ -23,6 +24,8 @@ const EFFECTS_TEXT_W = CARD_W - EFFECTS_PAD * 2;
 
 export class DifficultySelectScene extends Scene {
   private selectedLevel: DifficultyLevel = 1;
+  private maxUnlocked: DifficultyLevel = 1;
+  private professionId: string | null = null;
   private cards: Phaser.GameObjects.Container[] = [];
   private seededRunEnabled = false;
   private seedInput: HTMLInputElement | null = null;
@@ -73,6 +76,8 @@ export class DifficultySelectScene extends Scene {
     const confirmBtn = new Button(this, width / 2, height - 40, 'Embark', 220, 48);
     confirmBtn.setDepth(100);
     confirmBtn.onClick(() => {
+      if (!this.professionId || !isDifficultyUnlocked(this.professionId, this.selectedLevel)) return;
+
       const player = getPlayerState();
       player.setDifficulty(this.selectedLevel);
       const typedSeed = this.seedInput?.value.trim() ?? '';
@@ -84,9 +89,12 @@ export class DifficultySelectScene extends Scene {
       this.scene.start('RoundSelect', {});
     });
 
+    this.professionId = getPlayerState().profession?.id ?? null;
+    this.maxUnlocked = this.professionId ? getHighestUnlockedDifficulty(this.professionId) : 1;
+
     this.buildGrid(width);
     this.buildSeedControls(width, height);
-    this.selectDifficulty(1);
+    this.selectDifficulty(this.maxUnlocked);
 
     EventBus.emit(Events.SCENE_READY, this);
   }
@@ -102,7 +110,15 @@ export class DifficultySelectScene extends Scene {
       const row = Math.floor(i / COLS);
       const cx = startX + col * (CARD_W + CARD_GAP);
       const cy = startY + row * (CARD_H + CARD_GAP);
-      const card = this.createDifficultyCard(diff.level, diff.name, diff.description, diff.effects, cx, cy);
+      const card = this.createDifficultyCard(
+        diff.level,
+        diff.name,
+        diff.description,
+        diff.effects,
+        cx,
+        cy,
+        diff.level > this.maxUnlocked,
+      );
       this.cards.push(card);
     });
   }
@@ -114,15 +130,30 @@ export class DifficultySelectScene extends Scene {
     effects: string[],
     cx: number,
     cy: number,
+    locked: boolean,
   ): Phaser.GameObjects.Container {
     const container = this.add.container(cx, cy);
 
     const cardBg = this.add.graphics();
-    cardBg.fillStyle(COLORS.BG_CARD, 1);
-    cardBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
-    cardBg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
-    cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+    this.drawDifficultyCardBackground(cardBg, locked);
     container.add(cardBg);
+
+    if (locked) {
+      const lockOverlay = this.add.graphics();
+      lockOverlay.fillStyle(0x000000, 0.45);
+      lockOverlay.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+      container.add(lockOverlay);
+
+      const lockedLabel = this.add
+        .text(0, CARD_H / 2 - 18, 'Locked', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '13px',
+          color: TEXT_COLORS.DISABLED,
+          align: 'center',
+        })
+        .setOrigin(0.5);
+      container.add(lockedLabel);
+    }
 
     const cardTop = -CARD_H / 2;
     const iconY = cardTop + ICON_TOP_PAD + ICON_SIZE / 2;
@@ -158,24 +189,28 @@ export class DifficultySelectScene extends Scene {
 
     const hitZone = this.add.rectangle(0, 0, CARD_W, CARD_H, 0x000000, 0);
     container.add(hitZone);
-    hitZone.setInteractive({ useHandCursor: true });
 
-    hitZone.on('pointerover', () => {
-      if (this.selectedLevel !== level) {
-        this.drawCardBorder(cardBg, COLORS.BTN_HOVER, 2);
-      }
-    });
+    if (!locked) {
+      hitZone.setInteractive({ useHandCursor: true });
 
-    hitZone.on('pointerout', () => {
-      if (this.selectedLevel !== level) {
-        this.drawCardBorder(cardBg, COLORS.SIDEBAR_SECTION_BORDER, 2);
-      }
-    });
+      hitZone.on('pointerover', () => {
+        if (this.selectedLevel !== level) {
+          this.drawCardBorder(cardBg, COLORS.BTN_HOVER, 2, false);
+        }
+      });
 
-    hitZone.on('pointerdown', () => this.selectDifficulty(level));
+      hitZone.on('pointerout', () => {
+        if (this.selectedLevel !== level) {
+          this.drawCardBorder(cardBg, COLORS.SIDEBAR_SECTION_BORDER, 2, false);
+        }
+      });
+
+      hitZone.on('pointerdown', () => this.selectDifficulty(level));
+    }
 
     container.setData('level', level);
     container.setData('cardBg', cardBg);
+    container.setData('locked', locked);
 
     return container;
   }
@@ -213,15 +248,28 @@ export class DifficultySelectScene extends Scene {
     return block;
   }
 
-  private drawCardBorder(cardBg: Phaser.GameObjects.Graphics, borderColor: number, width: number): void {
+  private drawDifficultyCardBackground(cardBg: Phaser.GameObjects.Graphics, locked: boolean): void {
     cardBg.clear();
-    cardBg.fillStyle(COLORS.BG_CARD, 1);
+    cardBg.fillStyle(locked ? 0x1a1612 : COLORS.BG_CARD, 1);
     cardBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+    cardBg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
+    cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+  }
+
+  private drawCardBorder(
+    cardBg: Phaser.GameObjects.Graphics,
+    borderColor: number,
+    width: number,
+    locked: boolean,
+  ): void {
+    this.drawDifficultyCardBackground(cardBg, locked);
     cardBg.lineStyle(width, borderColor, 1);
     cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
   }
 
   private selectDifficulty(level: DifficultyLevel): void {
+    if (this.professionId && !isDifficultyUnlocked(this.professionId, level)) return;
+
     this.selectedLevel = level;
 
     if (this.cache?.audio?.exists('sfx_button')) {
@@ -231,6 +279,7 @@ export class DifficultySelectScene extends Scene {
     for (const card of this.cards) {
       const cardBg = card.getData('cardBg') as Phaser.GameObjects.Graphics;
       const cardLevel = card.getData('level') as DifficultyLevel;
+      const locked = card.getData('locked') as boolean;
 
       cardBg.clear();
       if (cardLevel === level) {
@@ -239,7 +288,7 @@ export class DifficultySelectScene extends Scene {
         cardBg.lineStyle(3, COLORS.SELECTION, 1);
         cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
       } else {
-        this.drawCardBorder(cardBg, COLORS.SIDEBAR_SECTION_BORDER, 2);
+        this.drawCardBorder(cardBg, COLORS.SIDEBAR_SECTION_BORDER, 2, locked);
       }
     }
   }

@@ -11,12 +11,20 @@ import { Button } from '../ui/Button';
 import professionsData, { type ProfessionDef } from '../../data/professions';
 import { ProfessionStartingDiceTooltip } from '../ui/ProfessionStartingDiceTooltip';
 import { performLoadGame } from '../SaveLoadIO';
+import {
+  getDifficultyBeatColor,
+  getDifficultyBeatStrokeColor,
+  getHighestDifficultyBeaten,
+} from '../../game/UserStats';
 
 const CARD_W = 190;
 const CARD_H = 310;
 const CARD_GAP = 16;
 const COLS = 5;
 const IMAGE_SIZE = 120;
+const BEAT_DOT_RADIUS = 7;
+const BEAT_DOT_X = CARD_W / 2 - 14;
+const BEAT_DOT_Y = -CARD_H / 2 + 14;
 
 export class ProfessionSelectScene extends Scene {
   private selectedId: string | null = null;
@@ -188,6 +196,8 @@ export class ProfessionSelectScene extends Scene {
     cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
     container.add(cardBg);
 
+    this.addBeatIndicatorDot(container, prof.id);
+
     // Profession image (square, intricate border already in asset)
     const imgKey = `prof_${prof.id}`;
     if (this.textures.exists(imgKey)) {
@@ -321,6 +331,21 @@ export class ProfessionSelectScene extends Scene {
     container.setData('cardBg', cardBg);
 
     return container;
+  }
+
+  private addBeatIndicatorDot(container: Phaser.GameObjects.Container, professionId: string): void {
+    const beaten = getHighestDifficultyBeaten(professionId);
+    const dot = this.add.graphics();
+    const fillColor = getDifficultyBeatColor(beaten);
+    const strokeColor = beaten > 0 ? getDifficultyBeatStrokeColor(beaten) : COLORS.SIDEBAR_SECTION_BORDER;
+
+    if (fillColor !== null) {
+      dot.fillStyle(fillColor, 1);
+      dot.fillCircle(BEAT_DOT_X, BEAT_DOT_Y, BEAT_DOT_RADIUS);
+    }
+    dot.lineStyle(2, strokeColor, 1);
+    dot.strokeCircle(BEAT_DOT_X, BEAT_DOT_Y, BEAT_DOT_RADIUS);
+    container.add(dot);
   }
 
   private selectProfession(id: string): void {
