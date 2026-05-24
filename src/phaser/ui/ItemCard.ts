@@ -201,9 +201,7 @@ export class ItemCard extends GameObjects.Container {
 
   /** Crumble/fade when destroyed by perishable expiry or lease default. */
   animateModifierDestruction(type: 'perished' | 'repossessed', onComplete: () => void): void {
-    this.hideTooltip();
-    this.hideActionTabs(true);
-    this.disableInteractive();
+    this.prepareForRemoval();
 
     const matrix = this.getWorldTransformMatrix();
     const wx = matrix.tx;
@@ -246,6 +244,13 @@ export class ItemCard extends GameObjects.Container {
         onComplete();
       },
     });
+  }
+
+  /** Prevent stray hover/click behavior while this card is being removed. */
+  prepareForRemoval(): void {
+    this.hideTooltip();
+    this.hideActionTabs(true);
+    this.disableInteractive();
   }
 
   // ─── Public API ───

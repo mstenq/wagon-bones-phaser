@@ -344,13 +344,12 @@ export abstract class CardBar extends GameObjects.Container {
 
   /** Clean up action tab state and disable interaction before a card removal animation */
   protected beginCardRemoval(card: ItemCard): void {
-    card.hideActionTabs(true);
+    card.prepareForRemoval();
     this.activeTabCard = null;
     if (this.dismissHandler) {
       this.scene.input.off('pointerdown', this.dismissHandler);
       this.dismissHandler = null;
     }
-    card.disableInteractive();
   }
 
   private dismissActiveTab(): void {

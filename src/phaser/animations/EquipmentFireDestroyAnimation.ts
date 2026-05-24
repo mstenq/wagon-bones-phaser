@@ -64,6 +64,8 @@ export function animateEquipmentFireDestruction(
     shakeEquipmentSourceCard(scene, equipBar, sourceIndex);
   }
 
+  victimCard.prepareForRemoval();
+
   const victimMatrix = victimCard.getWorldTransformMatrix();
   const victimWorldX = victimMatrix.tx;
   const victimWorldY = victimMatrix.ty;
