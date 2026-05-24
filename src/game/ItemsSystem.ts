@@ -4,7 +4,7 @@
 import allItems from '../data/items';
 import itemAuras, { type ItemAura } from '../data/item_auras';
 
-export type { HintSegment, HintStyle, ItemDisplayResult, CardTemplate } from '../data/items';
+export type { HintSegment, HintStyle, HintSize, ItemDisplayResult, CardTemplate } from '../data/items';
 import type { ItemDisplayResult } from '../data/items';
 
 import type { GameState } from './GameState';

@@ -22,6 +22,7 @@ export type HintStyle =
   | 'miles' // blue text — distance/miles values
   | 'mult' // red rounded-rect background, white text — multiplier chips
   | 'xmult' // red rounded-rect background, white text — xMult values
+  | 'retrigger' // purple text — retrigger labels/values
   | 'odds' // green text — probability displays like "1 in 6"
   | 'inactive' // gray text — "Inactive" when condition not met
   | 'condition' // amber text — activation requirement label
@@ -32,10 +33,13 @@ export type HintStyle =
   | 'aura_icy' // icy aura label (cyan)
   | 'aura_holy'; // holy aura label (golden-white)
 
+export type HintSize = 'xs' | 'sm' | 'md';
+
 /** A single styled text chunk in a hint line */
 export interface HintSegment {
   text: string;
   style: HintStyle;
+  size?: HintSize;
 }
 
 export interface ItemDisplayResult {
@@ -73,20 +77,22 @@ export interface ItemDef {
 }
 
 // ─── Helper constructors for readability ───
-const miles = (text: string): HintSegment => ({ text, style: 'miles' });
-const mult = (text: string): HintSegment => ({ text, style: 'mult' });
-const odds = (text: string): HintSegment => ({ text, style: 'odds' });
-const inactive = (text: string): HintSegment => ({ text, style: 'inactive' });
-const condition = (text: string): HintSegment => ({ text, style: 'condition' });
-const active = (text: string): HintSegment => ({ text, style: 'active' });
-const money = (text: string): HintSegment => ({ text, style: 'money' });
-const text = (t: string): HintSegment => ({ text: t, style: 'text' });
+const segment = (text: string, style: HintStyle, size: HintSize = 'md'): HintSegment => ({ text, style, size });
+const miles = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'miles', size);
+const mult = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'mult', size);
+const retrigger = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'retrigger', size);
+const odds = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'odds', size);
+const inactive = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'inactive', size);
+const condition = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'condition', size);
+const active = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'active', size);
+const money = (text: string, size: HintSize = 'md'): HintSegment => segment(text, 'money', size);
+const text = (t: string, size: HintSize = 'md'): HintSegment => segment(t, 'text', size);
 
 /** Format odds display accounting for Loaded Dice multiplier */
-const oddsDisplay = (chance: [number, number], player: PlayerState): HintSegment => {
+const oddsDisplay = (chance: [number, number], player: PlayerState, size: HintSize = 'md'): HintSegment => {
   const ldm = getLoadedDiceMultiplier(player.equipment);
   const effectiveNum = chance[0] * ldm;
-  return odds(`${effectiveNum} in ${chance[1]}`);
+  return odds(`${effectiveNum} in ${chance[1]}`, size);
 };
 
 const findOwnedEquip = (player: PlayerState, id: string) => player.equipment.find((e) => e.def.id === id);
@@ -673,7 +679,7 @@ const items: ItemDef[] = [
     display: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'war_drums');
       const days = equip?.state.daysRemaining ?? 0;
-      const hint = days > 0 ? [[active(`${days} days left`)]] : [[inactive('Expired')]];
+      const hint = days > 0 ? [[retrigger("Played")],[active(`${days} days left`)]] : [[inactive('Expired')]];
       return {
         hint,
         tooltip: [[text('Retrigger all dice played for the next '), condition('10 days'), text(' of travel')]],
@@ -837,8 +843,7 @@ const items: ItemDef[] = [
         player.profession?.id,
       );
       const hint = [
-        [active('Negates'), text(' trail penalties')],
-        xm > 1 ? [text('x'), mult(xm.toFixed(2))] : [inactive('x1'), text(' until first save')],
+        [mult(`x${xm.toFixed(2)}`)],
       ];
       return {
         hint,
@@ -955,13 +960,8 @@ const items: ItemDef[] = [
       const equip = player.equipment.find((e) => e.def.id === 'twenty_third_psalm');
       const xm = equip?.state.xMult ?? 1;
       const total = equip?.state.rerollsTotal ?? 0;
-      const remaining = 23 - (total % 23);
-      const hint =
-        xm > 1
-          ? [[mult(`x${xm}`)], [condition(`${remaining} to next`)]]
-          : [[mult('x1'), condition('per 23 rerolled')], [text(`${total % 23}/23`)]];
       return {
-        hint,
+        hint: [[mult(`x${xm}`)], [text(`${total % 23}/23`)]],
         tooltip: [
           [text('Item gains '), mult('x1'), text(' mult for every '), condition('23'), text(' dice re-rolled')],
         ],
@@ -992,7 +992,7 @@ const items: ItemDef[] = [
     effectType: 'ALL_RETRIGGER',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
-      hint: [[text('Retrigger'), condition('all played & held')]],
+      hint: [[retrigger('Retrigger')], [condition('played/held', "sm")]],
       tooltip: [[text('Retriggers all played dice, and all held in hand effects')]],
     }),
   }, // ─── Phase 3 Items ───
@@ -1071,7 +1071,7 @@ const items: ItemDef[] = [
     effectType: 'HELD_RETRIGGER',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
-      hint: [[text('Retrigger'), condition('held dice')]],
+      hint: [[retrigger('Held')]],
       tooltip: [[text('Retrigger all dice held in hand')]],
     }),
   },
@@ -1203,10 +1203,19 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'FREE_SHOP_REROLL',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
-      hint: [[active('1 free reroll'), condition('per shop')]],
-      tooltip: [[text('1 free reroll per shop visit')]],
-    }),
+    display: (game, player) => {
+      const totalFreeRerolls = player.equipment.reduce((sum, equip) => {
+        if (equip.def.effectType !== 'FREE_SHOP_REROLL') return sum;
+        const value = (equip.def.effectParams as { value?: number }).value ?? 0;
+        return sum + value;
+      }, 0);
+      const freeRerollsRemaining = Math.max(0, totalFreeRerolls - player.shopRerollCount);
+      const isActive = game === null && freeRerollsRemaining > 0;
+      return ({
+        hint: isActive ? [[active(`free reroll`)]] : [[inactive('used')]],
+        tooltip: [[text('1 free reroll per shop visit')]],
+      });
+    },
   },
   {
     id: 'last_stand',
@@ -1219,8 +1228,8 @@ const items: ItemDef[] = [
     display: (game, _player) => ({
       hint:
         game && game.state.day >= game.config.maxDays
-          ? [[text('Retrigger all'), active('Final day!')]]
-          : [[text('Retrigger all'), condition('final day')], [inactive('Inactive')]],
+          ? [[retrigger('Played'), active('Final day!')]]
+          : [[retrigger('Played'), condition('final day')], [inactive('Inactive')]],
       tooltip: [[text('Retrigger all played dice on final day of round')]],
     }),
   },
@@ -1283,7 +1292,7 @@ const items: ItemDef[] = [
     effectType: 'PIP_RETRIGGER',
     effectParams: { pip: 1 },
     display: (_game, _player) => ({
-      hint: [[text('Retrigger'), condition('each 1')]],
+      hint: [[retrigger('Played 1s')]],
       tooltip: [[text('Retrigger each played 1')]],
     }),
   },
@@ -1948,7 +1957,7 @@ const items: ItemDef[] = [
     effectParams: { destroyChance: [1, 6], diamondDestroyChance: [1, 3] },
     display: (_game, player) => ({
       hint: [
-        [text('Retrigger'), condition('enhanced dice')],
+        [retrigger('Retrigger', 'xs'), condition('enhanced', "xs")],
         [oddsDisplay([1, 6], player), text('destroy')],
       ],
       tooltip: [
@@ -2014,7 +2023,7 @@ const items: ItemDef[] = [
     effectType: 'FIRST_DICE_RETRIGGER',
     effectParams: { value: 2 },
     display: (_game, _player) => ({
-      hint: [[text('Retrigger first'), condition('×2')]],
+      hint: [[retrigger('First'), condition('×2')]],
       tooltip: [[text('Retrigger first played die 2 additional times')]],
     }),
   },
@@ -2027,7 +2036,7 @@ const items: ItemDef[] = [
     effectType: 'LAST_DICE_RETRIGGER',
     effectParams: { value: 1 },
     display: (_game, _player) => ({
-      hint: [[text('Retrigger last'), condition('×1')]],
+      hint: [[retrigger('Last'), condition('×1')]],
       tooltip: [[text('Retrigger last played die 1 additional time')]],
     }),
   },
@@ -2229,7 +2238,7 @@ const items: ItemDef[] = [
       }
       const hint =
         idx > 0 && target !== 'Incompatible'
-          ? [[text('Copying')], [active(target)]]
+          ? [[text('Copying')], [active(target, "xs")]]
           : idx > 0
             ? [[inactive('Incompatible')]]
             : [[inactive('Nothing to copy')]];
@@ -2733,10 +2742,8 @@ const items: ItemDef[] = [
     display: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'six_feet_under');
       const m = equip?.state.miles ?? 0;
-      const hint =
-        m > 0 ? [[miles(`+${m}`), condition('dice destroyed')]] : [[miles('+66'), condition('per die destroyed')]];
       return {
-        hint,
+        hint: [[miles(`+${m}`)]],
         tooltip: [[text('Item gains '), miles('+66'), text(' miles for every dice that is destroyed')]],
       };
     },

@@ -82,10 +82,10 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'loaded',
     name: 'Loaded',
-    description: 'Make one dice loaded (select 1-12)',
+    description: 'Make two dice loaded',
     diceSelection: {
       drawCount: 0,
-      pickCount: 1,
+      pickCount: 2,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'loaded' },
     },

@@ -7,7 +7,7 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../game/Constants';
 import type { ItemAura, EquipmentInstance } from '../../game/ItemsSystem';
-import type { HintSegment, ItemDisplayResult } from '../../game/ItemsSystem';
+import type { HintSegment, HintSize, ItemDisplayResult } from '../../game/ItemsSystem';
 import { isEquipmentCursed, isEquipmentLeased, isEquipmentPerishable } from '../../game/ItemsSystem';
 import { getModifierTooltipLines } from '../../game/EquipmentModifierDisplay';
 import { addModifierBadgeImage } from './ModifierAssets';
@@ -72,6 +72,12 @@ export interface CardActionTabConfig {
 interface ActionTabInstance {
   container: GameObjects.Container;
   config: CardActionTabConfig;
+}
+
+interface SegmentRenderMetrics {
+  fontSize: number;
+  padX: number;
+  padY: number;
 }
 
 const RARITY_LABELS: Record<string, string> = {
@@ -575,6 +581,7 @@ export class ItemCard extends GameObjects.Container {
     miles: { text: '#55aaff' },
     mult: { text: '#ffffff', bg: 0xcc3333 },
     xmult: { text: '#ffffff', bg: 0xcc3333 },
+    retrigger: { text: '#b266ff' },
     odds: { text: '#55cc55' },
     inactive: { text: '#777777' },
     condition: { text: '#ddaa44' },
@@ -591,6 +598,34 @@ export class ItemCard extends GameObjects.Container {
     const base = ItemCard.HINT_COLORS[style] ?? ItemCard.HINT_COLORS.text;
     if (style === 'text') return { text: COLORS.TOOLTIP_BODY_TEXT };
     return base;
+  }
+
+  private static readonly SIZE_SCALE: Record<HintSize, number> = {
+    xs: 0.7,
+    sm: 0.85,
+    md: 1,
+  };
+
+  private static getSegmentSize(seg: HintSegment): HintSize {
+    return seg.size ?? 'md';
+  }
+
+  private static getHintMetrics(seg: HintSegment, scale: number): SegmentRenderMetrics {
+    const segmentScale = ItemCard.SIZE_SCALE[ItemCard.getSegmentSize(seg)];
+    return {
+      fontSize: Math.max(12, Math.round(24 * scale * segmentScale)),
+      padX: Math.max(1, Math.round(3 * scale * segmentScale)),
+      padY: Math.max(1, Math.round(scale * segmentScale)),
+    };
+  }
+
+  private static getTooltipMetrics(seg: HintSegment): SegmentRenderMetrics {
+    const segmentScale = ItemCard.SIZE_SCALE[ItemCard.getSegmentSize(seg)];
+    return {
+      fontSize: Math.max(10, Math.round(UI.CARD_TOOLTIP_FONT_SIZE * segmentScale)),
+      padX: Math.max(1, Math.round(3 * segmentScale)),
+      padY: Math.max(1, Math.round(segmentScale)),
+    };
   }
 
   /** Build aura bonus row if this card has a scoring aura */
@@ -641,70 +676,69 @@ export class ItemCard extends GameObjects.Container {
     this.hintObjects = [];
 
     const scale = this._options.cardScale ?? 1;
-    const fontSize = Math.round(24 * scale);
-    const padX = 3 * scale;
-    const padY = 1 * scale;
     const chipRadius = 3 * scale;
-    const rowHeight = Math.round(15 * scale);
-    const rowGap = Math.round(10 * scale);
+    const rowGap = Math.round(8 * scale);
     const startY = this._cardH / 2 + Math.round(12 * scale);
+    const segGap = Math.round(3 * scale);
+    let currentY = startY;
 
     for (let r = 0; r < rows.length; r++) {
       const row = rows[r];
       if (!row || row.length === 0) continue;
 
-      const rowY = startY + r * (rowHeight + rowGap) + rowHeight / 2;
-      const segGap = Math.round(3 * scale);
-
       // Measure row width
       let totalW = 0;
-      const measurements: { w: number; h: number }[] = [];
+      let rowHeight = 0;
+      const measurements: Array<SegmentRenderMetrics & { w: number; h: number }> = [];
       for (const seg of row) {
+        const metrics = ItemCard.getHintMetrics(seg, scale);
         const hasBg = ItemCard.HINT_COLORS[seg.style]?.bg !== undefined;
         const tmpText = this.scene.add.text(0, 0, seg.text, {
           fontFamily: 'sans-serif',
-          fontSize: `${fontSize}px`,
+          fontSize: `${metrics.fontSize}px`,
         });
         const tw = tmpText.width;
         const th = tmpText.height;
         tmpText.destroy();
-        const segW = hasBg ? tw + padX * 2 : tw;
-        measurements.push({ w: segW, h: th });
+        const segW = hasBg ? tw + metrics.padX * 2 : tw;
+        const segH = hasBg ? th + metrics.padY * 2 : th;
+        measurements.push({ ...metrics, w: segW, h: segH });
         totalW += segW;
+        rowHeight = Math.max(rowHeight, segH);
       }
       // Add gaps between segments
       totalW += segGap * (row.length - 1);
+      const rowY = currentY + rowHeight / 2;
 
       // Render segments centered
       let curX = -totalW / 2;
       for (let i = 0; i < row.length; i++) {
         const seg = row[i];
         const colors = ItemCard.HINT_COLORS[seg.style] ?? ItemCard.HINT_COLORS.text;
-        const { w: segW, h: segH } = measurements[i];
+        const { w: segW, h: segH, fontSize, padX } = measurements[i];
         const hasBg = colors.bg !== undefined;
 
         if (hasBg) {
           const chipG = this.scene.add.graphics();
-          const chipW = segW;
-          const chipH = segH + padY * 2;
           chipG.fillStyle(colors.bg!, 0.9);
-          chipG.fillRoundedRect(curX, rowY - chipH / 2, chipW, chipH, chipRadius);
+          chipG.fillRoundedRect(curX, rowY - segH / 2, segW, segH, chipRadius);
           this.add(chipG);
           this.hintObjects.push(chipG);
         }
 
         const segText = this.scene.add
-          .text(curX + segW / 2, rowY, seg.text, {
+          .text(curX + (hasBg ? padX : segW / 2), rowY, seg.text, {
             fontFamily: 'sans-serif',
             fontSize: `${fontSize}px`,
             color: colors.text,
           })
-          .setOrigin(0.5);
+          .setOrigin(hasBg ? 0 : 0.5, 0.5);
         this.add(segText);
         this.hintObjects.push(segText);
 
         curX += segW + segGap;
       }
+      currentY += rowHeight + rowGap;
     }
   }
 
@@ -992,10 +1026,7 @@ export class ItemCard extends GameObjects.Container {
     const tooltipChildren: GameObjects.GameObject[] = [nameText];
     let contentWidth = nameText.width;
 
-    const tooltipFontSize = UI.CARD_TOOLTIP_FONT_SIZE;
     const segGap = 4;
-    const padX = 3;
-    const padY = 1;
     const chipRadius = 3;
     for (const row of tooltipRows) {
       if (!row || row.length === 0) {
@@ -1003,23 +1034,25 @@ export class ItemCard extends GameObjects.Container {
         continue;
       }
 
-      const measurements: { w: number; h: number; hasBg: boolean }[] = [];
+      const measurements: Array<SegmentRenderMetrics & { w: number; h: number; hasBg: boolean }> = [];
       let rowWidth = 0;
       let rowHeight = 0;
       for (const seg of row) {
+        const metrics = ItemCard.getTooltipMetrics(seg);
         const colors = ItemCard.tooltipSegmentColors(seg.style);
         const hasBg = colors.bg !== undefined;
         const tmpText = this.scene.add.text(0, 0, seg.text, {
           fontFamily: 'Arial',
-          fontSize: `${tooltipFontSize}px`,
+          fontSize: `${metrics.fontSize}px`,
         });
         const tw = tmpText.width;
         const th = tmpText.height;
         tmpText.destroy();
-        const w = hasBg ? tw + padX * 2 : tw;
-        measurements.push({ w, h: th, hasBg });
+        const w = hasBg ? tw + metrics.padX * 2 : tw;
+        const h = hasBg ? th + metrics.padY * 2 : th;
+        measurements.push({ ...metrics, w, h, hasBg });
         rowWidth += w;
-        rowHeight = Math.max(rowHeight, th + (hasBg ? padY * 2 : 0));
+        rowHeight = Math.max(rowHeight, h);
       }
       rowWidth += segGap * Math.max(0, row.length - 1);
       contentWidth = Math.max(contentWidth, rowWidth);
@@ -1033,14 +1066,14 @@ export class ItemCard extends GameObjects.Container {
         if (measurement.hasBg) {
           const chipG = this.scene.add.graphics();
           chipG.fillStyle(colors.bg!, 0.9);
-          chipG.fillRoundedRect(curX, rowY - rowHeight / 2, measurement.w, rowHeight, chipRadius);
+          chipG.fillRoundedRect(curX, rowY - measurement.h / 2, measurement.w, measurement.h, chipRadius);
           tooltipChildren.push(chipG);
         }
 
         const segText = this.scene.add
-          .text(curX + (measurement.hasBg ? padX : 0), rowY, seg.text, {
+          .text(curX + (measurement.hasBg ? measurement.padX : 0), rowY, seg.text, {
             fontFamily: 'Arial',
-            fontSize: `${tooltipFontSize}px`,
+            fontSize: `${measurement.fontSize}px`,
             color: colors.text,
           })
           .setOrigin(0, 0.5);
