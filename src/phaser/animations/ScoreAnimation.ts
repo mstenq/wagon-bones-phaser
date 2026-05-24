@@ -14,6 +14,7 @@ import { ConsumableBar } from '../ui/ConsumableBar';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { ANIM } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
+import { addScore, multiplyScore, D } from '../../game/scoreMath';
 
 // ─── Floating Score Popup ───
 
@@ -530,15 +531,15 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
       // Update sidebar running totals with shake feedback
       if (popupType === 'miles') {
-        currentMiles += value;
+        currentMiles = addScore(currentMiles, value);
         sidebar.setMilesAnimated(currentMiles);
         sidebar.shakeMilesPill();
       } else if (popupType === 'mult') {
-        currentMult += value;
+        currentMult = addScore(currentMult, value);
         sidebar.setMultAnimated(currentMult);
         sidebar.shakeMultPill(false);
       } else if (popupType === 'xmult') {
-        currentMult = currentMult * value;
+        currentMult = multiplyScore(currentMult, value);
         sidebar.setMultAnimated(currentMult);
         sidebar.shakeMultPill(true);
       }
@@ -559,7 +560,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     function finishScoring() {
       scene.time.delayedCall(ANIM.SCORE_FINAL_FLASH_DELAY, () => {
         sidebar.updateData({ milesBase: 0, mult: 0 });
-        sidebar.setRoundScoreAnimated((result.roundScoreBefore ?? 0) + result.miles);
+        sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));
         scene.sound.play('sfx_timpani', { volume: 0.5 });
         scene.time.delayedCall(ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);
       });

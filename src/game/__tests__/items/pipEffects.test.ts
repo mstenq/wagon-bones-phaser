@@ -12,6 +12,7 @@ import {
 } from '../testHelpers';
 import { processEquipmentOnDiceDestroyed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
+import { gt } from '../../scoreMath';
 
 beforeEach(() => resetDieIds());
 
@@ -94,7 +95,7 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     game.selectForScore(scored.map((d) => d.id));
     const result = game.calculateScore()!;
     // Two matching lucky dice each apply x2 → 1 × 2 × 2 = 4
-    expect(result.mult).toBeCloseTo(4, 5);
+    expect(result.mult).toBeMultCloseTo(4, 5);
     expect(player.profession?.id).toBe('gambler');
   });
 });
@@ -250,7 +251,7 @@ describe('PERMANENT_DIE_MILES_GAIN: Cowboy Boots', () => {
       equipment: [],
     });
     // PAIR baseMiles=10, dice: (5+10) + 5 = 20, total = 30
-    expect(result.miles).toBe(30);
+    expect(result.miles).toBeMiles(30);
   });
 
   test('gains bonusMiles for each last_laugh retrigger on the last die', () => {
@@ -306,7 +307,7 @@ describe('WOODEN_DICE_MILES: Wood Axe', () => {
       equipment: [item('wood_axe')],
     });
     // PAIR: baseMiles=10, totalValue: 5+30(wooden enh)+50(wood axe)+5 = 90, miles=(10+90)*1=100
-    expect(result.miles).toBe(100);
+    expect(result.miles).toBeMiles(100);
   });
 
   test('multiple wooden dice each get bonus', () => {
@@ -315,7 +316,7 @@ describe('WOODEN_DICE_MILES: Wood Axe', () => {
       equipment: [item('wood_axe')],
     });
     // PAIR: baseMiles=10, totalValue: (5+30+50)+(5+30+50)=170, miles=(10+170)*1=180
-    expect(result.miles).toBe(180);
+    expect(result.miles).toBeMiles(180);
   });
 
   test('no bonus from non-wooden dice', () => {
@@ -325,7 +326,7 @@ describe('WOODEN_DICE_MILES: Wood Axe', () => {
     });
     // PAIR: baseMiles=10, totalValue=5+5=10, mult=1+4(bone)=5
     // miles=(10+10)*5=100
-    expect(result.miles).toBe(100);
+    expect(result.miles).toBeMiles(100);
   });
 });
 
@@ -338,7 +339,7 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
       equipment: [item('iron_spurs')],
     });
     // PAIR: baseMult=1, +7 from iron spurs = 8
-    expect(result.mult).toBe(8);
+    expect(result.mult).toBeMult(8);
   });
 
   test('multiple steel dice each get bonus', () => {
@@ -347,7 +348,7 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
       equipment: [item('iron_spurs')],
     });
     // PAIR: baseMult=1, +7+7=15 from iron spurs = 15
-    expect(result.mult).toBe(15);
+    expect(result.mult).toBeMult(15);
   });
 
   test('no bonus from non-steel dice', () => {
@@ -356,7 +357,7 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
       equipment: [item('iron_spurs')],
     });
     // PAIR: baseMult=1+4(bone)=5, no iron spurs bonus
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 });
 
@@ -431,7 +432,7 @@ describe('BONE_DICE_XMULT_CHANCE: Bone Charm', () => {
     // PAIR: baseMult=1, no bone charm trigger, xMult stays 1
     // The mult should only include base (1) — no x1.5
     // wooden gives +30 miles but no mult
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -485,7 +486,7 @@ describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
     });
     // 50 existing + 10 gained this hand = 60 miles bonus from equipment
     // The miles reported includes 60 bonus in addition to base hand miles
-    expect(result.miles).toBeGreaterThan(60);
+    expect(gt(result.miles, 60)).toBe(true);
   });
 });
 
@@ -497,7 +498,7 @@ describe('FIRST_PIP_XMULT: Double Barrel', () => {
       scoredDice: [die({ value: 2 }), die({ value: 2 })],
       equipment: [item('double_barrel')],
     });
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 
   test('x2 triggers again on each retrigger of the first played 2 (War Drums)', () => {
@@ -507,7 +508,7 @@ describe('FIRST_PIP_XMULT: Double Barrel', () => {
       equipment: [item('double_barrel'), warDrums],
     });
     // PAIR baseMult=1; first 2 triggers twice (base + war drums) → x2 × x2 = x4
-    expect(result.mult).toBe(4);
+    expect(result.mult).toBeMult(4);
   });
 });
 
@@ -524,7 +525,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
       equipment: [stacked(), inst],
     });
     expect(inst.state.miles).toBe(5);
-    expect(result.miles).toBeGreaterThan(10);
+    expect(gt(result.miles, 10)).toBe(true);
   });
 
   test('Snake Eyes: loaded die counts as 1 for supply chance', () => {
@@ -565,7 +566,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
     game.selectForScore(scored.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, x1.5 from lucky number on loaded die
-    expect(result.mult).toBeCloseTo(1.5, 5);
+    expect(result.mult).toBeMultCloseTo(1.5, 5);
   });
 
   test('Even Odds: loaded die triggers even parity bonus', () => {
@@ -574,7 +575,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
       equipment: [stacked(), item('even_odds')],
     });
     // HIGH_VALUE: baseMult=1, +4 from even odds on loaded (all pips)
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('Odd Fellow: loaded die triggers odd parity miles', () => {
@@ -618,7 +619,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
       equipment: [stacked(), item('eight_second_ride')],
     });
     // HIGH_VALUE: baseMult=1, x1 from first consecutive 8
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('Ace in the Hole: held loaded die counts as 1', () => {
@@ -627,7 +628,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
       heldDice: [loaded(9)],
       equipment: [stacked(), item('ace_in_the_hole')],
     });
-    expect(result.mult).toBeCloseTo(1.5, 5);
+    expect(result.mult).toBeMultCloseTo(1.5, 5);
   });
 
   test('Ace in the Hole + Silver Bullets: held loaded retriggers pip 1 xMult', () => {
@@ -636,7 +637,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
       heldDice: [loaded(9)],
       equipment: [stacked(), item('ace_in_the_hole'), item('silver_bullets')],
     });
-    expect(result.mult).toBeCloseTo(2.25, 5);
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
   });
 
   test('Eleventh Crossing: held loaded die gives +11 mult', () => {
@@ -645,7 +646,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
       heldDice: [loaded(4)],
       equipment: [stacked(), item('eleventh_crossing')],
     });
-    expect(result.mult).toBe(12);
+    expect(result.mult).toBeMult(12);
   });
 
   test('Eleventh Crossing + Silver Bullets: held loaded retriggers +11', () => {
@@ -654,7 +655,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
       heldDice: [loaded(4)],
       equipment: [stacked(), item('eleventh_crossing'), item('silver_bullets')],
     });
-    expect(result.mult).toBe(23);
+    expect(result.mult).toBeMult(23);
   });
 
   test("Prospector's Pouch + Ace in the Hole: held loaded retriggers money and xMult", () => {
@@ -696,6 +697,6 @@ describe('DICE_DESTROYED_MILES_GAIN: Six Feet Under', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.miles).toBeGreaterThan(132);
+    expect(gt(result.miles, 132)).toBe(true);
   });
 });

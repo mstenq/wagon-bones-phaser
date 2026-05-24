@@ -15,7 +15,7 @@ import {
   HandType,
 } from './types';
 import { rollDice, rollDie, detectBestHand, scoreHand, createDie, drawFromPouch } from './DiceSystem';
-import { multiplyScore } from './scoreMath';
+import { multiplyScore, addScore, D, ZERO, floorScore, ceilScore, gte } from './scoreMath';
 import { getPlayerState } from './PlayerState';
 import {
   applyEquipmentEffects,
@@ -90,7 +90,7 @@ export class GameState {
       phase: 'SELECT',
       day: 1,
       rerollsRemaining: this.config.maxRerolls,
-      totalMiles: 0,
+      totalMiles: ZERO,
       spent: [...player.spentDice],
       hand,
       selectedForRoll: [],
@@ -156,12 +156,12 @@ export class GameState {
 
     // Apply trail event: target miles multiplier (score multiplier means harder target)
     if (trailMods.scoreMultiplier !== 1.0) {
-      this.config.targetMiles = Math.ceil(this.config.targetMiles * trailMods.scoreMultiplier);
+      this.config.targetMiles = ceilScore(multiplyScore(this.config.targetMiles, trailMods.scoreMultiplier));
     }
 
     // Apply trail event: boss upgrade multiplier
     if (trailMods.bossUpgradeMultiplier !== 1.0) {
-      this.config.targetMiles = Math.ceil(this.config.targetMiles * trailMods.bossUpgradeMultiplier);
+      this.config.targetMiles = ceilScore(multiplyScore(this.config.targetMiles, trailMods.bossUpgradeMultiplier));
     }
 
     // Apply boss round modifiers (negated by Saint Elmo's Shield / Sheriff's Badge)
@@ -169,7 +169,7 @@ export class GameState {
     initBossRoundState();
     const bossMods = getBossRoundConfigMods();
     if (bossMods.targetMilesMultiplier !== 1) {
-      this.config.targetMiles = Math.ceil(this.config.targetMiles * bossMods.targetMilesMultiplier);
+      this.config.targetMiles = ceilScore(multiplyScore(this.config.targetMiles, bossMods.targetMilesMultiplier));
     }
     if (bossMods.setMaxRerolls !== null) {
       this.config.maxRerolls = bossMods.setMaxRerolls;
@@ -420,8 +420,8 @@ export class GameState {
     const levelBonus = stats.level - 1;
     const leveledResult = {
       ...handResult,
-      baseMiles: handResult.baseMiles + stats.milesPerLevel * levelBonus,
-      baseMult: handResult.baseMult + stats.multPerLevel * levelBonus,
+      baseMiles: addScore(handResult.baseMiles, D(stats.milesPerLevel * levelBonus)),
+      baseMult: addScore(handResult.baseMult, D(stats.multPerLevel * levelBonus)),
     };
     if (levelBonus > 0) {
       console.log(
@@ -460,14 +460,14 @@ export class GameState {
     const heldResult = processHeldInHand(heldDice, player.equipment, handType);
 
     // Apply held-in-hand mult bonuses to the base result before independent equipment
-    const heldMult = multiplyScore(baseResult.mult + heldResult.bonusMult, heldResult.xMult);
+    const heldMult = multiplyScore(addScore(baseResult.mult, heldResult.bonusMult), heldResult.xMult);
     const mergedMutations = createEmptyScoringMutations();
     mergeMutations(mergedMutations, baseResult.mutations);
     mergeMutations(mergedMutations, heldResult.mutations);
     const afterHeldResult: ScoreResult = {
       handResult: baseResult.handResult,
       totalValue: baseResult.totalValue,
-      miles: multiplyScore(baseResult.handResult.baseMiles + baseResult.totalValue, heldMult),
+      miles: multiplyScore(addScore(baseResult.handResult.baseMiles, baseResult.totalValue), heldMult),
       mult: heldMult,
       animEvents: [...baseResult.animEvents, ...heldResult.animEvents],
       mutations: mergedMutations,
@@ -504,7 +504,7 @@ export class GameState {
     // Post-scoring equipment updates (Steam Engine decay, Surveyor's Transit, Repeat Offender, Emergency Supplies)
     const handUpgrades = processEquipmentAfterHandScored(player.equipment, handType);
 
-    this.state.totalMiles += Math.floor(finalResult.miles);
+    this.state.totalMiles = this.state.totalMiles.plus(floorScore(finalResult.miles));
     player.daysScored++;
     this.state.phase = 'DAY_END';
     if (handUpgrades.length > 0) {
@@ -566,7 +566,7 @@ export class GameState {
     const rolledIds = this.state.rolledDice.map((d) => d.id);
     const scoredIds = this.state.selectedForScore.map((d) => d.id);
     const scoredDice = this.state.selectedForScore;
-    const roundOver = this.state.totalMiles >= this.config.targetMiles || this.state.day >= this.config.maxDays;
+    const roundOver = gte(this.state.totalMiles, this.config.targetMiles) || this.state.day >= this.config.maxDays;
     player.markDiceSpent(roundOver ? rolledIds : scoredIds);
 
     // Track enhanced dice spent (Bone Collector)
@@ -575,7 +575,7 @@ export class GameState {
     // Process day-end equipment effects (War Drums counter)
     processEquipmentOnDayEnd(player.equipment);
 
-    if (this.state.totalMiles >= this.config.targetMiles) {
+    if (gte(this.state.totalMiles, this.config.targetMiles)) {
       // Round complete: refresh pouch for post-round scenes (payout/shop).
       player.spentDiceIds.clear();
       player.unusedRerollsTotal += this.state.rerollsRemaining;

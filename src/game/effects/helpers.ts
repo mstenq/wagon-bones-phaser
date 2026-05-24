@@ -6,12 +6,12 @@ import { Die, HandType } from '../types';
 import { getPlayerState } from '../PlayerState';
 import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 import type { ScoringPipelineContext } from './types';
-import { multiplyScore } from '../scoreMath';
+import { addScore, D, gte, multiplyScore, type Decimal, type DecimalSource } from '../scoreMath';
 
 export type UnresolvedCopyBehavior = 'none' | 'skip';
 
 /** Multiply pipeline xMult and round to avoid float drift. */
-export function multiplyCtxXMult(ctx: { xMult: number }, factor: number): void {
+export function multiplyCtxXMult(ctx: { xMult: Decimal }, factor: number): void {
   ctx.xMult = multiplyScore(ctx.xMult, factor);
 }
 
@@ -50,12 +50,12 @@ export function applyEquipmentAuras(equipment: EquipmentInstance[], ctx: Scoring
 
     switch (originalEquip.def.aura.id) {
       case 'fire':
-        ctx.bonusMult += 10;
+        ctx.bonusMult = addScore(ctx.bonusMult, 10);
         ctx.animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: 10 });
         console.log(`  [equip] ${originalEquip.def.name} FIRE aura: +10 mult (bonusMult: ${ctx.bonusMult})`);
         break;
       case 'icy':
-        ctx.bonusMiles += 50;
+        ctx.bonusMiles = addScore(ctx.bonusMiles, 50);
         ctx.animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: 50 });
         console.log(`  [equip] ${originalEquip.def.name} ICY aura: +50 miles (bonusMiles: ${ctx.bonusMiles})`);
         break;
@@ -65,11 +65,11 @@ export function applyEquipmentAuras(equipment: EquipmentInstance[], ctx: Scoring
 
 /** Apply holy aura xMult multipliers after additive bonuses. */
 export function applyHolyAuraXMult(
-  baseMult: number,
+  baseMult: DecimalSource,
   equipment: EquipmentInstance[],
   ctx: ScoringPipelineContext,
-): number {
-  let finalMult = baseMult;
+): Decimal {
+  let finalMult = D(baseMult);
   for (let i = 0; i < equipment.length; i++) {
     const equip = equipment[i];
     if (equip.def.aura?.id === 'holy') {
@@ -126,11 +126,15 @@ export function getConfigModifiers(equipment: EquipmentInstance[]): {
 }
 
 /** Check if any equipment prevents death. Returns the index of the first one found, or -1. */
-export function findDeathPrevention(equipment: EquipmentInstance[], totalMiles: number, targetMiles: number): number {
+export function findDeathPrevention(
+  equipment: EquipmentInstance[],
+  totalMiles: DecimalSource,
+  targetMiles: DecimalSource,
+): number {
   for (let i = 0; i < equipment.length; i++) {
     if (equipment[i].def.effectType === 'PREVENT_DEATH') {
       const threshold = (equipment[i].def.effectParams.threshold as number) ?? 0.25;
-      if (totalMiles >= targetMiles * threshold) {
+      if (gte(totalMiles, multiplyScore(targetMiles, threshold))) {
         return i;
       }
     }

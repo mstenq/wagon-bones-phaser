@@ -16,7 +16,7 @@ describe('PARITY_MULT: Even Odds (even, +4 mult per even die)', () => {
     // THREE_OF_A_KIND: baseMult=3
     // +4 per even die scored (3 dice with value 4) = +12
     // mult = (3 + 12) * 1 = 15
-    expect(result.mult).toBe(15);
+    expect(result.mult).toBeMult(15);
   });
 
   test('does not trigger on odd dice', () => {
@@ -25,7 +25,7 @@ describe('PARITY_MULT: Even Odds (even, +4 mult per even die)', () => {
       equipment: [item('even_odds')],
     });
     // No even dice → no bonus
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 
   test('only triggers on even dice in mixed hand', () => {
@@ -36,7 +36,7 @@ describe('PARITY_MULT: Even Odds (even, +4 mult per even die)', () => {
     // TWO_PAIR: baseMult=2
     // 2 even dice (4s) → +8
     // mult = (2 + 8) * 1 = 10
-    expect(result.mult).toBe(10);
+    expect(result.mult).toBeMult(10);
   });
 
   test('works with value 12 (even)', () => {
@@ -45,7 +45,7 @@ describe('PARITY_MULT: Even Odds (even, +4 mult per even die)', () => {
       equipment: [item('even_odds')],
     });
     // PAIR: baseMult=1, 2 even dice → +8 → mult=9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 });
 
@@ -61,7 +61,7 @@ describe('PARITY_MILES: Odd Fellow (odd, +31 miles per odd die)', () => {
     // totalValue = 5+5+5 + 31+31+31 = 108
     // miles = (20 + 108) * 3 = 384
     expect(result.totalValue).toBe(108);
-    expect(result.miles).toBe(384);
+    expect(result.miles).toBeMiles(384);
   });
 
   test('does not trigger on even dice', () => {
@@ -82,7 +82,7 @@ describe('PARITY_MILES: Odd Fellow (odd, +31 miles per odd die)', () => {
     // totalValue = 3+3+4+4 + 31+31 (two 3s are odd) = 76
     // miles = (15 + 76) * 2 = 182
     expect(result.totalValue).toBe(76);
-    expect(result.miles).toBe(182);
+    expect(result.miles).toBeMiles(182);
   });
 
   test('works with value 11 (odd)', () => {
@@ -94,6 +94,6 @@ describe('PARITY_MILES: Odd Fellow (odd, +31 miles per odd die)', () => {
     // totalValue = 11+11 + 31+31 = 84
     // miles = (10 + 84) * 1 = 94
     expect(result.totalValue).toBe(84);
-    expect(result.miles).toBe(94);
+    expect(result.miles).toBeMiles(94);
   });
 });

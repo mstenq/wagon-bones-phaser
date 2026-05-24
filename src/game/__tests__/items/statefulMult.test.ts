@@ -57,7 +57,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
     });
     // No 6 scored → gains +1 before scoring → 5 mult applied
     // PAIR: baseMult=1, +5 from marked = 6
-    expect(result.mult).toBe(6);
+    expect(result.mult).toBeMult(6);
   });
 
   test('demon hunter gains +2 per hand without a 6', () => {
@@ -78,7 +78,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
     expect(inst.state.mult).toBe(6);
     const markedAnim = result.animEvents.find((e) => e.popupType === 'mult' && e.target.kind === 'equip');
     expect(markedAnim?.value).toBe(6);
-    expect(result.mult).toBe(7);
+    expect(result.mult).toBeMult(7);
   });
 
   test('developer profession: one hand adds +1 to bank and popup', () => {
@@ -91,7 +91,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
     expect(inst.state.mult).toBe(1);
     const markedAnim = result.animEvents.find((e) => e.popupType === 'mult' && e.target.kind === 'equip');
     expect(markedAnim?.value).toBe(1);
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
     expect(player.profession?.id).toBe('developer');
   });
 
@@ -104,7 +104,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
     });
     expect(marked.state.mult).toBe(4);
     // PAIR base 1 + mirror(+4) + marked(+4)
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 });
 
@@ -141,7 +141,7 @@ describe('STATEFUL_ADD_MILES: Steam Engine', () => {
       equipment: [inst],
     });
     // PAIR: baseMiles = 10+10 = 20, +50 from steam engine = 70
-    expect(result.miles).toBe(70);
+    expect(result.miles).toBeMiles(70);
   });
 });
 
@@ -174,7 +174,7 @@ describe('STATEFUL_ADD_MULT: Tight Fist', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, +6 from tight fist = 7
-    expect(result.mult).toBe(7);
+    expect(result.mult).toBeMult(7);
   });
 
   test('integration: gains mult when pack is skipped with equipment present', () => {
@@ -194,7 +194,7 @@ describe('STATEFUL_ADD_MULT: Tight Fist', () => {
       equipment: player.equipment,
     });
     // PAIR: baseMult=1, +3 from tight fist = 4
-    expect(result.mult).toBe(4);
+    expect(result.mult).toBeMult(4);
   });
 });
 
@@ -237,7 +237,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
       equipment: [inst],
     });
     // PAIR: baseMiles=10, totalValue=10 (5+5), +12 from square_dance = 32 * mult(1)
-    expect(result.miles).toBe(32);
+    expect(result.miles).toBeMiles(32);
   });
 
   test('accumulates across multiple hands', () => {
@@ -265,7 +265,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
 
     // First hand: square dance gains +4 miles BEFORE scoring, so bonus applies
     // FOUR_OF_A_KIND: baseMiles=40, totalValue=12 (3×4), +4 from square_dance = 56 * mult(5)
-    expect(firstResult.miles).toBe(56 * 5);
+    expect(firstResult.miles).toBeMiles(56 * 5);
 
     // After scoring, square dance should have +4 miles stored
     expect(inst.state.miles).toBe(4);
@@ -281,7 +281,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
 
     // Second hand: square dance had 4, gains another +4 = 8 before scoring
     // FOUR_OF_A_KIND: baseMiles=40, totalValue=12, +8 from square_dance = 60 * mult(5)
-    expect(secondResult.miles).toBe(60 * 5);
+    expect(secondResult.miles).toBeMiles(60 * 5);
     expect(inst.state.miles).toBe(8);
   });
 });
@@ -325,7 +325,7 @@ describe('HAND_MILES_GAIN: Manifest Destiny', () => {
       equipment: [inst],
     });
     // PAIR: baseMiles=10, totalValue=10 (5+5), +30 from manifest = 50 * mult(1)
-    expect(result.miles).toBe(50);
+    expect(result.miles).toBeMiles(50);
   });
 
   test('accumulates across multiple 5 straights', () => {
@@ -368,7 +368,7 @@ describe('SUPPLY_USED_MULT: Campfire Stories', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, +5 from campfire stories = 6
-    expect(result.mult).toBe(6);
+    expect(result.mult).toBeMult(6);
   });
 });
 

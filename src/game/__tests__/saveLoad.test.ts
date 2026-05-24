@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import './setup';
 import { resetPlayerState, getPlayerState } from '../PlayerState';
 import { GameState } from '../GameState';
 import { acquireEquipmentInstance } from '../EquipmentModifiers';
@@ -11,6 +12,7 @@ import {
   SAVE_VERSION,
   type GameSaveSnapshot,
 } from '../SaveLoad';
+import { D } from '../scoreMath';
 import { getTrailEventById, selectTrailEvent } from '../TrailEventsSystem';
 import { item } from './testHelpers';
 import { HandType } from '../types';
@@ -77,7 +79,7 @@ describe('SaveLoad', () => {
     const game = new GameState({ targetMiles: player.targetMiles });
     game.startRound();
     game.state.phase = 'ROLL';
-    game.state.totalMiles = 42;
+    game.state.totalMiles = D(42);
     game.state.day = 2;
 
     const snapshot = buildSaveSnapshot({
@@ -98,7 +100,7 @@ describe('SaveLoad', () => {
 
     const { scene, sceneData } = applySaveSnapshot(snapshot);
     expect(scene).toBe('Game');
-    expect((sceneData as { restore: { state: { totalMiles: number } } }).restore.state.totalMiles).toBe(42);
+    expect((sceneData as { restore: { state: { totalMiles: import('../decimal').Decimal } } }).restore.state.totalMiles).toBeMiles(42);
 
     const restoredPlayer = getPlayerState();
     expect(restoredPlayer.equipment[0]?.def.id).toBe('coffee');

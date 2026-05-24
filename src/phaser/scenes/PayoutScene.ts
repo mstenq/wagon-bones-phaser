@@ -11,12 +11,13 @@ import { grantGhostMedicine } from '../../game/ConsumablesSystem';
 import { processBossPayoutTags, grantTag } from '../../game/TagSystem';
 import { getTrailTagById } from '../../data/trail_tags';
 import { formatScore } from '../../game/formatScore';
+import type { DecimalSource } from '../../game/decimal';
 import { Button } from '../ui/Button';
 import { buildVictoryGameOverData } from './GameOver';
 
 export interface PayoutData {
-  totalMiles: number;
-  targetMiles: number;
+  totalMiles: DecimalSource;
+  targetMiles: DecimalSource;
   daysRemaining: number;
   rerollsRemaining: number;
   leg: number;

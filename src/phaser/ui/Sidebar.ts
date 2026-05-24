@@ -5,7 +5,8 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import { formatScore } from '../../game/formatScore';
+import { formatScore, formatMult } from '../../game/formatScore';
+import type { DecimalSource } from '../../game/decimal';
 import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
 import type { BossDef } from '../../game/types';
 import { Button } from './Button';
@@ -17,11 +18,11 @@ export interface SidebarData {
   /** Title shown at top: "SHOP", "The Inspector", etc. */
   title: string;
   /** Current round/leg score */
-  roundScore: number;
+  roundScore: DecimalSource;
   /** Miles base value */
-  milesBase: number;
+  milesBase: DecimalSource | number;
   /** Multiplier value */
-  mult: number;
+  mult: DecimalSource;
   /** Travel days remaining */
   daysRemaining: number;
   /** Re-rolls remaining */
@@ -35,7 +36,7 @@ export interface SidebarData {
   /** Total rounds per leg */
   totalRounds?: number;
   /** Target miles for this leg */
-  targetMiles: number;
+  targetMiles: DecimalSource;
   /** Hand name to display (e.g. "Full House") */
   handName?: string;
   /** Hand level */
@@ -615,7 +616,7 @@ export class Sidebar extends GameObjects.Container {
     if (data.title !== undefined) this.titleText.setText(data.title);
     if (data.roundScore !== undefined) this.roundScoreText.setText(formatScore(data.roundScore));
     if (data.milesBase !== undefined) this.milesBaseText.setText(formatScore(data.milesBase));
-    if (data.mult !== undefined) this.multText.setText(`${data.mult}`);
+    if (data.mult !== undefined) this.multText.setText(formatMult(data.mult));
     if (data.handName !== undefined) {
       if (data.handName) {
         this.handNameText.setText(data.handName);
@@ -776,7 +777,7 @@ export class Sidebar extends GameObjects.Container {
   // ─── Scoring Animation Helpers ───
 
   /** Set miles value with a pop animation on the blue pill */
-  setMilesAnimated(value: number): void {
+  setMilesAnimated(value: DecimalSource): void {
     this.milesBaseText.setText(formatScore(value));
     this.scene.tweens.add({
       targets: this.milesBaseText,
@@ -789,8 +790,8 @@ export class Sidebar extends GameObjects.Container {
   }
 
   /** Set mult value with a pop animation on the red pill */
-  setMultAnimated(value: number): void {
-    this.multText.setText(`${value}`);
+  setMultAnimated(value: DecimalSource): void {
+    this.multText.setText(formatMult(value));
     this.scene.tweens.add({
       targets: this.multText,
       scaleX: 1.3,
@@ -802,7 +803,7 @@ export class Sidebar extends GameObjects.Container {
   }
 
   /** Set round score with a pop animation */
-  setRoundScoreAnimated(value: number): void {
+  setRoundScoreAnimated(value: DecimalSource): void {
     this.roundScoreText.setText(formatScore(value));
     this.scene.tweens.add({
       targets: this.roundScoreText,

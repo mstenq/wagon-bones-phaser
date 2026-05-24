@@ -13,7 +13,7 @@ import { GAMEPLAY } from './Constants';
 import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './equipmentUtils';
 import { getEnhancementScoreDestroyChance } from '../data/dice_enhancements';
 import { dieMatchesPip, hasStackedDeck, multiplyCtxXMult } from './effects/helpers';
-import { multiplyScore } from './scoreMath';
+import { multiplyScore, addScore, D, ZERO, ONE, floorScore, ceilScore, gte } from './scoreMath';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
 import type { TrailRoundEffects } from './TrailEventsSystem';
@@ -158,7 +158,7 @@ export function getHandDef(type: HandType): HandDefinition {
 
 export function buildHandResult(type: HandType, scoringDice: Die[]): HandResult {
   const def = getHandDef(type);
-  return { type, name: def.name, baseMiles: def.baseMiles, baseMult: def.baseMult, rank: def.rank, scoringDice };
+  return { type, name: def.name, baseMiles: D(def.baseMiles), baseMult: D(def.baseMult), rank: def.rank, scoringDice };
 }
 
 function buildResult(type: HandType, scoringDice: Die[]): HandResult {
@@ -302,8 +302,8 @@ export function scoreHand(
   scoreContext?: { currentDay: number; maxDays: number; rerollsRemaining?: number; allDice?: Die[] },
 ): ScoreResult {
   let totalValue = 0;
-  let bonusMult = 0;
-  let xMult = 1;
+  let bonusMult = ZERO;
+  let xMult = ONE;
   const player = getPlayerState();
   const animEvents: ScoreAnimEvent[] = [];
 
@@ -376,16 +376,16 @@ export function scoreHand(
     handType: handResult.type,
     playerBalance: player.economy.balance,
     totalValue,
-    bonusMult,
-    xMult,
-    bonusMiles: 0,
+    bonusMult: ZERO,
+    xMult: ONE,
+    bonusMiles: ZERO,
     animEvents,
     mutations: {
       moneyEarned: 0,
       earnedMoney: 0,
       lostMoney: 0,
-      earnedMiles: 0,
-      lostMiles: 0,
+      earnedMiles: ZERO,
+      lostMiles: ZERO,
       gainedDice: 0,
       lostDice: 0,
       gainedSupplyCards: 0,
@@ -488,7 +488,7 @@ export function scoreHand(
       }
       switch (scoringEnhancement(die)) {
         case 'bone':
-          bonusMult += 4;
+          bonusMult = addScore(bonusMult, 4);
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 4, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} BONE: +4 mult (bonusMult: ${bonusMult})`);
           break;
@@ -506,7 +506,7 @@ export function scoreHand(
           const luckyMultChance: [number, number] = trailRound.luckyOddsHalved ? [1, 10] : [1, 5];
           const luckyMoneyChance: [number, number] = trailRound.luckyOddsHalved ? [1, 30] : [1, 15];
           if (checkLoadedChance(luckyMultChance, equipment, 'luckyDice')) {
-            bonusMult += 20;
+            bonusMult = addScore(bonusMult, 20);
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit +20 mult! (bonusMult: ${bonusMult})`);
             for (const e of equipment) dispatchLifecycle('on-lucky-trigger', e);
@@ -524,7 +524,7 @@ export function scoreHand(
       // Dice aura effects
       switch (die.aura) {
         case 'fire':
-          bonusMult += 10;
+          bonusMult = addScore(bonusMult, 10);
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 10, dieId: die.id });
           console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} FIRE aura: +10 mult (bonusMult: ${bonusMult})`);
           break;
@@ -580,10 +580,10 @@ export function scoreHand(
 
       // Sync locals back to pipeline context, preserving handler deltas
       const handlerDeltaTotalValue = pipelineCtx.totalValue - savedCtxTotalValue;
-      const handlerDeltaBonusMult = pipelineCtx.bonusMult - savedCtxBonusMult;
-      const handlerDeltaXMult = pipelineCtx.xMult / savedCtxXMult;
+      const handlerDeltaBonusMult = pipelineCtx.bonusMult.minus(savedCtxBonusMult);
+      const handlerDeltaXMult = savedCtxXMult.eq(ZERO) ? ONE : pipelineCtx.xMult.div(savedCtxXMult);
       pipelineCtx.totalValue = totalValue + handlerDeltaTotalValue;
-      pipelineCtx.bonusMult = bonusMult + handlerDeltaBonusMult;
+      pipelineCtx.bonusMult = addScore(bonusMult, handlerDeltaBonusMult);
       pipelineCtx.xMult = multiplyScore(xMult, handlerDeltaXMult);
     } // end trigger loop
   }
@@ -708,8 +708,8 @@ export function scoreHand(
     }
   }
 
-  const mult = multiplyScore(handResult.baseMult + bonusMult, xMult);
-  const miles = multiplyScore(handResult.baseMiles + totalValue, mult);
+  const mult = multiplyScore(addScore(handResult.baseMult, bonusMult), xMult);
+  const miles = multiplyScore(addScore(handResult.baseMiles, totalValue), mult);
   console.log(
     `  [scoreHand] Result: (${handResult.baseMiles} baseMiles + ${totalValue} value) * (${handResult.baseMult} baseMult + ${bonusMult} bonus) * ${xMult} xMult = ${miles} miles (mult: ${mult})`,
   );

@@ -5,14 +5,15 @@ import { getConsumableDefById } from '../ConsumablesSystem';
 import { Die } from '../types';
 import { ScoringMutations } from './types';
 import { processEquipmentOnDiceDestroyed } from './lifecycle/onDiceDestroyed';
+import { ZERO, addScore } from '../scoreMath';
 
 export function createEmptyScoringMutations(): ScoringMutations {
   return {
     moneyEarned: 0,
     earnedMoney: 0,
     lostMoney: 0,
-    earnedMiles: 0,
-    lostMiles: 0,
+    earnedMiles: ZERO,
+    lostMiles: ZERO,
     gainedDice: 0,
     lostDice: 0,
     gainedSupplyCards: 0,
@@ -35,8 +36,8 @@ export function mergeMutations(target: ScoringMutations, source: ScoringMutation
   target.moneyEarned += source.moneyEarned;
   target.earnedMoney += source.earnedMoney;
   target.lostMoney += source.lostMoney;
-  target.earnedMiles += source.earnedMiles;
-  target.lostMiles += source.lostMiles;
+  target.earnedMiles = addScore(target.earnedMiles, source.earnedMiles);
+  target.lostMiles = addScore(target.lostMiles, source.lostMiles);
   target.gainedDice += source.gainedDice;
   target.lostDice += source.lostDice;
   target.gainedSupplyCards += source.gainedSupplyCards;

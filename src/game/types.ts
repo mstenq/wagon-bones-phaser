@@ -1,5 +1,7 @@
 import { GAMEPLAY } from './Constants';
 import type { ScoringMutations } from './effects/types';
+import type { Decimal } from './decimal';
+import { D } from './decimal';
 
 export type PhaseState = 'SELECT' | 'ROLL' | 'SCORE' | 'DAY_END' | 'ROUND_END';
 
@@ -42,8 +44,8 @@ export type { HandDef as HandDefinition } from '../data/hands';
 export interface HandResult {
   type: HandType;
   name: string;
-  baseMiles: number;
-  baseMult: number;
+  baseMiles: Decimal;
+  baseMult: Decimal;
   rank: number;
   scoringDice: Die[]; // the dice that form the hand
 }
@@ -97,11 +99,11 @@ export interface HandUpgradeInfo {
 export interface ScoreResult {
   handResult: HandResult;
   totalValue: number; // sum of scoring dice values (base miles from dice)
-  miles: number; // (handBaseMiles + totalValue) * mult
-  mult: number;
+  miles: Decimal; // (handBaseMiles + totalValue) * mult
+  mult: Decimal;
   // Animation event stack — populated by game logic during scoring
   animEvents: ScoreAnimEvent[];
-  roundScoreBefore?: number;
+  roundScoreBefore?: Decimal;
   /** Hand upgrades that occurred during scoring (e.g. Surveyor's Transit) */
   handUpgrades?: HandUpgradeInfo[];
   /** Scoring mutations (deferred to applyScoringMutations) */
@@ -113,7 +115,7 @@ export interface GameConfig {
   maxRerolls: number; // re-rolls per day (resets each day)
   rollSize: number; // dice drawn from pouch and rolled (default 8)
   scoreSize: number; // max dice player selects to score (default 5)
-  targetMiles: number; // miles to beat this leg
+  targetMiles: Decimal; // miles to beat this leg
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -121,14 +123,14 @@ export const DEFAULT_CONFIG: GameConfig = {
   maxRerolls: GAMEPLAY.MAX_REROLLS,
   rollSize: GAMEPLAY.ROLL_SIZE,
   scoreSize: GAMEPLAY.SCORE_SIZE,
-  targetMiles: 300, // leg 1 base; rounds set player.targetMiles via computeTargetMiles
+  targetMiles: D(300), // leg 1 base; rounds set player.targetMiles via computeTargetMiles
 };
 
 export interface RoundState {
   phase: PhaseState;
   day: number;
   rerollsRemaining: number;
-  totalMiles: number;
+  totalMiles: Decimal;
   spent: Die[]; // dice already used this cycle (persist across days)
   hand: Die[]; // all available dice shown in SELECT phase
   selectedForRoll: Die[];

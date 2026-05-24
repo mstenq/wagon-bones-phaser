@@ -17,7 +17,7 @@ import {
   hasStackedDeck,
   multiplyCtxXMult,
 } from './effects/helpers';
-import { multiplyScore } from './scoreMath';
+import { addScore, multiplyScore, D, ZERO, ONE } from './scoreMath';
 import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
 export { processEquipmentOnRoundStart, type AnimatedDestruction } from './effects/lifecycle/onRoundStart';
 
@@ -56,9 +56,9 @@ function createEquipmentScoringContext(
     handType: context.handType,
     playerBalance: context.playerBalance,
     totalValue: baseResult.totalValue,
-    bonusMult: 0,
-    xMult: 1,
-    bonusMiles: 0,
+    bonusMult: ZERO,
+    xMult: ONE,
+    bonusMiles: ZERO,
     animEvents,
     mutations,
   };
@@ -85,9 +85,9 @@ export function applyEquipmentEffects(
 
   const totalValue = baseResult.totalValue;
   const baseMiles = baseResult.handResult.baseMiles;
-  let finalMult = applyHolyAuraXMult(baseResult.mult + ctx.bonusMult, equipment, ctx);
+  let finalMult = applyHolyAuraXMult(addScore(baseResult.mult, ctx.bonusMult), equipment, ctx);
 
-  ctx.xMult = 1;
+  ctx.xMult = ONE;
   forEachEquipmentResolved(
     equipment,
     (equip, _original, i) => {
@@ -97,7 +97,7 @@ export function applyEquipmentEffects(
   );
   finalMult = multiplyScore(finalMult, ctx.xMult);
 
-  const finalMiles = multiplyScore(baseMiles + totalValue + ctx.bonusMiles, finalMult);
+  const finalMiles = multiplyScore(addScore(addScore(baseMiles, totalValue), ctx.bonusMiles), finalMult);
   console.log(
     `  [equip] Final: (${baseMiles} base + ${totalValue} value + ${ctx.bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`,
   );
@@ -138,8 +138,8 @@ function getHeldDieTriggerCount(die: Die, doubleDownCount: number): number {
 }
 
 interface HeldInHandResult {
-  bonusMult: number;
-  xMult: number;
+  bonusMult: import('./decimal').Decimal;
+  xMult: import('./decimal').Decimal;
   moneyEarned: number;
   mutations: ScoringMutations;
   animEvents: ScoreAnimEvent[];
@@ -155,8 +155,6 @@ export function processHeldInHand(
   equipment: EquipmentInstance[],
   scoredHandType?: HandType,
 ): HeldInHandResult {
-  let bonusMult = 0;
-  let xMult = 1;
   const animEvents: ScoreAnimEvent[] = [];
 
   const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
@@ -165,8 +163,8 @@ export function processHeldInHand(
     handResult: {
       type: HandType.HIGH_VALUE,
       name: '',
-      baseMiles: 0,
-      baseMult: 0,
+      baseMiles: ZERO,
+      baseMult: ZERO,
       rank: 0,
       scoringDice: [],
     },
@@ -181,32 +179,11 @@ export function processHeldInHand(
     handType: undefined,
     playerBalance: 0,
     totalValue: 0,
-    bonusMult,
-    xMult,
-    bonusMiles: 0,
+    bonusMult: ZERO,
+    xMult: ONE,
+    bonusMiles: ZERO,
     animEvents,
-    mutations: {
-      moneyEarned: 0,
-      earnedMoney: 0,
-      lostMoney: 0,
-      earnedMiles: 0,
-      lostMiles: 0,
-      gainedDice: 0,
-      lostDice: 0,
-      gainedSupplyCards: 0,
-      gainedEquipment: 0,
-      lostEquipment: 0,
-      daysBonus: 0,
-      loseAllRerolls: false,
-      burnBarrelMoney: 0,
-      burnBarrelTriggered: false,
-      supplyCardsToAdd: 0,
-      diceDestroyed: [],
-      diceEnhanced: [],
-      consumablesGranted: [],
-      diceCopied: [],
-      dieBonusMilesAdded: [],
-    },
+    mutations: createEmptyScoringMutations(),
   };
 
   console.log('[SCORE] Step 4: Held-in-hand abilities');
@@ -265,8 +242,8 @@ export function processHeldInHand(
     }
   }
 
-  bonusMult = heldCtx.bonusMult;
-  xMult = heldCtx.xMult;
+  const bonusMult = heldCtx.bonusMult;
+  const xMult = heldCtx.xMult;
   const moneyEarned = heldCtx.mutations.moneyEarned;
 
   console.log(

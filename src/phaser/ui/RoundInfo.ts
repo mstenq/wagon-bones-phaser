@@ -7,6 +7,7 @@ import { GAMEPLAY, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { computeRoundReward, computeTargetMiles, getPlayerState } from '../../game/PlayerState';
 import type { DifficultyLevel } from '../../game/types';
 import { formatScore } from '../../game/formatScore';
+import type { DecimalSource } from '../../game/decimal';
 import { Button } from './Button';
 import type { TrailTagDef, TagCategory } from '../../game/types';
 
@@ -40,7 +41,7 @@ export function targetMilesForRound(
   round: number,
   permitScoreReduction: number,
   difficulty: DifficultyLevel = 1,
-): number {
+): DecimalSource {
   const boss = round === GAMEPLAY.ROUNDS_PER_LEG ? getPlayerState().getBossForLeg(leg) : null;
   return computeTargetMiles(leg, round, permitScoreReduction, difficulty, boss);
 }

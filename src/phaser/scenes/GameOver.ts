@@ -3,6 +3,7 @@ import { EventBus, Events } from '../../game/EventBus';
 import { getPlayerState, resetPlayerState } from '../../game/PlayerState';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
+import type { DecimalSource } from '../../game/decimal';
 import { Button } from '../ui/Button';
 import { clearAutoSave } from '../AutoSaveManager';
 import { getRunSeed } from '../../game/RunRng';
@@ -14,8 +15,8 @@ export interface GameOverData {
   offerEndless?: boolean;
   /** Endless run cleared all legs (no continue). */
   endlessComplete?: boolean;
-  totalMiles: number;
-  targetMiles: number;
+  totalMiles: DecimalSource;
+  targetMiles: DecimalSource;
   leg?: number;
   round?: number;
 }
@@ -159,8 +160,8 @@ export class GameOver extends Scene {
 
 /** Build GameOver scene data after a round win that ends the journey arc. */
 export function buildVictoryGameOverData(
-  totalMiles: number,
-  targetMiles: number,
+  totalMiles: DecimalSource,
+  targetMiles: DecimalSource,
 ): GameOverData {
   const player = getPlayerState();
   if (player.storyVictoryOffered) {

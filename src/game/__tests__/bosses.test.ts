@@ -1,9 +1,11 @@
 import { describe, test, expect } from 'bun:test';
+import './setup';
 import { HandType, PhaseState } from '../types';
 import { GAMEPLAY } from '../Constants';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
 import { isFinisherLeg } from '../../data/bosses';
 import { setupGame, calculateTestScore, die, diceFromValues, item, setTestDifficulty } from './testHelpers';
+import { multiplyScore, eq, gt, lt } from '../scoreMath';
 import {
   getBossRoundConfigMods,
   initBossRoundState,
@@ -28,24 +30,24 @@ describe('Boss round config', () => {
     const { game, player } = setupGame({ bossId: 'the_marathon', leg: 2 });
     setTestDifficulty(3);
     const legBase = getBaseTargetMilesForLeg(2, 3);
-    expect(player.targetMiles).toBe(legBase * 4);
+    expect(eq(player.targetMiles, multiplyScore(legBase, 4))).toBe(true);
     game.startRound({ targetMiles: player.targetMiles });
-    expect(game.config.targetMiles).toBe(legBase * 4);
+    expect(eq(game.config.targetMiles, multiplyScore(legBase, 4))).toBe(true);
   });
 
   test('Finish Line: 6x leg base on final leg', () => {
     const { game, player } = setupGame({ bossId: 'the_finish_line', leg: 8 });
     const legBase = getBaseTargetMilesForLeg(8, 1);
-    expect(player.targetMiles).toBe(legBase * 6);
+    expect(eq(player.targetMiles, multiplyScore(legBase, 6))).toBe(true);
     game.startRound({ targetMiles: player.targetMiles });
-    expect(game.config.targetMiles).toBe(legBase * 6);
+    expect(eq(game.config.targetMiles, multiplyScore(legBase, 6))).toBe(true);
   });
 
   test('Standoff: 1x leg base on showdown (not 2×)', () => {
     const { player } = setupGame({ bossId: 'the_standoff', leg: 2 });
     setTestDifficulty(3);
     const legBase = getBaseTargetMilesForLeg(2, 3);
-    expect(player.targetMiles).toBe(legBase);
+    expect(eq(player.targetMiles, legBase)).toBe(true);
   });
 
   test('Chain Gang: 0 rerolls', () => {
@@ -235,7 +237,7 @@ describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
       scoredDice: diceFromValues([6, 6]),
       equipment: [horseshoe],
     });
-    expect(disabledResult.mult).toBeLessThan(normal.mult);
+    expect(lt(disabledResult.mult, normal.mult)).toBe(true);
     void player;
   });
 });
@@ -255,7 +257,7 @@ describe('DISABLE_ALL_DICE: Bank Lien', () => {
     });
     expect(result.handResult.type).toBe(HandType.PAIR);
     expect(result.totalValue).toBe(0);
-    expect(result.mult).toBeGreaterThan(1);
+    expect(gt(result.mult, 1)).toBe(true);
   });
 });
 

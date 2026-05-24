@@ -63,7 +63,7 @@ describe('LOADED_DICE: item definition', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [],
     });
-    expect(withLoaded.miles).toBe(without.miles);
+    expect(withLoaded.miles).toBeMiles(without.miles);
   });
 });
 
@@ -626,6 +626,6 @@ describe('Loaded Dice cannot be copied', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('loaded_dice')],
     });
-    expect(withCopy.miles).toBe(justLoaded.miles);
+    expect(withCopy.miles).toBeMiles(justLoaded.miles);
   });
 });

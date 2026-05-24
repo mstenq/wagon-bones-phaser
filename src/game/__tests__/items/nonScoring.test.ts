@@ -11,6 +11,8 @@ import {
   calculateTestScore,
   resetDieIds,
 } from '../testHelpers';
+import { getBossRoundConfigMods } from '../../BossEffectsSystem';
+import { gt, gte, D } from '../../scoreMath';
 import {
   processEndOfRound,
   getConfigModifiers,
@@ -28,7 +30,6 @@ import {
 } from '../../EquipmentEffects';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { resolveChance, resolveEffectParam } from '../../effectParams';
-import { getBossRoundConfigMods } from '../../BossEffectsSystem';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
 
@@ -245,7 +246,7 @@ describe('ROUND_START_ADD_DICE: Mystery Crate', () => {
   test('day 2 refills to normal roll size without extra mystery slots', () => {
     const { game, player } = setupGame({ equipment: [item('mystery_crate')] });
     game.startRound();
-    game.config.targetMiles = 999999;
+    game.config.targetMiles = D(999_999);
     const handIds = game.state.hand.map((d) => d.id);
     expect(game.selectForRoll(handIds)).toBe(true);
     expect(game.selectForScore([handIds[0]])).toBe(true);
@@ -278,7 +279,7 @@ describe.skip('ENHANCED_SPENT_MILES_GAIN: Bone Collector', () => {
       equipment: [item('bone_collector')],
     });
     // No accumulated miles → just base
-    expect(result.miles).toBe(20); // (10+10)*1
+    expect(result.miles).toBeMiles(20); // (10+10)*1
   });
 
   test('gains +3 miles per enhanced die spent', () => {
@@ -305,7 +306,7 @@ describe.skip('ENHANCED_SPENT_MILES_GAIN: Bone Collector', () => {
     });
     // PAIR: baseMiles=10, totalValue=10, +15 bonusMiles
     // finalMiles = (10 + 10 + 15) * 1 = 35
-    expect(result.miles).toBe(35);
+    expect(result.miles).toBeMiles(35);
   });
 });
 
@@ -457,7 +458,7 @@ describe('TRAIL_TAX: Trail Tax', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('trail_tax')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('gains +2 mult per day end', () => {
@@ -490,7 +491,7 @@ describe('TRAIL_TAX: Trail Tax', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, +8 from trail tax = 9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 });
 
@@ -614,7 +615,7 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     game.selectForScore(normalDice.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMiles=10, totalValue=10, +50 (2 stone × 25) = 70 * mult(1)
-    expect(result.miles).toBe(70);
+    expect(result.miles).toBeMiles(70);
   });
 
   test('no bonus with zero stone dice', () => {
@@ -632,7 +633,7 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     game.selectForScore(normalDice.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMiles=10, totalValue=10, +0 (no stone) = 20 * mult(1)
-    expect(result.miles).toBe(20);
+    expect(result.miles).toBeMiles(20);
   });
 
   test('scales with number of stone dice', () => {
@@ -656,7 +657,7 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     game.selectForScore(normalDice.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMiles=10, totalValue=10, +100 (4 stone × 25) = 120 * mult(1)
-    expect(result.miles).toBe(120);
+    expect(result.miles).toBeMiles(120);
   });
 });
 
@@ -692,7 +693,7 @@ describe('FIRST_DICE_RETRIGGER: Quick Draw', () => {
     // Second die 1x: value 5
     // totalValue=20, baseMult=1+12=13
     expect(result.totalValue).toBe(20);
-    expect(result.mult).toBe(13);
+    expect(result.mult).toBeMult(13);
   });
 
   test('purple_flower on quick_draw retrigger respects consumable slot cap', () => {
@@ -739,7 +740,7 @@ describe('ENHANCED_RETRIGGER: Moonshine', () => {
     // non-enhanced die 1x: value 5
     // totalValue=15, baseMult=1+8=9
     expect(result.totalValue).toBe(15);
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('does not retrigger non-enhanced dice', () => {
@@ -801,7 +802,7 @@ describe('EXPRESS_TRAIN: Express Train', () => {
       equipment: [item('express_train')],
     });
     // PAIR base miles + 250 express train bonus
-    expect(result.miles).toBeGreaterThanOrEqual(250);
+    expect(gte(result.miles, 250)).toBe(true);
   });
 
   test('reflected in game config after startRound', () => {
@@ -1169,7 +1170,7 @@ describe('ALL_RETRIGGER: The Seventh Trumpet', () => {
     });
     // PAIR base miles from dice: (5+5)*2 triggers = 20 value
     // baseMult=1, mult=1 → miles = (10 + 20) * 1 = 30
-    expect(result.miles).toBe(30);
+    expect(result.miles).toBeMiles(30);
   });
 
   test('retriggers held-in-hand effects', () => {
@@ -1179,7 +1180,7 @@ describe('ALL_RETRIGGER: The Seventh Trumpet', () => {
       equipment: [item('seventh_trumpet')],
     });
     // Steel held triggers twice (base + seventh trumpet): x1.5 * x1.5 = 2.25
-    expect(result.mult).toBeCloseTo(2.25, 5);
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
   });
 });
 

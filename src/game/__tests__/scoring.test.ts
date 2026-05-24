@@ -11,6 +11,7 @@ import {
   resetDieIds,
 } from './testHelpers';
 import { HandType } from '../types';
+import { eq, gt } from '../scoreMath';
 import { resolveScoreDestroyChance } from '../DiceSystem';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
@@ -32,8 +33,8 @@ describe('basic scoring (no equipment)', () => {
     // HIGH_VALUE: baseMiles=5, baseMult=1
     // miles = (5 + 10) * 1 = 15
     expect(result.handResult.type).toBe(HandType.HIGH_VALUE);
-    expect(result.miles).toBe(15);
-    expect(result.mult).toBe(1);
+    expect(result.miles).toBeMiles(15);
+    expect(result.mult).toBeMult(1);
   });
 
   test('pair', () => {
@@ -43,7 +44,7 @@ describe('basic scoring (no equipment)', () => {
     // PAIR: baseMiles=10, baseMult=1
     // miles = (10 + 14) * 1 = 24
     expect(result.handResult.type).toBe(HandType.PAIR);
-    expect(result.miles).toBe(24);
+    expect(result.miles).toBeMiles(24);
   });
 
   test('three of a kind', () => {
@@ -53,7 +54,7 @@ describe('basic scoring (no equipment)', () => {
     // THREE_OF_A_KIND: baseMiles=20, baseMult=3
     // miles = (20 + 12) * 3 = 96
     expect(result.handResult.type).toBe(HandType.THREE_OF_A_KIND);
-    expect(result.miles).toBe(96);
+    expect(result.miles).toBeMiles(96);
   });
 
   test('full house', () => {
@@ -64,7 +65,7 @@ describe('basic scoring (no equipment)', () => {
     // totalValue = 5*3 + 8*2 = 31
     // miles = (25 + 31) * 4 = 224
     expect(result.handResult.type).toBe(HandType.FULL_HOUSE);
-    expect(result.miles).toBe(224);
+    expect(result.miles).toBeMiles(224);
   });
 
   test('five of a kind', () => {
@@ -75,7 +76,7 @@ describe('basic scoring (no equipment)', () => {
     // totalValue = 60
     // miles = (50 + 60) * 6 = 660
     expect(result.handResult.type).toBe(HandType.FIVE_OF_A_KIND);
-    expect(result.miles).toBe(660);
+    expect(result.miles).toBeMiles(660);
   });
 
   test('five straight', () => {
@@ -86,7 +87,7 @@ describe('basic scoring (no equipment)', () => {
     // totalValue = 50
     // miles = (30 + 50) * 4 = 320
     expect(result.handResult.type).toBe(HandType.FIVE_STRAIGHT);
-    expect(result.miles).toBe(320);
+    expect(result.miles).toBeMiles(320);
   });
 });
 
@@ -102,8 +103,8 @@ describe('equipment: ADD_MULT', () => {
     // Equipment: +4 mult → totalMult = 7
     // totalValue = 18
     // miles = (20 + 18) * 7 = 266
-    expect(result.mult).toBe(7);
-    expect(result.miles).toBe(266);
+    expect(result.mult).toBeMult(7);
+    expect(result.miles).toBeMiles(266);
   });
 
   test('two horseshoes stack', () => {
@@ -113,8 +114,8 @@ describe('equipment: ADD_MULT', () => {
     });
     // baseMult=3, +4+4=8, totalMult=11
     // (20 + 18) * 11 = 418
-    expect(result.mult).toBe(11);
-    expect(result.miles).toBe(418);
+    expect(result.mult).toBeMult(11);
+    expect(result.miles).toBeMiles(418);
   });
 });
 
@@ -128,7 +129,7 @@ describe('equipment: HAND_MULT', () => {
     });
     // PAIR: baseMult=1
     // wedding_ring: +8 mult when hand contains pair → mult = 9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('wedding_ring activates on full house (contains pair)', () => {
@@ -138,7 +139,7 @@ describe('equipment: HAND_MULT', () => {
     });
     // FULL_HOUSE contains PAIR → wedding ring triggers
     // baseMult=4, +8 = 12
-    expect(result.mult).toBe(12);
+    expect(result.mult).toBeMult(12);
   });
 
   test('wedding_ring does not activate on high value', () => {
@@ -146,7 +147,7 @@ describe('equipment: HAND_MULT', () => {
       scoredDice: [die({ value: 10 })],
       equipment: [item('wedding_ring')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -161,8 +162,8 @@ describe('dice enhancements', () => {
     // 2 bone dice: +4 * 2 = +8 → mult = 9
     // totalValue = 10
     // miles = (10 + 10) * 9 = 180
-    expect(result.mult).toBe(9);
-    expect(result.miles).toBe(180);
+    expect(result.mult).toBeMult(9);
+    expect(result.miles).toBeMiles(180);
   });
 
   test('wooden dice add +30 miles per die', () => {
@@ -173,7 +174,7 @@ describe('dice enhancements', () => {
     // totalValue = 3 + 3 + 30 + 30 = 66 (each wooden adds +30 value)
     // miles = (10 + 66) * 1 = 76
     expect(result.totalValue).toBe(66);
-    expect(result.miles).toBe(76);
+    expect(result.miles).toBeMiles(76);
   });
 
   test('diamond dice apply x2 mult', () => {
@@ -183,7 +184,7 @@ describe('dice enhancements', () => {
     // PAIR: baseMult=1
     // 1 diamond → xMult = 2
     // mult = 1 * 2 = 2
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 
   test('stone dice contribute 50 miles instead of face value', () => {
@@ -194,7 +195,7 @@ describe('dice enhancements', () => {
     // stone: +50 miles instead of value
     // miles = (5 + 50) * 1 = 55
     expect(result.totalValue).toBe(50);
-    expect(result.miles).toBe(55);
+    expect(result.miles).toBeMiles(55);
   });
 });
 
@@ -207,7 +208,7 @@ describe('dice auras', () => {
     });
     // PAIR: baseMult=1
     // fire aura on 1 die: +10 → mult = 11
-    expect(result.mult).toBe(11);
+    expect(result.mult).toBeMult(11);
   });
 
   test('icy aura adds +50 to totalValue', () => {
@@ -226,7 +227,7 @@ describe('dice auras', () => {
     });
     // PAIR: baseMult=1
     // holy: xMult * 1.5 → mult = 1.5
-    expect(result.mult).toBe(1.5);
+    expect(result.mult).toBeMult(1.5);
   });
 });
 
@@ -240,7 +241,7 @@ describe('item auras', () => {
     });
     // PAIR: baseMult=1
     // horseshoe: +4, fire aura: +10 → 1 + 4 + 10 = 15
-    expect(result.mult).toBe(15);
+    expect(result.mult).toBeMult(15);
   });
 
   test('holy aura on equipment applies x1.5', () => {
@@ -250,7 +251,7 @@ describe('item auras', () => {
     });
     // PAIR: baseMult=1
     // horseshoe: +4 → 5, then holy x1.5 → 7.5
-    expect(result.mult).toBe(7.5);
+    expect(result.mult).toBeMult(7.5);
   });
 
   test('icy aura on equipment adds +50 miles', () => {
@@ -264,7 +265,7 @@ describe('item auras', () => {
     // icy aura on ITEMS adds +50 to bonusMiles in applyEquipmentEffects
     // miles = (baseMiles + totalValue + bonusMiles) * mult
     // = (10 + 8 + 50) * 5 = 340
-    expect(result.miles).toBe(340);
+    expect(result.miles).toBeMiles(340);
   });
 
   test('ghost aura on equipment does not take an inventory slot', () => {
@@ -315,8 +316,8 @@ describe('item auras', () => {
       equipment: [item('horseshoe')],
     });
     // Ghost aura should not change mult or miles vs no aura
-    expect(withGhost.mult).toBe(withoutAura.mult);
-    expect(withGhost.miles).toBe(withoutAura.miles);
+    expect(eq(withGhost.mult, withoutAura.mult)).toBe(true);
+    expect(eq(withGhost.miles, withoutAura.miles)).toBe(true);
   });
 });
 
@@ -331,7 +332,7 @@ describe('held-in-hand effects', () => {
     // PAIR: baseMult=1
     // held steel: xMult=1.5
     // afterHeldMult = (1 + 0) * 1.5 = 1.5
-    expect(result.mult).toBe(1.5);
+    expect(result.mult).toBeMult(1.5);
   });
 
   test('two steel dice held multiply together', () => {
@@ -340,7 +341,7 @@ describe('held-in-hand effects', () => {
       heldDice: [die({ value: 3, enhancement: 'steel' }), die({ value: 4, enhancement: 'steel' })],
     });
     // xMult = 1.5 * 1.5 = 2.25
-    expect(result.mult).toBe(2.25);
+    expect(result.mult).toBeMult(2.25);
   });
 });
 
@@ -357,7 +358,7 @@ describe('hand levels', () => {
     });
 
     // Level 2 should give more miles than level 1
-    expect(lvl2.miles).toBeGreaterThan(lvl1.miles);
+    expect(gt(lvl2.miles, lvl1.miles)).toBe(true);
   });
 });
 
@@ -379,8 +380,8 @@ describe('combined scenarios', () => {
     // totalMult = 3 + 12 + 4 = 19
     // totalValue = 24
     // miles = (20 + 24) * 19 = 836
-    expect(result.mult).toBe(19);
-    expect(result.miles).toBe(836);
+    expect(result.mult).toBeMult(19);
+    expect(result.miles).toBeMiles(836);
   });
 
   test('steel held + equipment + scored bone dice', () => {
@@ -410,8 +411,8 @@ describe('combined scenarios', () => {
     //    finalMult = 7.5 + 4 = 11.5
     //    finalMiles = (10 + 10 + 0) * 11.5 = 230
 
-    expect(result.mult).toBe(11.5);
-    expect(result.miles).toBe(230);
+    expect(result.mult).toBeMult(11.5);
+    expect(result.miles).toBeMiles(230);
   });
 });
 
@@ -583,7 +584,7 @@ describe('Stone dice', () => {
     });
     // Pair: baseMiles=10, baseMult=1, values=6+6+50(stone)=62
     // miles = (10 + 62) * 1 = 72
-    expect(result.miles).toBe(72);
+    expect(result.miles).toBeMiles(72);
   });
 
   test('rollDie does not assign value to stone dice', () => {

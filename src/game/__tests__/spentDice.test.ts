@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
 import { diceFromValues, setupGame, resetDieIds } from './testHelpers';
 import { resetPlayerState } from '../PlayerState';
+import { D } from '../scoreMath';
 
 beforeEach(() => {
   resetDieIds();
@@ -93,7 +94,7 @@ describe('spent dice persistence', () => {
     const { game, player } = setupGame({ dice: testDice, handSize: 8 });
 
     game.startRound();
-    game.config.targetMiles = 1;
+    game.config.targetMiles = D(1);
     const allIds = game.state.hand.map((d) => d.id);
     expect(game.selectForRoll(allIds)).toBe(true);
     expect(game.selectForScore([allIds[0]])).toBe(true);
@@ -111,7 +112,7 @@ describe('spent dice persistence', () => {
     const { game } = setupGame({ dice: testDice, handSize: 8 });
 
     game.startRound();
-    game.config.targetMiles = 999999;
+    game.config.targetMiles = D(999_999);
     const rolledIds = game.state.hand.map((d) => d.id);
     expect(game.selectForRoll(rolledIds)).toBe(true);
     expect(game.selectForScore([rolledIds[0]])).toBe(true);

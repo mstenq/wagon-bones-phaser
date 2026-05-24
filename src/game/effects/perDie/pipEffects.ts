@@ -5,12 +5,13 @@ import { checkLoadedChance } from '../../equipmentUtils';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { getPlayerState } from '../../PlayerState';
 import { dieMatchesPip, multiplyCtxXMult, resolveChance, resolveEffectParam } from '../helpers';
+import { addScore } from '../../scoreMath';
 
 effectRegistry.registerPerDie('PIP_MULT', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
   if (dieMatchesPip(die, p.pip as number, ctx.equipment, ctx.hasStackedDeck)) {
     const value = p.value as number;
-    ctx.bonusMult += value;
+    ctx.bonusMult = addScore(ctx.bonusMult, value);
     ctx.animEvents.push({
       target: { kind: 'both', dieId: die.id, equipIndex: _idx },
       popupType: 'mult',

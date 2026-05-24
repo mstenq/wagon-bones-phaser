@@ -11,6 +11,7 @@ import type { GameRoundSaveData } from '../../game/SaveLoad';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { detectBestHand } from '../../game/DiceSystem';
 import { getPlayerState } from '../../game/PlayerState';
+import { addScore, D } from '../../game/scoreMath';
 import {
   hasActiveTrailRoundEffects,
   trailRoundEffectsFromModifiers,
@@ -743,7 +744,7 @@ export class GameScene extends Scene {
     });
 
     // Store round score before this hand for the animation
-    const roundScoreBefore = this.gameState.state.totalMiles - result.miles;
+    const roundScoreBefore = this.gameState.state.totalMiles.minus(result.miles);
     result.roundScoreBefore = roundScoreBefore;
 
     // Play sequential scoring animation
@@ -874,7 +875,7 @@ export class GameScene extends Scene {
 
     this.hideAllButtons();
     this.clearSprites();
-    this.gameState.state.totalMiles = 1_000_000;
+    this.gameState.state.totalMiles = D(1_000_000);
     this.gameState.state.phase = 'DAY_END';
     this.updateHUD();
     this.onContinue();
@@ -1108,8 +1109,8 @@ export class GameScene extends Scene {
       const player = getPlayerState();
       const stats = player.getHandStats(handResult.type);
       const levelBonus = stats.level - 1;
-      const baseMiles = handResult.baseMiles + stats.milesPerLevel * levelBonus;
-      const baseMult = handResult.baseMult + stats.multPerLevel * levelBonus;
+      const baseMiles = addScore(handResult.baseMiles, stats.milesPerLevel * levelBonus);
+      const baseMult = addScore(handResult.baseMult, stats.multPerLevel * levelBonus);
       this.sidebar.updateData({
         handName: handResult.name,
         handLevel: stats.level,

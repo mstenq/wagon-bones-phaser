@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { addScore } from '../../scoreMath';
 import '../setup';
 import { calculateTestScore, die, diceWithValue, item, itemWithState, setupGame, resetDieIds } from '../testHelpers';
 import {
@@ -23,7 +24,7 @@ describe('COPY_RIGHT: Mirror Lake', () => {
       equipment: [item('mirror_lake'), item('horseshoe')],
     });
     // PAIR baseMult=1, +4 (mirror copies horseshoe) +4 (horseshoe) = 9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('does nothing when it is the rightmost item', () => {
@@ -32,7 +33,7 @@ describe('COPY_RIGHT: Mirror Lake', () => {
       equipment: [item('horseshoe'), item('mirror_lake')],
     });
     // PAIR baseMult=1, +4 (horseshoe) = 5, mirror lake has nothing to right
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('does not copy incompatible effect types', () => {
@@ -41,7 +42,7 @@ describe('COPY_RIGHT: Mirror Lake', () => {
       equipment: [item('mirror_lake'), item('spare_holster')],
     });
     // PAIR baseMult=1, spare_holster is MODIFY_REROLLS (incompatible), mirror lake does nothing
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('copies HAND_MULT correctly', () => {
@@ -50,7 +51,7 @@ describe('COPY_RIGHT: Mirror Lake', () => {
       equipment: [item('mirror_lake'), item('wedding_ring')],
     });
     // PAIR baseMult=1, +8 (mirror copies wedding_ring) +8 (wedding_ring) = 17
-    expect(result.mult).toBe(17);
+    expect(result.mult).toBeMult(17);
   });
 
   test('copies xMult effects', () => {
@@ -61,7 +62,7 @@ describe('COPY_RIGHT: Mirror Lake', () => {
       maxDays: 5,
     });
     // PAIR baseMult=1, final day: x3 from mirror lake copying high_noon, x3 from high_noon = x9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 });
 
@@ -72,7 +73,7 @@ describe('COPY_LEFTMOST: Echo Chamber', () => {
       equipment: [item('horseshoe'), item('dynamite'), item('echo_chamber')],
     });
     // PAIR baseMult=1, +4 (horseshoe) +15 (dynamite) +4 (echo copies horseshoe) = 24
-    expect(result.mult).toBe(24);
+    expect(result.mult).toBeMult(24);
   });
 
   test('does nothing when it is the leftmost item', () => {
@@ -81,7 +82,7 @@ describe('COPY_LEFTMOST: Echo Chamber', () => {
       equipment: [item('echo_chamber'), item('horseshoe')],
     });
     // PAIR baseMult=1, +4 (horseshoe) = 5, echo chamber is at index 0, does nothing
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('does not copy incompatible effects', () => {
@@ -91,7 +92,7 @@ describe('COPY_LEFTMOST: Echo Chamber', () => {
     });
     // spare_holster is incompatible, echo chamber can't copy it
     // PAIR baseMult=1, +4 (horseshoe) = 5
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('copies xMult from leftmost', () => {
@@ -104,7 +105,7 @@ describe('COPY_LEFTMOST: Echo Chamber', () => {
     // PAIR baseMult=1, +4 (horseshoe) = 5 mult
     // xMult: x3 (high_noon) x3 (echo copies high_noon) = x9
     // finalMult = 5 * 9 = 45
-    expect(result.mult).toBe(45);
+    expect(result.mult).toBeMult(45);
   });
 });
 
@@ -119,7 +120,7 @@ describe('Mirror Lake + Echo Chamber interaction', () => {
       equipment: [item('mirror_lake'), item('echo_chamber')],
     });
     // Neither can resolve, PAIR baseMult=1
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('both resolve correctly with a real item present', () => {
@@ -131,7 +132,7 @@ describe('Mirror Lake + Echo Chamber interaction', () => {
       equipment: [item('mirror_lake'), item('horseshoe'), item('echo_chamber')],
     });
     // PAIR baseMult=1, +4 (mirror copies horseshoe) +4 (horseshoe) +4 (echo copies mirror→horseshoe) = 13
-    expect(result.mult).toBe(13);
+    expect(result.mult).toBeMult(13);
   });
 
   test('echo chamber at position 1 copies mirror lake at position 0', () => {
@@ -144,7 +145,7 @@ describe('Mirror Lake + Echo Chamber interaction', () => {
       equipment: [item('mirror_lake'), item('echo_chamber'), item('horseshoe')],
     });
     // PAIR baseMult=1, +4 (horseshoe) = 5
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('mirror lake between two real items copies right', () => {
@@ -153,7 +154,7 @@ describe('Mirror Lake + Echo Chamber interaction', () => {
       equipment: [item('horseshoe'), item('mirror_lake'), item('dynamite')],
     });
     // PAIR baseMult=1, +4 (horseshoe) +15 (mirror copies dynamite) +15 (dynamite) = 35
-    expect(result.mult).toBe(35);
+    expect(result.mult).toBeMult(35);
   });
 });
 
@@ -206,7 +207,7 @@ describe('Copy item edge cases — side effects', () => {
       equipment: [item('mirror_lake'), item('dynamite')],
     });
     // PAIR baseMult=1, +15 (mirror copies dynamite) +15 (dynamite) = 31
-    expect(result.mult).toBe(31);
+    expect(result.mult).toBeMult(31);
   });
 
   test('echo chamber copying nitro still provides the xMult bonus', () => {
@@ -217,7 +218,7 @@ describe('Copy item edge cases — side effects', () => {
     // PAIR baseMult=1, +4 (horseshoe) = 5
     // xMult: x3 (nitro) x3 (echo copies nitro) = x9
     // finalMult = 5 * 9 = 45
-    expect(result.mult).toBe(45);
+    expect(result.mult).toBeMult(45);
   });
 });
 
@@ -335,7 +336,7 @@ describe('Copy item round-start effects', () => {
       equipment: [item('mirror_lake'), itemWithState('haunted_totem', { xMult: 2 })],
     });
     // startRound bumps xMult from 2 to 2.5, then scoring: 1 * x2.5 (mirror) * x2.5 (totem) = 6.25
-    expect(result.mult).toBe(6.25);
+    expect(result.mult).toBeMult(6.25);
   });
 
   test('mirror lake copying funeral_pyre does not trigger destruction', () => {
@@ -352,7 +353,7 @@ describe('Copy item round-start effects', () => {
     });
     // PAIR baseMult=1, mirror copies funeral_pyre (+6), funeral_pyre (+6) = 13
     // But startRound will trigger funeral_pyre destroying the item to its right (none here), so mult stays 6
-    expect(result.mult).toBe(13);
+    expect(result.mult).toBeMult(13);
   });
 
   test('mirror lake copying marked applies bank without incrementing marked streak on copy slot', () => {
@@ -365,7 +366,7 @@ describe('Copy item round-start effects', () => {
     expect(mirrorLake.state.mult).toBeUndefined();
     expect(marked.state.mult).toBe(2);
     // PAIR base 1 + mirror(+2) + marked(+2)
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('mirror lake copies trail repair kit stateful xMult when stacked', () => {
@@ -376,7 +377,7 @@ describe('Copy item round-start effects', () => {
       equipment: [item('mirror_lake'), kit],
     });
     // PAIR baseMult 1; mirror copies kit x1.75, kit applies x1.75 (rounded per multiply)
-    expect(result.mult).toBe(3.06);
+    expect(result.mult).toBeMult(3.06);
   });
 });
 
@@ -440,7 +441,7 @@ describe('Mirror Lake copies EXPRESS_TRAIN', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [],
     });
-    expect(result.miles).toBe(baseResult.miles + 500);
+    expect(result.miles).toBeMiles(addScore(baseResult.miles, 500).toNumber());
   });
 
   test('does not apply -2 reroll penalty from copy', () => {

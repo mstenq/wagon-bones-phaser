@@ -4,6 +4,7 @@ import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
 import { checkLoadedChance } from '../../equipmentUtils';
 import { multiplyCtxXMult, resolveChance } from '../helpers';
+import { addScore } from '../../scoreMath';
 
 effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement === 'gold') {
@@ -84,7 +85,7 @@ effectRegistry.registerPerDie('WOODEN_DICE_MILES', (ctx, equip, _idx, die, _t) =
 effectRegistry.registerPerDie('IRON_DICE_MULT', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement === 'steel') {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
-    ctx.bonusMult += value;
+    ctx.bonusMult = addScore(ctx.bonusMult, value);
     ctx.animEvents.push({
       target: { kind: 'both', dieId: die.id, equipIndex: _idx },
       popupType: 'mult',

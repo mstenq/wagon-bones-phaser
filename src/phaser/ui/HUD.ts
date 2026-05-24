@@ -4,6 +4,7 @@
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
+import type { DecimalSource } from '../../game/decimal';
 
 const HUD_Y = UI.HUD_Y;
 const FONT_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -57,8 +58,8 @@ export class HUD extends GameObjects.Container {
     day: number;
     maxDays: number;
     rerolls: number;
-    miles: number;
-    targetMiles: number;
+    miles: DecimalSource;
+    targetMiles: DecimalSource;
     phase: string;
     diceRemaining: number;
     diceSpent: number;

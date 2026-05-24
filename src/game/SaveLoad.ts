@@ -19,8 +19,10 @@ import type { TrailTagInstance } from '../data/trail_tags';
 import bosses from '../data/bosses';
 import { type PackItem, type PackCategory } from './BoosterPackSystem';
 import { getRunRngState, getRunSeed, restoreRunRng, type RunRngState } from './RunRng';
+import { milesToSave, milesFromSave } from './scoreMath';
+import type { Decimal } from './decimal';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export type ActiveScene = 'Game' | 'Shop' | 'BoosterPack' | 'TrailEvent' | 'RoundSelect';
 
@@ -102,6 +104,26 @@ export interface GameRoundSaveData {
   state: RoundState;
 }
 
+/** JSON-safe game round snapshot (miles as strings). */
+export interface SerializedGameRoundSaveData {
+  config: Omit<GameConfig, 'targetMiles'> & { targetMiles: string };
+  state: Omit<RoundState, 'totalMiles'> & { totalMiles: string };
+}
+
+export function serializeGameRound(data: GameRoundSaveData): SerializedGameRoundSaveData {
+  return {
+    config: { ...data.config, targetMiles: milesToSave(data.config.targetMiles) },
+    state: { ...data.state, totalMiles: milesToSave(data.state.totalMiles) },
+  };
+}
+
+export function deserializeGameRound(data: SerializedGameRoundSaveData): GameRoundSaveData {
+  return {
+    config: { ...data.config, targetMiles: milesFromSave(data.config.targetMiles) },
+    state: { ...data.state, totalMiles: milesFromSave(data.state.totalMiles) },
+  };
+}
+
 export interface ShopSaveData {
   stock: SerializedShopItem[];
   packs: { defId: string; instanceId: string }[];
@@ -143,7 +165,7 @@ export interface TrailEventSaveData {
 }
 
 export type SceneSaveData =
-  | GameRoundSaveData
+  | SerializedGameRoundSaveData
   | ShopSaveData
   | BoosterPackSaveData
   | TrailEventSaveData
@@ -393,7 +415,8 @@ export function buildSaveSnapshot(context: SceneSaveContext): GameSaveSnapshot {
   };
 
   if (context.activeScene !== 'RoundSelect') {
-    snapshot.scene = context.data;
+    snapshot.scene =
+      context.activeScene === 'Game' ? serializeGameRound(context.data) : context.data;
   }
 
   return snapshot;
@@ -430,7 +453,7 @@ export function applySaveSnapshot(snapshot: GameSaveSnapshot): {
 
   switch (snapshot.activeScene) {
     case 'Game': {
-      const data = snapshot.scene as GameRoundSaveData;
+      const data = deserializeGameRound(snapshot.scene as SerializedGameRoundSaveData);
       sceneData.restore = data;
       break;
     }

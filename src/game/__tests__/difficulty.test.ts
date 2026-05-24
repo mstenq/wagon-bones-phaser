@@ -4,6 +4,7 @@ import { resetPlayerState, computeTargetMiles, computeRoundReward } from '../Pla
 import { GAMEPLAY } from '../Constants';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
 import { setTestDifficulty } from './testHelpers';
+import { ceilScore, multiplyScore, eq } from '../scoreMath';
 
 beforeEach(() => {
   resetPlayerState();
@@ -17,8 +18,8 @@ describe('Difficulty System', () => {
       const base = getBaseTargetMilesForLeg(leg, 1);
       const mult = GAMEPLAY.ROUND_MULTIPLIERS[round - 1];
 
-      expect(computeTargetMiles(leg, round, 0, 1)).toBe(Math.ceil(base * mult));
-      expect(computeTargetMiles(leg, round, 0, 2)).toBe(Math.ceil(base * mult));
+      expect(eq(computeTargetMiles(leg, round, 0, 1), ceilScore(multiplyScore(base, mult)))).toBe(true);
+      expect(eq(computeTargetMiles(leg, round, 0, 2), ceilScore(multiplyScore(base, mult)))).toBe(true);
     });
 
     test('uses rough targets at difficulty 3–5', () => {
@@ -27,8 +28,8 @@ describe('Difficulty System', () => {
       const base = getBaseTargetMilesForLeg(leg, 3);
       const mult = GAMEPLAY.ROUND_MULTIPLIERS[round - 1];
 
-      expect(computeTargetMiles(leg, round, 0, 3)).toBe(Math.ceil(base * mult));
-      expect(computeTargetMiles(leg, round, 0, 5)).toBe(Math.ceil(base * mult));
+      expect(eq(computeTargetMiles(leg, round, 0, 3), ceilScore(multiplyScore(base, mult)))).toBe(true);
+      expect(eq(computeTargetMiles(leg, round, 0, 5), ceilScore(multiplyScore(base, mult)))).toBe(true);
     });
 
     test('uses deadly targets at difficulty 6+', () => {
@@ -37,24 +38,24 @@ describe('Difficulty System', () => {
       const base = getBaseTargetMilesForLeg(leg, 6);
       const mult = GAMEPLAY.ROUND_MULTIPLIERS[round - 1];
 
-      expect(computeTargetMiles(leg, round, 0, 6)).toBe(Math.ceil(base * mult));
-      expect(computeTargetMiles(leg, round, 0, 8)).toBe(Math.ceil(base * mult));
+      expect(eq(computeTargetMiles(leg, round, 0, 6), ceilScore(multiplyScore(base, mult)))).toBe(true);
+      expect(eq(computeTargetMiles(leg, round, 0, 8), ceilScore(multiplyScore(base, mult)))).toBe(true);
     });
 
     test('deadly overrides rough at difficulty 6', () => {
       const leg = 3;
       const round = 1;
-      expect(computeTargetMiles(leg, round, 0, 6)).toBe(getBaseTargetMilesForLeg(leg, 6));
-      expect(computeTargetMiles(leg, round, 0, 3)).toBe(getBaseTargetMilesForLeg(leg, 3));
-      expect(computeTargetMiles(leg, round, 0, 6)).not.toBe(computeTargetMiles(leg, round, 0, 3));
+      expect(eq(computeTargetMiles(leg, round, 0, 6), getBaseTargetMilesForLeg(leg, 6))).toBe(true);
+      expect(eq(computeTargetMiles(leg, round, 0, 3), getBaseTargetMilesForLeg(leg, 3))).toBe(true);
+      expect(eq(computeTargetMiles(leg, round, 0, 6), computeTargetMiles(leg, round, 0, 3))).toBe(false);
     });
 
     test('permit score reduction lowers effective leg index for targets', () => {
       setTestDifficulty(3);
       const withReduction = computeTargetMiles(4, 1, 1, 3);
       const without = computeTargetMiles(4, 1, 0, 3);
-      expect(withReduction).toBe(getBaseTargetMilesForLeg(3, 3));
-      expect(without).toBe(getBaseTargetMilesForLeg(4, 3));
+      expect(eq(withReduction, getBaseTargetMilesForLeg(3, 3))).toBe(true);
+      expect(eq(without, getBaseTargetMilesForLeg(4, 3))).toBe(true);
     });
   });
 
@@ -131,7 +132,12 @@ describe('Difficulty System', () => {
       const player = resetPlayerState();
       player.leg = 2;
       player.round = 2;
-      expect(player.targetMiles).toBe(Math.ceil(getBaseTargetMilesForLeg(2, 1) * GAMEPLAY.ROUND_MULTIPLIERS[1]));
+      expect(
+        eq(
+          player.targetMiles,
+          ceilScore(multiplyScore(getBaseTargetMilesForLeg(2, 1), GAMEPLAY.ROUND_MULTIPLIERS[1])),
+        ),
+      ).toBe(true);
     });
 
     test('difficulty 3: rough targets on player state', () => {
@@ -139,7 +145,7 @@ describe('Difficulty System', () => {
       player.setDifficulty(3);
       player.leg = 2;
       player.round = 1;
-      expect(player.targetMiles).toBe(getBaseTargetMilesForLeg(2, 3));
+      expect(eq(player.targetMiles, getBaseTargetMilesForLeg(2, 3))).toBe(true);
     });
 
     test('difficulty 6: deadly targets on player state', () => {
@@ -147,7 +153,7 @@ describe('Difficulty System', () => {
       player.setDifficulty(6);
       player.leg = 3;
       player.round = 1;
-      expect(player.targetMiles).toBe(getBaseTargetMilesForLeg(3, 6));
+      expect(eq(player.targetMiles, getBaseTargetMilesForLeg(3, 6))).toBe(true);
     });
   });
 });

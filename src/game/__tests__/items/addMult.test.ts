@@ -13,7 +13,7 @@ describe('ADD_MULT: Horseshoe', () => {
       equipment: [item('horseshoe')],
     });
     // PAIR: baseMult=1, +4 from horseshoe = 5
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('stacks with multiple horseshoes', () => {
@@ -22,7 +22,7 @@ describe('ADD_MULT: Horseshoe', () => {
       equipment: [item('horseshoe'), item('horseshoe')],
     });
     // baseMult=1, +4+4 = 9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('adds to existing hand mult', () => {
@@ -31,7 +31,7 @@ describe('ADD_MULT: Horseshoe', () => {
       equipment: [item('horseshoe')],
     });
     // THREE_OF_A_KIND: baseMult=3, +4 = 7
-    expect(result.mult).toBe(7);
+    expect(result.mult).toBeMult(7);
   });
 });
 
@@ -42,7 +42,7 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
       equipment: [item('dynamite')],
     });
     // PAIR: baseMult=1, +15 = 16
-    expect(result.mult).toBe(16);
+    expect(result.mult).toBeMult(16);
   });
 
   test('stacks with other mult equipment', () => {
@@ -51,7 +51,7 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
       equipment: [item('horseshoe'), item('dynamite')],
     });
     // baseMult=1, +4+15 = 20
-    expect(result.mult).toBe(20);
+    expect(result.mult).toBeMult(20);
   });
 
   test('destroyed at end of round when random hits (1 in 6)', () => {
@@ -112,7 +112,7 @@ describe('SHOP_REROLL_MULT_GAIN: Bargain Bin', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('bargain_bin')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('gains +2 mult per shop reroll via payShopReroll', () => {
@@ -163,7 +163,7 @@ describe('SHOP_REROLL_MULT_GAIN: Bargain Bin', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1 + 6 = 7
-    expect(result.mult).toBe(7);
+    expect(result.mult).toBeMult(7);
   });
 });
 
@@ -176,7 +176,7 @@ describe('DECAYING_MULT: Fading Memory', () => {
       equipment: [item('fading_memory')],
     });
     // PAIR: baseMult=1 + 20 = 21
-    expect(result.mult).toBe(21);
+    expect(result.mult).toBeMult(21);
   });
 
   test('loses -4 mult per round end', () => {
@@ -209,7 +209,7 @@ describe('DECAYING_MULT: Fading Memory', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.mult).toBe(9); // baseMult=1 + 8
+    expect(result.mult).toBeMult(9); // baseMult=1 + 8
   });
 });
 
@@ -229,7 +229,7 @@ describe('SELL_VALUE_AS_MULT: Desperado', () => {
     // horseshoe: +4, dynamite: +15 → +19
     // desperado: +sell values of horseshoe(1) + dynamite(2) = +3
     // total mult = 1 + 19 + 3 = 23
-    expect(result.mult).toBe(23);
+    expect(result.mult).toBeMult(23);
   });
 
   test('no bonus when alone', () => {
@@ -237,7 +237,7 @@ describe('SELL_VALUE_AS_MULT: Desperado', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('desperado')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 

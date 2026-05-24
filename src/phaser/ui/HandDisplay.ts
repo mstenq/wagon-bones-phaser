@@ -4,7 +4,7 @@
 import { GameObjects, Scene } from 'phaser';
 import { ScoreResult } from '../../game/types';
 import { TEXT_COLORS, FONTS } from '../../game/Constants';
-import { formatScore } from '../../game/formatScore';
+import { formatScore, formatMult } from '../../game/formatScore';
 
 export class HandDisplay extends GameObjects.Container {
   private handName: GameObjects.Text;
@@ -51,7 +51,7 @@ export class HandDisplay extends GameObjects.Container {
     this.handName.setText(hr.name);
     this.scoreText.setText(`+${formatScore(result.miles)} miles`);
     this.detailText.setText(
-      `(${formatScore(hr.baseMiles)} base + ${formatScore(result.totalValue)} value) × ${result.mult} mult`,
+      `(${formatScore(hr.baseMiles)} base + ${formatScore(result.totalValue)} value) × ${formatMult(result.mult)} mult`,
     );
     this.setVisible(true);
   }

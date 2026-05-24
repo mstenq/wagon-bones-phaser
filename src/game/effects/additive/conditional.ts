@@ -2,6 +2,7 @@
 
 import { effectRegistry } from '../registry';
 import { getPlayerState } from '../../PlayerState';
+import { addScore } from '../../scoreMath';
 
 effectRegistry.registerAdditive('CONDITIONAL_MULT', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
@@ -14,7 +15,7 @@ effectRegistry.registerAdditive('CONDITIONAL_MULT', (ctx, equip, index) => {
   }
   if (met) {
     const value = p.value as number;
-    ctx.bonusMult += value;
+    ctx.bonusMult = addScore(ctx.bonusMult, value);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value });
   }
 });
@@ -23,7 +24,7 @@ effectRegistry.registerAdditive('MULT_PER_EQUIPMENT', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
   const total = (p.value as number) * ctx.equipment.length;
   if (total > 0) {
-    ctx.bonusMult += total;
+    ctx.bonusMult = addScore(ctx.bonusMult, total);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: total });
   }
 });
@@ -32,7 +33,7 @@ effectRegistry.registerAdditive('MILES_PER_DOLLAR', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
   const milesGain = (p.value as number) * ctx.playerBalance;
   if (milesGain > 0) {
-    ctx.bonusMiles += milesGain;
+    ctx.bonusMiles = addScore(ctx.bonusMiles, milesGain);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: milesGain });
   }
   console.log(
@@ -44,7 +45,7 @@ effectRegistry.registerAdditive('MILES_PER_EQUIPMENT', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
   const total = (p.value as number) * ctx.equipment.length;
   if (total > 0) {
-    ctx.bonusMiles += total;
+    ctx.bonusMiles = addScore(ctx.bonusMiles, total);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: total });
   }
 });
@@ -55,7 +56,7 @@ effectRegistry.registerAdditive('SELL_VALUE_AS_MULT', (ctx, equip, index) => {
     if (other !== equip) totalSellValue += other.sellValue;
   }
   if (totalSellValue > 0) {
-    ctx.bonusMult += totalSellValue;
+    ctx.bonusMult = addScore(ctx.bonusMult, totalSellValue);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: totalSellValue });
   }
   console.log(`  [equip] ${equip.def.name}: +${totalSellValue} mult (sell values) (bonusMult: ${ctx.bonusMult})`);
@@ -67,7 +68,7 @@ effectRegistry.registerAdditive('MULT_PER_MONEY_CHUNK', (ctx, equip, index) => {
   const perChunk = (p.value as number) ?? 2;
   const total = Math.floor(ctx.playerBalance / chunk) * perChunk;
   if (total > 0) {
-    ctx.bonusMult += total;
+    ctx.bonusMult = addScore(ctx.bonusMult, total);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: total });
     console.log(
       `  [equip] ${equip.def.name}: +${total} mult ($${ctx.playerBalance} held) (bonusMult: ${ctx.bonusMult})`,
@@ -82,7 +83,7 @@ effectRegistry.registerAdditive('MULT_PER_MISSING_DICE', (ctx, equip, index) => 
   const missing = Math.max(0, player.startingDiceCount - ctx.allDice.length);
   if (missing > 0) {
     const total = missing * perDie;
-    ctx.bonusMult += total;
+    ctx.bonusMult = addScore(ctx.bonusMult, total);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: total });
     console.log(
       `  [equip] ${equip.def.name}: +${total} mult (${missing} dice below start) (bonusMult: ${ctx.bonusMult})`,
@@ -93,7 +94,7 @@ effectRegistry.registerAdditive('MULT_PER_MISSING_DICE', (ctx, equip, index) => 
 effectRegistry.registerAdditive('DICE_DESTROYED_MILES_GAIN', (ctx, equip, index) => {
   const val = equip.state.miles ?? 0;
   if (val > 0) {
-    ctx.bonusMiles += val;
+    ctx.bonusMiles = addScore(ctx.bonusMiles, val);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: val });
     console.log(`  [equip] ${equip.def.name}: +${val} miles (destroyed dice) (bonusMiles: ${ctx.bonusMiles})`);
   }
@@ -103,7 +104,7 @@ effectRegistry.registerAdditive('MARKED_NO_SIX_MULT', (ctx, equip, index) => {
   // Marked: accumulated mult (resets when a 6 is scored)
   const val = equip.state.mult ?? 0;
   if (val > 0) {
-    ctx.bonusMult += val;
+    ctx.bonusMult = addScore(ctx.bonusMult, val);
     ctx.animEvents.push({
       target: { kind: 'equip', equipIndex: index },
       popupType: 'mult',

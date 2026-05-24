@@ -41,7 +41,7 @@ describe("LUCKY_TRIGGER_XMULT: Rabbit's Foot", () => {
       equipment: [item('rabbits_foot')],
     });
     // x1 means no change
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('gains x0.25 per lucky trigger', () => {
@@ -56,7 +56,7 @@ describe("LUCKY_TRIGGER_XMULT: Rabbit's Foot", () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, x1.5 from rabbit's foot
-    expect(result.mult).toBeCloseTo(1.5, 5);
+    expect(result.mult).toBeMultCloseTo(1.5, 5);
   });
 
   test('accumulates over many triggers', () => {
@@ -78,7 +78,7 @@ describe("UNCOMMON_EQUIP_XMULT: Collector's Case", () => {
     // collectors_case: UNCOMMON_EQUIP_XMULT, horseshoe is common (0 uncommon)
     // 0 uncommon → no xMult bonus, horseshoe ADD_MULT +4
     // result.mult = (1 + 4) * 1 = 5
-    expect(result.mult).toBeCloseTo(5, 5);
+    expect(result.mult).toBeMultCloseTo(5, 5);
   });
 
   test('multiplies for each uncommon item', () => {
@@ -88,7 +88,7 @@ describe("UNCOMMON_EQUIP_XMULT: Collector's Case", () => {
     });
     // 2 horseshoes (common) → 0 uncommon → no bonus from collectors_case
     // 2x ADD_MULT +4 = +8, result.mult = (1 + 8) * 1 = 9
-    expect(result.mult).toBeCloseTo(9, 5);
+    expect(result.mult).toBeMultCloseTo(9, 5);
   });
 
   test('no bonus with zero uncommon', () => {
@@ -98,7 +98,7 @@ describe("UNCOMMON_EQUIP_XMULT: Collector's Case", () => {
     });
     // baseMult=1, horseshoe: +4 = 5
     // 0 uncommon → no xMult
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 });
 
@@ -111,7 +111,7 @@ describe('DECAYING_XMULT: Worn Deck', () => {
       equipment: [item('worn_deck')],
     });
     // PAIR: baseMult=1, x2 = 2
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 
   test('loses x0.01 per die rerolled', () => {
@@ -131,7 +131,7 @@ describe('DECAYING_XMULT: Worn Deck', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.mult).toBeCloseTo(1.9, 5);
+    expect(result.mult).toBeMultCloseTo(1.9, 5);
   });
 
   test('does not go below 0', () => {
@@ -149,7 +149,7 @@ describe('SELL_XMULT_GAIN: Snake Oil Ledger', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('snake_oil_ledger')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('gains x0.25 per sell', () => {
@@ -170,7 +170,7 @@ describe('SELL_XMULT_GAIN: Snake Oil Ledger', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, x2.0 → 2.0
-    expect(result.mult).toBeCloseTo(2.0, 5);
+    expect(result.mult).toBeMultCloseTo(2.0, 5);
   });
 
   test('resets on boss defeat', () => {
@@ -219,7 +219,7 @@ describe('FINAL_DAY_XMULT: High Noon', () => {
       maxDays: 4,
     });
     // PAIR: baseMult=1, x3 on final day
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 
   test('no bonus on non-final day', () => {
@@ -229,7 +229,7 @@ describe('FINAL_DAY_XMULT: High Noon', () => {
       currentDay: 2,
       maxDays: 4,
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('works when maxDays is 1', () => {
@@ -239,7 +239,7 @@ describe('FINAL_DAY_XMULT: High Noon', () => {
       currentDay: 1,
       maxDays: 1,
     });
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 });
 
@@ -253,7 +253,7 @@ describe('EVERY_NTH_HAND_XMULT: Six Shooter', () => {
       equipment: [sixShooter],
     });
     // PAIR: baseMult=1, no x4 since handsPlayed=4 (not multiple of 6)
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('triggers x4 when handsPlayed is multiple of 6', () => {
@@ -263,7 +263,7 @@ describe('EVERY_NTH_HAND_XMULT: Six Shooter', () => {
       equipment: [sixShooter],
     });
     // PAIR: baseMult=1, x4 because handsPlayed increments to 6 before scoring, 6%6===0
-    expect(result.mult).toBe(4);
+    expect(result.mult).toBeMult(4);
   });
 
   test('triggers x4 at 12 hands played', () => {
@@ -273,7 +273,7 @@ describe('EVERY_NTH_HAND_XMULT: Six Shooter', () => {
       equipment: [sixShooter],
     });
     // increments to 12, 12%6===0 → x4
-    expect(result.mult).toBe(4);
+    expect(result.mult).toBeMult(4);
   });
 
   test('increments handsPlayed on processEquipmentOnHandPlayed', () => {
@@ -312,7 +312,7 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
     const result = game.calculateScore()!;
     // PAIR: baseMult=1
     // 3 steel dice in collection → x(1 + 3*0.2) = x1.6
-    expect(result.mult).toBeCloseTo(1.6);
+    expect(result.mult).toBeMultCloseTo(1.6);
   });
 
   test('no xMult when no steel dice in collection', () => {
@@ -321,7 +321,7 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
       equipment: [item('iron_furnace')],
     });
     // No steel dice anywhere → x1 (no bonus)
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('scales with more steel dice in collection', () => {
@@ -343,7 +343,7 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
     const result = game.calculateScore()!;
     // PAIR: baseMult=1
     // 5 steel dice in collection → x(1 + 5*0.2) = x2.0
-    expect(result.mult).toBeCloseTo(2.0);
+    expect(result.mult).toBeMultCloseTo(2.0);
   });
 });
 
@@ -355,7 +355,7 @@ describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('guide_lantern')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('gains x0.1 when a trail guide is used', () => {
@@ -375,7 +375,7 @@ describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.mult).toBeCloseTo(1.3, 5);
+    expect(result.mult).toBeMultCloseTo(1.3, 5);
   });
 
   test('scout gains x0.2 per trail guide used', () => {
@@ -398,7 +398,7 @@ describe('XMULT_RISKY: Nitro', () => {
       equipment: [item('nitro')],
     });
     // PAIR: baseMult=1, x3 from nitro = 3
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 
   test('stacks multiplicatively with other xMult', () => {
@@ -407,7 +407,7 @@ describe('XMULT_RISKY: Nitro', () => {
       equipment: [item('nitro'), item('horseshoe')],
     });
     // PAIR: baseMult=1, +4 from horseshoe = 5, x3 from nitro = 15
-    expect(result.mult).toBe(15);
+    expect(result.mult).toBeMult(15);
   });
 });
 
@@ -421,7 +421,7 @@ describe('REPEAT_HAND_XMULT: Repeat Offender', () => {
       equipment: [inst],
     });
     // PAIR first time: no x3
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('activates x3 on second play of same hand type this round', () => {
@@ -440,7 +440,7 @@ describe('REPEAT_HAND_XMULT: Repeat Offender', () => {
     game.selectForScore(dice.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, x3 from repeat offender = 3
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 
   test('does NOT activate for different hand types', () => {
@@ -459,7 +459,7 @@ describe('REPEAT_HAND_XMULT: Repeat Offender', () => {
     game.state.rerollsRemaining = 6;
     game.selectForScore(dice.map((d) => d.id));
     const result = game.calculateScore()!;
-    expect(result.mult).toBe(3); // THREE_OF_A_KIND baseMult=3, no x3
+    expect(result.mult).toBeMult(3); // THREE_OF_A_KIND baseMult=3, no x3
   });
 
   test('resets on new round', () => {
@@ -505,7 +505,7 @@ describe('STATEFUL_XMULT: New Blood', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, x2 from new blood = 2
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 
   test('integrates with player addDie', () => {
@@ -526,7 +526,7 @@ describe('EMPTY_SLOT_XMULT: One-Man Posse', () => {
     });
     // Default maxEquipmentSlots=5, usedSlots=1 (one_man_posse), empty=4
     // PAIR: baseMult=1, x(1+4)=x5
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('no bonus when all slots full', () => {
@@ -536,7 +536,7 @@ describe('EMPTY_SLOT_XMULT: One-Man Posse', () => {
     });
     // maxEquipmentSlots=5, usedSlots=5, empty=0
     // PAIR: baseMult=1, +4+4+4+4=17 from horseshoes, x1 from posse (no empty)
-    expect(result.mult).toBe(17);
+    expect(result.mult).toBeMult(17);
   });
 });
 
@@ -549,7 +549,7 @@ describe('ROUNDS_SKIPPED_XMULT: Shortcut Trail', () => {
       equipment: [item('shortcut_trail')],
     });
     // No rounds skipped → no bonus
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('activates based on roundsSkipped state', () => {
@@ -559,7 +559,7 @@ describe('ROUNDS_SKIPPED_XMULT: Shortcut Trail', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, x(1+2*0.25)=x1.5
-    expect(result.mult).toBeCloseTo(1.5, 5);
+    expect(result.mult).toBeMultCloseTo(1.5, 5);
   });
 });
 
@@ -586,7 +586,7 @@ describe('DIAMOND_DESTROYED_XMULT: Diamond Coffin', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, x2.5
-    expect(result.mult).toBeCloseTo(2.5, 5);
+    expect(result.mult).toBeMultCloseTo(2.5, 5);
   });
 });
 
@@ -599,7 +599,7 @@ describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
       equipment: [item('rainbow_trail')],
     });
     // PAIR: baseMult=1+4(bone) = 5, x2 from rainbow trail
-    expect(result.mult).toBe(10);
+    expect(result.mult).toBeMult(10);
   });
 
   test('x3 with 3 different enhancement types scored', () => {
@@ -612,7 +612,7 @@ describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
       equipment: [item('rainbow_trail')],
     });
     // THREE_OF_A_KIND: baseMult=3+4(bone) = 7, x3 from rainbow trail
-    expect(result.mult).toBe(21);
+    expect(result.mult).toBeMult(21);
   });
 
   test('no bonus with only 1 enhancement type', () => {
@@ -621,7 +621,7 @@ describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
       equipment: [item('rainbow_trail')],
     });
     // PAIR: baseMult=1+4+4(bone)=9, no rainbow bonus (only 1 type)
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('no bonus with no enhanced dice', () => {
@@ -630,7 +630,7 @@ describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
       equipment: [item('rainbow_trail')],
     });
     // PAIR: baseMult=1, no bonus
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -643,7 +643,7 @@ describe('HAND_CONTAINS_XMULT: Hitched Pair (pair, x2)', () => {
       equipment: [item('hitched_pair')],
     });
     // PAIR: baseMult=1, x2 = 2
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 
   test('activates on full house (contains pair)', () => {
@@ -652,7 +652,7 @@ describe('HAND_CONTAINS_XMULT: Hitched Pair (pair, x2)', () => {
       equipment: [item('hitched_pair')],
     });
     // FULL_HOUSE: baseMult=4, x2 = 8
-    expect(result.mult).toBe(8);
+    expect(result.mult).toBeMult(8);
   });
 
   test('does not activate on straight', () => {
@@ -661,7 +661,7 @@ describe('HAND_CONTAINS_XMULT: Hitched Pair (pair, x2)', () => {
       equipment: [item('hitched_pair')],
     });
     // FOUR_STRAIGHT: baseMult=2, no pair → no xMult
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 });
 
@@ -674,7 +674,7 @@ describe('HAND_CONTAINS_XMULT: Hat Trick (3oak, x3)', () => {
       equipment: [item('hat_trick')],
     });
     // THREE_OF_A_KIND: baseMult=3, x3 = 9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('activates on four of a kind (contains 3oak)', () => {
@@ -683,7 +683,7 @@ describe('HAND_CONTAINS_XMULT: Hat Trick (3oak, x3)', () => {
       equipment: [item('hat_trick')],
     });
     // FOUR_OF_A_KIND: baseMult=5, x3 = 15
-    expect(result.mult).toBe(15);
+    expect(result.mult).toBeMult(15);
   });
 
   test('does not activate on pair', () => {
@@ -692,7 +692,7 @@ describe('HAND_CONTAINS_XMULT: Hat Trick (3oak, x3)', () => {
       equipment: [item('hat_trick')],
     });
     // PAIR: baseMult=1, no 3oak → no xMult
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -705,7 +705,7 @@ describe('HAND_CONTAINS_XMULT: Posse Wagon (4oak, x4)', () => {
       equipment: [item('posse_wagon')],
     });
     // FOUR_OF_A_KIND: baseMult=5, x4 = 20
-    expect(result.mult).toBe(20);
+    expect(result.mult).toBeMult(20);
   });
 
   test('does not activate on three of a kind', () => {
@@ -714,7 +714,7 @@ describe('HAND_CONTAINS_XMULT: Posse Wagon (4oak, x4)', () => {
       equipment: [item('posse_wagon')],
     });
     // THREE_OF_A_KIND: baseMult=3, no 4oak → no xMult
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 });
 
@@ -727,7 +727,7 @@ describe('HAND_CONTAINS_XMULT: Five Finger Fillet (5oak, x5)', () => {
       equipment: [item('five_finger_fillet')],
     });
     // FIVE_OF_A_KIND: baseMult=6, x5 = 30
-    expect(result.mult).toBe(30);
+    expect(result.mult).toBeMult(30);
   });
 
   test('does not activate on four of a kind', () => {
@@ -736,7 +736,7 @@ describe('HAND_CONTAINS_XMULT: Five Finger Fillet (5oak, x5)', () => {
       equipment: [item('five_finger_fillet')],
     });
     // FOUR_OF_A_KIND: baseMult=5, no 5oak → no xMult
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 });
 
@@ -749,7 +749,7 @@ describe('HAND_CONTAINS_XMULT: Snake River (5 straight, x3)', () => {
       equipment: [item('snake_river')],
     });
     // FIVE_STRAIGHT: baseMult=4, x3 = 12
-    expect(result.mult).toBe(12);
+    expect(result.mult).toBeMult(12);
   });
 
   test('does not activate on 4 straight', () => {
@@ -758,7 +758,7 @@ describe('HAND_CONTAINS_XMULT: Snake River (5 straight, x3)', () => {
       equipment: [item('snake_river')],
     });
     // FOUR_STRAIGHT: baseMult=2, no 5 straight → no xMult
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 });
 
@@ -783,7 +783,7 @@ describe('ENHANCED_DICE_COUNT_XMULT: Blessed Herd', () => {
 
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, x3 from blessed herd
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 
   test('does not activate when fewer than 16 enhanced dice', () => {
@@ -804,7 +804,7 @@ describe('ENHANCED_DICE_COUNT_XMULT: Blessed Herd', () => {
 
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, no x3 (only 10 enhanced)
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -845,7 +845,7 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     // PAIR: baseMult=1, bone would add +4 mult but graverobber strips it first
     // Graverobber gains x0.1 for the bone die → xMult = 1.1
     // Final mult: baseMult(1) * xMult(1.1) = 1.1 (no +4 from bone)
-    expect(result.mult).toBeCloseTo(1.1, 5);
+    expect(result.mult).toBeMultCloseTo(1.1, 5);
     expect(inst.state.xMult).toBeCloseTo(1.1, 5);
   });
 
@@ -864,7 +864,7 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     // Graverobber gains x0.1 → xMult = 1.1
     // Final miles = 20 * (1 * 1.1) = 22 (no +30 from wooden, but xMult applies)
     // Without graverobber, wooden would give: (10 + 10 + 30) * 1 = 50
-    expect(result.miles).toBeCloseTo(22, 5);
+    expect(result.miles).toBeMilesCloseTo(22, 5);
   });
 
   test('does not gain xMult from non-enhanced dice', () => {
@@ -883,7 +883,7 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1, x2.0 from graverobber
-    expect(result.mult).toBeCloseTo(2.0, 5);
+    expect(result.mult).toBeMultCloseTo(2.0, 5);
   });
 });
 
@@ -909,7 +909,7 @@ describe('TRAILBLAZER_XMULT: Trailblazer', () => {
 
     const result = game.calculateScore()!;
     // THREE_OF_A_KIND baseMult=3, streak 1 → x1.2 → 3.6
-    expect(result.mult).toBeCloseTo(3.6, 5);
+    expect(result.mult).toBeMultCloseTo(3.6, 5);
   });
 
   test('resets streak when playing most-played hand', () => {
@@ -932,7 +932,7 @@ describe('CONSECUTIVE_PIP_XMULT: Eight Second Ride', () => {
       equipment: [item('eight_second_ride')],
     });
     // THREE_OF_A_KIND: baseMult=3, x1 * x1.5 * x2 = x3 → 9
-    expect(result.mult).toBeCloseTo(9, 5);
+    expect(result.mult).toBeMultCloseTo(9, 5);
   });
 });
 
@@ -952,7 +952,7 @@ describe('ENHANCED_DESTROYED_XMULT: Book of the Dead', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.mult).toBeCloseTo(2, 5);
+    expect(result.mult).toBeMultCloseTo(2, 5);
   });
 
   test('does not gain xMult from standard die destruction', () => {
@@ -971,7 +971,7 @@ describe("PIP_XMULT: The Devil's Hand", () => {
       equipment: [item('devils_hand')],
     });
     // PAIR: baseMult=1, two scored 6s → x2 * x2 = x4
-    expect(result.mult).toBeCloseTo(4, 5);
+    expect(result.mult).toBeMultCloseTo(4, 5);
   });
 });
 
@@ -996,6 +996,6 @@ describe('REROLL_COUNT_XMULT: The 23rd Psalm', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect(result.mult).toBeCloseTo(3, 5);
+    expect(result.mult).toBeMultCloseTo(3, 5);
   });
 });

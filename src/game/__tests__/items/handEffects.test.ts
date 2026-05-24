@@ -24,7 +24,7 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
       equipment: [item('wedding_ring')],
     });
     // PAIR: baseMult=1, +8 = 9
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('activates on full house (contains pair)', () => {
@@ -33,7 +33,7 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
       equipment: [item('wedding_ring')],
     });
     // FULL_HOUSE: baseMult=4, +8 = 12
-    expect(result.mult).toBe(12);
+    expect(result.mult).toBeMult(12);
   });
 
   test('activates on three of a kind (contains pair)', () => {
@@ -42,7 +42,7 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
       equipment: [item('wedding_ring')],
     });
     // THREE_OF_A_KIND: baseMult=3, +8 = 11
-    expect(result.mult).toBe(11);
+    expect(result.mult).toBeMult(11);
   });
 
   test('does not activate on high value', () => {
@@ -50,7 +50,7 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
       scoredDice: [die({ value: 10 })],
       equipment: [item('wedding_ring')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('does not activate on straight', () => {
@@ -59,7 +59,7 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
       equipment: [item('wedding_ring')],
     });
     // FOUR_STRAIGHT: baseMult=2, no pair → no bonus from wedding ring
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 });
 
@@ -70,7 +70,7 @@ describe('HAND_MULT: Town Choir (three of a kind, +12)', () => {
       equipment: [item('town_choir')],
     });
     // THREE_OF_A_KIND: baseMult=3, +12 = 15
-    expect(result.mult).toBe(15);
+    expect(result.mult).toBeMult(15);
   });
 
   test('activates on full house (contains three of a kind)', () => {
@@ -79,7 +79,7 @@ describe('HAND_MULT: Town Choir (three of a kind, +12)', () => {
       equipment: [item('town_choir')],
     });
     // FULL_HOUSE: baseMult=4, +12 = 16
-    expect(result.mult).toBe(16);
+    expect(result.mult).toBeMult(16);
   });
 
   test('activates on four of a kind (contains three of a kind)', () => {
@@ -88,7 +88,7 @@ describe('HAND_MULT: Town Choir (three of a kind, +12)', () => {
       equipment: [item('town_choir')],
     });
     // FOUR_OF_A_KIND: baseMult=5, +12 = 17
-    expect(result.mult).toBe(17);
+    expect(result.mult).toBeMult(17);
   });
 
   test('does not activate on pair', () => {
@@ -97,7 +97,7 @@ describe('HAND_MULT: Town Choir (three of a kind, +12)', () => {
       equipment: [item('town_choir')],
     });
     // PAIR: baseMult=1, no three of a kind → no bonus
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -108,7 +108,7 @@ describe('HAND_MULT: Deputy Brothers (two pair, +10)', () => {
       equipment: [item('deputy_brothers')],
     });
     // TWO_PAIR: baseMult=2, +10 = 12
-    expect(result.mult).toBe(12);
+    expect(result.mult).toBeMult(12);
   });
 
   test('activates on full house (contains two pair)', () => {
@@ -117,7 +117,7 @@ describe('HAND_MULT: Deputy Brothers (two pair, +10)', () => {
       equipment: [item('deputy_brothers')],
     });
     // FULL_HOUSE: baseMult=4, +10 = 14
-    expect(result.mult).toBe(14);
+    expect(result.mult).toBeMult(14);
   });
 
   test('does not activate on pair', () => {
@@ -125,7 +125,7 @@ describe('HAND_MULT: Deputy Brothers (two pair, +10)', () => {
       scoredDice: diceWithValue(6, 2),
       equipment: [item('deputy_brothers')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -140,7 +140,7 @@ describe('HAND_MILES: Work Boots (pair, +50 miles)', () => {
     // PAIR: baseMiles=10, baseMult=1, totalValue=10
     // Equipment: +50 bonusMiles
     // finalMiles = (10 + 10 + 50) * 1 = 70
-    expect(result.miles).toBe(70);
+    expect(result.miles).toBeMiles(70);
   });
 
   test('activates on full house (contains pair)', () => {
@@ -151,7 +151,7 @@ describe('HAND_MILES: Work Boots (pair, +50 miles)', () => {
     // FULL_HOUSE: baseMiles=25, baseMult=4, totalValue=31
     // +50 bonusMiles
     // finalMiles = (25 + 31 + 50) * 4 = 424
-    expect(result.miles).toBe(424);
+    expect(result.miles).toBeMiles(424);
   });
 
   test('does not activate on high value', () => {
@@ -161,7 +161,7 @@ describe('HAND_MILES: Work Boots (pair, +50 miles)', () => {
     });
     // HIGH_VALUE: baseMiles=5, totalValue=10, no bonus
     // miles = (5 + 10 + 0) * 1 = 15
-    expect(result.miles).toBe(15);
+    expect(result.miles).toBeMiles(15);
   });
 });
 
@@ -174,7 +174,7 @@ describe('HAND_MILES: Buffalo Stampede (three of a kind, +100 miles)', () => {
     // THREE_OF_A_KIND: baseMiles=20, baseMult=3, totalValue=12
     // +100 bonusMiles
     // finalMiles = (20 + 12 + 100) * 3 = 396
-    expect(result.miles).toBe(396);
+    expect(result.miles).toBeMiles(396);
   });
 
   test('activates on four of a kind (contains three of a kind)', () => {
@@ -185,7 +185,7 @@ describe('HAND_MILES: Buffalo Stampede (three of a kind, +100 miles)', () => {
     // FOUR_OF_A_KIND: baseMiles=40, baseMult=5, totalValue=16
     // +100 bonusMiles
     // finalMiles = (40 + 16 + 100) * 5 = 780
-    expect(result.miles).toBe(780);
+    expect(result.miles).toBeMiles(780);
   });
 
   test('does not activate on pair', () => {
@@ -195,7 +195,7 @@ describe('HAND_MILES: Buffalo Stampede (three of a kind, +100 miles)', () => {
     });
     // PAIR: baseMiles=10, totalValue=8, no bonus
     // miles = (10 + 8 + 0) * 1 = 18
-    expect(result.miles).toBe(18);
+    expect(result.miles).toBeMiles(18);
   });
 });
 
@@ -207,7 +207,7 @@ describe('HAND_MULT_GAIN: Card Counter', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('card_counter')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('gains +2 mult when two pair is played', () => {
@@ -240,7 +240,7 @@ describe('HAND_MULT_GAIN: Card Counter', () => {
       equipment: [inst],
     });
     // PAIR: baseMult=1 + 6 = 7
-    expect(result.mult).toBe(7);
+    expect(result.mult).toBeMult(7);
   });
 
   test('con artist gains +4 mult per two pair hand', () => {
@@ -263,7 +263,7 @@ describe('HAND_MILES: Twin Colts (TWO_PAIR, +80 miles)', () => {
     // TWO_PAIR: baseMiles=15, +80 = 95, baseMult=2
     // totalValue = 3+3+7+7 = 20
     // miles = (95 + 20) * 2 = 230
-    expect(result.miles).toBe(230);
+    expect(result.miles).toBeMiles(230);
   });
 
   test('does not trigger on non-TWO_PAIR hand', () => {
@@ -273,7 +273,7 @@ describe('HAND_MILES: Twin Colts (TWO_PAIR, +80 miles)', () => {
     });
     // THREE_OF_A_KIND: baseMiles=20, no bonus from twin_colts
     // totalValue = 15, miles = (20 + 15) * 3 = 105
-    expect(result.miles).toBe(105);
+    expect(result.miles).toBeMiles(105);
   });
 });
 
@@ -285,7 +285,7 @@ describe('HAND_MILES: Rail Line (FOUR_STRAIGHT, +80 miles)', () => {
     });
     // FOUR_STRAIGHT: baseMiles=15, +80 = 95, baseMult=2
     // totalValue = 18, miles = (95 + 18) * 2 = 226
-    expect(result.miles).toBe(226);
+    expect(result.miles).toBeMiles(226);
   });
 
   test('does not trigger on non-FOUR_STRAIGHT hand', () => {
@@ -294,7 +294,7 @@ describe('HAND_MILES: Rail Line (FOUR_STRAIGHT, +80 miles)', () => {
       equipment: [item('rail_line')],
     });
     // PAIR: baseMiles=10, no bonus
-    expect(result.miles).toBe((10 + 10) * 1);
+    expect(result.miles).toBeMiles((10 + 10) * 1);
   });
 });
 
@@ -306,7 +306,7 @@ describe('HAND_MILES: Long Haul (FIVE_STRAIGHT, +100 miles)', () => {
     });
     // FIVE_STRAIGHT: baseMiles=30, +100 = 130, baseMult=4
     // totalValue = 20, miles = (130 + 20) * 4 = 600
-    expect(result.miles).toBe(600);
+    expect(result.miles).toBeMiles(600);
   });
 });
 
@@ -319,7 +319,7 @@ describe('HAND_TIMES_PLAYED_MULT: Trail Journal', () => {
       equipment: [item('trail_journal')],
     });
     // PAIR: baseMult=1, +0 from trail journal = 1
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('adds timesPlayed as mult after hand has been played', () => {
@@ -337,7 +337,7 @@ describe('HAND_TIMES_PLAYED_MULT: Trail Journal', () => {
     game.selectForScore(dice.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, +3 from trail journal = 4
-    expect(result.mult).toBe(4);
+    expect(result.mult).toBeMult(4);
   });
 
   test('uses correct hand type count', () => {
@@ -355,7 +355,7 @@ describe('HAND_TIMES_PLAYED_MULT: Trail Journal', () => {
     game.selectForScore(dice.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR played 2 times → +2 mult
-    expect(result.mult).toBe(3);
+    expect(result.mult).toBeMult(3);
   });
 });
 
@@ -453,7 +453,7 @@ describe('HAND_MULT: Rail Splitter (4 straight, +8)', () => {
       equipment: [item('rail_splitter')],
     });
     // FOUR_STRAIGHT: baseMult=2, +8 = 10
-    expect(result.mult).toBe(10);
+    expect(result.mult).toBeMult(10);
   });
 
   test('activates on 5 straight (contains 4 straight)', () => {
@@ -462,7 +462,7 @@ describe('HAND_MULT: Rail Splitter (4 straight, +8)', () => {
       equipment: [item('rail_splitter')],
     });
     // FIVE_STRAIGHT: baseMult=4, +8 = 12
-    expect(result.mult).toBe(12);
+    expect(result.mult).toBeMult(12);
   });
 
   test('does not activate on pair', () => {
@@ -470,7 +470,7 @@ describe('HAND_MULT: Rail Splitter (4 straight, +8)', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('rail_splitter')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -483,7 +483,7 @@ describe('HAND_MULT: Open Range (5 straight, +12)', () => {
       equipment: [item('open_range')],
     });
     // FIVE_STRAIGHT: baseMult=4, +12 = 16
-    expect(result.mult).toBe(16);
+    expect(result.mult).toBeMult(16);
   });
 
   test('does not activate on 4 straight', () => {
@@ -492,7 +492,7 @@ describe('HAND_MULT: Open Range (5 straight, +12)', () => {
       equipment: [item('open_range')],
     });
     // FOUR_STRAIGHT: baseMult=2, no bonus
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 
   test('does not activate on pair', () => {
@@ -500,6 +500,6 @@ describe('HAND_MULT: Open Range (5 straight, +12)', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('open_range')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });

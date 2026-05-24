@@ -14,7 +14,7 @@ describe('CONDITIONAL_MULT: Deadeye (scored ≤3 dice, +20 mult)', () => {
       equipment: [item('deadeye')],
     });
     // HIGH_VALUE: baseMult=1, +20 = 21
-    expect(result.mult).toBe(21);
+    expect(result.mult).toBeMult(21);
   });
 
   test('activates when scoring 2 dice', () => {
@@ -23,7 +23,7 @@ describe('CONDITIONAL_MULT: Deadeye (scored ≤3 dice, +20 mult)', () => {
       equipment: [item('deadeye')],
     });
     // PAIR: baseMult=1, +20 = 21
-    expect(result.mult).toBe(21);
+    expect(result.mult).toBeMult(21);
   });
 
   test('activates when scoring 3 dice', () => {
@@ -32,7 +32,7 @@ describe('CONDITIONAL_MULT: Deadeye (scored ≤3 dice, +20 mult)', () => {
       equipment: [item('deadeye')],
     });
     // THREE_OF_A_KIND: baseMult=3, +20 = 23
-    expect(result.mult).toBe(23);
+    expect(result.mult).toBeMult(23);
   });
 
   test('does NOT activate when scoring 4 dice', () => {
@@ -41,7 +41,7 @@ describe('CONDITIONAL_MULT: Deadeye (scored ≤3 dice, +20 mult)', () => {
       equipment: [item('deadeye')],
     });
     // FOUR_OF_A_KIND: baseMult=5, no bonus
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('does NOT activate when scoring 5 dice', () => {
@@ -50,7 +50,7 @@ describe('CONDITIONAL_MULT: Deadeye (scored ≤3 dice, +20 mult)', () => {
       equipment: [item('deadeye')],
     });
     // FIVE_OF_A_KIND: baseMult=6, no bonus
-    expect(result.mult).toBe(6);
+    expect(result.mult).toBeMult(6);
   });
 });
 
@@ -62,7 +62,7 @@ describe('CONDITIONAL_MULT: Stubborn Mule (no rerolls, +15 mult)', () => {
       rerollsRemaining: 0,
     });
     // PAIR: baseMult=1, +15 = 16
-    expect(result.mult).toBe(16);
+    expect(result.mult).toBeMult(16);
   });
 
   test('does NOT activate when rerolls remain', () => {
@@ -72,7 +72,7 @@ describe('CONDITIONAL_MULT: Stubborn Mule (no rerolls, +15 mult)', () => {
       rerollsRemaining: 1,
     });
     // PAIR: baseMult=1, no bonus
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('does NOT activate with default rerolls (6)', () => {
@@ -80,7 +80,7 @@ describe('CONDITIONAL_MULT: Stubborn Mule (no rerolls, +15 mult)', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('stubborn_mule')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -96,7 +96,7 @@ describe('MILES_PER_UNUSED_REROLL: Trail Rations (+30 miles per reroll)', () => 
     // PAIR: baseMiles=10, baseMult=1, totalValue=10
     // +30 * 2 = +60 bonusMiles
     // miles = (10 + 10 + 60) * 1 = 80
-    expect(result.miles).toBe(80);
+    expect(result.miles).toBeMiles(80);
   });
 
   test('0 rerolls = 0 bonus miles', () => {
@@ -107,7 +107,7 @@ describe('MILES_PER_UNUSED_REROLL: Trail Rations (+30 miles per reroll)', () => 
     });
     // PAIR: baseMiles=10, totalValue=10, +0
     // miles = (10 + 10 + 0) * 1 = 20
-    expect(result.miles).toBe(20);
+    expect(result.miles).toBeMiles(20);
   });
 
   test('scales with more rerolls', () => {
@@ -118,7 +118,7 @@ describe('MILES_PER_UNUSED_REROLL: Trail Rations (+30 miles per reroll)', () => 
     });
     // +30 * 3 = +90
     // miles = (10 + 10 + 90) * 1 = 110
-    expect(result.miles).toBe(110);
+    expect(result.miles).toBeMiles(110);
   });
 });
 
@@ -131,7 +131,7 @@ describe('MULT_PER_EQUIPMENT: Toolbelt (+3 mult per equipment)', () => {
       equipment: [item('toolbelt')],
     });
     // PAIR: baseMult=1, +3 * 1 = +3 → mult=4
-    expect(result.mult).toBe(4);
+    expect(result.mult).toBeMult(4);
   });
 
   test('counts all equipment', () => {
@@ -143,7 +143,7 @@ describe('MULT_PER_EQUIPMENT: Toolbelt (+3 mult per equipment)', () => {
     // toolbelt: +3 * 3 = +9
     // horseshoe×2: +4+4 = +8
     // mult = 1 + 9 + 8 = 18
-    expect(result.mult).toBe(18);
+    expect(result.mult).toBeMult(18);
   });
 
   test('multiple toolbelts stack', () => {
@@ -154,7 +154,7 @@ describe('MULT_PER_EQUIPMENT: Toolbelt (+3 mult per equipment)', () => {
     // PAIR: baseMult=1
     // Each toolbelt: +3 * 2 = +6
     // Total: 1 + 6 + 6 = 13
-    expect(result.mult).toBe(13);
+    expect(result.mult).toBeMult(13);
   });
 });
 
@@ -170,7 +170,7 @@ describe('MILES_PER_DOLLAR: Money Wagon', () => {
     // PAIR: baseMiles=10, baseMult=1, totalValue=10
     // +2 * 10 = +20 bonusMiles
     // finalMiles = (10 + 10 + 20) * 1 = 40
-    expect(result.miles).toBe(40);
+    expect(result.miles).toBeMiles(40);
   });
 
   test('scales with higher balance', () => {
@@ -181,7 +181,7 @@ describe('MILES_PER_DOLLAR: Money Wagon', () => {
     });
     // +2 * 50 = +100 bonusMiles
     // finalMiles = (10 + 10 + 100) * 1 = 120
-    expect(result.miles).toBe(120);
+    expect(result.miles).toBeMiles(120);
   });
 
   test('zero money = zero bonus', () => {
@@ -191,7 +191,7 @@ describe('MILES_PER_DOLLAR: Money Wagon', () => {
       money: 0,
     });
     // finalMiles = (10 + 10 + 0) * 1 = 20
-    expect(result.miles).toBe(20);
+    expect(result.miles).toBeMiles(20);
   });
 });
 
@@ -300,7 +300,7 @@ describe('MULT_PER_MONEY_CHUNK: Oil Baron', () => {
       money: 25,
     });
     // PAIR: baseMult=1, +10 from oil baron (25/5*2)
-    expect(result.mult).toBe(11);
+    expect(result.mult).toBeMult(11);
   });
 });
 
@@ -321,6 +321,6 @@ describe('MULT_PER_MISSING_DICE: Ghost Town', () => {
     game.selectForScore(game.state.rolledDice.map((d) => d.id));
     const result = game.calculateScore()!;
     // 5 missing dice → +50 mult → 51 total
-    expect(result.mult).toBe(51);
+    expect(result.mult).toBeMult(51);
   });
 });

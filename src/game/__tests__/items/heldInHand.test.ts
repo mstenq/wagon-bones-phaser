@@ -20,7 +20,7 @@ describe('HELD_RETRIGGER: Silver Bullets', () => {
     // Steel held triggers 2 times (base + 1 retrigger from silver_bullets)
     // xMult = 1.5 * 1.5 = 2.25
     // heldMult = (1 + 0) * 2.25 = 2.25
-    expect(result.mult).toBe(2.25);
+    expect(result.mult).toBeMult(2.25);
   });
 
   test('retriggers eleventh_crossing effect', () => {
@@ -33,7 +33,7 @@ describe('HELD_RETRIGGER: Silver Bullets', () => {
     // Held die with value 11: eleventh_crossing triggers +11 per trigger
     // 2 triggers (base + silver_bullets) → +22 bonusMult
     // heldMult = (1 + 22) * 1 = 23
-    expect(result.mult).toBe(23);
+    expect(result.mult).toBeMult(23);
   });
 
   test('without silver_bullets, steel triggers once', () => {
@@ -43,7 +43,7 @@ describe('HELD_RETRIGGER: Silver Bullets', () => {
       equipment: [],
     });
     // xMult = 1.5 (one trigger)
-    expect(result.mult).toBe(1.5);
+    expect(result.mult).toBeMult(1.5);
   });
 });
 
@@ -59,7 +59,7 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     // PAIR: baseMult=1
     // Lowest held = 3, only die(3) matches → +6
     // heldMult = (1 + 6) * 1 = 7
-    expect(result.mult).toBe(7);
+    expect(result.mult).toBeMult(7);
   });
 
   test('only triggers on leftmost die when multiple tie for lowest', () => {
@@ -70,7 +70,7 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     });
     // Lowest = 2, but only leftmost die triggers → +4
     // heldMult = (1 + 4) * 1 = 5
-    expect(result.mult).toBe(5);
+    expect(result.mult).toBeMult(5);
   });
 
   test('single held die is always the lowest', () => {
@@ -81,7 +81,7 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     });
     // Lowest = 10 → +20
     // heldMult = (1 + 20) * 1 = 21
-    expect(result.mult).toBe(21);
+    expect(result.mult).toBeMult(21);
   });
 
   test('no held dice = no effect', () => {
@@ -90,7 +90,7 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
       heldDice: [],
       equipment: [item('bottom_dollar')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('mirror lake copies bottom dollar', () => {
@@ -99,7 +99,7 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
       heldDice: [die({ value: 3 }), die({ value: 7 })],
       equipment: [item('mirror_lake'), item('bottom_dollar')],
     });
-    expect(result.mult).toBe(13);
+    expect(result.mult).toBeMult(13);
   });
 
   test('retriggers when the lowest held die has red_bullet', () => {
@@ -112,7 +112,7 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     // Lowest held = 3, and red_bullet adds one held retrigger
     // Bottom Dollar adds +6 per trigger, so +12 total
     // heldMult = (1 + 12) * 1 = 13
-    expect(result.mult).toBe(13);
+    expect(result.mult).toBeMult(13);
   });
 
   test('stacks natural trigger, red_bullet, and silver_bullets retrigger on the lowest held die', () => {
@@ -126,7 +126,7 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     // Triggers: natural + red_bullet + silver_bullets = 3 total triggers
     // Bottom Dollar adds +6 per trigger, so +18 total
     // heldMult = (1 + 18) * 1 = 19
-    expect(result.mult).toBe(19);
+    expect(result.mult).toBeMult(19);
   });
 });
 
@@ -141,7 +141,7 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
     });
     // xMult = 1.5
     // heldMult = (1 + 0) * 1.5 = 1.5
-    expect(result.mult).toBe(1.5);
+    expect(result.mult).toBeMult(1.5);
   });
 
   test('stacks multiplicatively with multiple held 1s', () => {
@@ -151,7 +151,7 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
       equipment: [item('ace_in_the_hole')],
     });
     // xMult = 1.5 * 1.5 = 2.25
-    expect(result.mult).toBe(2.25);
+    expect(result.mult).toBeMult(2.25);
   });
 
   test('does not trigger on non-1 held dice', () => {
@@ -160,7 +160,7 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
       heldDice: [die({ value: 7 })],
       equipment: [item('ace_in_the_hole')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 
   test('retriggers with silver_bullets', () => {
@@ -170,7 +170,7 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
       equipment: [item('ace_in_the_hole'), item('silver_bullets')],
     });
     // 2 triggers per die: xMult = 1.5 * 1.5 = 2.25
-    expect(result.mult).toBe(2.25);
+    expect(result.mult).toBeMult(2.25);
   });
 
   test('echo chamber copies ace in the hole', () => {
@@ -179,7 +179,7 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
       heldDice: [die({ value: 1 })],
       equipment: [item('ace_in_the_hole'), item('echo_chamber')],
     });
-    expect(result.mult).toBe(2.25);
+    expect(result.mult).toBeMult(2.25);
   });
 });
 
@@ -194,7 +194,7 @@ describe('HELD_PIP_MULT: The Eleventh Crossing (pip 11, +11 mult)', () => {
     });
     // PAIR: baseMult=1
     // +11 bonusMult → heldMult = (1 + 11) * 1 = 12
-    expect(result.mult).toBe(12);
+    expect(result.mult).toBeMult(12);
   });
 
   test('stacks with multiple held 11s', () => {
@@ -204,7 +204,7 @@ describe('HELD_PIP_MULT: The Eleventh Crossing (pip 11, +11 mult)', () => {
       equipment: [item('eleventh_crossing')],
     });
     // +11 + +11 = +22 → heldMult = (1 + 22) * 1 = 23
-    expect(result.mult).toBe(23);
+    expect(result.mult).toBeMult(23);
   });
 
   test('does not trigger on non-11 held dice', () => {
@@ -213,7 +213,7 @@ describe('HELD_PIP_MULT: The Eleventh Crossing (pip 11, +11 mult)', () => {
       heldDice: [die({ value: 10 })],
       equipment: [item('eleventh_crossing')],
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -227,7 +227,7 @@ describe("HELD_ENHANCED_MONEY: Prospector's Pouch", () => {
       equipment: [item('prospectors_pouch')],
       money: 10,
     });
-    expect(result.mult).toBe(1);
+    expect(result.mult).toBeMult(1);
     expect(player.economy.balance).toBe(10); // unchanged
   });
 

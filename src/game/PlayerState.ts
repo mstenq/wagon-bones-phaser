@@ -45,6 +45,7 @@ import trailGuidesData from '../data/trail_guides';
 import { getProfessionById, type ProfessionDef } from '../data/professions';
 import bosses, { getBossDistanceMultiplier, getEligibleBossesForLeg } from '../data/bosses';
 import { getBaseTargetMilesForLeg } from '../data/target_miles';
+import { ceilScore, multiplyScore, type Decimal } from './scoreMath';
 import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
 import { getTrailTagById } from '../data/trail_tags';
 import { resetRunRng, rngPick } from './RunRng';
@@ -74,7 +75,7 @@ export function computeTargetMiles(
   permitScoreReduction: number,
   difficulty: DifficultyLevel,
   bossForLeg?: BossDef | null,
-): number {
+): Decimal {
   const effectiveLeg = leg - permitScoreReduction;
   const base = getBaseTargetMilesForLeg(effectiveLeg, difficulty);
   let multiplier = GAMEPLAY.ROUND_MULTIPLIERS[round - 1] ?? 1;
@@ -84,7 +85,7 @@ export function computeTargetMiles(
       multiplier = bossMultiplier;
     }
   }
-  return Math.ceil(base * multiplier);
+  return ceilScore(multiplyScore(base, multiplier));
 }
 
 /** Base money reward for completing a round at the given difficulty. */
@@ -693,7 +694,7 @@ export class PlayerState {
   }
 
   /** Target miles for the current round (base × round multiplier, reduced by permit shortcuts) */
-  get targetMiles(): number {
+  get targetMiles(): Decimal {
     const boss = this.round === GAMEPLAY.ROUNDS_PER_LEG ? this.getBossForLeg(this.leg) : null;
     return computeTargetMiles(this.leg, this.round, this.permitScoreReduction, this.difficulty, boss);
   }

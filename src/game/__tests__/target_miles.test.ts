@@ -10,21 +10,21 @@ beforeEach(() => {
 
 describe('target_miles', () => {
   test('legs -1 and 0 are 100 on all difficulties', () => {
-    expect(getBaseTargetMilesForLeg(-1, 1)).toBe(100);
-    expect(getBaseTargetMilesForLeg(0, 6)).toBe(100);
+    expect(getBaseTargetMilesForLeg(-1, 1)).toBeMiles(100);
+    expect(getBaseTargetMilesForLeg(0, 6)).toBeMiles(100);
   });
 
   test('leg 8 and 9 normal bases match doc', () => {
-    expect(getBaseTargetMilesForLeg(8, 1)).toBe(50_000);
-    expect(getBaseTargetMilesForLeg(9, 1)).toBe(110_000);
+    expect(getBaseTargetMilesForLeg(8, 1)).toBeMiles(50_000);
+    expect(getBaseTargetMilesForLeg(9, 1)).toBeMiles(110_000);
   });
 
   test('leg 13 deadly uses scientific-scale base', () => {
-    expect(getBaseTargetMilesForLeg(13, 6)).toBe(1.8e11);
+    expect(getBaseTargetMilesForLeg(13, 6)).toBeMiles(1.8e11);
   });
 
   test('permit shortcut uses leg -1 base on leg 1', () => {
-    expect(computeTargetMiles(1, 1, 2, 1)).toBe(100);
+    expect(computeTargetMiles(1, 1, 2, 1)).toBeMiles(100);
   });
 
   test('advancing past leg 8 sets storyVictoryPending', () => {

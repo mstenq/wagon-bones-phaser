@@ -2,6 +2,7 @@
 
 import { Die, HandType, HandResult, ScoreAnimEvent } from '../types';
 import { EquipmentInstance } from '../ItemsSystem';
+import type { Decimal } from '../decimal';
 
 /**
  * Mutable context passed through the scoring pipeline.
@@ -23,9 +24,9 @@ export interface ScoringPipelineContext {
 
   // ─── Accumulator State (mutated by handlers) ───
   totalValue: number;
-  bonusMult: number;
-  xMult: number;
-  bonusMiles: number;
+  bonusMult: Decimal;
+  xMult: Decimal;
+  bonusMiles: Decimal;
   animEvents: ScoreAnimEvent[];
 
   // ─── Mutation Collector (applied after scoring) ───
@@ -36,8 +37,8 @@ export interface ScoringMutations {
   moneyEarned: number;
   earnedMoney: number;
   lostMoney: number;
-  earnedMiles: number;
-  lostMiles: number;
+  earnedMiles: Decimal;
+  lostMiles: Decimal;
   gainedDice: number;
   lostDice: number;
   gainedSupplyCards: number;

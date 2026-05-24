@@ -57,7 +57,7 @@ describe('red_bullet sticker', () => {
     // Die triggers twice: totalValue = 4 + 4 = 8, bonusMult = 4 + 4 = 8
     // mult = (1 + 8) = 9
     expect(result.totalValue).toBe(8);
-    expect(result.mult).toBe(9);
+    expect(result.mult).toBeMult(9);
   });
 
   test('retriggers in held-in-hand context', () => {
@@ -68,7 +68,7 @@ describe('red_bullet sticker', () => {
     // PAIR: baseMult=1
     // Held steel die triggers 2 times (base + red_bullet retrigger)
     // xMult = 1.5 * 1.5 = 2.25
-    expect(result.mult).toBe(2.25);
+    expect(result.mult).toBeMult(2.25);
   });
 });
 

@@ -21,6 +21,7 @@ import {
   PermitDef,
 } from '../PermitsSystem';
 import { GAMEPLAY } from '../Constants';
+import { lt } from '../scoreMath';
 import { devGrantPermit } from '../DevMode';
 
 beforeEach(() => {
@@ -390,7 +391,7 @@ describe('Permit effects: SHORTCUT', () => {
     const baseMiles = player.targetMiles;
     player.buyPermit(getPermitById('shortcut_trail')!);
     const reducedMiles = player.targetMiles;
-    expect(reducedMiles).toBeLessThan(baseMiles);
+    expect(lt(reducedMiles, baseMiles)).toBe(true);
   });
 });
 

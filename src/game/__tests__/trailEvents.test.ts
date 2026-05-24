@@ -27,6 +27,7 @@ import {
 } from '../TrailEventsSystem';
 import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
 import { GAMEPLAY, TRAIL_EVENT } from '../Constants';
+import { D } from '../scoreMath';
 import { getEquipmentDefById, isEquipmentCursed } from '../ItemsSystem';
 import { resolveEffectParam } from '../effectParams';
 import { PhaseState } from '../types';
@@ -710,8 +711,8 @@ describe('Effect application', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'BOSS_UPGRADE', multiplier: 1.5 }, player, mods);
     player.trailEventModifiers = mods;
-    game.startRound({ targetMiles: 1000 });
-    expect(game.config.targetMiles).toBe(1500);
+    game.startRound({ targetMiles: D(1000) });
+    expect(game.config.targetMiles).toBeMiles(1500);
   });
 
   test('SCORE_MULTIPLIER increases target miles in next round', () => {
@@ -719,8 +720,8 @@ describe('Effect application', () => {
     const mods = createEmptyModifiers();
     applyEffect({ type: 'SCORE_MULTIPLIER', multiplier: 1.5 }, player, mods);
     player.trailEventModifiers = mods;
-    game.startRound({ targetMiles: 1000 });
-    expect(game.config.targetMiles).toBe(1500);
+    game.startRound({ targetMiles: D(1000) });
+    expect(game.config.targetMiles).toBeMiles(1500);
   });
 
   test('FLAT_MILES_PENALTY still accumulates on modifiers (not wired to gameplay)', () => {
@@ -931,7 +932,7 @@ describe('Round modifier integration', () => {
     // Verify effects were applied
     expect(game.config.maxDays).toBe(2);
     expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
-    expect(game.config.targetMiles).toBe(1500);
+    expect(game.config.targetMiles).toBeMiles(1500);
 
     // Verify modifiers are cleared after consumption
     expect(player.trailEventModifiers.dayPenalty).toBe(0);
@@ -963,7 +964,7 @@ describe('Round modifier integration', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     player.economy.setBalance(20);
     player.trailEventModifiers.moneyPerDayLoss = 3;
-    game.startRound({ targetMiles: 999_999 });
+    game.startRound({ targetMiles: D(999_999) });
 
     const d1 = die({ id: 'pay_d1', value: 5 });
     const d2 = die({ id: 'pay_d2', value: 5 });
@@ -981,7 +982,7 @@ describe('Round modifier integration', () => {
   test('disableRerollDay1 blocks rerolls on day 1 only', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     player.trailEventModifiers.disableRerollDay1 = true;
-    game.startRound({ targetMiles: 999_999 });
+    game.startRound({ targetMiles: D(999_999) });
 
     expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS);
     expect(game.state.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS);
@@ -1013,7 +1014,7 @@ describe('Round modifier integration', () => {
     const event = getTrailEventById('heavy_fog')!;
     const result = resolveChoice(event, 'endure', player);
     player.trailEventModifiers = result.modifiers;
-    game.startRound({ targetMiles: 999_999 });
+    game.startRound({ targetMiles: D(999_999) });
 
     expect(player.trailRoundEffects.disableRerollDay1).toBe(true);
     expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS);
@@ -1024,7 +1025,7 @@ describe('Round modifier integration', () => {
   test('standardDiceDay1 strips enhancement bonuses on day 1 only', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     player.trailEventModifiers.standardDiceDay1 = true;
-    game.startRound({ targetMiles: 999_999 });
+    game.startRound({ targetMiles: D(999_999) });
 
     const wooden = die({ id: 'std_d1', value: 5, enhancement: 'wooden' });
     const plain = die({ id: 'std_d2', value: 5 });
@@ -1049,7 +1050,7 @@ describe('Round modifier integration', () => {
     const { game, player } = setupGame({
       dice: [diamond, plain, ...diceWithValue(1, 48)],
     });
-    game.startRound({ targetMiles: 999_999 });
+    game.startRound({ targetMiles: D(999_999) });
 
     const originalRandom = Math.random;
     Math.random = () => 0;
@@ -1068,7 +1069,7 @@ describe('Round modifier integration', () => {
   test('scoredDiceDestroyChance destroys scored dice', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     player.trailEventModifiers.scoredDiceDestroyChance = 1;
-    game.startRound({ targetMiles: 999_999 });
+    game.startRound({ targetMiles: D(999_999) });
 
     const d1 = die({ id: 'curse_d1', value: 5 });
     const d2 = die({ id: 'curse_d2', value: 5 });

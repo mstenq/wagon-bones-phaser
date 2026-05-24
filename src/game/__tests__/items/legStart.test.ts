@@ -42,7 +42,7 @@ describe('ROUND_START_DESTROY_RIGHT: Funeral Pyre', () => {
       equipment: [pyre],
     });
     // PAIR: baseMult=1, +15 bonusMult from funeral_pyre state
-    expect(result.mult).toBe(16);
+    expect(result.mult).toBeMult(16);
   });
 });
 
@@ -117,7 +117,7 @@ describe('ROUND_START_XMULT_DESTROY: Haunted Totem', () => {
     game.selectForScore(game.state.rolledDice.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, x2 from totem = 2
-    expect(result.mult).toBe(2);
+    expect(result.mult).toBeMult(2);
   });
 
   test('stacks across multiple rounds', () => {
