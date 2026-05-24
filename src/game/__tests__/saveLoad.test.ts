@@ -193,6 +193,7 @@ describe('SaveLoad', () => {
           equipmentDisplayOrder: null,
           equipmentHidden: false,
           landSlideRevealed: false,
+          diceScoringReenabledBySell: false,
         },
         pendingNewDiceIds: [],
         pendingHandDiceIds: [],

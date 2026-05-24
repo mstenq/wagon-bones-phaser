@@ -157,7 +157,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_bank_lien',
     name: 'The Bank Lien',
-    description: 'All dice disabled (equipment still scores)',
+    description: 'All dice disabled until one piece of equipment is sold',
     effectType: 'DISABLE_ALL_DICE',
     effectParams: {},
     minimumLeg: 8,

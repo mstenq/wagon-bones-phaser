@@ -46,7 +46,7 @@ import { getProfessionById, type ProfessionDef } from '../data/professions';
 import bosses, { getBossDistanceMultiplier, getEligibleBossesForLeg } from '../data/bosses';
 import { getBaseTargetMilesForLeg } from '../data/target_miles';
 import { ceilScore, multiplyScore, type Decimal } from './scoreMath';
-import { BossRoundState, EMPTY_BOSS_ROUND_STATE } from './BossEffectsSystem';
+import { BossRoundState, EMPTY_BOSS_ROUND_STATE, onBossRoundEquipmentSold } from './BossEffectsSystem';
 import { getTrailTagById } from '../data/trail_tags';
 import { resetRunRng, rngPick } from './RunRng';
 
@@ -537,6 +537,7 @@ export class PlayerState {
             this.equipment.push(duplicated);
           }
           processEquipmentOnSell(this.equipment);
+          onBossRoundEquipmentSold();
           return true;
         }
       }
@@ -545,6 +546,7 @@ export class PlayerState {
     this.equipment.splice(index, 1);
     // Update stateful equipment on sell (Snake Oil Ledger)
     processEquipmentOnSell(this.equipment);
+    onBossRoundEquipmentSold();
     return true;
   }
 

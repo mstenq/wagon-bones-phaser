@@ -32,6 +32,8 @@ export interface BossRoundState {
   equipmentHidden: boolean;
   /** Land Slide: hints/tooltips enabled after first scored hand */
   landSlideRevealed: boolean;
+  /** Bank Lien: dice scoring re-enabled after selling one equipment */
+  diceScoringReenabledBySell: boolean;
 }
 
 const NO_MODS: BossRoundConfigMods = {
@@ -48,6 +50,7 @@ export const EMPTY_BOSS_ROUND_STATE: BossRoundState = {
   equipmentDisplayOrder: null,
   equipmentHidden: false,
   landSlideRevealed: false,
+  diceScoringReenabledBySell: false,
 };
 
 function getActiveBoss() {
@@ -163,9 +166,14 @@ export function isDiceScoringDisabledByBoss(die: Die): boolean {
   const boss = getActiveBoss();
   if (!boss) return false;
 
-  if (boss.effectType === 'DISABLE_ALL_DICE') return true;
+  if (boss.effectType === 'DISABLE_ALL_DICE') {
+    return !getBossRoundState().diceScoringReenabledBySell;
+  }
 
   if (boss.effectType !== 'DISABLE_VALUES') return false;
+
+  // Stone dice have no face value (0) — neither odd nor even for boss parity
+  if (die.enhancement === 'stone') return false;
 
   const parity = boss.effectParams.parity as 'even' | 'odd';
   const player = getPlayerState();
@@ -175,6 +183,13 @@ export function isDiceScoringDisabledByBoss(die: Die): boolean {
 /** @deprecated Use isDiceScoringDisabledByBoss — kept for call-site clarity */
 export function isDiceDisabledByBoss(die: Die): boolean {
   return isDiceScoringDisabledByBoss(die);
+}
+
+/** Bank Lien: selling any equipment re-enables dice scoring for the rest of the round */
+export function onBossRoundEquipmentSold(): void {
+  const boss = getActiveBoss();
+  if (!boss || boss.effectType !== 'DISABLE_ALL_DICE') return;
+  getBossRoundState().diceScoringReenabledBySell = true;
 }
 
 /** Jinx-disabled equipment does not score (only while the boss round is active). */

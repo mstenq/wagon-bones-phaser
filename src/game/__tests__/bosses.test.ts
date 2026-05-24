@@ -5,6 +5,7 @@ import { GAMEPLAY } from '../Constants';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
 import { isFinisherLeg } from '../../data/bosses';
 import { setupGame, calculateTestScore, die, diceFromValues, item, setTestDifficulty } from './testHelpers';
+import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
 import { multiplyScore, eq, gt, lt } from '../scoreMath';
 import {
   getBossRoundConfigMods,
@@ -86,6 +87,29 @@ describe('DISABLE_VALUES: Ghost Town / Undertaker', () => {
     initBossRoundState();
     expect(isDiceScoringDisabledByBoss(die({ value: 5 }))).toBe(true);
     expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(false);
+  });
+
+  test('stone dice are not disabled by Ghost Town or Undertaker', () => {
+    const stone = die({ value: 0, enhancement: 'stone' });
+
+    setupGame({ bossId: 'the_ghost_town' });
+    resetBossRoundState();
+    initBossRoundState();
+    expect(isDiceScoringDisabledByBoss(stone)).toBe(false);
+
+    setupGame({ bossId: 'the_undertaker' });
+    resetBossRoundState();
+    initBossRoundState();
+    expect(isDiceScoringDisabledByBoss(stone)).toBe(false);
+  });
+
+  test('Ghost Town still scores stone dice miles', () => {
+    const { result } = calculateTestScore({
+      bossId: 'the_ghost_town',
+      scoredDice: [die({ value: 6 }), die({ value: 6 }), die({ value: 0, enhancement: 'stone' })],
+    });
+    expect(result.handResult.type).toBe(HandType.PAIR);
+    expect(result.totalValue).toBe(50);
   });
 });
 
@@ -258,6 +282,51 @@ describe('DISABLE_ALL_DICE: Bank Lien', () => {
     expect(result.handResult.type).toBe(HandType.PAIR);
     expect(result.totalValue).toBe(0);
     expect(gt(result.mult, 1)).toBe(true);
+  });
+
+  test('selling equipment re-enables dice scoring for the rest of the round', () => {
+    const { game, player } = setupGame({
+      bossId: 'the_bank_lien',
+      equipment: [item('horseshoe'), item('dynamite')],
+    });
+    game.startRound();
+    expect(getBossRoundState().diceScoringReenabledBySell).toBe(false);
+    expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(true);
+
+    expect(player.sellEquipment(0)).toBe(true);
+    expect(getBossRoundState().diceScoringReenabledBySell).toBe(true);
+    expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(false);
+
+    const rolled = diceFromValues([6, 6]);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = rolled;
+    game.state.selectedForRoll = rolled;
+    game.selectForScore(rolled.map((d) => d.id));
+    const result = game.calculateScore();
+    expect(result).not.toBeNull();
+    expect(result!.handResult.type).toBe(HandType.PAIR);
+    expect(result!.totalValue).toBeGreaterThan(0);
+  });
+
+  test('selling a consumable does not lift the Bank Lien', () => {
+    const { player } = setupGame({
+      bossId: 'the_bank_lien',
+      equipment: [item('horseshoe')],
+    });
+    player.consumables.push(createConsumableInstance(getSupplyDefById('bless')!));
+    expect(player.sellConsumable(0)).toBe(true);
+    expect(getBossRoundState().diceScoringReenabledBySell).toBe(false);
+    expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(true);
+  });
+
+  test('destroying equipment does not lift the Bank Lien', () => {
+    const { player } = setupGame({
+      bossId: 'the_bank_lien',
+      equipment: [item('horseshoe')],
+    });
+    expect(player.destroyEquipment(0)).toBe(true);
+    expect(getBossRoundState().diceScoringReenabledBySell).toBe(false);
+    expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(true);
   });
 });
 

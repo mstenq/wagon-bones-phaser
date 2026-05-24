@@ -250,6 +250,7 @@ export class GameScene extends Scene {
       this.sidebar.refreshMoney();
       this.dicePouch.refresh();
       this.equipBar.updateHints(this.gameState, getPlayerState());
+      this.applyBossRollDiceState();
     });
 
     // Refresh displays when consumables change

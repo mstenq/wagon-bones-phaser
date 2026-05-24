@@ -3,6 +3,8 @@
 - Blue moon sticker gives a trail guide for every hand its not scored in. Should only work if the round ends.
 - Second helping gave me firewood even though within one mega pack i first purchased and used loaded. I used firewood the turn before 
 -Golden Spike shouldn't work on disabled dice (the_undertaker and other bosses)
+-follow_traveler trail event, you shouldn't be able to trade back the same item you got from the trade, thats weird.
+-binoculars permit - while it now guarantees my most played hand it also is allowing for duplicates. Dupes should only be allowed if you have counterfeit_goods.
 
 
 ## New Features
