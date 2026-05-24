@@ -16,7 +16,9 @@ import { CHANCES, PACK_EXCLUDED_SUPPLY_IDS, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS
 import type { PlayerState } from './PlayerState';
 import packsData, { type PackCategory, type PackDef, type PackTier } from '../data/packs';
 import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
-import trailGuidesData from '../data/trail_guides';
+import trailGuidesData, { type TrailGuideDef } from '../data/trail_guides';
+import { hasPermitTrailGuideTargeting } from './PermitsSystem';
+import { getMostPlayedHandTypes } from './handStatsHelpers';
 import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
 import diceEnhancements from '../data/dice_enhancements';
 import pipEnhancements from '../data/pip_enhancements';
@@ -314,10 +316,33 @@ function generateSupplyPackContents(count: number): PackItem[] {
   return items;
 }
 
+function pickTargetTrailGuideForPlayer(player: PlayerState): TrailGuideDef | null {
+  const handTypes = getMostPlayedHandTypes(player.handStats);
+  if (handTypes.length === 0) return null;
+  const targetHand = handTypes.length === 1 ? handTypes[0] : rngPick('trailPack', handTypes);
+  return TRAIL_GUIDES.find((tg) => tg.handType === targetHand) ?? null;
+}
+
+function buildTrailGuidePackItem(tg: TrailGuideDef): PackItem {
+  return {
+    id: nextRunId(tg.id),
+    name: tg.name,
+    description: tg.description,
+    category: 'trail_guide' as PackCategory,
+    trailGuideId: tg.id,
+  };
+}
+
 function generateTrailGuidePackContents(count: number): PackItem[] {
+  const player = getPlayerState();
+  const targetGuide = hasPermitTrailGuideTargeting(player.purchasedPermits)
+    ? pickTargetTrailGuideForPlayer(player)
+    : null;
+
   const items: PackItem[] = [];
   const normalCards = pickRandom(TRAIL_GUIDES, count, 'trailPack');
   let normalIdx = 0;
+  let placedTarget = false;
 
   for (let i = 0; i < count; i++) {
     const rare = rollRarePackCard('trail_guide');
@@ -325,15 +350,16 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
       items.push(buildFrontierPackItem(rare));
       continue;
     }
-    const tg = normalCards[normalIdx++];
-    items.push({
-      id: nextRunId(tg.id),
-      name: tg.name,
-      description: tg.description,
-      category: 'trail_guide' as PackCategory,
-      trailGuideId: tg.id,
-    });
+    const tg = targetGuide && !placedTarget ? targetGuide : normalCards[normalIdx++];
+    if (targetGuide && tg.id === targetGuide.id) placedTarget = true;
+    items.push(buildTrailGuidePackItem(tg));
   }
+
+  if (targetGuide && !items.some((item) => item.trailGuideId === targetGuide.id)) {
+    const swapIdx = items.findIndex((item) => item.trailGuideId != null);
+    if (swapIdx >= 0) items[swapIdx] = buildTrailGuidePackItem(targetGuide);
+  }
+
   return items;
 }
 

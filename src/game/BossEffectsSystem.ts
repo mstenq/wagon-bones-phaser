@@ -2,9 +2,10 @@
 // Applies boss modifiers during boss rounds, unless negated by Saint Elmo's Shield
 // or Sheriff's Badge (sold this round).
 
-import { Die, HandResult, HandStats, HandType } from './types';
+import { Die, HandResult, HandType } from './types';
 import { getPlayerState } from './PlayerState';
 import { isBossEffectNegated, dieMatchesParity } from './effects/helpers';
+import { getMostPlayedHandTypes } from './handStatsHelpers';
 import { buildHandResult } from './DiceSystem';
 import { rngFloat, rngShuffle } from './RunRng';
 
@@ -271,14 +272,7 @@ export function applyBossOnScore(handType: HandType, playedDice: Die[]): void {
   const player = getPlayerState();
 
   if (boss.effectType === 'ZERO_MONEY_ON_MOST_PLAYED') {
-    let max = 0;
-    for (const [, stats] of player.handStats) {
-      max = Math.max(max, stats.timesPlayed);
-    }
-    const mostPlayed: HandType[] = [];
-    for (const [type, stats] of player.handStats) {
-      if (stats.timesPlayed === max && max > 0) mostPlayed.push(type);
-    }
+    const mostPlayed = getMostPlayedHandTypes(player.handStats);
     if (mostPlayed.includes(handType)) {
       player.economy.setBalance(0);
     }

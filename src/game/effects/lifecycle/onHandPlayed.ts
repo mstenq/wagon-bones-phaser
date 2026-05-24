@@ -1,24 +1,12 @@
 // ─── on-hand-played lifecycle handlers ───
 
-import type { Die, HandType, HandStats } from '../../types';
+import type { Die, HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { dieMatchesPip, handTypeMatches, hasStackedDeck, resolveEffectParam } from '../helpers';
 import { getPlayerState } from '../../PlayerState';
-
-function getMostPlayedHandTypes(handStats: Map<HandType, HandStats>): HandType[] {
-  let max = 0;
-  for (const [, stats] of handStats) {
-    max = Math.max(max, stats.timesPlayed);
-  }
-  if (max === 0) return [];
-  const types: HandType[] = [];
-  for (const [type, stats] of handStats) {
-    if (stats.timesPlayed === max) types.push(type);
-  }
-  return types;
-}
+import { getMostPlayedHandTypes } from '../../handStatsHelpers';
 
 effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice) => {
   switch (equip.def.effectType) {

@@ -12,6 +12,7 @@ import { generateShopStock, getAllEquipment } from '../ItemsSystem';
 import { CHANCES } from '../Constants';
 import { resetPlayerState, getPlayerState } from '../PlayerState';
 import { item } from './testHelpers';
+import { HandType } from '../types';
 
 const frontierPack: PackDefinition = {
   id: 'frontier_standard',
@@ -130,6 +131,44 @@ describe('equipment pack duplicate filtering', () => {
       .map((d) => d.id);
     const [picked] = generateShopStock(1, excludeAllButHorseshoe);
     expect(picked?.id).toBe('horseshoe');
+  });
+});
+
+const trailGuidePack: PackDefinition = {
+  id: 'trail_guide_standard',
+  category: 'trail_guide',
+  tier: 'normal',
+  name: 'Trail Guide Pack',
+  cost: 4,
+  totalCards: 3,
+  pickCount: 1,
+  weight: 4,
+  color: 0x4682b4,
+};
+
+describe('Binoculars trail guide targeting', () => {
+  beforeEach(() => resetPlayerState());
+
+  test('includes most played hand trail guide when binoculars permit is owned', () => {
+    const player = getPlayerState();
+    player.purchasedPermits.push('binoculars');
+    player.getHandStats(HandType.PAIR).timesPlayed = 10;
+    player.getHandStats(HandType.HIGH_VALUE).timesPlayed = 3;
+
+    for (let i = 0; i < 30; i++) {
+      const items = generatePackContents(trailGuidePack);
+      expect(items.some((packItem) => packItem.trailGuideId === 'tg_pair')).toBe(true);
+    }
+  });
+
+  test('does not force a trail guide when no hands have been played', () => {
+    const player = getPlayerState();
+    player.purchasedPermits.push('binoculars');
+
+    for (let i = 0; i < 20; i++) {
+      const items = generatePackContents(trailGuidePack);
+      expect(items.filter((packItem) => packItem.trailGuideId != null).length).toBeGreaterThan(0);
+    }
   });
 });
 
