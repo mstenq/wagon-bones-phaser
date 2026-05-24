@@ -11,6 +11,7 @@ import {
   getTrailGuideDefById,
   executeConsumableEffect,
   useConsumableDirectly,
+  finalizeConsumableEquipmentEvents,
   isSecondHelpingsCloneTarget,
   grantGhostMedicine,
   canUseConsumableInShop,
@@ -621,6 +622,7 @@ describe('frontier cards and cursed equipment', () => {
 
     const def = getFrontierDefById('skin_walker')!;
     const result = useConsumableDirectly(def, player);
+    finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
 
     expect(result.success).toBe(true);
     expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
@@ -633,10 +635,33 @@ describe('frontier cards and cursed equipment', () => {
     player.equipment.push(equipWithModifiers('horseshoe', ['cursed']));
 
     const def = getFrontierDefById('skin_walker')!;
-    useConsumableDirectly(def, player);
+    const result = useConsumableDirectly(def, player);
+    finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
 
     expect(player.equipment.length).toBe(2);
     expect(player.equipment.every((e) => isEquipmentCursed(e))).toBe(true);
+  });
+
+  test('skin walker keeps chosen item and adds a copy when other items are destroyed', () => {
+    const player = resetPlayerState();
+    player.maxEquipmentSlots = 2;
+    player.equipment.push(equipWithModifiers('horseshoe', []));
+    player.equipment.push(equipWithModifiers('war_drums', []));
+
+    const def = getFrontierDefById('skin_walker')!;
+    const original = Math.random;
+    Math.random = () => 0; // choose horseshoe (index 0)
+    try {
+      const result = useConsumableDirectly(def, player);
+      finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
+
+      expect(result.success).toBe(true);
+      expect(result.consumableAnimEvents?.[0]?.type).toBe('destroy_equipment');
+      expect(player.equipment).toHaveLength(2);
+      expect(player.equipment.every((e) => e.def.id === 'horseshoe')).toBe(true);
+    } finally {
+      Math.random = original;
+    }
   });
 });
 

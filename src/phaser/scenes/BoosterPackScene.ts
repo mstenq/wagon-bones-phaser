@@ -25,7 +25,12 @@ import {
   getConsumableTexturePrefix,
   isSecondHelpingsCloneTarget,
   getRandomSupplyDef,
+  type UseConsumableResult,
 } from '../../game/ConsumablesSystem';
+import {
+  applyConsumableAnimEvents,
+  playEquipmentCreatedPopIn,
+} from '../animations/ConsumableAnimPlayback';
 import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
 import { processEquipmentOnPackSkipped, processEquipmentOnPackOpened } from '../../game/EquipmentEffects';
 import { Die, HandType, HandDefinition, HandUpgradeInfo } from '../../game/types';
@@ -971,6 +976,9 @@ export class BoosterPackScene extends Scene {
 
     const item = sprite.item;
     const player = getPlayerState();
+    let consumableResult: UseConsumableResult | undefined;
+    let equipmentPopInCount = 0;
+    const equipmentCountBefore = player.equipment.length;
 
     // If card needs dice selection, validate
     if (this.cardNeedsDiceSelection(item)) {
@@ -989,6 +997,7 @@ export class BoosterPackScene extends Scene {
         player.equipment.push(
           acquireEquipmentInstance(item.equipmentDef, player.purchasedPermits, item.equipmentPreview?.modifiers),
         );
+        equipmentPopInCount = 1;
       }
     } else if (item.category === 'dice' && item.die) {
       player.addDie(item.die);
@@ -1023,34 +1032,44 @@ export class BoosterPackScene extends Scene {
       const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
       if (fe) {
         const def = createFrontierConsumableDef(fe);
-        const result = useConsumableDirectly(def, player);
-        if (!result.success && result.failReason) {
-          this.showFloatingText(result.failReason);
+        consumableResult = useConsumableDirectly(def, player);
+        if (!consumableResult.success && consumableResult.failReason) {
+          this.showFloatingText(consumableResult.failReason);
         }
       }
     } else if (item.instantEffect) {
       this.applyInstantEffect(item.instantEffect, player);
+      equipmentPopInCount = Math.max(equipmentPopInCount, player.equipment.length - equipmentCountBefore);
     }
 
-    // Mark card as used
+    const finishUse = () => this.finishUseCard(sprite, equipmentPopInCount);
+
+    const animEvents = consumableResult?.consumableAnimEvents;
+    if (animEvents && animEvents.length > 0) {
+      void applyConsumableAnimEvents(this, this.equipBar, animEvents, {
+        destroyDice: async () => {},
+      }).then(finishUse);
+      return;
+    }
+
+    finishUse();
+  }
+
+  private finishUseCard(sprite: CardSprite, equipmentPopInCount = 0): void {
     sprite.used = true;
     this.dismissActiveTab();
-
-    // Gray out the card
     this.markCardUsed(sprite);
 
-    // Decrement picks
     this.picksRemaining--;
     this.updatePicksText();
 
-    // Refresh all UI
     this.equipBar.refresh();
+    void playEquipmentCreatedPopIn(this, this.equipBar, equipmentPopInCount);
     this.consumableBar.refresh();
     this.updateEquipHints();
     this.dicePouch.refresh();
     this.sidebar.refreshMoney();
 
-    // Auto-return to shop when picks exhausted
     if (this.picksRemaining <= 0) {
       this.clearDiceLineup();
       this.time.delayedCall(800, () => {
@@ -1221,13 +1240,22 @@ export class BoosterPackScene extends Scene {
     if (this.isPackDiceTargetingPending()) return;
 
     const player = getPlayerState();
+    void this.handleConsumableUsedAsync(consumed, player);
+  }
+
+  private async handleConsumableUsedAsync(consumed: ConsumableInstance, player: ReturnType<typeof getPlayerState>): Promise<void> {
     const result = executeConsumableEffect(consumed, player);
+
+    await applyConsumableAnimEvents(this, this.equipBar, result.consumableAnimEvents ?? [], {
+      destroyDice: async () => {},
+    });
 
     this.sidebar.refreshMoney();
     this.equipBar.refresh();
     this.consumableBar.refresh();
     this.dicePouch.refresh();
     this.refreshDiceLineup();
+    await playEquipmentCreatedPopIn(this, this.equipBar, result.equipmentCreatedCount);
 
     if (!result.success && result.failReason) {
       this.showFloatingText(result.failReason);

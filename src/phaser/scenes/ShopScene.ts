@@ -28,6 +28,10 @@ import {
   canUseConsumableInShop,
   isSecondHelpingsCloneTarget,
 } from '../../game/ConsumablesSystem';
+import {
+  applyConsumableAnimEvents,
+  playEquipmentCreatedPopIn,
+} from '../animations/ConsumableAnimPlayback';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
@@ -829,11 +833,19 @@ export class ShopScene extends Scene {
   }
 
   private handleConsumableResult(result: ReturnType<typeof executeConsumableEffect>): void {
-    // Refresh all UI
+    void this.handleConsumableResultAsync(result);
+  }
+
+  private async handleConsumableResultAsync(result: ReturnType<typeof executeConsumableEffect>): Promise<void> {
+    await applyConsumableAnimEvents(this, this.equipBar, result.consumableAnimEvents ?? [], {
+      destroyDice: async () => {},
+    });
+
     this.updateDisplays();
     this.equipBar.refresh();
     this.consumableBar.refresh();
     this.dicePouch.refresh();
+    await playEquipmentCreatedPopIn(this, this.equipBar, result.equipmentCreatedCount);
 
     if (!result.success && result.failReason) {
       // Show popup at center of consumable bar area

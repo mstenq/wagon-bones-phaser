@@ -286,6 +286,8 @@ export interface UseConsumableResult {
   handUpgrades?: HandUpgradeInfo[];
   /** Optional animation events for non-scoring consumable effects */
   consumableAnimEvents?: ConsumableAnimEvent[];
+  /** Equipment added immediately (e.g. Ingenuity) — Phaser plays pop-in for this many cards */
+  equipmentCreatedCount?: number;
 }
 
 export interface UseConsumableContext {
@@ -293,9 +295,34 @@ export interface UseConsumableContext {
   visibleDiceIds?: string[];
 }
 
-export interface ConsumableAnimEvent {
-  type: 'destroy_dice';
-  diceIds: string[];
+export type ConsumableAnimEvent =
+  | {
+      type: 'destroy_dice';
+      diceIds: string[];
+    }
+  | {
+      type: 'destroy_equipment';
+      destructions: { sourceIdx: number; victimIdx: number }[];
+      /** Equipment to add after all destruction animations (e.g. Skin Walker copy). */
+      equipmentToAdd?: EquipmentInstance[];
+    };
+
+/** Apply deferred equipment changes from consumable anim events (for tests / non-Phaser callers). */
+export function finalizeConsumableEquipmentEvents(
+  player: PlayerState,
+  events: ConsumableAnimEvent[] | undefined,
+): void {
+  if (!events) return;
+  for (const event of events) {
+    if (event.type !== 'destroy_equipment') continue;
+    const sorted = [...event.destructions].sort((a, b) => b.victimIdx - a.victimIdx);
+    for (const { victimIdx } of sorted) {
+      player.equipment.splice(victimIdx, 1);
+    }
+    if (event.equipmentToAdd?.length) {
+      player.equipment.push(...event.equipmentToAdd);
+    }
+  }
 }
 
 /**
@@ -478,9 +505,10 @@ export function executeConsumableEffect(
       };
     }
     case 'skin_walker': {
-      // Copy random item; destroy non-cursed others (cursed items survive, copy keeps modifiers)
+      // Copy random item; destroy non-cursed others (cursed / eternal items survive, copy keeps modifiers)
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
-      const source = rngPick('consumables', player.equipment);
+      const chosenIdx = Math.floor(rngFloat('consumables') * player.equipment.length);
+      const source = player.equipment[chosenIdx];
       const duplicated: EquipmentInstance = {
         def: source.def.aura?.id === 'ghost' ? { ...source.def, aura: undefined } : { ...source.def },
         sellValue: source.sellValue,
@@ -488,11 +516,28 @@ export function executeConsumableEffect(
         modifiers: [...source.modifiers],
         perishableRoundsLeft: source.perishableRoundsLeft,
       };
-      const survivors = player.equipment.filter((e) => isEquipmentCursed(e));
-      const canAdd = player.usedEquipmentSlots < player.maxEquipmentSlots || duplicated.def.aura?.id === 'ghost';
-      if (canAdd) survivors.push(duplicated);
-      player.equipment.splice(0, player.equipment.length, ...survivors);
-      return { success: true };
+      const destructions = player.equipment
+        .map((_, i) => i)
+        .filter((i) => i !== chosenIdx && !isEquipmentCursed(player.equipment[i]))
+        .map((victimIdx) => ({ sourceIdx: chosenIdx, victimIdx }));
+
+      if (destructions.length === 0) {
+        const survivors = player.equipment.filter((e, i) => i === chosenIdx || isEquipmentCursed(e));
+        survivors.push(duplicated);
+        player.equipment.splice(0, player.equipment.length, ...survivors);
+        return { success: true };
+      }
+
+      return {
+        success: true,
+        consumableAnimEvents: [
+          {
+            type: 'destroy_equipment',
+            destructions,
+            equipmentToAdd: [duplicated],
+          },
+        ],
+      };
     }
   }
 
@@ -539,17 +584,19 @@ function applyConsumableInstantEffect(effect: InstantEffect, player: PlayerState
       return { success: true };
     }
     case 'CREATE_EQUIPMENT': {
+      let equipmentCreatedCount = 0;
       if (player.equipmentSlotsFree > 0) {
         const def = generateRandomEquipment({
           rarity: effect.rarity,
           excludeRarity: effect.excludeRarity,
         });
         player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
+        equipmentCreatedCount = 1;
       }
       if (effect.setMoneyZero) {
         player.economy.spend(player.economy.balance);
       }
-      return { success: true };
+      return { success: true, equipmentCreatedCount };
     }
     case 'UPGRADE_ALL_HANDS': {
       return { success: true, handUpgrades: createAllHandUpgrades(player) };

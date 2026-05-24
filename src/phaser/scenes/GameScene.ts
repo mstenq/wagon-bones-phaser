@@ -44,6 +44,15 @@ import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimat
 import { processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
+import {
+  animateEquipmentFireDestruction,
+  animateEquipmentFireDestructionSequence,
+} from '../animations/EquipmentFireDestroyAnimation';
+import {
+  applyConsumableAnimEvents as playConsumableAnimEvents,
+  playEquipmentCreatedPopIn,
+} from '../animations/ConsumableAnimPlayback';
+import { animateEquipmentPopIn } from '../animations/EquipmentPopInAnimation';
 import { rngShuffle } from '../../game/RunRng';
 import { getLoadedDiceMultiplier } from '../../game/equipmentUtils';
 import { isDiceScoringDisabledByBoss, isDiceLockedByBoss, revealLandSlideHints } from '../../game/BossEffectsSystem';
@@ -1731,144 +1740,12 @@ export class GameScene extends Scene {
 
   /** Animate an equipment card being destroyed by fire (used by Funeral Pyre, Haunted Totem, etc.) */
   private animateEquipmentFireDestruction(sourceIndex: number, victimIndex: number, onComplete?: () => void): void {
-    ensureAuraTextures(this);
-    const sourceCard = this.equipBar.getCardByEquipIndex(sourceIndex);
-    const victimCard = this.equipBar.getCardByEquipIndex(victimIndex);
-    if (!sourceCard || !victimCard) {
-      // Fallback: just remove immediately if cards aren't available
-      const player = getPlayerState();
-      player.equipment.splice(victimIndex, 1);
-      this.equipBar.refresh();
-      onComplete?.();
-      return;
-    }
-
-    // Get world position of victim card
-    const victimMatrix = victimCard.getWorldTransformMatrix();
-    const victimWorldX = victimMatrix.tx;
-    const victimWorldY = victimMatrix.ty;
-
-    // Phase 1: Fire aura glow on victim + ambient fire sound
-    const fireSound = this.sound.add('sfx_ambient_fire', { volume: 1.5 });
-    this.trackEquipDestroySound(fireSound);
-    fireSound.play();
-
-    // Create fire particles on the victim card (in scene space)
-    const fireEmitter = this.add.particles(victimWorldX, victimWorldY, 'aura_soft', {
-      speed: { min: 20, max: 60 },
-      angle: { min: -110, max: -70 },
-      scale: { start: 0.8, end: 0 },
-      alpha: { start: 0.9, end: 0 },
-      lifespan: { min: 500, max: 900 },
-      frequency: 30,
-      quantity: 3,
-      tint: [0xff2200, 0xff4500, 0xff6600, 0xffaa00, 0xffdd00],
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-40, -50, 80, 100),
-      } as any,
-      maxAliveParticles: 40,
-    });
-    fireEmitter.setDepth(500);
-
-    // Shake the source card
-    const sourceOrigX = sourceCard.x;
-    this.tweens.add({
-      targets: sourceCard,
-      x: sourceOrigX - 3,
-      duration: 50,
-      yoyo: true,
-      repeat: 5,
-      ease: 'Sine.easeInOut',
-      onComplete: () => {
-        sourceCard.x = sourceOrigX;
-      },
-    });
-
-    const finishDestruction = () => {
-      const player = getPlayerState();
-      player.equipment.splice(victimIndex, 1);
-      this.equipBar.refresh();
-      onComplete?.();
-    };
-
-    const fadeOutFireSound = (then: () => void) => {
-      this.tweens.add({
-        targets: fireSound,
-        volume: 0,
-        duration: ANIM.EQUIP_FIRE_DESTROY_SOUND_FADE_MS,
-        onComplete: () => {
-          fireSound.stop();
-          fireSound.destroy();
-          then();
-        },
-      });
-    };
-
-    // Phase 2: After brief fire buildup, play slice and destroy
-    this.time.delayedCall(ANIM.EQUIP_FIRE_DESTROY_BUILDUP_MS, () => {
-      this.sound.play('sfx_slice1', { volume: 0.7 });
-
-      // Flash victim card red
-      this.tweens.add({
-        targets: victimCard,
-        alpha: 0,
-        scaleX: 0.3,
-        scaleY: 0.3,
-        rotation: victimCard.rotation + 0.3,
-        duration: ANIM.EQUIP_FIRE_DESTROY_SLICE_MS,
-        ease: 'Power2',
-      });
-
-      // Burst of sparks
-      const sparkEmitter = this.add.particles(victimWorldX, victimWorldY, 'aura_soft', {
-        speed: { min: 80, max: 180 },
-        angle: { min: 0, max: 360 },
-        scale: { start: 0.5, end: 0 },
-        alpha: { start: 1, end: 0 },
-        lifespan: { min: 300, max: 600 },
-        frequency: -1,
-        quantity: 20,
-        tint: [0xff4400, 0xffaa00, 0xffdd00],
-        blendMode: 'ADD',
-      });
-      sparkEmitter.setDepth(500);
-      sparkEmitter.explode(20);
-
-      // Phase 3: Stop particles, fade fire audio, then remove equipment
-      this.time.delayedCall(ANIM.EQUIP_FIRE_DESTROY_CLEANUP_MS, () => {
-        fireEmitter.stop();
-        this.time.delayedCall(1000, () => {
-          fireEmitter.destroy();
-          sparkEmitter.destroy();
-        });
-
-        fadeOutFireSound(() => {
-          this.time.delayedCall(ANIM.EQUIP_FIRE_DESTROY_COMPLETE_HOLD_MS, finishDestruction);
-        });
-      });
-    });
+    animateEquipmentFireDestruction(this, this.equipBar, sourceIndex, victimIndex, onComplete);
   }
 
   /** Animate a sequence of round-start equipment destructions in order, adjusting indices after each splice */
   private animateRoundStartDestructions(destructions: { sourceIdx: number; victimIdx: number }[]): void {
-    if (destructions.length === 0) return;
-
-    const { sourceIdx, victimIdx } = destructions[0];
-
-    // Adjust remaining destructions' indices after this victim is spliced out
-    const remaining = destructions.slice(1).map((d) => ({
-      sourceIdx: d.sourceIdx > victimIdx ? d.sourceIdx - 1 : d.sourceIdx,
-      victimIdx: d.victimIdx > victimIdx ? d.victimIdx - 1 : d.victimIdx,
-    }));
-
-    this.animateEquipmentFireDestruction(sourceIdx, victimIdx, () => {
-      // Small delay between sequential destructions
-      this.time.delayedCall(200, () => {
-        this.animateRoundStartDestructions(remaining);
-      });
-    });
+    animateEquipmentFireDestructionSequence(this, this.equipBar, destructions);
   }
 
   /** Animate end-of-round self-destructs (Dynamite, Nitro) using the same fire burst as Haunted Totem. */
@@ -1891,29 +1768,7 @@ export class GameScene extends Scene {
 
   /** Animate Junk Dealer equipment cards popping into the equipment bar */
   private animateJunkDealerCreation(count: number): void {
-    // Equipment is already in player.equipment — refresh to render them
-    this.equipBar.refresh();
-
-    const cards = this.equipBar.getCards();
-    const newCards = cards.slice(cards.length - count);
-
-    for (let i = 0; i < newCards.length; i++) {
-      const card = newCards[i];
-      card.setScale(0);
-      card.setAlpha(0);
-
-      this.time.delayedCall(i * 150, () => {
-        this.sound.play('sfx_card1', { volume: 0.5 });
-        this.tweens.add({
-          targets: card,
-          scaleX: UI.EQUIP_CARD_SCALE,
-          scaleY: UI.EQUIP_CARD_SCALE,
-          alpha: 1,
-          duration: 300,
-          ease: 'Back.easeOut',
-        });
-      });
-    }
+    void animateEquipmentPopIn(this, this.equipBar, count);
   }
 
   /** Calculate X positions for dice in the play area */
@@ -2427,6 +2282,7 @@ export class GameScene extends Scene {
     this.equipBar.refresh();
     this.consumableBar.refresh();
     this.dicePouch.refresh();
+    await playEquipmentCreatedPopIn(this, this.equipBar, result.equipmentCreatedCount);
 
     if (!result.success && result.failReason) {
       const text = this.add
@@ -2480,13 +2336,13 @@ export class GameScene extends Scene {
   }
 
   private async applyConsumableAnimEvents(events: ConsumableAnimEvent[]): Promise<void> {
-    for (const event of events) {
-      if (event.type !== 'destroy_dice') continue;
-      await this.animateConsumableDiceDestruction(event.diceIds, {
-        refillSelectHand: true,
-        floatingText: `Raid destroyed ${event.diceIds.length} dice`,
-      });
-    }
+    await playConsumableAnimEvents(this, this.equipBar, events, {
+      destroyDice: (diceIds) =>
+        this.animateConsumableDiceDestruction(diceIds, {
+          refillSelectHand: true,
+          floatingText: `Raid destroyed ${diceIds.length} dice`,
+        }),
+    });
   }
 
   private animateConsumableDiceDestruction(
