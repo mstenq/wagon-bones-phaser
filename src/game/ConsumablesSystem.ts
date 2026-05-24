@@ -455,16 +455,26 @@ export function executeConsumableEffect(
       return { success: true };
     }
     case 'priests_blessing': {
-      // Holy aura on random item; destroy non-cursed others (cursed items survive)
+      // Holy aura on random item; destroy non-cursed others (cursed / eternal items survive)
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
       const holyAura = getItemAuraById('holy');
       if (!holyAura) return { success: true };
       const chosenIdx = Math.floor(rngFloat('consumables') * player.equipment.length);
       const chosen = player.equipment[chosenIdx];
       chosen.def = { ...chosen.def, aura: holyAura };
-      const survivors = player.equipment.filter((e, i) => i === chosenIdx || isEquipmentCursed(e));
-      player.equipment.splice(0, player.equipment.length, ...survivors);
-      return { success: true };
+      const destructions = player.equipment
+        .map((_, i) => i)
+        .filter((i) => i !== chosenIdx && !isEquipmentCursed(player.equipment[i]))
+        .map((victimIdx) => ({ sourceIdx: chosenIdx, victimIdx }));
+
+      if (destructions.length === 0) {
+        return { success: true };
+      }
+
+      return {
+        success: true,
+        consumableAnimEvents: [{ type: 'destroy_equipment', destructions }],
+      };
     }
     case 'blood_moon': {
       if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };

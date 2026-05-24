@@ -605,11 +605,34 @@ describe('frontier cards and cursed equipment', () => {
     Math.random = () => 0; // bless horseshoe (index 0), not the cursed war_drums
     try {
       const result = useConsumableDirectly(def, player);
+      finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
 
       expect(result.success).toBe(true);
       expect(player.equipment).toHaveLength(2);
       expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
       expect(player.equipment.some((e) => e.def.aura?.id === 'holy')).toBe(true);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test("priest's blessing destroys non-cursed others with deferred equipment removal", () => {
+    const player = resetPlayerState();
+    player.equipment.push(equipWithModifiers('horseshoe', []));
+    player.equipment.push(equipWithModifiers('war_drums', []));
+
+    const def = getFrontierDefById('priests_blessing')!;
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const result = useConsumableDirectly(def, player);
+      finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
+
+      expect(result.success).toBe(true);
+      expect(result.consumableAnimEvents?.[0]?.type).toBe('destroy_equipment');
+      expect(player.equipment).toHaveLength(1);
+      expect(player.equipment[0].def.id).toBe('horseshoe');
+      expect(player.equipment[0].def.aura?.id).toBe('holy');
     } finally {
       Math.random = original;
     }
