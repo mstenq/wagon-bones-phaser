@@ -1,6 +1,7 @@
 // ─── on-supply-used lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { replaceEquipmentList } from '../../store/resolve';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 
@@ -14,4 +15,5 @@ export function processEquipmentOnSupplyUsed(equipment: EquipmentInstance[]): vo
   for (const equip of equipment) {
     dispatchLifecycle('on-supply-used', equip);
   }
+  replaceEquipmentList(equipment);
 }

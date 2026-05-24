@@ -5,15 +5,12 @@ import { Die, DiceSticker } from './types';
 import { createDie } from './DiceSystem';
 import { generateShopStock, EquipmentDef, EquipmentInstance } from './ItemsSystem';
 import { rollShopEquipmentPreview } from './EquipmentModifiers';
-import { getPlayerState } from './PlayerState';
-import {
-  DiceSelectionConfig,
-  DiceSelectionEffectType,
-  DiceSelectionEffectParams,
-  pickRandomAura,
-} from './DiceSelectionSystem';
+import { getItemDisplayContext } from './displayContext';
+import { getRunState } from './store/runStore';
+import { resolveEquipmentList } from './store/resolve';
+import type { RunState } from './store/types';
+import { DiceSelectionConfig, pickRandomAura } from './DiceSelectionSystem';
 import { CHANCES, PACK_EXCLUDED_SUPPLY_IDS, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS } from './Constants';
-import type { PlayerState } from './PlayerState';
 import packsData, { type PackCategory, type PackDef, type PackTier } from '../data/packs';
 import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
 import trailGuidesData, { type TrailGuideDef } from '../data/trail_guides';
@@ -290,13 +287,14 @@ function generateDicePackContents(count: number): PackItem[] {
 }
 
 /** True when Counterfeit Goods allows duplicate equipment in packs/shop. */
-export function playerAllowsDuplicateItems(player: PlayerState): boolean {
-  return player.equipment.some((e) => e.def.effectType === 'ALLOW_DUPLICATES');
+export function playerAllowsDuplicateItems(state: RunState = getRunState()): boolean {
+  void state;
+  return resolveEquipmentList().some((e) => e.def.effectType === 'ALLOW_DUPLICATES');
 }
 
 /** Owned equipment ids excluded from pack stock, or undefined when duplicates are allowed. */
-export function getEquipmentPackExcludeIds(player: PlayerState): string[] | undefined {
-  return playerAllowsDuplicateItems(player) ? undefined : player.equipment.map((e) => e.def.id);
+export function getEquipmentPackExcludeIds(state: RunState = getRunState()): string[] | undefined {
+  return playerAllowsDuplicateItems(state) ? undefined : resolveEquipmentList().map((e) => e.def.id);
 }
 
 function generateSupplyPackContents(count: number): PackItem[] {
@@ -316,8 +314,8 @@ function generateSupplyPackContents(count: number): PackItem[] {
   return items;
 }
 
-function pickTargetTrailGuideForPlayer(player: PlayerState): TrailGuideDef | null {
-  const handTypes = getMostPlayedHandTypes(player.handStats);
+function pickTargetTrailGuideForRun(state: RunState): TrailGuideDef | null {
+  const handTypes = getMostPlayedHandTypes(state.handStats);
   if (handTypes.length === 0) return null;
   const targetHand = handTypes.length === 1 ? handTypes[0] : rngPick('trailPack', handTypes);
   return TRAIL_GUIDES.find((tg) => tg.handType === targetHand) ?? null;
@@ -334,10 +332,8 @@ function buildTrailGuidePackItem(tg: TrailGuideDef): PackItem {
 }
 
 function generateTrailGuidePackContents(count: number): PackItem[] {
-  const player = getPlayerState();
-  const targetGuide = hasPermitTrailGuideTargeting(player.purchasedPermits)
-    ? pickTargetTrailGuideForPlayer(player)
-    : null;
+  const run = getRunState();
+  const targetGuide = hasPermitTrailGuideTargeting(run.purchasedPermits) ? pickTargetTrailGuideForRun(run) : null;
 
   const items: PackItem[] = [];
   const normalCards = pickRandom(TRAIL_GUIDES, count, 'trailPack');
@@ -380,18 +376,19 @@ function generateFrontierPackContents(count: number): PackItem[] {
 }
 
 function generateEquipmentPackContents(count: number): PackItem[] {
-  const player = getPlayerState();
-  const excludeIds = getEquipmentPackExcludeIds(player);
+  const run = getRunState();
+  const excludeIds = getEquipmentPackExcludeIds(run);
+  const displayPlayer = getItemDisplayContext(run);
   const defs = generateShopStock(count, excludeIds);
   return defs.map((def) => ({
     id: nextRunId(def.id),
     name: def.name,
     description: def
-      .display(null, player)
+      .display(null, displayPlayer)
       .tooltip.map((line) => line.join(' '))
       .join('\n'),
     category: 'equipment' as PackCategory,
     equipmentDef: def,
-    equipmentPreview: rollShopEquipmentPreview(def, player.purchasedPermits),
+    equipmentPreview: rollShopEquipmentPreview(def, run.purchasedPermits),
   }));
 }

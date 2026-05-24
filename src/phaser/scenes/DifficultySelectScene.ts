@@ -4,7 +4,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState } from '../../game/PlayerState';
+import { getRunState, setupActions, bossActions } from '../../game/store';
 import { COLORS, TEXT_COLORS, FONTS, DIFFICULTIES } from '../../game/Constants';
 import { DifficultyLevel } from '../../game/types';
 import { Button } from '../ui/Button';
@@ -78,18 +78,17 @@ export class DifficultySelectScene extends Scene {
     confirmBtn.onClick(() => {
       if (!this.professionId || !isDifficultyUnlocked(this.professionId, this.selectedLevel)) return;
 
-      const player = getPlayerState();
-      player.setDifficulty(this.selectedLevel);
+      setupActions.setDifficulty(this.selectedLevel);
       const typedSeed = this.seedInput?.value.trim() ?? '';
       const seed = this.seededRunEnabled ? typedSeed || generateRunSeed() : generateRunSeed();
       initRunRng(seed);
-      player.assignBosses();
+      bossActions.assignBosses();
       startAutoSaveLoop();
       this.destroySeedInput();
       this.scene.start('RoundSelect', {});
     });
 
-    this.professionId = getPlayerState().profession?.id ?? null;
+    this.professionId = getRunState().professionId;
     this.maxUnlocked = this.professionId ? getHighestUnlockedDifficulty(this.professionId) : 1;
 
     this.buildGrid(width);

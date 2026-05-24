@@ -8,6 +8,7 @@ import {
   getEquipmentDefById,
   isEquipmentUnlocked,
 } from '../ItemsSystem';
+import { getItemDisplayContext } from '../displayContext';
 import {
   getRandomSupplyDef,
   getRandomTrailGuideDef,
@@ -15,7 +16,7 @@ import {
   getShopRandomFrontierDef,
   generateShopConsumables,
 } from '../ConsumablesSystem';
-import { resetPlayerState } from '../PlayerState';
+import { resetPlayerState } from '../__tests__/testRunPlayer';
 import { die } from './testHelpers';
 
 describe('Shop stock exclusion', () => {
@@ -212,7 +213,7 @@ describe('Shop stock exclusion', () => {
       .filter((item) => item.id !== 'nitro')
       .map((item) => item.id);
 
-    expect(isEquipmentUnlocked(nitro, null, player)).toBe(false);
+    expect(isEquipmentUnlocked(nitro, null, getItemDisplayContext())).toBe(false);
 
     // While locked, nitro cannot appear even when every other item is excluded.
     const lockedStock = generateShopStock(1, excludeAllButNitro);
@@ -224,7 +225,7 @@ describe('Shop stock exclusion', () => {
     }
 
     player.dynamiteSelfDestructed = true;
-    expect(isEquipmentUnlocked(nitro, null, player)).toBe(true);
+    expect(isEquipmentUnlocked(nitro, null, getItemDisplayContext())).toBe(true);
 
     // After unlock, nitro is the only eligible pick when everything else is excluded.
     const unlockedStock = generateShopStock(1, excludeAllButNitro);
@@ -234,20 +235,20 @@ describe('Shop stock exclusion', () => {
   test('isEquipmentUnlocked gates enhancement-specific items', () => {
     const player = resetPlayerState();
     const goldTooth = getEquipmentDefById('gold_tooth')!;
-    expect(isEquipmentUnlocked(goldTooth, null, player)).toBe(false);
+    expect(isEquipmentUnlocked(goldTooth, null, getItemDisplayContext())).toBe(false);
 
     player.dice.push(die({ enhancement: 'gold', value: 6 }));
-    expect(isEquipmentUnlocked(goldTooth, null, player)).toBe(true);
+    expect(isEquipmentUnlocked(goldTooth, null, getItemDisplayContext())).toBe(true);
   });
 
   test('rainbow_trail requires two different enhanced dice in pouch', () => {
     const player = resetPlayerState();
     const rainbow = getEquipmentDefById('rainbow_trail')!;
     player.dice.push(die({ enhancement: 'gold', value: 6 }));
-    expect(isEquipmentUnlocked(rainbow, null, player)).toBe(false);
+    expect(isEquipmentUnlocked(rainbow, null, getItemDisplayContext())).toBe(false);
 
     player.dice.push(die({ enhancement: 'steel', value: 5 }));
-    expect(isEquipmentUnlocked(rainbow, null, player)).toBe(true);
+    expect(isEquipmentUnlocked(rainbow, null, getItemDisplayContext())).toBe(true);
   });
 
   test('generateRandomEquipment respects explicit rarity filters before weighted rolls', () => {

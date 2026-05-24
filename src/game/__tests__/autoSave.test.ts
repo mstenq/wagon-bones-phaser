@@ -10,7 +10,7 @@ import {
   hasRunnableAutoSave,
 } from '../AutoSave';
 import { buildSaveSnapshot, SAVE_VERSION } from '../SaveLoad';
-import { resetPlayerState } from '../PlayerState';
+import { resetPlayerState } from '../__tests__/testRunPlayer';
 
 function createMockStorage(): Storage {
   const store = new Map<string, string>();
@@ -49,8 +49,8 @@ describe('AutoSave', () => {
 
     const restored = readAutoSaveFromStorage();
     expect(restored?.version).toBe(SAVE_VERSION);
-    expect(restored?.player.leg).toBe(2);
-    expect(restored?.player.professionId).toBe('outlaw');
+    expect(restored?.run.leg).toBe(2);
+    expect(restored?.run.professionId).toBe('outlaw');
   });
 
   test('hasRunnableAutoSave requires profession', () => {
@@ -113,8 +113,8 @@ describe('AutoSave', () => {
     writeAutoSaveToStorage(second);
 
     expect(localStorage.getItem(GAMEPLAY.AUTOSAVE_PREV_STORAGE_KEY)).toBe(rawFirst);
-    expect(readAutoSaveFromStorage()?.player.leg).toBe(2);
-    expect(readPreviousAutoSaveFromStorage()?.player.leg).toBe(1);
+    expect(readAutoSaveFromStorage()?.run.leg).toBe(2);
+    expect(readPreviousAutoSaveFromStorage()?.run.leg).toBe(1);
   });
 
   test('clearAutoSaveStorage removes main slot only', () => {
@@ -131,6 +131,6 @@ describe('AutoSave', () => {
     clearAutoSaveStorage();
 
     expect(readAutoSaveFromStorage()).toBeNull();
-    expect(readPreviousAutoSaveFromStorage()?.player.leg).toBe(1);
+    expect(readPreviousAutoSaveFromStorage()?.run.leg).toBe(1);
   });
 });

@@ -260,15 +260,25 @@ import { createDie } from './DiceSystem';
 import { generateRandomEquipment } from './ItemsSystem';
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import type { DiceEnhancement } from './types';
-import type { PlayerState } from './PlayerState';
+import { getRunState, runActions } from './store/runStore';
+import { replaceEquipmentList, resolveEquipmentList, resolveLastUsedConsumableDef } from './store/resolve';
+import { consumableActions } from './store/actions/consumableActions';
+import { economyActions } from './store/actions/economyActions';
+import { diceActions } from './store/actions/diceActions';
+import { progressionActions } from './store/actions/progressionActions';
+import { selectHandStats, selectProfession } from './store/selectors/runSelectors';
 import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 
+function writeEquipment(list: EquipmentInstance[]): void {
+  replaceEquipmentList(list);
+}
+
 /** Add a medicine supply card with ghost aura (Doctor profession, trail events, etc.). */
-export function grantGhostMedicine(player: PlayerState): boolean {
+export function grantGhostMedicine(): boolean {
   const ghostAura = getItemAuraById('ghost');
   const def = getSupplyDefById('medicine', ghostAura);
   if (!def) return false;
-  return player.addConsumable(def);
+  return consumableActions.addConsumable(def);
 }
 
 export interface UseConsumableResult {
@@ -308,20 +318,19 @@ export type ConsumableAnimEvent =
     };
 
 /** Apply deferred equipment changes from consumable anim events (for tests / non-Phaser callers). */
-export function finalizeConsumableEquipmentEvents(
-  player: PlayerState,
-  events: ConsumableAnimEvent[] | undefined,
-): void {
+export function finalizeConsumableEquipmentEvents(events: ConsumableAnimEvent[] | undefined): void {
   if (!events) return;
   for (const event of events) {
     if (event.type !== 'destroy_equipment') continue;
+    const list = resolveEquipmentList();
     const sorted = [...event.destructions].sort((a, b) => b.victimIdx - a.victimIdx);
     for (const { victimIdx } of sorted) {
-      player.equipment.splice(victimIdx, 1);
+      list.splice(victimIdx, 1);
     }
     if (event.equipmentToAdd?.length) {
-      player.equipment.push(...event.equipmentToAdd);
+      list.push(...event.equipmentToAdd);
     }
+    writeEquipment(list);
   }
 }
 
@@ -331,45 +340,50 @@ export function finalizeConsumableEquipmentEvents(
  */
 export function executeConsumableEffect(
   consumed: ConsumableInstance,
-  player: PlayerState,
   context: UseConsumableContext = {},
 ): UseConsumableResult {
   const def = consumed.def;
+  const run = getRunState();
+  const professionId = selectProfession(run)?.id;
 
   // Update Campfire Stories: +mult per supply card used
   if (def.category === 'supply') {
-    for (const equip of player.equipment) {
+    const equipment = resolveEquipmentList();
+    for (const equip of equipment) {
       if (equip.def.effectType === 'SUPPLY_USED_MULT') {
         equip.state.mult =
           (equip.state.mult ?? 0) + ((equip.def.effectParams as Record<string, unknown>).value as number);
       }
     }
+    writeEquipment(equipment);
   }
 
   // ─── Trail guide → upgrade hand level ───
   if (def.category === 'trail_guide' && def.handType) {
     const ht = def.handType as HandType;
-    const stats = player.getHandStats(ht);
+    const stats = selectHandStats(run, ht);
     const handDef = HAND_TABLE.find((h) => h.type === ht)!;
     const oldLevel = stats.level;
     const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
     const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
 
-    player.upgradeHandLevel(ht);
-    player.trailGuidesUsed++;
+    progressionActions.upgradeHandLevel(ht);
+    runActions.patch({ trailGuidesUsed: run.trailGuidesUsed + 1 });
 
-    const newLevel = stats.level;
+    const newStats = selectHandStats(getRunState(), ht);
+    const newLevel = newStats.level;
     const newBaseMiles = handDef.baseMiles + stats.milesPerLevel * (newLevel - 1);
     const newBaseMult = handDef.baseMult + stats.multPerLevel * (newLevel - 1);
 
-    // Update Guide Lantern xMult
-    for (const equip of player.equipment) {
+    const equipment = resolveEquipmentList();
+    for (const equip of equipment) {
       if (equip.def.effectType === 'TRAIL_GUIDE_XMULT') {
         const p = equip.def.effectParams as Record<string, unknown>;
-        const gain = resolveEffectParam<number>(p, 'value', player.profession?.id) ?? 0.1;
+        const gain = resolveEffectParam<number>(p, 'value', professionId) ?? 0.1;
         equip.state.xMult = (equip.state.xMult ?? 1) + gain;
       }
     }
+    writeEquipment(equipment);
     return {
       success: true,
       handUpgrade: {
@@ -392,7 +406,7 @@ export function executeConsumableEffect(
 
   // ─── Instant effects ───
   if (def.instantEffect) {
-    return applyConsumableInstantEffect(def.instantEffect, player);
+    return applyRunInstantEffect(def.instantEffect);
   }
 
   // ─── Supply cards that create other consumables ───
@@ -403,7 +417,7 @@ export function executeConsumableEffect(
       if (!medicineDef) return { success: true, consumablesCreated: 0 };
       let created = 0;
       for (let i = 0; i < 2; i++) {
-        if (player.addConsumable(medicineDef)) created++;
+        if (consumableActions.addConsumable(medicineDef)) created++;
       }
       return { success: true, consumablesCreated: created };
     }
@@ -412,7 +426,7 @@ export function executeConsumableEffect(
       let created = 0;
       for (let i = 0; i < 2; i++) {
         const tgDef = getRandomTrailGuideDef();
-        if (player.addConsumable(tgDef)) created++;
+        if (consumableActions.addConsumable(tgDef)) created++;
       }
       return { success: true, consumablesCreated: created };
     }
@@ -421,25 +435,25 @@ export function executeConsumableEffect(
       let created = 0;
       for (let i = 0; i < 2; i++) {
         const sDef = getRandomSupplyDef();
-        if (player.addConsumable(sDef)) created++;
+        if (consumableActions.addConsumable(sDef)) created++;
       }
       return { success: true, consumablesCreated: created };
     }
     case 'second_helpings': {
-      // Creates last used supply or trail guide (not frontier encounters)
-      if (!isSecondHelpingsCloneTarget(player.lastUsedConsumable)) {
+      const lastUsed = resolveLastUsedConsumableDef();
+      if (!isSecondHelpingsCloneTarget(lastUsed)) {
         return { success: false, failReason: 'No previous consumable used!' };
       }
-      if (player.addConsumable(player.lastUsedConsumable)) {
+      if (lastUsed && consumableActions.addConsumable(lastUsed)) {
         return { success: true, consumablesCreated: 1 };
       }
       return { success: false, failReason: 'No space!' };
     }
     case 'bless': {
-      // 1 in 4 chance to bless a random unblessed equipment with an aura (weighted)
-      const unblessed = player.equipment.filter((e) => !e.def.aura);
+      const equipment = resolveEquipmentList();
+      const unblessed = equipment.filter((e) => !e.def.aura);
       if (unblessed.length === 0) return { success: false, failReason: 'All equipment already has auras!' };
-      if (!checkLoadedChance([1, 4], player.equipment)) return { success: true };
+      if (!checkLoadedChance([1, 4], equipment)) return { success: true };
       const blessableAuras = (['fire', 'icy', 'holy'] as const).map((id) => getItemAuraById(id)!);
       const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
       const target = rngPick('consumables', unblessed);
@@ -452,38 +466,42 @@ export function executeConsumableEffect(
           break;
         }
       }
+      writeEquipment(equipment);
       return { success: true };
     }
     case 'priests_blessing': {
-      // Holy aura on random item; destroy non-cursed others (cursed / eternal items survive)
-      if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
+      const equipment = resolveEquipmentList();
+      if (equipment.length === 0) return { success: false, failReason: 'No equipment!' };
       const holyAura = getItemAuraById('holy');
       if (!holyAura) return { success: true };
-      const chosenIdx = Math.floor(rngFloat('consumables') * player.equipment.length);
-      const chosen = player.equipment[chosenIdx];
-      chosen.def = { ...chosen.def, aura: holyAura };
-      const destructions = player.equipment
+      const chosenIdx = Math.floor(rngFloat('consumables') * equipment.length);
+      equipment[chosenIdx]!.def = { ...equipment[chosenIdx]!.def, aura: holyAura };
+      const destructions = equipment
         .map((_, i) => i)
-        .filter((i) => i !== chosenIdx && !isEquipmentCursed(player.equipment[i]))
+        .filter((i) => i !== chosenIdx && !isEquipmentCursed(equipment[i]!))
         .map((victimIdx) => ({ sourceIdx: chosenIdx, victimIdx }));
 
       if (destructions.length === 0) {
+        writeEquipment(equipment);
         return { success: true };
       }
 
+      writeEquipment(equipment);
       return {
         success: true,
         consumableAnimEvents: [{ type: 'destroy_equipment', destructions }],
       };
     }
     case 'blood_moon': {
-      if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
+      const equipment = resolveEquipmentList();
+      if (equipment.length === 0) return { success: false, failReason: 'No equipment!' };
       const ghostAura = getItemAuraById('ghost');
       if (!ghostAura) return { success: true };
-      const chosenIdx = Math.floor(rngFloat('consumables') * player.equipment.length);
-      const chosen = player.equipment[chosenIdx];
-      chosen.def = { ...chosen.def, aura: ghostAura };
-      player.trailEventModifiers.rerollPenalty += 1;
+      const chosenIdx = Math.floor(rngFloat('consumables') * equipment.length);
+      equipment[chosenIdx]!.def = { ...equipment[chosenIdx]!.def, aura: ghostAura };
+      writeEquipment(equipment);
+      const mods = getRunState().trailEventModifiers;
+      runActions.patch({ trailEventModifiers: { ...mods, rerollPenalty: mods.rerollPenalty + 1 } });
       return { success: true };
     }
     case 'raid': {
@@ -491,7 +509,7 @@ export function executeConsumableEffect(
       if (visibleIds.size === 0) {
         return { success: false, failReason: 'Raid can only be used when dice are visible!' };
       }
-      const visibleDice = player.dice.filter((d) => visibleIds.has(d.id));
+      const visibleDice = getRunState().dice.filter((d) => visibleIds.has(d.id));
       if (visibleDice.length === 0) {
         return { success: false, failReason: 'No visible dice available for Raid!' };
       }
@@ -499,26 +517,28 @@ export function executeConsumableEffect(
       const toDestroy = rngShuffle('consumables', visibleDice).slice(0, Math.min(5, visibleDice.length));
       const destroyIds = new Set(toDestroy.map((d) => d.id));
       const enhancedCount = toDestroy.filter((d) => d.enhancement !== null).length;
-      const before = player.dice.length;
-      player.dice = player.dice.filter((d) => !destroyIds.has(d.id));
-      for (const id of destroyIds) {
-        player.spentDiceIds.delete(id);
-      }
-      const removed = before - player.dice.length;
+      const before = getRunState().dice.length;
+      const nextDice = getRunState().dice.filter((d) => !destroyIds.has(d.id));
+      const spentSet = new Set(getRunState().spentDiceIds);
+      for (const id of destroyIds) spentSet.delete(id);
+      runActions.patch({ dice: nextDice, spentDiceIds: [...spentSet] });
+      const removed = before - nextDice.length;
       if (removed > 0) {
-        processEquipmentOnDiceDestroyed(player.equipment, removed, enhancedCount);
+        const equipment = resolveEquipmentList();
+        processEquipmentOnDiceDestroyed(equipment, removed, enhancedCount);
+        writeEquipment(equipment);
       }
-      player.economy.earn(20);
+      economyActions.earn(20);
       return {
         success: true,
         consumableAnimEvents: [{ type: 'destroy_dice', diceIds: [...destroyIds] }],
       };
     }
     case 'skin_walker': {
-      // Copy random item; destroy non-cursed others (cursed / eternal items survive, copy keeps modifiers)
-      if (player.equipment.length === 0) return { success: false, failReason: 'No equipment!' };
-      const chosenIdx = Math.floor(rngFloat('consumables') * player.equipment.length);
-      const source = player.equipment[chosenIdx];
+      const equipment = resolveEquipmentList();
+      if (equipment.length === 0) return { success: false, failReason: 'No equipment!' };
+      const chosenIdx = Math.floor(rngFloat('consumables') * equipment.length);
+      const source = equipment[chosenIdx]!;
       const duplicated: EquipmentInstance = {
         def: source.def.aura?.id === 'ghost' ? { ...source.def, aura: undefined } : { ...source.def },
         sellValue: source.sellValue,
@@ -526,15 +546,15 @@ export function executeConsumableEffect(
         modifiers: [...source.modifiers],
         perishableRoundsLeft: source.perishableRoundsLeft,
       };
-      const destructions = player.equipment
+      const destructions = equipment
         .map((_, i) => i)
-        .filter((i) => i !== chosenIdx && !isEquipmentCursed(player.equipment[i]))
+        .filter((i) => i !== chosenIdx && !isEquipmentCursed(equipment[i]!))
         .map((victimIdx) => ({ sourceIdx: chosenIdx, victimIdx }));
 
       if (destructions.length === 0) {
-        const survivors = player.equipment.filter((e, i) => i === chosenIdx || isEquipmentCursed(e));
+        const survivors = equipment.filter((e, i) => i === chosenIdx || isEquipmentCursed(e));
         survivors.push(duplicated);
-        player.equipment.splice(0, player.equipment.length, ...survivors);
+        writeEquipment(survivors);
         return { success: true };
       }
 
@@ -560,72 +580,75 @@ export function executeConsumableEffect(
  * Handles lastUsedConsumable tracking (skips for second_helpings which reads the previous value).
  * Use this instead of manually setting lastUsedConsumable + calling executeConsumableEffect.
  */
-export function useConsumableDirectly(
-  def: ConsumableDef,
-  player: PlayerState,
-  context: UseConsumableContext = {},
-): UseConsumableResult {
+export function useConsumableDirectly(def: ConsumableDef, context: UseConsumableContext = {}): UseConsumableResult {
   const consumed = createConsumableInstance(def);
   if (isSecondHelpingsCloneTarget(def)) {
-    player.lastUsedConsumable = def;
+    runActions.patch({ lastUsedConsumableId: def.id });
   }
-  return executeConsumableEffect(consumed, player, context);
+  return executeConsumableEffect(consumed, context);
 }
 
-function applyConsumableInstantEffect(effect: InstantEffect, player: PlayerState): UseConsumableResult {
+/** Apply a pack/instant effect directly against the run store. */
+export function applyRunInstantEffect(effect: InstantEffect): UseConsumableResult {
+  const run = getRunState();
   switch (effect.type) {
     case 'CREATE_DICE': {
       const count = effect.count ?? 1;
       const enhancement = (effect.enhancement ?? null) as DiceEnhancement;
       for (let i = 0; i < count; i++) {
-        player.addDie(createDie({ enhancement }));
+        diceActions.addDie(createDie({ enhancement }));
       }
       return { success: true };
     }
     case 'DOUBLE_MONEY': {
-      const gain = Math.min(player.economy.balance, effect.maxGain ?? 20);
-      player.economy.earn(gain);
+      const gain = Math.min(run.balance, effect.maxGain ?? 20);
+      economyActions.earn(gain);
       return { success: true };
     }
     case 'TRADE_EQUIPMENT': {
-      const totalValue = player.equipment.reduce((sum, eq) => sum + eq.sellValue, 0);
+      const equipment = resolveEquipmentList();
+      const totalValue = equipment.reduce((sum, eq) => sum + eq.sellValue, 0);
       const gain = Math.min(totalValue, effect.maxGain ?? 50);
-      player.economy.earn(gain);
+      economyActions.earn(gain);
       return { success: true };
     }
     case 'CREATE_EQUIPMENT': {
       let equipmentCreatedCount = 0;
-      if (player.equipmentSlotsFree > 0) {
+      const state = getRunState();
+      const list = resolveEquipmentList();
+      const usedSlots = list.filter((e) => e.def.aura?.id !== 'ghost').length;
+      if (usedSlots < state.maxEquipmentSlots) {
         const def = generateRandomEquipment({
           rarity: effect.rarity,
           excludeRarity: effect.excludeRarity,
         });
-        player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
+        list.push(acquireRewardEquipmentInstance(def, state.purchasedPermits));
+        writeEquipment(list);
         equipmentCreatedCount = 1;
       }
       if (effect.setMoneyZero) {
-        player.economy.spend(player.economy.balance);
+        economyActions.spend(getRunState().balance);
       }
       return { success: true, equipmentCreatedCount };
     }
     case 'UPGRADE_ALL_HANDS': {
-      return { success: true, handUpgrades: createAllHandUpgrades(player) };
+      return { success: true, handUpgrades: createAllHandUpgrades() };
     }
     default:
       return { success: true };
   }
 }
 
-function createAllHandUpgrades(player: PlayerState): HandUpgradeInfo[] {
+function createAllHandUpgrades(): HandUpgradeInfo[] {
   const upgrades: HandUpgradeInfo[] = [];
   for (const type of Object.values(HandType)) {
-    const stats = player.getHandStats(type);
+    const stats = selectHandStats(getRunState(), type);
     const handDef = HAND_TABLE.find((h) => h.type === type)!;
     const oldLevel = stats.level;
     const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
     const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
-    player.upgradeHandLevel(type);
-    const newLevel = stats.level;
+    progressionActions.upgradeHandLevel(type);
+    const newLevel = selectHandStats(getRunState(), type).level;
     upgrades.push({
       handType: type,
       handName: handDef.name,

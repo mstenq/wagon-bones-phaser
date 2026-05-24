@@ -12,7 +12,7 @@ import {
   resetDieIds,
 } from '../testHelpers';
 import { getBossRoundConfigMods } from '../../BossEffectsSystem';
-import { gt, gte, D } from '../../scoreMath';
+import { gte, D } from '../../scoreMath';
 import {
   processEndOfRound,
   getConfigModifiers,
@@ -20,7 +20,6 @@ import {
   findDeathPrevention,
   processEquipmentOnDayEnd,
   processEquipmentOnDiceSpent,
-  processEquipmentOnHandPlayed,
   processEquipmentAfterHandScored,
   processEquipmentOnReroll,
   processEquipmentOnPackOpened,
@@ -244,7 +243,7 @@ describe('ROUND_START_ADD_DICE: Mystery Crate', () => {
   });
 
   test('day 2 refills to normal roll size without extra mystery slots', () => {
-    const { game, player } = setupGame({ equipment: [item('mystery_crate')] });
+    const { game } = setupGame({ equipment: [item('mystery_crate')] });
     game.startRound();
     game.config.targetMiles = D(999_999);
     const handIds = game.state.hand.map((d) => d.id);
@@ -620,7 +619,7 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     const normalDice = diceWithValue(5, 2);
     // Include stone dice in the "all dice" pool
     const allDice = [...normalDice, ...stoneDice, ...diceWithValue(1, 48)];
-    const { game, player } = setupGame({
+    const { game } = setupGame({
       equipment: [item('quarry_mine')],
       dice: allDice,
     });
@@ -638,7 +637,7 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
   test('no bonus with zero stone dice', () => {
     const normalDice = diceWithValue(5, 2);
     const allDice = [...normalDice, ...diceWithValue(1, 48)];
-    const { game, player } = setupGame({
+    const { game } = setupGame({
       equipment: [item('quarry_mine')],
       dice: allDice,
     });
@@ -662,7 +661,7 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     ];
     const normalDice = diceWithValue(5, 2);
     const allDice = [...normalDice, ...stoneDice, ...diceWithValue(1, 44)];
-    const { game, player } = setupGame({
+    const { game } = setupGame({
       equipment: [item('quarry_mine')],
       dice: allDice,
     });

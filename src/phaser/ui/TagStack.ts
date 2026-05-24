@@ -5,9 +5,11 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { TEXT_COLORS, FONTS, UI, TAG_STACK } from '../../game/Constants';
-import { getPlayerState } from '../../game/PlayerState';
-import { getQueuedAuraTags } from '../../game/TagSystem';
+import { runStore } from '../../game/store/runStore';
+import { selectTagStackModel } from '../../game/store/selectors/uiSelectors';
+import { resolveTagDescription } from '../../data/trail_tags';
 import { TrailTagInstance } from '../../game/types';
+import { bindGameObject } from '../store/subscribe';
 
 const TAG_COLORS: Record<string, number> = {
   shop: 0x44aa44,
@@ -23,76 +25,66 @@ const TAG_COLORS: Record<string, number> = {
 
 const { BADGE_SIZE, BADGE_GAP, BADGE_RADIUS, TOOLTIP_WIDTH, POUCH_CLEARANCE } = TAG_STACK;
 
-/** Merge tag instances with the same id into one badge. */
-function groupTagsById(tags: TrailTagInstance[]): TrailTagInstance[] {
-  const grouped = new Map<string, TrailTagInstance>();
-  for (const tag of tags) {
-    const existing = grouped.get(tag.def.id);
-    if (existing) {
-      existing.copies += tag.copies;
-    } else {
-      grouped.set(tag.def.id, { def: tag.def, copies: tag.copies });
-    }
+function tagStackEquality(
+  a: ReturnType<typeof selectTagStackModel>,
+  b: ReturnType<typeof selectTagStackModel>,
+): boolean {
+  if (a.twinWagonCount !== b.twinWagonCount) return false;
+  if (a.tags.length !== b.tags.length) return false;
+  for (let i = 0; i < a.tags.length; i++) {
+    if (a.tags[i]!.def.id !== b.tags[i]!.def.id || a.tags[i]!.copies !== b.tags[i]!.copies) return false;
   }
-  return [...grouped.values()];
+  return true;
 }
 
 export class TagStack extends GameObjects.Container {
   private badges: GameObjects.Container[] = [];
   private tooltip: GameObjects.Container | null = null;
+  private pouchX: number;
+  private pouchY: number;
 
-  constructor(
-    scene: Scene,
-    private pouchX: number,
-    private pouchY: number,
-  ) {
+  constructor(scene: Scene, pouchX: number, pouchY: number) {
     super(scene, 0, 0);
+    this.pouchX = pouchX;
+    this.pouchY = pouchY;
     scene.add.existing(this);
     this.setDepth(150);
-    this.refresh();
+
+    bindGameObject(this, runStore, selectTagStackModel, (model) => this.renderFromModel(model), {
+      equalityFn: tagStackEquality,
+    });
   }
 
-  /** Rebuild the tag stack from current player state */
-  refresh(): void {
+  private renderFromModel(model: ReturnType<typeof selectTagStackModel>): void {
     if (!this.scene || !this.active) return;
 
     for (const badge of this.badges) badge.destroy();
     this.badges = [];
     this.hideTooltip();
 
-    const player = getPlayerState();
-    const pending = player.pendingTags.filter((t) => !t.def.category.startsWith('immediate_'));
-    const auraQueued = getQueuedAuraTags(player);
-    const nonAuraPending = pending.filter((t) => t.def.category !== 'shop_aura');
-    const tags = groupTagsById([...nonAuraPending, ...auraQueued]);
-
-    if (tags.length === 0 && player.twinWagonCount === 0) return;
+    const { tags, twinWagonCount } = model;
+    if (tags.length === 0 && twinWagonCount === 0) return;
 
     const stackBottom = this.pouchY - UI.POUCH_SIZE - POUCH_CLEARANCE;
 
     for (let i = 0; i < tags.length; i++) {
-      const tag = tags[i];
+      const tag = tags[i]!;
       const badgeY = stackBottom - (i + 1) * (BADGE_SIZE + BADGE_GAP) + BADGE_SIZE;
       const badge = this.createBadge(tag, this.pouchX, badgeY);
       this.badges.push(badge);
     }
 
-    if (player.twinWagonCount > 0) {
+    if (twinWagonCount > 0) {
       const twY = stackBottom - (tags.length + 1) * (BADGE_SIZE + BADGE_GAP) + BADGE_SIZE;
-      const twBadge = this.createTwinWagonBadge(player.twinWagonCount, this.pouchX, twY);
+      const twBadge = this.createTwinWagonBadge(twinWagonCount, this.pouchX, twY);
       this.badges.push(twBadge);
     }
   }
 
   /** Pouch anchor for fly-in animations */
   getStackAnchor(): { x: number; y: number } {
-    const player = getPlayerState();
-    const pending = player.pendingTags.filter((t) => !t.def.category.startsWith('immediate_'));
-    const auraQueued = getQueuedAuraTags(player);
-    const nonAuraPending = pending.filter((t) => t.def.category !== 'shop_aura');
-    const tagCount = groupTagsById([...nonAuraPending, ...auraQueued]).length;
-    const twinExtra = player.twinWagonCount > 0 ? 1 : 0;
-    const stackCount = tagCount + twinExtra;
+    const model = selectTagStackModel();
+    const stackCount = model.tags.length + (model.twinWagonCount > 0 ? 1 : 0);
     const stackBottom = this.pouchY - UI.POUCH_SIZE - POUCH_CLEARANCE;
     const y = stackBottom - (stackCount + 1) * (BADGE_SIZE + BADGE_GAP) + BADGE_SIZE / 2;
     return { x: this.pouchX + BADGE_SIZE / 2, y };
@@ -101,7 +93,7 @@ export class TagStack extends GameObjects.Container {
   updatePouchPosition(pouchX: number, pouchY: number): void {
     this.pouchX = pouchX;
     this.pouchY = pouchY;
-    this.refresh();
+    this.renderFromModel(selectTagStackModel());
   }
 
   private createBadge(tag: TrailTagInstance, x: number, y: number): GameObjects.Container {
@@ -213,7 +205,8 @@ export class TagStack extends GameObjects.Container {
     });
     this.tooltip.add(name);
 
-    const desc = this.scene.add.text(8, 24, tag.def.description, {
+    const descText = resolveTagDescription(tag.def, { surveyorHand: tag.surveyorHand });
+    const desc = this.scene.add.text(8, 24, descText, {
       fontFamily: FONTS.PRIMARY,
       fontSize: '10px',
       color: TEXT_COLORS.SECONDARY,

@@ -6,7 +6,9 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState } from '../../game/PlayerState';
+import { getRunState } from '../../game/store/runStore';
+import { selectHandStats, selectTagDescriptionContextForRound } from '../../game/store/selectors/runSelectors';
+import { resolveTagDescription } from '../../data/trail_tags';
 import { HandType } from '../../game/types';
 import { Button } from './Button';
 import { getPermitById } from '../../game/PermitsSystem';
@@ -17,7 +19,6 @@ import { TagTooltip } from './TagTooltip';
 import hands from '../../data/hands';
 
 export class JourneyInfoModal extends GameObjects.Container {
-  private scene: Scene;
   private panelX: number;
   private panelY: number;
   private panelW: number;
@@ -47,7 +48,6 @@ export class JourneyInfoModal extends GameObjects.Container {
 
   constructor(scene: Scene, contentX: number, width: number, height: number) {
     super(scene, 0, 0);
-    this.scene = scene;
 
     // Dim background
     const dim = scene.add.graphics();
@@ -191,7 +191,7 @@ export class JourneyInfoModal extends GameObjects.Container {
     const panelsY = top + 26;
 
     const legLabel = this.scene.add
-      .text(this.panelX + this.panelW / 2, labelY, `Leg ${getPlayerState().leg} — Current Leg Rounds`, {
+      .text(this.panelX + this.panelW / 2, labelY, `Leg ${getRunState().leg} — Current Leg Rounds`, {
         fontFamily: FONTS.PRIMARY,
         fontSize: '12px',
         color: TEXT_COLORS.MUTED,
@@ -212,10 +212,13 @@ export class JourneyInfoModal extends GameObjects.Container {
         compact: true,
         showActions: false,
         depth: 510,
-        onTagHover: (tag, ax, ay) => {
+        onTagHover: (tag, round, ax, ay) => {
+          const run = getRunState();
+          const desc = resolveTagDescription(tag, selectTagDescriptionContextForRound(run, round));
           this.tagTooltip.show(
             this.scene,
             tag,
+            desc,
             ax,
             ay,
             {
@@ -235,7 +238,6 @@ export class JourneyInfoModal extends GameObjects.Container {
     const scene = this.scene;
     const panelX = this.panelX;
     const panelW = this.panelW;
-    const panelY = this.panelY;
 
     const { top } = this.getContentArea();
     let rowY = top + 4;
@@ -286,12 +288,12 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.tabContent.add(sep);
     rowY += 6;
 
-    const player = getPlayerState();
+    const run = getRunState();
 
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       const handType = hand.type as HandType;
-      const stats = player.getHandStats(handType);
+      const stats = selectHandStats(run, handType);
 
       // Row background (alternating)
       if (i % 2 === 0) {
@@ -378,13 +380,13 @@ export class JourneyInfoModal extends GameObjects.Container {
     const panelX = this.panelX;
     const panelW = this.panelW;
     const panelY = this.panelY;
-    const player = getPlayerState();
+    const run = getRunState();
 
     const { top } = this.getContentArea();
     let rowY = top + 4;
     const rowH = 44;
 
-    if (player.purchasedPermits.length === 0) {
+    if (run.purchasedPermits.length === 0) {
       const emptyText = scene.add
         .text(panelX + panelW / 2, panelY + this.panelH / 2 - 20, 'No permits purchased yet', {
           fontFamily: FONTS.PRIMARY,
@@ -394,8 +396,8 @@ export class JourneyInfoModal extends GameObjects.Container {
         .setOrigin(0.5);
       this.tabContent.add(emptyText);
     } else
-      for (let i = 0; i < player.purchasedPermits.length; i++) {
-        const permitId = player.purchasedPermits[i];
+      for (let i = 0; i < run.purchasedPermits.length; i++) {
+        const permitId = run.purchasedPermits[i];
         const permit = getPermitById(permitId);
         if (!permit) continue;
 

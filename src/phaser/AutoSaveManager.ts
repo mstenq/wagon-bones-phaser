@@ -3,7 +3,7 @@
 
 import type { Game, Scene } from 'phaser';
 import { GAMEPLAY } from '../game/Constants';
-import { getPlayerState } from '../game/PlayerState';
+import { getRunState } from '../game/store/runStore';
 import { clearAutoSaveStorage, readAutoSaveFromStorage, writeAutoSaveToStorage } from '../game/AutoSave';
 import { buildSnapshotFromScene, restoreSnapshotToScene } from './SaveLoadIO';
 import { ensureBackgroundMusic } from './BackgroundMusic';
@@ -56,7 +56,7 @@ function findActiveAutoSaveScene(): Scene | null {
 function autoSaveTick(): void {
   const scene = findActiveAutoSaveScene();
   if (!scene) return;
-  if (!getPlayerState().profession) return;
+  if (!getRunState().professionId) return;
 
   try {
     const snapshot = buildSnapshotFromScene(scene);
@@ -78,7 +78,7 @@ export function flushAutoSave(): void {
 /** Restore from localStorage on boot. Returns true if a scene was started. */
 export function tryRestoreAutoSaveOnBoot(hostScene: Scene): boolean {
   const snapshot = readAutoSaveFromStorage();
-  if (!snapshot || !snapshot.player.professionId) {
+  if (!snapshot || !snapshot.run.professionId) {
     if (snapshot) clearAutoSaveStorage();
     return false;
   }

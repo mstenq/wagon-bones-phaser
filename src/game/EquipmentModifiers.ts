@@ -7,12 +7,14 @@ import {
   createEquipmentInstance,
   EquipmentDef,
   EquipmentInstance,
-  isEquipmentCursed,
   isEquipmentLeased,
   isEquipmentModifierImmune,
   isEquipmentPerishable,
 } from './ItemsSystem';
-import { getPlayerState, PlayerState } from './PlayerState';
+import { getRunState } from './store/runStore';
+import { replaceEquipmentList, resolveEquipmentList } from './store/resolve';
+import { economyActions } from './store/actions/economyActions';
+import { equipmentActions } from './store/actions/equipmentActions';
 import { getDiscountedShopPrice } from './PermitsSystem';
 import { rngFloat } from './RunRng';
 
@@ -68,8 +70,7 @@ export function applyModifiersToEquipment(instance: EquipmentInstance, modifiers
  */
 export function rollShopEquipmentPreview(def: EquipmentDef, purchasedPermitIds: string[] = []): EquipmentInstance {
   const instance = createEquipmentInstance(def, purchasedPermitIds);
-  const player = getPlayerState();
-  const modifiers = rollEquipmentModifiers(player.difficulty, def);
+  const modifiers = rollEquipmentModifiers(getRunState().difficulty, def);
   applyModifiersToEquipment(instance, modifiers);
   return instance;
 }
@@ -84,7 +85,7 @@ export function acquireEquipmentInstance(
   modifiers?: EquipmentModifier[],
 ): EquipmentInstance {
   const instance = createEquipmentInstance(def, purchasedPermitIds);
-  const mods = modifiers ?? rollEquipmentModifiers(getPlayerState().difficulty, def);
+  const mods = modifiers ?? rollEquipmentModifiers(getRunState().difficulty, def);
   applyModifiersToEquipment(instance, mods);
   return instance;
 }
@@ -123,18 +124,17 @@ export interface EquipmentModifierRoundResult {
  * Call when a round ends (win or loss), before payout interest is calculated.
  */
 /** Remove equipment marked for destruction in a modifier round result (indices captured before splice). */
-export function applyEquipmentModifierDestructions(player: PlayerState, result: EquipmentModifierRoundResult): void {
+export function applyEquipmentModifierDestructions(result: EquipmentModifierRoundResult): void {
   const indices = [
     ...new Set([...result.perished.map((p) => p.index), ...result.leaseDefaulted.map((p) => p.index)]),
   ].sort((a, b) => b - a);
 
   for (const idx of indices) {
-    player.destroyEquipment(idx);
+    equipmentActions.destroyEquipment(idx);
   }
 }
 
 export function processEquipmentModifiersEndOfRound(
-  player: PlayerState,
   options: { applyDestruction?: boolean } = {},
 ): EquipmentModifierRoundResult {
   const applyDestruction = options.applyDestruction ?? true;
@@ -144,9 +144,10 @@ export function processEquipmentModifiersEndOfRound(
     leaseDefaulted: [],
   };
 
+  const equipment = resolveEquipmentList();
   const perishableToDestroy: number[] = [];
-  for (let i = 0; i < player.equipment.length; i++) {
-    const equip = player.equipment[i];
+  for (let i = 0; i < equipment.length; i++) {
+    const equip = equipment[i]!;
     if (isEquipmentPerishable(equip) && equip.perishableRoundsLeft !== undefined) {
       equip.perishableRoundsLeft -= 1;
       if (equip.perishableRoundsLeft <= 0) {
@@ -156,12 +157,12 @@ export function processEquipmentModifiersEndOfRound(
   }
 
   const leaseToDestroy: number[] = [];
-  for (let i = 0; i < player.equipment.length; i++) {
-    const equip = player.equipment[i];
+  for (let i = 0; i < equipment.length; i++) {
+    const equip = equipment[i]!;
     if (!isEquipmentLeased(equip)) continue;
 
     const cost = EQUIPMENT_MODIFIER.LEASED_UPKEEP;
-    if (player.trySpend(cost)) {
+    if (economyActions.trySpend(cost)) {
       result.leasePaid.push({ index: i, equipmentName: equip.def.name, cost });
     } else {
       leaseToDestroy.push(i);
@@ -169,8 +170,10 @@ export function processEquipmentModifiersEndOfRound(
   }
 
   const toDestroy = [...new Set([...perishableToDestroy, ...leaseToDestroy])];
+  replaceEquipmentList(equipment);
+
   for (const idx of toDestroy) {
-    const equip = player.equipment[idx];
+    const equip = equipment[idx];
     if (!equip) continue;
 
     const name = equip.def.name;
@@ -183,7 +186,7 @@ export function processEquipmentModifiersEndOfRound(
   }
 
   if (applyDestruction) {
-    applyEquipmentModifierDestructions(player, result);
+    applyEquipmentModifierDestructions(result);
   }
 
   return result;

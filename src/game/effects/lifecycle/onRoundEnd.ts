@@ -2,7 +2,7 @@
 
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { checkLoadedChance } from '../../equipmentUtils';
-import { getPlayerState } from '../../PlayerState';
+import { getRunState } from '../../store/runStore';
 import { resolveEffectParam } from '../helpers';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
@@ -12,6 +12,7 @@ export interface RoundEndContext {
   moneyEarned: number;
   destroyedIndices: number[];
   index: number;
+  professionId: string | null;
 }
 
 effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
@@ -21,7 +22,7 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
 
   switch (effectType) {
     case 'END_ROUND_MONEY': {
-      const professionId = getPlayerState().profession?.id;
+      const professionId = ctx.professionId ?? undefined;
       ctx.moneyEarned += resolveEffectParam<number>(p, 'value', professionId);
       break;
     }
@@ -70,6 +71,7 @@ export function processEndOfRound(equipment: EquipmentInstance[]): {
     moneyEarned: 0,
     destroyedIndices: [],
     index: 0,
+    professionId: getRunState().professionId,
   };
 
   for (let i = 0; i < equipment.length; i++) {

@@ -9,6 +9,8 @@ import {
   calculateTestScore,
   setupGame,
   resetDieIds,
+  pushEquipmentState,
+  syncEquipmentInstances,
 } from '../testHelpers';
 import {
   processEquipmentOnLuckyTrigger,
@@ -27,7 +29,7 @@ import {
   createConsumableInstance,
   createTrailGuideConsumableDef,
 } from '../../ConsumablesSystem';
-import { HandType } from '../../types';
+import { Die, HandType } from '../../types';
 import trailGuidesData from '../../../data/trail_guides';
 
 beforeEach(() => resetDieIds());
@@ -297,7 +299,7 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
       die({ value: 6, enhancement: 'steel' }),
     ];
 
-    const { game, player } = setupGame({
+    const { game } = setupGame({
       equipment: [item('iron_furnace')],
       dice: [...scoredDice, ...steelInCollection, ...diceWithValue(1, 50)],
     });
@@ -362,7 +364,7 @@ describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
     const { player } = setupGame({ equipment: [item('guide_lantern')] });
     const tgDef = createTrailGuideConsumableDef(trailGuidesData[0]);
     const consumed = createConsumableInstance(tgDef);
-    executeConsumableEffect(consumed, player);
+    executeConsumableEffect(consumed);
 
     const lantern = player.equipment.find((e) => e.def.id === 'guide_lantern')!;
     expect(lantern.state.xMult).toBeCloseTo(1.1, 5);
@@ -382,7 +384,7 @@ describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
     const { player } = setupGame({ equipment: [item('guide_lantern')], profession: 'scout' });
     const tgDef = createTrailGuideConsumableDef(trailGuidesData[0]);
     const consumed = createConsumableInstance(tgDef);
-    executeConsumableEffect(consumed, player);
+    executeConsumableEffect(consumed);
 
     const lantern = player.equipment.find((e) => e.def.id === 'guide_lantern')!;
     expect(lantern.state.xMult).toBeCloseTo(1.2, 5);
@@ -431,6 +433,7 @@ describe('REPEAT_HAND_XMULT: Repeat Offender', () => {
     game.startRound();
     // Simulate a prior PAIR play this round (after round start reset)
     inst.state['round_PAIR'] = 1;
+    pushEquipmentState(inst);
 
     game.state.phase = 'ROLL';
     const dice = diceWithValue(5, 2);
@@ -464,7 +467,7 @@ describe('REPEAT_HAND_XMULT: Repeat Offender', () => {
 
   test('resets on new round', () => {
     const inst = item('repeat_offender');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
 
     // Play a PAIR
     processEquipmentAfterHandScored([inst], HandType.PAIR);
@@ -512,6 +515,7 @@ describe('STATEFUL_XMULT: New Blood', () => {
     const inst = item('new_blood');
     const { player } = setupGame({ equipment: [inst] });
     player.addDie({ id: '', value: 5, enhancement: null, sticker: null, aura: null, bonusMiles: 0 });
+    syncEquipmentInstances(inst);
     expect(inst.state.xMult).toBeCloseTo(1.25, 5);
   });
 });
@@ -530,7 +534,7 @@ describe('EMPTY_SLOT_XMULT: One-Man Posse', () => {
   });
 
   test('no bonus when all slots full', () => {
-    const { result, player } = calculateTestScore({
+    const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [item('one_man_posse'), item('horseshoe'), item('horseshoe'), item('horseshoe'), item('horseshoe')],
     });
@@ -816,7 +820,7 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     const steelDie = die({ value: 5, enhancement: 'steel' });
     const inst = item('graverobber');
 
-    const { result, player } = calculateTestScore({
+    const { player } = calculateTestScore({
       scoredDice: [woodenDie, steelDie],
       equipment: [inst],
     });
@@ -827,8 +831,8 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     expect(woodenDie.enhancement).toBeNull();
     expect(steelDie.enhancement).toBeNull();
     // Enhancements should also be removed from pouch dice
-    const pouchWooden = player.dice.find((d) => d.id === woodenDie.id)!;
-    const pouchSteel = player.dice.find((d) => d.id === steelDie.id)!;
+    const pouchWooden = player.dice.find((d: Die) => d.id === woodenDie.id)!;
+    const pouchSteel = player.dice.find((d: Die) => d.id === steelDie.id)!;
     expect(pouchWooden.enhancement).toBeNull();
     expect(pouchSteel.enhancement).toBeNull();
   });

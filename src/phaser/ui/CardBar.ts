@@ -93,7 +93,8 @@ export abstract class CardBar extends GameObjects.Container {
     return this.cards;
   }
 
-  refresh(): void {
+  /** Rebuild card row from current store-backed model (subclasses provide counts via getItemCount). */
+  protected rebuildCards(): void {
     for (const t of this.wobbleTweens) t.destroy();
     this.wobbleTweens = [];
     this.hoveredCard = null;
@@ -337,7 +338,7 @@ export abstract class CardBar extends GameObjects.Container {
       ease: 'Power3',
       onComplete: () => {
         this.onSellComplete(index);
-        this.refresh();
+        this.rebuildCards();
       },
     });
   }

@@ -6,8 +6,9 @@
 
 import { Scene } from 'phaser';
 import { COLORS, UI, GAMEPLAY } from '../../game/Constants';
-import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState } from '../../game/PlayerState';
+import { getRunState } from '../../game/store/runStore';
+import { selectRunSidebarModel } from '../../game/store/selectors/uiSelectors';
+import { selectRoundTotalMiles } from '../../game/store/selectors/roundSelectors';
 import { Sidebar } from './Sidebar';
 import { EquipmentBar } from './EquipmentBar';
 import { ConsumableBar } from './ConsumableBar';
@@ -56,10 +57,10 @@ export interface LayoutOptions {
  */
 export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResult {
   const { width, height } = scene.scale;
-  const player = getPlayerState();
+  const run = getRunState();
   const opts = options ?? {};
 
-  if (player.profession) {
+  if (run.professionId) {
     ensureBackgroundMusic(scene);
     startAutoSaveLoop();
   }
@@ -79,18 +80,19 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
   const sidebar = new Sidebar(scene, sidebarW, height);
   if (opts.sidebarTitle) {
+    const model = selectRunSidebarModel(run);
+    const roundMiles = selectRoundTotalMiles();
     sidebar.updateData({
       title: opts.sidebarTitle,
-      roundScore: 0,
+      roundScore: roundMiles ?? 0,
       milesBase: 0,
       mult: 0,
-      daysRemaining: player.effectiveDays,
-      rerolls: player.effectiveRerolls,
-      leg: player.leg,
-      totalLegs: player.endlessMode ? undefined : GAMEPLAY.LEGS,
-      round: player.round,
+      daysRemaining: model.daysRemaining,
+      rerolls: model.rerolls,
+      leg: model.leg,
+      round: model.round,
       totalRounds: GAMEPLAY.ROUNDS_PER_LEG,
-      targetMiles: player.targetMiles,
+      targetMiles: model.targetMiles,
     });
   }
   sidebar.setJourneyInfoCallback(() => {
@@ -136,17 +138,6 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   });
 
   const tagStack = new TagStack(scene, pouchX, pouchY);
-  const onTagStateChange = () => tagStack.refresh();
-  const unregisterTagListeners = () => {
-    EventBus.off(Events.TAG_EARNED, onTagStateChange);
-    EventBus.off(Events.ROUND_SKIPPED, onTagStateChange);
-    EventBus.off(Events.TAG_QUEUE_CHANGED, onTagStateChange);
-  };
-  EventBus.on(Events.TAG_EARNED, onTagStateChange);
-  EventBus.on(Events.ROUND_SKIPPED, onTagStateChange);
-  EventBus.on(Events.TAG_QUEUE_CHANGED, onTagStateChange);
-  tagStack.on('destroy', unregisterTagListeners);
-  scene.events.once('shutdown', unregisterTagListeners);
 
   const contentTop = equipBarH + 16;
   const contentBottom = height - UI.POUCH_MARGIN - UI.POUCH_SIZE - 8;

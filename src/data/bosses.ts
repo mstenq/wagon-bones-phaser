@@ -133,7 +133,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_banker',
     name: 'The Banker',
-    description: 'Lose $1 per die played when scoring (all dice you select, not just the hand)',
+    description: 'Lose $1 per played dice',
     effectType: 'LOSE_MONEY_PER_PLAYED',
     effectParams: { value: 1 },
     minimumLeg: 3,

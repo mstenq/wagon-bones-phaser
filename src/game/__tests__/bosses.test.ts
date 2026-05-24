@@ -14,6 +14,7 @@ import {
   isDiceScoringDisabledByBoss,
   isEquipmentDisabledByBoss,
   canPlayHandType,
+  recordBossHandPlayed,
   getBossAdjustedHandStats,
   applyBossHandRestriction,
   applyBossAfterScore,
@@ -123,6 +124,15 @@ describe('SINGLE_HAND_TYPE: Preacher', () => {
     expect(canPlayHandType(HandType.PAIR).allowed).toBe(true);
     expect(canPlayHandType(HandType.THREE_OF_A_KIND).allowed).toBe(false);
   });
+
+  test('recordBossHandPlayed locks first hand type', () => {
+    setupGame({ bossId: 'the_preacher' });
+    resetBossRoundState();
+    recordBossHandPlayed(HandType.PAIR);
+    expect(getBossRoundState().preacherLockedHand).toBe(HandType.PAIR);
+    expect(canPlayHandType(HandType.PAIR).allowed).toBe(true);
+    expect(canPlayHandType(HandType.THREE_OF_A_KIND).allowed).toBe(false);
+  });
 });
 
 describe('UNIQUE_HANDS_ONLY: Call Girl', () => {
@@ -130,6 +140,15 @@ describe('UNIQUE_HANDS_ONLY: Call Girl', () => {
     setupGame({ bossId: 'the_call_girl' });
     resetBossRoundState();
     getBossRoundState().handsPlayedThisRound = [HandType.PAIR];
+    expect(canPlayHandType(HandType.PAIR).allowed).toBe(false);
+    expect(canPlayHandType(HandType.HIGH_VALUE).allowed).toBe(true);
+  });
+
+  test('recordBossHandPlayed tracks unique hands for rejection', () => {
+    setupGame({ bossId: 'the_call_girl' });
+    resetBossRoundState();
+    recordBossHandPlayed(HandType.PAIR);
+    expect(getBossRoundState().handsPlayedThisRound).toEqual([HandType.PAIR]);
     expect(canPlayHandType(HandType.PAIR).allowed).toBe(false);
     expect(canPlayHandType(HandType.HIGH_VALUE).allowed).toBe(true);
   });
@@ -368,7 +387,7 @@ describe('Boss assignment uniqueness', () => {
     for (const leg of [8, 16, 24, 32]) {
       expect(isFinisherLeg(leg)).toBe(true);
       const boss = player.getBossForLeg(leg);
-      expect((boss?.minimumLeg ?? 1)).toBeGreaterThanOrEqual(8);
+      expect(boss?.minimumLeg ?? 1).toBeGreaterThanOrEqual(8);
     }
   });
 

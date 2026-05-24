@@ -1,7 +1,6 @@
 // ─── Dev Mode Utilities ───
 // Dev tools (shop swap, boss test, etc.) when developer profession is selected or ?devmode=true.
 
-import { getPlayerState } from './PlayerState';
 import { GAMEPLAY } from './Constants';
 import { createEmptyModifiers, createEmptyTrailRoundEffects } from './TrailEventsSystem';
 import { resetBossRoundState } from './BossEffectsSystem';
@@ -9,9 +8,11 @@ import bosses from '../data/bosses';
 import type { BossDef } from './types';
 import { getAllEquipment, EquipmentDef, ItemAura } from './ItemsSystem';
 import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableDef } from './ConsumablesSystem';
-import { applyPermitEffect, getPermitById, PermitDef } from './PermitsSystem';
+import { applyPermitEffectToRun, getPermitById, PermitDef } from './PermitsSystem';
 import itemAuras from '../data/item_auras';
 import { getPackDefById, type PackDefinition } from './BoosterPackSystem';
+import { bossActions, getRunState, permitActions, runActions } from './store';
+import { selectProfession } from './store/selectors/runSelectors';
 
 let urlDevModeEnabled = false;
 
@@ -30,8 +31,7 @@ export function setUrlDevModeForTests(enabled: boolean): void {
 /** Check if dev mode is active (developer profession or ?devmode=true). */
 export function isDevMode(): boolean {
   if (urlDevModeEnabled) return true;
-  const player = getPlayerState();
-  return player.profession?.id === 'developer';
+  return selectProfession(getRunState())?.id === 'developer';
 }
 
 /** Result of looking up a shop item by ID */
@@ -80,22 +80,22 @@ export function devGrantPermit(id: string): { ok: true; added: string[] } | { ok
   const permit = getPermitById(id.trim());
   if (!permit) return { ok: false, error: `Permit not found: ${id}` };
 
-  const player = getPlayerState();
   const toGrant: PermitDef[] = [];
 
   if (permit.stage === 2 && permit.prerequisiteId) {
     const prereq = getPermitById(permit.prerequisiteId);
-    if (prereq && !player.hasPermit(prereq.id)) toGrant.push(prereq);
+    if (prereq && !permitActions.hasPermit(prereq.id)) toGrant.push(prereq);
   }
 
-  if (!player.hasPermit(permit.id)) toGrant.push(permit);
+  if (!permitActions.hasPermit(permit.id)) toGrant.push(permit);
 
   if (toGrant.length === 0) return { ok: false, error: 'Permit already owned' };
 
   const added: string[] = [];
   for (const p of toGrant) {
-    player.purchasedPermits.push(p.id);
-    applyPermitEffect(p, player);
+    const state = getRunState();
+    runActions.patch({ purchasedPermits: [...state.purchasedPermits, p.id] });
+    applyPermitEffectToRun(p);
     added.push(p.id);
   }
 
@@ -112,18 +112,19 @@ export function devGetAllBosses(): BossDef[] {
   return bosses;
 }
 
-/** Configure player state and start a boss round with a specific boss */
+/** Configure run state and start a boss round with a specific boss */
 export function devStartBossRound(bossId: string): BossDef | null {
   const boss = devGetAllBosses().find((b) => b.id === bossId);
   if (!boss) return null;
 
-  const player = getPlayerState();
-  player.round = GAMEPLAY.ROUNDS_PER_LEG;
-  player.setBossForCurrentLeg(boss);
-  player.bossEffectDisabled = false;
-  player.trailEventModifiers = createEmptyModifiers();
-  player.trailRoundEffects = createEmptyTrailRoundEffects();
-  player.skipNextShop = false;
+  runActions.patch({
+    round: GAMEPLAY.ROUNDS_PER_LEG,
+    bossEffectDisabled: false,
+    trailEventModifiers: createEmptyModifiers(),
+    trailRoundEffects: createEmptyTrailRoundEffects(),
+    skipNextShop: false,
+  });
+  bossActions.setBossForCurrentLeg(boss);
   resetBossRoundState();
 
   return boss;

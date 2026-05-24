@@ -12,12 +12,25 @@ SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; almost all gameplay liv
 |------|---------|
 | Dev server | `bun run dev` (http://localhost:8080) |
 | Build | `bun run build` |
+| Typecheck | `bun run typecheck` |
 | Tests | `bun test` |
 | Single test | `bun test src/game/__tests__/items/myTest.test.ts` |
 | Format | `bun run format` |
 | Format check | `bun run format:check` |
+| Tests + format | `bun run check` |
+| CI locally | `bun run ci` |
 
 **Never use `npm`, `npx`, or `yarn`.** Use `bun` / `bunx` exclusively.
+
+### Before finishing work
+
+Run these before marking a task done (in order):
+
+1. **`bun run typecheck`** — `tsc --noEmit` on `src/` (strict; catches issues tests may miss)
+2. **`bun run check`** — tests + format
+3. **`bun run build`** — when you changed Phaser scenes, Vite config, or anything that affects the production bundle
+
+Fix failures in code you touched. Do not introduce new TypeScript errors, test failures, or format violations. The repo may still have pre-existing `tsc` errors elsewhere; clear those when you edit the affected files.
 
 ## Architecture
 
@@ -46,8 +59,10 @@ Everything else under `src/game/` should remain Phaser-free.
 
 | File / area | Purpose |
 |-------------|---------|
-| `GameState.ts` | Round state machine: **SELECT → ROLL → SCORE → DAY_END** (repeat) → **ROUND_END** |
-| `PlayerState.ts` | Persistent cross-scene singleton (money, dice pouch, equipment, permits, tags, trail modifiers) |
+| `store/runStore.ts` + `store/actions/*` | Run state (money, dice, equipment, consumables, trail modifiers, …) |
+| `store/roundStore.ts` + `roundActions` | Round FSM: **SELECT → ROLL → SCORE → DAY_END** → **ROUND_END** |
+| `store/roundView.ts` | `readRoundState()` / `patchLegacyRoundState()` for die-object round reads/writes (GameScene) |
+| `store/sceneStore.ts` | Shop, booster pack, trail event, payout, round-select slices |
 | `DiceSystem.ts` | Dice creation, rolling, pouch/spent cycling, hand detection, per-die scoring |
 | `EquipmentEffects.ts` | Scoring pipeline + round/day lifecycle orchestration (some hooks still live here) |
 | `effects/` | Effect registry — additive, xMult, perDie, heldDie, lifecycle handlers |
@@ -61,7 +76,7 @@ Everything else under `src/game/` should remain Phaser-free.
 | `TagSystem.ts` | Skip-round tag rewards |
 | `PermitsSystem.ts` | Frontier permits (voucher-like shop upgrades) |
 | `DiceSelectionSystem.ts` | Dice selection flows (enhancements, destruction, etc.) |
-| `Economy.ts` | Money tracking |
+| `store/economy.ts` + `economyActions` | Money tracking |
 | `SaveLoad.ts` | Serializable run snapshot types + apply/serialize |
 | `AutoSave.ts` | Auto-save scheduling (interval from `Constants`) |
 | `scoreMath.ts` / `formatScore.ts` | Scoring math and display formatting |
@@ -111,7 +126,7 @@ Equipment UI hints: items use `display(game, player)` on each def (returns `Item
 
 ### TypeScript
 
-- **No inline type imports.** Never use `import('./module').Type` or `import('../foo').Bar` in type positions. Add a proper top-level `import type { Foo } from './module'` (or a value import when needed) and reference `Foo` directly.
+- **No inline type imports.** Never use `import('./module').Type` or `import('../foo').Bar` in type positions — not on fields (`surveyorHand?: import('../types').HandType`), parameters, or return types. Add a top-level `import type { Foo } from './module'` (or a value import when the symbol is an enum) and reference `Foo` directly.
 
 ### Score Animation (Event-Driven)
 
@@ -176,11 +191,11 @@ Equipment cards show dynamic colored hints via `display(game, player)`. Segment 
 
 **Gap:** Static tooltips cannot see live run state. `BUGS.md` tracks making consumable/equipment tooltips state-aware (like `display`) for cards such as Second Helpings and Trade.
 
-### Singletons
+### State access
 
-- `PlayerState` — `getPlayerState()`, `resetPlayerState()`
-- `GameState` — one instance per round (not global)
-- `EventBus` — global cross-layer events
+- **Run / round / scene** — `getRunState()`, `getRoundState()`, `getSceneState()` and `*Actions` in `src/game/store/`
+- **Tests** — `resetTestRun()` / `resetAllGameStores()`; optional `testRunPlayer.ts` / `testGameState.ts` shims
+- `EventBus` — global cross-layer events (scene readiness, SFX bridges — not authoritative game state)
 
 ### Scene Lifecycle
 

@@ -1,6 +1,16 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, itemWithState, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
+import {
+  die,
+  diceWithValue,
+  item,
+  itemWithState,
+  setupGame,
+  calculateTestScore,
+  resetDieIds,
+  persistPlayerEquipment,
+  seedTestRoll,
+} from '../testHelpers';
 import { processEquipmentOnRoundStart, processEquipmentAfterHandScored } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
@@ -107,14 +117,12 @@ describe('ROUND_START_XMULT_DESTROY: Haunted Totem', () => {
     });
 
     game.startRound();
-    // Reset xMult AFTER startRound (which adds 0.5) to test scoring in isolation
-    totem.state.xMult = 2;
+    player.equipment[0]!.state.xMult = 2;
+    persistPlayerEquipment();
 
-    game.state.phase = 'ROLL';
-    game.state.rolledDice = diceWithValue(5, 2);
-    game.state.selectedForRoll = game.state.rolledDice;
-    game.state.rerollsRemaining = 6;
-    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    const rolled = player.dice.slice(0, 2);
+    seedTestRoll(rolled);
+    game.selectForScore(rolled.map((d) => d.id));
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, x2 from totem = 2
     expect(result.mult).toBeMult(2);

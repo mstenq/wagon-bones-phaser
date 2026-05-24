@@ -5,16 +5,8 @@
 
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
-import {
-  PackDefinition,
-  PackItem,
-  InstantEffect,
-  generatePackContents,
-  getPackDefById,
-} from '../../game/BoosterPackSystem';
-import { getPlayerState } from '../../game/PlayerState';
-import { generateRandomEquipment } from '../../game/ItemsSystem';
-import { acquireEquipmentInstance, acquireRewardEquipmentInstance } from '../../game/EquipmentModifiers';
+import { PackDefinition, PackItem, generatePackContents, getPackDefById } from '../../game/BoosterPackSystem';
+import { acquireEquipmentInstance } from '../../game/EquipmentModifiers';
 import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
@@ -22,18 +14,19 @@ import {
   ConsumableInstance,
   executeConsumableEffect,
   useConsumableDirectly,
+  applyRunInstantEffect,
   getConsumableTexturePrefix,
   isSecondHelpingsCloneTarget,
   getRandomSupplyDef,
   type UseConsumableResult,
 } from '../../game/ConsumablesSystem';
-import {
-  applyConsumableAnimEvents,
-  playEquipmentCreatedPopIn,
-} from '../animations/ConsumableAnimPlayback';
+import { consumableActions, diceActions, getRunState } from '../../game/store';
+import { replaceEquipmentList, resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
+import { selectEquipmentSlotsFree } from '../../game/store/selectors/runSelectors';
+import { applyConsumableAnimEvents } from '../animations/ConsumableAnimPlayback';
 import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
 import { processEquipmentOnPackSkipped, processEquipmentOnPackOpened } from '../../game/EquipmentEffects';
-import { Die, HandType, HandDefinition, HandUpgradeInfo } from '../../game/types';
+import { Die } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
@@ -41,16 +34,18 @@ import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
-import hands from '../../data/hands';
+import { getSceneState, sceneActions } from '../../game/store/sceneStore';
+import { enqueueConsumablePlayback } from '../../game/store/uiEffectHelpers';
+import { runActions } from '../../game/store/runStore';
+import { bindConsumableUiEffects } from '../store/consumableUiEffects';
+import type { BoosterPackSceneState } from '../../game/store/types';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
 import { rngShuffle } from '../../game/RunRng';
 
-const HAND_TABLE: HandDefinition[] = hands;
 import trailGuidesData from '../../data/trail_guides';
 import supplyCardsData from '../../data/supply_cards';
 import frontierEncountersData from '../../data/frontier_encounters';
@@ -95,7 +90,6 @@ export class BoosterPackScene extends Scene {
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
-  private dicePouch: DicePouch;
 
   // Layout helpers
   private contentCX: number = 0;
@@ -111,7 +105,6 @@ export class BoosterPackScene extends Scene {
   // Active card tab state
   private activeTabCard: CardSprite | null = null;
   private dismissHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
-  private pendingRestorePack: BoosterPackSaveData | null = null;
   private pendingUsedCardIndices: number[] = [];
 
   constructor() {
@@ -127,12 +120,12 @@ export class BoosterPackScene extends Scene {
       restorePack?: BoosterPackSaveData;
     } = {},
   ) {
-    if (data.restorePack) {
-      this.pendingRestorePack = data.restorePack;
-      const def = getPackDefById(data.restorePack.packDefId);
-      if (!def) throw new Error(`Unknown pack id: ${data.restorePack.packDefId}`);
+    const scenePack = getSceneState().boosterPack;
+    if (scenePack) {
+      const def = getPackDefById(scenePack.packDefId);
+      if (!def) throw new Error(`Unknown pack id: ${scenePack.packDefId}`);
       this.packDef = def;
-      this.returnScene = data.restorePack.returnScene;
+      this.returnScene = scenePack.returnScene;
     } else if (data.packDef) {
       this.packDef = data.packDef;
       this.returnScene = data.returnScene ?? 'Shop';
@@ -146,7 +139,7 @@ export class BoosterPackScene extends Scene {
     }
   }
 
-  getSaveContext(): BoosterPackSaveData {
+  private buildPackSceneState(): BoosterPackSceneState {
     return {
       packDefId: this.packDef.id,
       returnScene: this.returnScene,
@@ -156,24 +149,36 @@ export class BoosterPackScene extends Scene {
     };
   }
 
+  private syncPackToStore(): void {
+    const next = this.buildPackSceneState();
+    if (getSceneState().boosterPack) {
+      sceneActions.patchBoosterPack(next);
+    } else {
+      sceneActions.enterBoosterPack(next);
+    }
+  }
+
   create() {
-    if (this.pendingRestorePack) {
-      const restore = this.pendingRestorePack;
-      this.contents = restore.contents.map(deserializePackItem);
-      this.picksRemaining = restore.picksRemaining;
-      this.pendingUsedCardIndices = [...restore.usedCardIndices];
-      this.pendingRestorePack = null;
+    const storedPack = getSceneState().boosterPack;
+    if (storedPack) {
+      this.contents = storedPack.contents.map(deserializePackItem);
+      this.picksRemaining = storedPack.picksRemaining;
+      this.pendingUsedCardIndices = [...storedPack.usedCardIndices];
+      this.syncPackToStore();
+      sceneActions.enterScene('BoosterPack');
     } else {
       this.contents = generatePackContents(this.packDef);
       this.picksRemaining = this.packDef.pickCount;
 
       // Process pack-opened equipment effects (Leftovers: chance to grant supply card)
-      const player = getPlayerState();
-      const grantSupply = processEquipmentOnPackOpened(player.equipment);
+      const equipment = resolveEquipmentList();
+      const grantSupply = processEquipmentOnPackOpened(equipment);
+      replaceEquipmentList(equipment);
       if (grantSupply) {
-        const supplyDef = getRandomSupplyDef();
-        player.addConsumable(supplyDef);
+        consumableActions.addConsumable(getRandomSupplyDef());
       }
+      this.syncPackToStore();
+      sceneActions.enterScene('BoosterPack');
     }
 
     this.cardSprites = [];
@@ -194,26 +199,17 @@ export class BoosterPackScene extends Scene {
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
     this.consumableBar.setCanUsePredicate((def) => def.id !== 'raid' && !this.isPackDiceTargetingPending());
-    this.dicePouch = layout.dicePouch;
     this.contentCX = layout.contentCX;
 
-    // Refresh displays when equipment is sold from the bar
-    this.equipBar.on('equipment-changed', () => {
-      this.sidebar.refreshMoney();
-      this.dicePouch.refresh();
-      this.updateEquipHints();
+    this.equipBar.on('equipment-changed', () => this.updateEquipHints());
+    this.consumableBar.on('consumable-changed', () => this.updateEquipHints());
+
+    bindConsumableUiEffects(this, this.equipBar, {
+      destroyDice: async () => {},
     });
 
-    // Refresh displays when consumables change
-    this.consumableBar.on('consumable-changed', () => {
-      this.sidebar.refreshMoney();
-      this.dicePouch.refresh();
-      this.updateEquipHints();
-    });
-
-    // Execute consumable effect when used
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      this.handleConsumableUsed(consumed);
+      void this.handleConsumableUsed(consumed);
     });
 
     // Show equipment hints
@@ -301,12 +297,11 @@ export class BoosterPackScene extends Scene {
 
   private buildDiceLineup(): void {
     this.clearDiceLineup();
-    const player = getPlayerState();
-
-    // Draw handSize random non-spent dice
-    const nonSpent = player.dice.filter((d) => !player.spentDiceIds.has(d.id));
+    const run = getRunState();
+    const spent = new Set(run.spentDiceIds);
+    const nonSpent = run.dice.filter((d) => !spent.has(d.id));
     const shuffled = rngShuffle('dice', nonSpent);
-    this.lineupDice = shuffled.slice(0, Math.min(player.handSize, shuffled.length));
+    this.lineupDice = shuffled.slice(0, Math.min(run.handSize, shuffled.length));
 
     if (this.lineupDice.length === 0) return;
 
@@ -354,10 +349,11 @@ export class BoosterPackScene extends Scene {
     const oldSelected = new Set(this.selectedDiceIds);
     this.clearDiceLineup();
 
-    const player = getPlayerState();
-    const nonSpent = player.dice.filter((d) => !player.spentDiceIds.has(d.id));
+    const run = getRunState();
+    const spent = new Set(run.spentDiceIds);
+    const nonSpent = run.dice.filter((d) => !spent.has(d.id));
     const shuffled = rngShuffle('dice', nonSpent);
-    this.lineupDice = shuffled.slice(0, Math.min(player.handSize, shuffled.length));
+    this.lineupDice = shuffled.slice(0, Math.min(run.handSize, shuffled.length));
 
     if (this.lineupDice.length === 0) return;
 
@@ -444,7 +440,6 @@ export class BoosterPackScene extends Scene {
     item: PackItem,
   ): { container: Phaser.GameObjects.Container; diceSprite: DiceSprite | null; itemCard: ItemCard | null } {
     const container = this.add.container(x, y);
-    const player = getPlayerState();
     const color = CATEGORY_COLORS[item.category] ?? 0x444444;
     let diceSprite: DiceSprite | null = null;
     let itemCard: ItemCard | null = null;
@@ -499,7 +494,7 @@ export class BoosterPackScene extends Scene {
         mode: 'inventory',
         equipment: item.equipmentPreview,
       });
-      itemCard.setTooltipContext(null, player);
+      itemCard.setTooltipContext(null, null);
       container.add(itemCard);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
       const tgData = {
@@ -507,14 +502,14 @@ export class BoosterPackScene extends Scene {
         id: item.trailGuideId,
         display: () => ({
           hint: [],
-          tooltip: [[{ text: item.description, style: 'text' }]],
+          tooltip: [[{ text: item.description, style: 'text' as const }]],
         }),
       };
       itemCard = new ItemCard(this, 0, 0, tgData, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('trail_guide'),
       });
-      itemCard.setTooltipContext(null, player);
+      itemCard.setTooltipContext(null, null);
       container.add(itemCard);
     } else if (item.category === 'supply' && item.supplyCardId) {
       const scData = {
@@ -522,14 +517,14 @@ export class BoosterPackScene extends Scene {
         id: item.supplyCardId,
         display: () => ({
           hint: [],
-          tooltip: [[{ text: item.description, style: 'text' }]],
+          tooltip: [[{ text: item.description, style: 'text' as const }]],
         }),
       };
       itemCard = new ItemCard(this, 0, 0, scData, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('supply'),
       });
-      itemCard.setTooltipContext(null, player);
+      itemCard.setTooltipContext(null, null);
       container.add(itemCard);
     } else if (item.category === 'frontier' && item.frontierEncounterId) {
       const feData = {
@@ -537,14 +532,14 @@ export class BoosterPackScene extends Scene {
         id: item.frontierEncounterId,
         display: () => ({
           hint: [],
-          tooltip: [[{ text: item.description, style: 'text' }]],
+          tooltip: [[{ text: item.description, style: 'text' as const }]],
         }),
       };
       itemCard = new ItemCard(this, 0, 0, feData, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('frontier'),
       });
-      itemCard.setTooltipContext(null, player);
+      itemCard.setTooltipContext(null, null);
       container.add(itemCard);
     } else {
       const catLabel = item.category.replace('_', ' ').toUpperCase();
@@ -612,8 +607,7 @@ export class BoosterPackScene extends Scene {
 
       // Block equipment cards if no free slot
       if (this.cardNeedsEquipSlot(sprite.item)) {
-        const player = getPlayerState();
-        if (player.equipmentSlotsFree <= 0) return;
+        if (selectEquipmentSlotsFree(getRunState()) <= 0) return;
       }
 
       // Lift card
@@ -716,7 +710,7 @@ export class BoosterPackScene extends Scene {
 
     // second_helpings needs a valid clone target
     if (item.supplyCardId === 'second_helpings') {
-      if (!isSecondHelpingsCloneTarget(getPlayerState().lastUsedConsumable)) {
+      if (!isSecondHelpingsCloneTarget(resolveLastUsedConsumableDef())) {
         return [];
       }
     }
@@ -975,10 +969,10 @@ export class BoosterPackScene extends Scene {
     if (sprite.used) return;
 
     const item = sprite.item;
-    const player = getPlayerState();
+    const run = getRunState();
     let consumableResult: UseConsumableResult | undefined;
     let equipmentPopInCount = 0;
-    const equipmentCountBefore = player.equipment.length;
+    const equipmentCountBefore = resolveEquipmentList(run).length;
 
     // If card needs dice selection, validate
     if (this.cardNeedsDiceSelection(item)) {
@@ -993,19 +987,19 @@ export class BoosterPackScene extends Scene {
       const result = applyDiceSelectionEffect(config, selectedDice);
       this.showFloatingText(result);
     } else if (item.category === 'equipment' && item.equipmentDef) {
-      if (item.equipmentDef.aura?.id === 'ghost' || player.equipmentSlotsFree > 0) {
-        player.equipment.push(
-          acquireEquipmentInstance(item.equipmentDef, player.purchasedPermits, item.equipmentPreview?.modifiers),
-        );
+      if (item.equipmentDef.aura?.id === 'ghost' || selectEquipmentSlotsFree(run) > 0) {
+        const list = resolveEquipmentList();
+        list.push(acquireEquipmentInstance(item.equipmentDef, run.purchasedPermits, item.equipmentPreview?.modifiers));
+        replaceEquipmentList(list);
         equipmentPopInCount = 1;
       }
     } else if (item.category === 'dice' && item.die) {
-      player.addDie(item.die);
+      diceActions.addDie(item.die);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
       const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
       if (tg) {
         const def = createTrailGuideConsumableDef(tg);
-        const result = useConsumableDirectly(def, player);
+        const result = useConsumableDirectly(def);
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
@@ -1023,7 +1017,7 @@ export class BoosterPackScene extends Scene {
       const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
       if (cardData) {
         const def = createSupplyConsumableDef(cardData);
-        const result = useConsumableDirectly(def, player);
+        const result = useConsumableDirectly(def);
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
@@ -1032,14 +1026,25 @@ export class BoosterPackScene extends Scene {
       const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
       if (fe) {
         const def = createFrontierConsumableDef(fe);
-        consumableResult = useConsumableDirectly(def, player);
+        consumableResult = useConsumableDirectly(def);
         if (!consumableResult.success && consumableResult.failReason) {
           this.showFloatingText(consumableResult.failReason);
         }
       }
     } else if (item.instantEffect) {
-      this.applyInstantEffect(item.instantEffect, player);
-      equipmentPopInCount = Math.max(equipmentPopInCount, player.equipment.length - equipmentCountBefore);
+      const instantResult = applyRunInstantEffect(item.instantEffect);
+      if (instantResult.handUpgrades?.length) {
+        playHandUpgradeAnimation({
+          scene: this,
+          sidebar: this.sidebar,
+          upgrades: instantResult.handUpgrades,
+          onComplete: () => {},
+        });
+      }
+      equipmentPopInCount = Math.max(
+        equipmentPopInCount,
+        instantResult.equipmentCreatedCount ?? resolveEquipmentList().length - equipmentCountBefore,
+      );
     }
 
     const finishUse = () => this.finishUseCard(sprite, equipmentPopInCount);
@@ -1061,18 +1066,19 @@ export class BoosterPackScene extends Scene {
     this.markCardUsed(sprite);
 
     this.picksRemaining--;
+    sceneActions.markBoosterCardUsed(sprite.index);
+    this.syncPackToStore();
     this.updatePicksText();
 
-    this.equipBar.refresh();
-    void playEquipmentCreatedPopIn(this, this.equipBar, equipmentPopInCount);
-    this.consumableBar.refresh();
+    if (equipmentPopInCount > 0) {
+      runActions.enqueueUiEffect({ kind: 'equipment-created-count', count: equipmentPopInCount });
+    }
     this.updateEquipHints();
-    this.dicePouch.refresh();
-    this.sidebar.refreshMoney();
 
     if (this.picksRemaining <= 0) {
       this.clearDiceLineup();
       this.time.delayedCall(800, () => {
+        sceneActions.clearBoosterPack();
         this.scene.start(this.returnScene, {});
       });
     } else {
@@ -1153,73 +1159,21 @@ export class BoosterPackScene extends Scene {
     }
   }
 
-  private applyInstantEffect(effect: InstantEffect, player: ReturnType<typeof getPlayerState>): void {
-    switch (effect.type) {
-      case 'DOUBLE_MONEY': {
-        const gain = Math.min(player.economy.balance, effect.maxGain ?? 20);
-        player.economy.earn(gain);
-        break;
-      }
-      case 'TRADE_EQUIPMENT': {
-        const totalValue = player.equipment.reduce((sum, eq) => sum + eq.sellValue, 0);
-        const gain = Math.min(totalValue, effect.maxGain ?? 50);
-        player.economy.earn(gain);
-        break;
-      }
-      case 'UPGRADE_ALL_HANDS': {
-        const upgrades: HandUpgradeInfo[] = [];
-        for (const type of Object.values(HandType)) {
-          const stats = player.getHandStats(type);
-          const handDef = HAND_TABLE.find((h) => h.type === type)!;
-          const oldLevel = stats.level;
-          const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
-          const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
-          player.upgradeHandLevel(type);
-          const newLevel = stats.level;
-          upgrades.push({
-            handType: type,
-            handName: handDef.name,
-            oldLevel,
-            newLevel,
-            oldBaseMiles,
-            newBaseMiles: handDef.baseMiles + stats.milesPerLevel * (newLevel - 1),
-            oldBaseMult,
-            newBaseMult: handDef.baseMult + stats.multPerLevel * (newLevel - 1),
-          });
-        }
-        if (upgrades.length > 0) {
-          playHandUpgradeAnimation({
-            scene: this,
-            sidebar: this.sidebar,
-            upgrades,
-            onComplete: () => {},
-          });
-        }
-        break;
-      }
-      case 'CREATE_EQUIPMENT': {
-        if (player.equipmentSlotsFree > 0) {
-          const def = generateRandomEquipment({
-            rarity: effect.rarity,
-            excludeRarity: effect.excludeRarity,
-          });
-          player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
-        }
-        if (effect.setMoneyZero) {
-          player.economy.spend(player.economy.balance);
-        }
-        break;
-      }
-    }
-  }
-
   private onSkip(): void {
-    const player = getPlayerState();
-    processEquipmentOnPackSkipped(player.equipment);
+    const equipment = resolveEquipmentList();
+    processEquipmentOnPackSkipped(equipment);
+    replaceEquipmentList(equipment);
+    sceneActions.clearBoosterPack();
     this.scene.start(this.returnScene, {});
   }
 
   private onResize(): void {
+    const stored = getSceneState().boosterPack;
+    if (stored) {
+      this.contents = stored.contents.map(deserializePackItem);
+      this.picksRemaining = stored.picksRemaining;
+      this.pendingUsedCardIndices = [...stored.usedCardIndices];
+    }
     this.cardSprites = [];
     this.activeTabCard = null;
     this.dismissHandler = null;
@@ -1228,34 +1182,24 @@ export class BoosterPackScene extends Scene {
   }
 
   private updateEquipHints(): void {
-    this.equipBar.updateHints(null, getPlayerState());
+    this.equipBar.setHintRound(null);
   }
 
   private isPackDiceTargetingPending(): boolean {
     if (!this.activeTabCard?.item.diceSelection) return false;
-    return this.selectedDiceIds.size < this.getActivePickCount();
+    return this.selectedDiceIds.size < this.getRequiredDicePicks();
   }
 
   private handleConsumableUsed(consumed: ConsumableInstance): void {
     if (this.isPackDiceTargetingPending()) return;
 
-    const player = getPlayerState();
-    void this.handleConsumableUsedAsync(consumed, player);
+    void this.handleConsumableUsedAsync(consumed);
   }
 
-  private async handleConsumableUsedAsync(consumed: ConsumableInstance, player: ReturnType<typeof getPlayerState>): Promise<void> {
-    const result = executeConsumableEffect(consumed, player);
-
-    await applyConsumableAnimEvents(this, this.equipBar, result.consumableAnimEvents ?? [], {
-      destroyDice: async () => {},
-    });
-
-    this.sidebar.refreshMoney();
-    this.equipBar.refresh();
-    this.consumableBar.refresh();
-    this.dicePouch.refresh();
+  private async handleConsumableUsedAsync(consumed: ConsumableInstance): Promise<void> {
+    const result = executeConsumableEffect(consumed);
+    enqueueConsumablePlayback(result);
     this.refreshDiceLineup();
-    await playEquipmentCreatedPopIn(this, this.equipBar, result.equipmentCreatedCount);
 
     if (!result.success && result.failReason) {
       this.showFloatingText(result.failReason);
@@ -1266,7 +1210,7 @@ export class BoosterPackScene extends Scene {
       this.scene.start('DiceSelection', {
         config: result.diceSelection,
         returnScene: 'BoosterPack',
-        returnSceneData: { restorePack: this.getSaveContext() },
+        returnSceneData: {},
       });
     }
 

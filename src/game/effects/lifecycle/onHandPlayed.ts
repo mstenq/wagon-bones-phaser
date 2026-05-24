@@ -2,19 +2,23 @@
 
 import type { Die, HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { replaceEquipmentList } from '../../store/resolve';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { dieMatchesPip, handTypeMatches, hasStackedDeck, resolveEffectParam } from '../helpers';
-import { getPlayerState } from '../../PlayerState';
 import { getMostPlayedHandTypes } from '../../handStatsHelpers';
+import { getRunState } from '../../store/runStore';
+import { resolveEquipmentList } from '../../store/resolve';
 
 effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice) => {
+  const run = getRunState();
+  const equipment = resolveEquipmentList();
   switch (equip.def.effectType) {
     case 'HAND_MULT_GAIN': {
       const p = equip.def.effectParams as Record<string, unknown>;
-      if (handTypeMatches(handType as any, p.handType as string)) {
-        const professionId = getPlayerState().profession?.id;
-        equip.state.mult = (equip.state.mult ?? 0) + resolveEffectParam<number>(p, 'value', professionId);
+      if (handTypeMatches(handType as HandType, p.handType as string)) {
+        equip.state.mult =
+          (equip.state.mult ?? 0) + resolveEffectParam<number>(p, 'value', run.professionId ?? undefined);
       }
       break;
     }
@@ -22,36 +26,33 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       equip.state.handsPlayed = (equip.state.handsPlayed ?? 0) + 1;
       break;
     case 'MARKED_NO_SIX_MULT': {
-      const player = getPlayerState();
-      const stackedDeck = hasStackedDeck(player.equipment);
-      const hasSix = (scoringDice as Die[])?.some((d) => dieMatchesPip(d, 6, player.equipment, stackedDeck)) ?? false;
+      const stackedDeck = hasStackedDeck(equipment);
+      const hasSix = (scoringDice as Die[])?.some((d) => dieMatchesPip(d, 6, equipment, stackedDeck)) ?? false;
       if (hasSix) {
         equip.state.mult = 0;
       } else {
         const p = equip.def.effectParams as Record<string, unknown>;
-        const professionId = player.profession?.id;
-        const gain = resolveEffectParam<number>(p, 'multPerHand', professionId);
+        const gain = resolveEffectParam<number>(p, 'multPerHand', run.professionId ?? undefined);
         equip.state.mult = (equip.state.mult ?? 0) + gain;
       }
       break;
     }
     case 'EXACT_DICE_COUNT_MILES': {
       const count = equip.def.effectParams.count as number;
-      const diceCount = (scoringDice as any[])?.length ?? 0;
+      const diceCount = (scoringDice as Die[])?.length ?? 0;
       if (diceCount === count) {
         equip.state.miles = (equip.state.miles ?? 0) + (equip.def.effectParams.value as number);
       }
       break;
     }
     case 'HAND_MILES_GAIN': {
-      if (handTypeMatches(handType as any, equip.def.effectParams.handType as string)) {
+      if (handTypeMatches(handType as HandType, equip.def.effectParams.handType as string)) {
         equip.state.miles = (equip.state.miles ?? 0) + (equip.def.effectParams.value as number);
       }
       break;
     }
     case 'TRAILBLAZER_XMULT': {
-      const player = getPlayerState();
-      const mostPlayed = getMostPlayedHandTypes(player.handStats);
+      const mostPlayed = getMostPlayedHandTypes(run.handStats);
       if (mostPlayed.length > 0 && mostPlayed.includes(handType as HandType)) {
         equip.state.streak = 0;
       } else {
@@ -73,4 +74,5 @@ export function processEquipmentOnHandPlayed(
   for (const equip of equipment) {
     dispatchLifecycle('on-hand-played', equip, handType, scoringDice);
   }
+  replaceEquipmentList(equipment);
 }

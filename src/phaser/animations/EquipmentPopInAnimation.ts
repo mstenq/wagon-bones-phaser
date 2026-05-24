@@ -13,8 +13,6 @@ export function animateEquipmentPopIn(scene: Scene, equipBar: EquipmentBar, coun
       return;
     }
 
-    equipBar.refresh();
-
     const cards = equipBar.getCards();
     const newCards = cards.slice(Math.max(0, cards.length - count));
     if (newCards.length === 0) {

@@ -1,0 +1,107 @@
+import '../setup';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { resetPlayerState } from '../../__tests__/testRunPlayer';
+import { setupGame, diceWithValue } from '../testHelpers';
+import { D } from '../../scoreMath';
+import { roundActions, roundStore, selectHandDice, selectRolledDice, selectRoundPhase } from '../../store';
+import { setupActions } from '../../store/actions';
+
+describe('round store actions', () => {
+  afterEach(() => {
+    resetPlayerState();
+  });
+
+  test('startRound computes config and enters SELECT', () => {
+    const { player } = setupGame({ dice: diceWithValue(6, 8) });
+    setupActions.finalizeRunSetup();
+    player.handSize = 5;
+    roundActions.startRound({ targetMiles: D(400) });
+
+    const round = roundStore.getState();
+    expect(round).not.toBeNull();
+    expect(round!.config.targetMiles).toBeMiles(400);
+    expect(round!.config.rollSize).toBe(5);
+    expect(selectRoundPhase()).toBe('SELECT');
+    expect(selectHandDice().length).toBeGreaterThan(0);
+  });
+
+  test('selectForRoll transitions to ROLL with rolled values', () => {
+    setupGame({ dice: diceWithValue(6, 8) });
+    roundActions.startRound();
+    const handIds = selectHandDice()
+      .slice(0, 5)
+      .map((d) => d.id);
+    expect(roundActions.selectForRoll(handIds)).toBe(true);
+    expect(selectRoundPhase()).toBe('ROLL');
+    expect(selectRolledDice().length).toBe(5);
+  });
+
+  test('reroll decrements rerolls remaining', () => {
+    setupGame({ dice: diceWithValue(6, 8) });
+    roundActions.startRound();
+    const handIds = selectHandDice()
+      .slice(0, 5)
+      .map((d) => d.id);
+    roundActions.selectForRoll(handIds);
+    const before = roundStore.getState()!.rerollsRemaining;
+    const rolledId = selectRolledDice()[0]!.id;
+    expect(roundActions.reroll([rolledId])).toBe(true);
+    expect(roundStore.getState()!.rerollsRemaining).toBe(before - 1);
+  });
+
+  test('calculateScore updates total miles and DAY_END', () => {
+    const { game } = setupGame({ dice: diceWithValue(7, 8) });
+    game.startRound();
+    const handIds = game.state.hand.slice(0, 2).map((d) => d.id);
+    game.selectForRoll(handIds);
+    game.selectForScore(handIds);
+    const score = game.calculateScore();
+    expect(score).not.toBeNull();
+    expect(roundStore.getState()!.phase).toBe('DAY_END');
+    expect(roundStore.getState()!.totalMiles.gt(0)).toBe(true);
+  });
+
+  test('endDay advances day on next-day outcome', () => {
+    setupGame({ dice: diceWithValue(6, 12) });
+    roundActions.startRound();
+    const handIds = selectHandDice()
+      .slice(0, 5)
+      .map((d) => d.id);
+    roundActions.selectForRoll(handIds);
+    roundActions.selectForScore(handIds.slice(0, 2));
+    roundActions.calculateScore();
+    const result = roundActions.endDay();
+    expect(result.outcome).toBe('next-day');
+    expect(roundStore.getState()!.day).toBe(2);
+    expect(selectRoundPhase()).toBe('SELECT');
+  });
+
+  test('restoreRound reproduces legacy snapshot', () => {
+    const { game } = setupGame({ dice: diceWithValue(6, 8) });
+    game.startRound();
+    game.state.day = 2;
+    game.state.phase = 'ROLL';
+    game.state.totalMiles = D(50);
+    const snapshot = { ...game.state };
+    const config = { ...game.config };
+    roundActions.clearRound();
+    roundActions.restoreRound(config, snapshot);
+    expect(roundStore.getState()!.day).toBe(2);
+    expect(roundStore.getState()!.phase).toBe('ROLL');
+    expect(roundStore.getState()!.totalMiles).toBeMiles(50);
+  });
+
+  test('winning round sets ROUND_END', () => {
+    setupGame({ dice: diceWithValue(12, 8) });
+    roundActions.startRound({ targetMiles: D(1) });
+    const handIds = selectHandDice()
+      .slice(0, 5)
+      .map((d) => d.id);
+    roundActions.selectForRoll(handIds);
+    roundActions.selectForScore(handIds);
+    roundActions.calculateScore();
+    const result = roundActions.endDay();
+    expect(result.outcome).toBe('won');
+    expect(selectRoundPhase()).toBe('ROUND_END');
+  });
+});

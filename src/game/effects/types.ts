@@ -21,6 +21,7 @@ export interface ScoringPipelineContext {
   readonly allDice: Die[];
   readonly handType: HandType | undefined;
   readonly playerBalance: number;
+  readonly professionId: string | null;
 
   // ─── Accumulator State (mutated by handlers) ───
   totalValue: number;

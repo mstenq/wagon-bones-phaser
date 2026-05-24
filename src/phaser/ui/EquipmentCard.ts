@@ -44,7 +44,7 @@ export class EquipmentCard extends GameObjects.Container {
 
     // Description
     const descText = scene.add
-      .text(0, -10, def.description, {
+      .text(0, -10, '', {
         fontFamily: 'Arial',
         fontSize: '12px',
         color: '#cccccc',

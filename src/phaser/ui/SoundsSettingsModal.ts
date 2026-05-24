@@ -169,7 +169,6 @@ class VolumeSlider extends GameObjects.Container {
   }
 
   private redraw(): void {
-    const halfW = this.trackWidth / 2;
     const handleX = this._value * this.trackWidth;
 
     this.track.clear();

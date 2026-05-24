@@ -13,8 +13,7 @@ import { getModifierTooltipLines } from '../../game/EquipmentModifierDisplay';
 import { addModifierBadgeImage } from './ModifierAssets';
 import type { EquipmentModifier } from '../../game/types';
 import type { CardTemplate } from '../../data/items';
-import type { GameState } from '../../game/GameState';
-import type { PlayerState } from '../../game/PlayerState';
+import { getItemDisplayContext, type ItemDisplayContext, type RoundHintContext } from '../../game/displayContext';
 import { applyAuraGlow, createAuraParticles } from './AuraFX';
 
 /** Generic data shape for any card type */
@@ -25,7 +24,7 @@ export interface CardData {
   rarity?: string;
   aura?: ItemAura | null;
   cardTemplate?: CardTemplate;
-  display: (game: GameState | null, player: PlayerState) => ItemDisplayResult;
+  display: (round: RoundHintContext | null, player: ItemDisplayContext) => ItemDisplayResult;
 }
 
 export interface ItemCardOptions {
@@ -122,8 +121,8 @@ export class ItemCard extends GameObjects.Container {
   private modifierBadgeContainers: GameObjects.Container[] = [];
   private perishableBadgeContainer: GameObjects.Container | null = null;
   private leasedBadgeContainer: GameObjects.Container | null = null;
-  private tooltipGame: GameState | null = null;
-  private tooltipPlayer: PlayerState | null = null;
+  private tooltipRound: RoundHintContext | null = null;
+  private tooltipPlayer: ItemDisplayContext | null = null;
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
@@ -254,6 +253,7 @@ export class ItemCard extends GameObjects.Container {
 
   /** Prevent stray hover/click behavior while this card is being removed. */
   prepareForRemoval(): void {
+    if (!this.scene) return;
     this.hideTooltip();
     this.hideActionTabs(true);
     this.disableInteractive();
@@ -303,8 +303,8 @@ export class ItemCard extends GameObjects.Container {
     }
   }
 
-  setTooltipContext(game: GameState | null, player: PlayerState): void {
-    this.tooltipGame = game;
+  setTooltipContext(round: RoundHintContext | null, player: ItemDisplayContext | null = null): void {
+    this.tooltipRound = round;
     this.tooltipPlayer = player;
   }
 
@@ -653,17 +653,17 @@ export class ItemCard extends GameObjects.Container {
     }
   }
 
-  private resolveDisplay(game: GameState | null, player: PlayerState): ItemDisplayResult {
-    return this._def.display(game, player);
+  private resolveDisplay(round: RoundHintContext | null, player: ItemDisplayContext): ItemDisplayResult {
+    return this._def.display(round, player);
   }
 
   /** Render or update the hint rows below the card */
-  updateHints(game: GameState | null, player: PlayerState): void {
-    this.setTooltipContext(game, player);
+  updateHints(round: RoundHintContext | null, player: ItemDisplayContext): void {
+    this.setTooltipContext(round, player);
     if (this._suppressHints) return;
-    if (!this._def.aura && this.resolveDisplay(game, player).hint.length === 0) return;
+    if (!this._def.aura && this.resolveDisplay(round, player).hint.length === 0) return;
 
-    const baseRows = this.resolveDisplay(game, player).hint;
+    const baseRows = this.resolveDisplay(round, player).hint;
     const auraRow = this.getAuraHintRow();
     const rows = [...(baseRows || [])];
     if (auraRow) rows.push(auraRow);
@@ -1001,14 +1001,15 @@ export class ItemCard extends GameObjects.Container {
   private showTooltip(): void {
     if (this._suppressTooltip || this._faceDown) return;
     if (this.tooltip) return;
-    if (!this.tooltipPlayer) return;
+
+    const player = this.tooltipPlayer ?? getItemDisplayContext();
 
     const matrix = this.getWorldTransformMatrix();
     const worldX = matrix.tx;
     const worldY = matrix.ty;
 
     this.tooltip = this.scene.add.container(0, 0).setDepth(1000);
-    const tooltipRows = this.resolveDisplay(this.tooltipGame, this.tooltipPlayer).tooltip;
+    const tooltipRows = this.resolveDisplay(this.tooltipRound, player).tooltip;
 
     const rarityLabel = this._def.rarity ? (RARITY_LABELS[this._def.rarity] ?? this._def.rarity) : null;
 

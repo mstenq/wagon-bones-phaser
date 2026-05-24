@@ -1,7 +1,6 @@
 // ─── GOLD_DICE_MONEY, ENHANCED_SCORE_MONEY, LUCKY_DICE_MONEY, BONE_DICE_XMULT_CHANCE, WOODEN_DICE_MILES, IRON_DICE_MULT, ENHANCEMENT_SCORED_MILES ───
 
 import { effectRegistry } from '../registry';
-import { getPlayerState } from '../../PlayerState';
 import { checkLoadedChance } from '../../equipmentUtils';
 import { multiplyCtxXMult, resolveChance } from '../helpers';
 import { addScore } from '../../scoreMath';
@@ -9,7 +8,7 @@ import { addScore } from '../../scoreMath';
 effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement === 'gold') {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
-    getPlayerState().economy.earn(value);
+    ctx.mutations.moneyEarned += value;
     ctx.animEvents.push({
       target: { kind: 'both', dieId: die.id, equipIndex: _idx },
       popupType: 'money',
@@ -23,9 +22,9 @@ effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => 
 effectRegistry.registerPerDie('ENHANCED_SCORE_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement !== null) {
     const p = equip.def.effectParams as Record<string, unknown>;
-    if (checkLoadedChance(resolveChance(p, getPlayerState().profession?.id), ctx.equipment)) {
+    if (checkLoadedChance(resolveChance(p, ctx.professionId ?? undefined), ctx.equipment)) {
       const value = p.value as number;
-      getPlayerState().economy.earn(value);
+      ctx.mutations.moneyEarned += value;
       ctx.animEvents.push({
         target: { kind: 'both', dieId: die.id, equipIndex: _idx },
         popupType: 'money',
@@ -40,7 +39,7 @@ effectRegistry.registerPerDie('ENHANCED_SCORE_MONEY', (ctx, equip, _idx, die, _t
 effectRegistry.registerPerDie('LUCKY_DICE_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement === 'lucky') {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
-    getPlayerState().economy.earn(value);
+    ctx.mutations.moneyEarned += value;
     ctx.animEvents.push({
       target: { kind: 'both', dieId: die.id, equipIndex: _idx },
       popupType: 'money',

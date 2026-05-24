@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { resetPlayerState } from '../../game/PlayerState';
+import { resetAllGameStores } from '../../game/store';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { clearAutoSave } from '../AutoSaveManager';
@@ -49,7 +49,7 @@ export class MainMenu extends Scene {
     // Start button
     new Button(this, width / 2, height * 0.57, 'Start Journey', 220, 52).onClick(() => {
       clearAutoSave();
-      resetPlayerState();
+      resetAllGameStores();
       this.scene.start('ProfessionSelect', {});
     });
 

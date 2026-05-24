@@ -9,6 +9,7 @@ import {
   calculateTestScore,
   setupGame,
   resetDieIds,
+  syncEquipmentInstances,
 } from '../testHelpers';
 import {
   processEquipmentOnHandPlayed,
@@ -31,7 +32,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
 
   test('gains +1 mult per hand played without a 6', () => {
     const inst = item('marked');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const scoringDice = [die({ value: 5 }), die({ value: 5 })];
     processEquipmentOnHandPlayed([inst], HandType.PAIR, scoringDice);
     expect(inst.state.mult).toBe(1);
@@ -42,7 +43,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
   test('resets to 0 if a 6 is scored', () => {
     const inst = item('marked');
     inst.state.mult = 5;
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const scoringDice = [die({ value: 6 }), die({ value: 6 })];
     processEquipmentOnHandPlayed([inst], HandType.PAIR, scoringDice);
     expect(inst.state.mult).toBe(0);
@@ -62,7 +63,7 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
 
   test('demon hunter gains +2 per hand without a 6', () => {
     const inst = item('marked');
-    const { player } = setupGame({ equipment: [inst], profession: 'demon_hunter' });
+    setupGame({ equipment: [inst], profession: 'demon_hunter' });
     const scoringDice = [die({ value: 5 }), die({ value: 5 })];
     processEquipmentOnHandPlayed([inst], HandType.PAIR, scoringDice);
     expect(inst.state.mult).toBe(2);
@@ -118,7 +119,7 @@ describe('STATEFUL_ADD_MILES: Steam Engine', () => {
 
   test('loses 5 miles per hand played', () => {
     const inst = item('steam_engine');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     processEquipmentAfterHandScored([inst], HandType.PAIR);
     expect(inst.state.miles).toBe(95);
     processEquipmentAfterHandScored([inst], HandType.PAIR);
@@ -128,7 +129,7 @@ describe('STATEFUL_ADD_MILES: Steam Engine', () => {
   test('does not go below 0', () => {
     const inst = item('steam_engine');
     inst.state.miles = 3;
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     processEquipmentAfterHandScored([inst], HandType.PAIR);
     expect(inst.state.miles).toBe(0);
   });
@@ -185,6 +186,7 @@ describe('STATEFUL_ADD_MULT: Tight Fist', () => {
 
     // Simulate skipping a pack (what BoosterPackScene.onSkip does)
     processEquipmentOnPackSkipped(player.equipment);
+    syncEquipmentInstances(tightFist);
 
     expect(tightFist.state.mult).toBe(3);
 
@@ -208,7 +210,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
 
   test('gains +4 miles when exactly 4 dice are played', () => {
     const inst = item('square_dance');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const fourDice = diceWithValue(3, 4);
     processEquipmentOnHandPlayed([inst], HandType.FOUR_OF_A_KIND, fourDice);
     expect(inst.state.miles).toBe(4);
@@ -216,7 +218,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
 
   test('does NOT gain miles when fewer than 4 dice played', () => {
     const inst = item('square_dance');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const threeDice = diceWithValue(5, 3);
     processEquipmentOnHandPlayed([inst], HandType.THREE_OF_A_KIND, threeDice);
     expect(inst.state.miles).toBe(0);
@@ -224,7 +226,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
 
   test('does NOT gain miles when more than 4 dice played', () => {
     const inst = item('square_dance');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const fiveDice = diceWithValue(5, 5);
     processEquipmentOnHandPlayed([inst], HandType.FIVE_OF_A_KIND, fiveDice);
     expect(inst.state.miles).toBe(0);
@@ -242,7 +244,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
 
   test('accumulates across multiple hands', () => {
     const inst = item('square_dance');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const fourDice = diceWithValue(3, 4);
     processEquipmentOnHandPlayed([inst], HandType.FOUR_OF_A_KIND, fourDice);
     processEquipmentOnHandPlayed([inst], HandType.FOUR_OF_A_KIND, fourDice);
@@ -268,6 +270,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
     expect(firstResult.miles).toBeMiles(56 * 5);
 
     // After scoring, square dance should have +4 miles stored
+    syncEquipmentInstances(inst);
     expect(inst.state.miles).toBe(4);
 
     // Score another 4-dice hand — now the stored 4 + new 4 = 8 applies
@@ -282,6 +285,7 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
     // Second hand: square dance had 4, gains another +4 = 8 before scoring
     // FOUR_OF_A_KIND: baseMiles=40, totalValue=12, +8 from square_dance = 60 * mult(5)
     expect(secondResult.miles).toBeMiles(60 * 5);
+    syncEquipmentInstances(inst);
     expect(inst.state.miles).toBe(8);
   });
 });
@@ -296,7 +300,7 @@ describe('HAND_MILES_GAIN: Manifest Destiny', () => {
 
   test('gains +15 miles when 5 straight is played', () => {
     const inst = item('manifest_destiny');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const straightDice = diceFromValues([1, 2, 3, 4, 5]);
     processEquipmentOnHandPlayed([inst], HandType.FIVE_STRAIGHT, straightDice);
     expect(inst.state.miles).toBe(15);
@@ -304,7 +308,7 @@ describe('HAND_MILES_GAIN: Manifest Destiny', () => {
 
   test('does NOT gain miles for other hand types', () => {
     const inst = item('manifest_destiny');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const pairDice = diceWithValue(5, 2);
     processEquipmentOnHandPlayed([inst], HandType.PAIR, pairDice);
     expect(inst.state.miles).toBe(0);
@@ -312,7 +316,7 @@ describe('HAND_MILES_GAIN: Manifest Destiny', () => {
 
   test('does NOT activate on 4 straight', () => {
     const inst = item('manifest_destiny');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const fourStraight = diceFromValues([2, 3, 4, 5]);
     processEquipmentOnHandPlayed([inst], HandType.FOUR_STRAIGHT, fourStraight);
     expect(inst.state.miles).toBe(0);
@@ -330,7 +334,7 @@ describe('HAND_MILES_GAIN: Manifest Destiny', () => {
 
   test('accumulates across multiple 5 straights', () => {
     const inst = item('manifest_destiny');
-    const { player } = setupGame({ equipment: [inst] });
+    setupGame({ equipment: [inst] });
     const straightDice = diceFromValues([1, 2, 3, 4, 5]);
     processEquipmentOnHandPlayed([inst], HandType.FIVE_STRAIGHT, straightDice);
     processEquipmentOnHandPlayed([inst], HandType.FIVE_STRAIGHT, straightDice);
@@ -386,7 +390,8 @@ describe('Campfire Stories: supply card use integration', () => {
     const supplyDef = getRandomSupplyDef(null, SLOT_CREATING_SUPPLIES);
     player.addConsumable(supplyDef);
     const consumed = player.useConsumable(0)!;
-    executeConsumableEffect(consumed, player);
+    executeConsumableEffect(consumed);
+    syncEquipmentInstances(campfire);
 
     expect(campfire.state.mult).toBe(1);
   });
@@ -398,7 +403,7 @@ describe('Campfire Stories: supply card use integration', () => {
     const tgDef = getRandomTrailGuideDef();
     player.addConsumable(tgDef);
     const consumed = player.useConsumable(0)!;
-    executeConsumableEffect(consumed, player);
+    executeConsumableEffect(consumed);
 
     // Trail guides are NOT supply cards
     expect(campfire.state.mult ?? 0).toBe(0);
@@ -414,8 +419,9 @@ describe('Campfire Stories: supply card use integration', () => {
       history.push(supplyDef);
       player.addConsumable(supplyDef);
       const consumed = player.useConsumable(0)!;
-      executeConsumableEffect(consumed, player);
+      executeConsumableEffect(consumed);
     }
+    syncEquipmentInstances(campfire);
 
     expect(campfire.state.mult).toBe(3);
   });

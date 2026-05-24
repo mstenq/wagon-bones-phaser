@@ -1,7 +1,8 @@
 // ─── XMULT_RISKY, EMPTY_SLOT_XMULT, UNCOMMON_EQUIP_XMULT, ENHANCEMENT_COUNT_XMULT, REPEAT_HAND_XMULT, RAINBOW_TRAIL_XMULT ───
 
 import { effectRegistry } from '../registry';
-import { getPlayerState } from '../../PlayerState';
+import { getRunState } from '../../store/runStore';
+import { selectUsedEquipmentSlots } from '../../store/selectors/runSelectors';
 import { multiplyCtxXMult } from '../helpers';
 
 effectRegistry.registerXMult('XMULT_RISKY', (ctx, equip, index) => {
@@ -12,8 +13,8 @@ effectRegistry.registerXMult('XMULT_RISKY', (ctx, equip, index) => {
 });
 
 effectRegistry.registerXMult('EMPTY_SLOT_XMULT', (ctx, equip, index) => {
-  const player = getPlayerState();
-  const emptySlots = player.maxEquipmentSlots - player.usedEquipmentSlots;
+  const run = getRunState();
+  const emptySlots = run.maxEquipmentSlots - selectUsedEquipmentSlots(run);
   if (emptySlots > 0) {
     const xVal = 1 + emptySlots * ((equip.def.effectParams as Record<string, unknown>).value as number);
     multiplyCtxXMult(ctx, xVal);

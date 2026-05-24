@@ -1,8 +1,14 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, itemWithState, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
-import { processEndOfRound, processEquipmentOnRoundStart } from '../../EquipmentEffects';
-import { HandType } from '../../types';
+import {
+  diceWithValue,
+  item,
+  calculateTestScore,
+  setupGame,
+  resetDieIds,
+  syncEquipmentInstances,
+} from '../testHelpers';
+import { processEndOfRound } from '../../EquipmentEffects';
 
 beforeEach(() => resetDieIds());
 
@@ -125,6 +131,7 @@ describe('SHOP_REROLL_MULT_GAIN: Bargain Bin', () => {
     expect(bargain.state.mult).toBe(2);
 
     player.payShopReroll();
+    syncEquipmentInstances(bargain);
     expect(bargain.state.mult).toBe(4);
   });
 
@@ -253,7 +260,7 @@ describe('RANDOM_MULT: Wild Card', () => {
         equipment: [item('wild_card')],
       });
       // PAIR: baseMult=1, bonusMult from wild_card is random 0-23
-      results.push(result.mult);
+      results.push(Number(result.mult));
     }
     // All results should be >= 1 (baseMult) and <= 24 (1 + 23)
     expect(results.every((r) => r >= 1 && r <= 24)).toBe(true);

@@ -12,36 +12,44 @@ process.on('exit', () => {
 });
 
 expect.extend({
-  toBeMiles(received: DecimalSource, expected: number) {
-    const pass = eq(received, expected);
+  toBeMiles(received: unknown, expected: unknown) {
+    const value = received as DecimalSource;
+    const pass = eq(value, expected as DecimalSource);
     return {
       pass,
       message: () =>
         pass
-          ? `expected ${String(received)} not to equal ${expected} miles`
-          : `expected ${expected} miles, received ${String(received)}`,
+          ? `expected ${String(value)} not to equal ${expected} miles`
+          : `expected ${expected} miles, received ${String(value)}`,
     };
   },
-  toBeMult(received: DecimalSource, expected: number) {
-    const pass = eq(received, expected);
+  toBeMult(received: unknown, expected: unknown) {
+    const value = received as DecimalSource;
+    const pass = eq(value, expected as DecimalSource);
     return {
       pass,
       message: () =>
         pass
-          ? `expected ${String(received)} not to equal ${expected} mult`
-          : `expected ${expected} mult, received ${String(received)}`,
+          ? `expected ${String(value)} not to equal ${expected} mult`
+          : `expected ${expected} mult, received ${String(value)}`,
     };
   },
-  toBeMilesCloseTo(received: DecimalSource, expected: number, precision = 5) {
-    const actual = Number(received instanceof Object && 'toNumber' in (received as object) ? (received as { toNumber(): number }).toNumber() : received);
+  toBeMilesCloseTo(received: unknown, expected: number, precision = 5) {
+    const value = received as DecimalSource;
+    const actual = Number(
+      value instanceof Object && 'toNumber' in (value as object) ? (value as { toNumber(): number }).toNumber() : value,
+    );
     const pass = Math.abs(actual - expected) < 10 ** -precision;
     return {
       pass,
       message: () => `expected ${expected} miles ±10^-${precision}, received ${actual}`,
     };
   },
-  toBeMultCloseTo(received: DecimalSource, expected: number, precision = 5) {
-    const actual = Number(received instanceof Object && 'toNumber' in (received as object) ? (received as { toNumber(): number }).toNumber() : received);
+  toBeMultCloseTo(received: unknown, expected: number, precision = 5) {
+    const value = received as DecimalSource;
+    const actual = Number(
+      value instanceof Object && 'toNumber' in (value as object) ? (value as { toNumber(): number }).toNumber() : value,
+    );
     const pass = Math.abs(actual - expected) < 10 ** -precision;
     return {
       pass,
@@ -52,8 +60,8 @@ expect.extend({
 
 declare module 'bun:test' {
   interface Matchers<T = unknown> {
-    toBeMiles(expected: number): void;
-    toBeMult(expected: number): void;
+    toBeMiles(expected: unknown): void;
+    toBeMult(expected: unknown): void;
     toBeMilesCloseTo(expected: number, precision?: number): void;
     toBeMultCloseTo(expected: number, precision?: number): void;
   }

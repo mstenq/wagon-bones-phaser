@@ -2,13 +2,16 @@
 
 import { HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
-import { getPlayerState } from '../../PlayerState';
 import { resolveEffectParam } from '../../effectParams';
 import { resolveCopyTarget } from '../../equipmentUtils';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 import { processEquipmentOnDiceDestroyed } from './onDiceDestroyed';
 import { rngInt, rngPick } from '../../RunRng';
+import { getRunState, runStore } from '../../store/runStore';
+import { replaceEquipmentList, resolveEquipmentList } from '../../store/resolve';
+import { economyActions } from '../../store/actions/economyActions';
+import { diceActions } from '../../store/actions/diceActions';
 
 /** A single animated equipment destruction: source triggered victim's removal */
 export interface AnimatedDestruction {
@@ -77,13 +80,15 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
       result.loseAllRerolls = true;
       break;
     case 'ROUND_START_DESTROY_STANDARD_DICE': {
-      const player = getPlayerState();
-      const standardIdx = player.dice.findIndex((d) => d.enhancement === null);
+      const run = getRunState();
+      const standardIdx = run.dice.findIndex((d) => d.enhancement === null);
       if (standardIdx >= 0) {
-        player.dice.splice(standardIdx, 1);
-        processEquipmentOnDiceDestroyed(player.equipment, 1);
+        runStore.setState({ dice: run.dice.filter((_, i) => i !== standardIdx) });
+        const equipment = resolveEquipmentList();
+        processEquipmentOnDiceDestroyed(equipment, 1);
+        replaceEquipmentList(equipment);
         const moneyVal = equip.def.effectParams.value as number;
-        player.economy.earn(moneyVal);
+        economyActions.earn(moneyVal);
         result.burnBarrelMoney += moneyVal;
         result.burnBarrelTriggered = true;
         console.log(`  [equip] ${equip.def.name}: destroyed standard die, earned $${moneyVal}`);
@@ -114,7 +119,7 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
     case 'LUCKY_NUMBER_PIP_XMULT': {
       const pip = rngInt('luckyNumber', 1, 12);
       equip.state.pip = pip;
-      getPlayerState().applyLoadedDieFromLuckyNumber(pip);
+      diceActions.applyLoadedDieFromLuckyNumber(pip);
       break;
     }
     case 'REPEAT_HAND_XMULT':
@@ -134,7 +139,7 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
     case 'FLOUR_SACK': {
       if (!isCopy) {
         const p = equip.def.effectParams as Record<string, unknown>;
-        const decay = resolveEffectParam<number>(p, 'decayPerRound', getPlayerState().profession?.id);
+        const decay = resolveEffectParam<number>(p, 'decayPerRound', getRunState().professionId ?? undefined);
         if (decay > 0) {
           equip.state.handSizeBonus = Math.max(0, (equip.state.handSizeBonus ?? 0) - decay);
         }
@@ -208,6 +213,8 @@ export function processEquipmentOnRoundStart(
     ctx.isCopy = isCopy;
     dispatchLifecycle('on-round-start', equip, ctx);
   }
+
+  replaceEquipmentList(equipment);
 
   return {
     destroyedIndices,

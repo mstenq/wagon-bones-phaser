@@ -5,22 +5,26 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState } from '../../game/PlayerState';
-import { processEquipmentOnShopReroll, processEquipmentOnShopEnd } from '../../game/EquipmentEffects';
+import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
+import { shopBuyActions } from '../../game/store';
+import {
+  selectProfession,
+  selectShopRerollCost,
+  selectTrailGuidesFree,
+  selectUsedEquipmentSlots,
+} from '../../game/store/selectors/runSelectors';
+import { shopActions } from '../../game/store/actions/shopActions';
+import { resolveConsumableList } from '../../game/store/resolve';
+import { canAfford } from '../../game/store/economy';
+import { getPermitById } from '../../game/PermitsSystem';
+import { processEquipmentOnShopEnd } from '../../game/EquipmentEffects';
 import { TEXT_COLORS, FONTS, UI, SHOP_WEIGHTS } from '../../game/Constants';
 import { generateShopStock, EquipmentDef, EquipmentInstance, getEquipmentListPrice } from '../../game/ItemsSystem';
-import {
-  processShopTags,
-  applyInjectTagsToShopStock,
-  applyAuraTagsToShopStock,
-  type ShopTagModifications,
-} from '../../game/TagSystem';
-import { generateShopPacks, PackInstance } from '../../game/BoosterPackSystem';
+import { PackInstance } from '../../game/BoosterPackSystem';
 import {
   ConsumableDef,
   ConsumableInstance,
   executeConsumableEffect,
-  useConsumableDirectly,
   getConsumableTexturePrefix,
   getRandomSupplyDef,
   getRandomTrailGuideDef,
@@ -28,48 +32,35 @@ import {
   canUseConsumableInShop,
   isSecondHelpingsCloneTarget,
 } from '../../game/ConsumablesSystem';
-import {
-  applyConsumableAnimEvents,
-  playEquipmentCreatedPopIn,
-} from '../animations/ConsumableAnimPlayback';
-import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
+import { ItemCard, CardActionTabConfig, type CardData } from '../ui/ItemCard';
+import { getItemDisplayContext } from '../../game/displayContext';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
-import {
-  PermitDef,
-  generateShopPermit,
-  getPermitShopDiscount,
-  getDiscountedShopPrice,
-  applyPermitEffect,
-  hasPermitDiceInShop,
-} from '../../game/PermitsSystem';
-import {
-  acquireEquipmentInstance,
-  applyModifiersToEquipment,
-  getEquipmentPurchasePrice,
-  rollShopEquipmentPreview,
-} from '../../game/EquipmentModifiers';
-import { createDie } from '../../game/DiceSystem';
+import { PermitDef, generateShopPermit, getPermitShopDiscount, getDiscountedShopPrice } from '../../game/PermitsSystem';
+import { getEquipmentPurchasePrice, rollShopEquipmentPreview } from '../../game/EquipmentModifiers';
 import { Die } from '../../game/types';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
-import {
-  type ShopSaveData,
-  type SerializedShopItem,
-  serializeEquipmentInstance,
-  deserializeEquipmentInstance,
-} from '../../game/SaveLoad';
+import { type SerializedShopItem, serializeEquipmentInstance, deserializeEquipmentInstance } from '../../game/SaveLoad';
+import { getSceneState, sceneActions } from '../../game/store/sceneStore';
+import { getRunState, runActions, runStore } from '../../game/store/runStore';
+import { sceneStore } from '../../game/store/sceneStore';
+import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../game/store/selectors/sceneSelectors';
+import { bindStore } from '../store/subscribe';
+import { bindConsumableUiEffects } from '../store/consumableUiEffects';
+import { enqueueConsumablePlayback } from '../../game/store/uiEffectHelpers';
+import { shopSceneActions } from '../../game/store/actions/shopSceneActions';
+import type { ShopSceneState } from '../../game/store/types';
 import { getPackDefById } from '../../game/BoosterPackSystem';
 import { getConsumableDefById } from '../../game/ConsumablesSystem';
 import { getEquipmentDefById } from '../../game/ItemsSystem';
-import { rngFloat, rngPick } from '../../game/RunRng';
+import { rngFloat } from '../../game/RunRng';
 
 const CARD_SPACING = 185;
 
@@ -82,7 +73,7 @@ function canBuyAndUse(def: ConsumableDef): boolean {
   if (def.instantEffect) return true;
   // second_helpings requires a previous supply or trail guide to clone
   if (def.id === 'second_helpings') {
-    return isSecondHelpingsCloneTarget(getPlayerState().lastUsedConsumable);
+    return isSecondHelpingsCloneTarget(resolveLastUsedConsumableDef());
   }
   // Special-case supply/frontier IDs handled by switch in executeConsumableEffect
   const SPECIAL_IDS = ['doctor', 'compass', 'supply_cache', 'bless'];
@@ -98,42 +89,7 @@ type ShopItem =
 
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
 const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
-const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded'];
-const ALL_STICKERS: Die['sticker'][] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
 const DICE_SHOP_COST = 5;
-
-/** Generate a single enhanced die for the shop */
-function generateShopDie(mode: 'enhanced' | 'stickered'): { die: Die; displayDef: EquipmentDef } {
-  const enhancement = rngPick('shop', SHOP_ENHANCEMENTS);
-  const die = createDie({ enhancement });
-
-  if (mode === 'stickered') {
-    die.sticker = rngPick('sticker', ALL_STICKERS);
-  }
-
-  const enhInfo = enhancement ? ENHANCEMENT_INFO.get(enhancement) : null;
-  const name = enhInfo ? `${enhInfo.name} Die` : 'Die';
-  const descParts = [enhInfo?.description ?? 'Standard die'];
-  if (die.sticker) {
-    const stickerInfo = STICKER_INFO.get(die.sticker);
-    if (stickerInfo) descParts.push(`Sticker: ${stickerInfo.name}`);
-  }
-
-  const displayDef = {
-    id: `shop_die_${die.id}`,
-    name,
-    cost: DICE_SHOP_COST,
-    rarity: 'uncommon' as string,
-    effectType: 'DICE',
-    effectParams: {},
-    display: () => ({
-      hint: [],
-      tooltip: [[{ text: descParts.join('\n'), style: 'text' }]],
-    }),
-  } as unknown as EquipmentDef;
-
-  return { die, displayDef };
-}
 
 function buildShopDieDisplayDef(die: Die): EquipmentDef {
   const enhInfo = die.enhancement ? ENHANCEMENT_INFO.get(die.enhancement) : null;
@@ -164,6 +120,11 @@ export class ShopScene extends Scene {
   private packCards: BoosterPackCard[] = [];
   private permitCard: ItemCard | null = null;
   private rerollBtn: Button;
+  private displayStoreUnsubs: Array<() => void> = [];
+  /** Shop row-1 objects (stock box, buttons, stock cards) — cleared on reroll without rebuilding equip bar. */
+  private shopStockObjects: Phaser.GameObjects.GameObject[] = [];
+  /** Avoid double stock rebuild when reroll handler and store subscription both fire. */
+  private suppressStockRefresh = false;
 
   // Action tab state (shop card click-to-buy)
   private activeTabCard: ItemCard | null = null;
@@ -173,28 +134,43 @@ export class ShopScene extends Scene {
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
-  private dicePouch: DicePouch;
-
-  private pendingRestoreShop: ShopSaveData | null = null;
 
   constructor() {
     super('Shop');
   }
 
-  init(data: { restoreShop?: ShopSaveData } = {}) {
-    if (data.restoreShop) {
-      this.pendingRestoreShop = data.restoreShop;
-      this.stockItems = null!;
-      this.packs = null!;
+  init(_data: Record<string, never> = {}) {
+    // Phaser reuses scene instances; drop cached stock so create() always syncs from the store or rolls new stock.
+    this.stockItems = null!;
+    this.packs = null!;
+  }
+
+  private buildShopSceneState(): ShopSceneState {
+    return {
+      stock: this.stockItems.map((item) => this.serializeShopItem(item)),
+      packs: this.packs.map((p) => ({
+        defId: p.def.id,
+        instanceId: p.id,
+        opened: this.isPackOpened(p),
+      })),
+      shopRerollCount: getRunState().shopRerollCount,
+    };
+  }
+
+  private syncShopToStore(): void {
+    const next = this.buildShopSceneState();
+    if (getSceneState().shop) {
+      sceneActions.patchShop(next);
+    } else {
+      sceneActions.enterShop(next);
     }
   }
 
-  getSaveContext(): ShopSaveData {
-    return {
-      stock: this.stockItems.map((item) => this.serializeShopItem(item)),
-      packs: this.packs.map((p) => ({ defId: p.def.id, instanceId: p.id })),
-      shopRerollCount: getPlayerState().shopRerollCount,
-    };
+  private isPackOpened(pack: PackInstance): boolean {
+    const shop = getSceneState().shop;
+    if (!shop) return !!(pack as unknown as { _opened?: boolean })._opened;
+    const entry = shop.packs.find((p) => p.instanceId === pack.id);
+    return entry?.opened ?? false;
   }
 
   private serializeShopItem(item: ShopItem): SerializedShopItem {
@@ -237,44 +213,22 @@ export class ShopScene extends Scene {
   }
 
   create() {
-    const player = getPlayerState();
-    if (this.pendingRestoreShop) {
-      this.stockItems = this.pendingRestoreShop.stock.map((s) => this.deserializeShopItem(s));
-      this.packs = this.pendingRestoreShop.packs.map((p) => {
-        const def = getPackDefById(p.defId);
-        if (!def) throw new Error(`Unknown pack: ${p.defId}`);
-        return { def, id: p.instanceId };
-      });
-      player.shopRerollCount = this.pendingRestoreShop.shopRerollCount;
-      this.pendingRestoreShop = null;
-    } else if (!this.stockItems) {
-      this.stockItems = this.generateMixedStock(player);
-      if (!this.packs) {
-        this.packs = generateShopPacks(
-          2,
-          player.isFirstShopVisit() ? { guaranteePackId: 'equipment_standard' } : undefined,
-        );
-      }
-      const tagMods = processShopTags(player);
-      this.applyShopTagMods(tagMods, player);
+    const sceneShop = getSceneState().shop;
+    if (sceneShop) {
+      this.hydrateShopFromState(sceneShop);
+    } else {
+      const shop = shopSceneActions.openShop();
+      this.hydrateShopFromState(shop);
       EventBus.emit(Events.TAG_QUEUE_CHANGED);
-      player.resetShopRerolls();
-      if (tagMods.freeFirstReroll) {
-        player.tagFreeReroll = true;
-      }
-      if (tagMods.extraPermits > 0) {
-        player.bonusShopPermit = generateShopPermit(player.purchasedPermits);
-      }
-    } else if (!this.packs) {
-      this.packs = generateShopPacks(
-        2,
-        player.isFirstShopVisit() ? { guaranteePackId: 'equipment_standard' } : undefined,
-      );
     }
+    sceneActions.enterScene('Shop');
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
+      this.tearDownShopSubscriptions();
+      this.stockItems = null!;
+      this.packs = null!;
     });
 
     this.buildLayout();
@@ -282,183 +236,46 @@ export class ShopScene extends Scene {
   }
 
   private buildLayout(): void {
-    const player = getPlayerState();
+    const run = getRunState();
+    const equipment = resolveEquipmentList(run);
+    const consumables = resolveConsumableList(run);
+    selectProfession(run);
+    const trailGuidesFree = selectTrailGuidesFree(run);
+    const bonusPermit = run.bonusShopPermitId ? getPermitById(run.bonusShopPermitId) : null;
 
     const layout = createLayout(this, { bgKey: 'bg_shop', sidebarTitle: 'SHOP' });
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
     this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
-    this.dicePouch = layout.dicePouch;
     const contentL = layout.contentX;
     const contentW = layout.contentW;
 
-    // Refresh displays when equipment is sold from the bar
     this.equipBar.on('equipment-changed', () => {
-      this.updateDisplays();
       this.updateEquipHints();
     });
 
-    // Refresh displays when consumables change
     this.consumableBar.on('consumable-changed', () => {
-      this.updateDisplays();
       this.updateEquipHints();
     });
 
     // Execute consumable effect when used
+    bindConsumableUiEffects(this, this.equipBar, {
+      destroyDice: async () => {},
+    });
+
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      this.handleConsumableUsed(consumed);
+      void this.handleConsumableUsed(consumed);
     });
 
     // Show equipment hints with default (shop) context
     this.updateEquipHints();
 
-    // ─── Layout constants ───
-    const equipBarH = UI.EQUIP_BAR_HEIGHT;
-    const BOX_RADIUS = 12;
-    const BOX_PAD = 16; // padding inside boxes
-    const BOX_GAP = 12; // gap between the two boxes
-    const CARD_H = 235;
-    const PRICE_TAG_SPACE = 36; // room above cards for price tags
-    const BTN_COL_W = 130;
-
-    // Row heights (box inner height = card height + price tag + padding)
-    const rowInnerH = CARD_H + PRICE_TAG_SPACE + BOX_PAD * 2;
-
-    // Top of first box (below equipment/consumable bars)
-    const box1Top = equipBarH + 20;
-    const box1H = rowInnerH;
-    const box2Top = box1Top + box1H + BOX_GAP;
-    const box2H = rowInnerH;
-
-    // Card center Y (same for both rows — vertically centered in box, shifted down for price tags)
-    const cardCY1 = box1Top + BOX_PAD + PRICE_TAG_SPACE + CARD_H / 2;
-    const cardCY2 = box2Top + BOX_PAD + PRICE_TAG_SPACE + CARD_H / 2;
-
-    // ─── Box 1: Shop items + action buttons ───
-    const shopBox = this.add.graphics();
-    shopBox.fillStyle(0x0d0d1a, 0.75);
-    shopBox.fillRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
-    shopBox.lineStyle(2, 0x333355, 0.6);
-    shopBox.strokeRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
-
-    // Action buttons (left side of box 1)
-    const btnColX = contentL + BOX_PAD + BTN_COL_W / 2 - 6;
-    const btnW = BTN_COL_W - 16;
-    const btnH = 52;
-
-    new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
-      .setColor(0x8b2020, 0xb03030)
-      .onClick(() => {
-        processEquipmentOnShopEnd(getPlayerState().equipment);
-        this.stockItems = null!;
-        this.packs = null!;
-        this.scene.start('RoundSelect', {});
-      });
-
-    this.rerollBtn = new Button(this, btnColX, cardCY1 + btnH / 2 + 8, `Reroll\n$${player.shopRerollCost}`, btnW, btnH);
-    this.rerollBtn.setColor(0x2d6b2d, 0x3d8b3d);
-    this.rerollBtn.setEnabled(player.canRerollShop());
-    this.rerollBtn.onClick(() => this.onRerollShop());
-
-    // Shop stock cards (right side of box 1)
-    this.cards = [];
-    const cardAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
-    const cardAreaW = contentW - BOX_PAD * 2 - BTN_COL_W - 8;
-    const equipTotalW = this.stockItems.length > 1 ? (this.stockItems.length - 1) * CARD_SPACING : 0;
-    const cardStartX = cardAreaLeft + cardAreaW / 2 - equipTotalW / 2;
-    const shopDiscount = getPermitShopDiscount(player.purchasedPermits);
-
-    for (let i = 0; i < this.stockItems.length; i++) {
-      const shopItem = this.stockItems[i];
-      const texturePrefix =
-        shopItem.type === 'consumable' ? getConsumableTexturePrefix(shopItem.def.category) : undefined;
-      // Apply shop discount to displayed cost
-      const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
-      // Explorer's Guild: trail guides are free
-      const isTrailGuideFree =
-        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
-      let displayDef = isTrailGuideFree
-        ? { ...itemDef, cost: 0 }
-        : shopDiscount > 0 && shopItem.type !== 'equipment'
-          ? { ...itemDef, cost: Math.max(1, Math.floor(itemDef.cost * (1 - shopDiscount))) }
-          : itemDef;
-      if (shopItem.type === 'equipment') {
-        const listPrice = getEquipmentListPrice(shopItem.def);
-        const purchaseCost = getEquipmentPurchasePrice(
-          shopItem.def,
-          shopItem.preview.modifiers,
-          listPrice,
-          player.purchasedPermits,
-        );
-        displayDef = { ...shopItem.def, cost: purchaseCost };
-      }
-      const cardData = (displayDef as { display?: unknown }).display
-        ? displayDef
-        : {
-            ...displayDef,
-            display: () => ({
-              hint: [],
-              tooltip: [[{ text: (displayDef as { description?: string }).description ?? '', style: 'text' }]],
-            }),
-          };
-      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, cardData, {
-        mode: 'shop',
-        showCost: true,
-        ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
-        ...(texturePrefix != null ? { texturePrefix } : {}),
-      });
-      card.setTooltipContext(null, player);
-      card.setDepth(10);
-
-      // If this stock item was already sold (e.g. before a permit rebuild), mark and skip
-      if (shopItem.sold) {
-        card.markSold();
-        this.cards.push(card);
-        continue;
-      }
-
-      const discountedCost = displayDef.cost ?? 0;
-      if (shopItem.type === 'equipment') {
-        const alreadyOwned = player.equipment.some((e) => e.def.id === shopItem.def.id);
-        if (alreadyOwned) {
-          card.markSold();
-        } else {
-          const canAffordEquip =
-            player.canAfford(discountedCost) &&
-            (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
-          card.setAffordable(canAffordEquip);
-          this.setupShopCardClick(card, i);
-        }
-      } else if (shopItem.type === 'consumable') {
-        const alreadyOwned = player.consumables.some((c) => c.def.id === shopItem.def.id);
-        if (alreadyOwned) {
-          card.markSold();
-        } else {
-          const canAfford = player.canAfford(discountedCost);
-          card.setAffordable(canAfford);
-          this.setupShopCardClick(card, i);
-        }
-      } else {
-        // Dice card
-        const canAfford = player.canAfford(discountedCost);
-        card.setAffordable(canAfford);
-        this.setupShopCardClick(card, i);
-      }
-
-      this.cards.push(card);
-    }
-
-    // Dev icons on shop stock cards
-    if (isDevMode()) {
-      for (let i = 0; i < this.cards.length; i++) {
-        const card = this.cards[i];
-        if (card.sold) continue;
-        this.addDevIcon(cardStartX + i * CARD_SPACING + 60, cardCY1 - 125, () => this.devSwapShopItem(i));
-      }
-    }
+    const layoutMetrics = this.getShopLayoutMetrics(contentL, contentW);
+    this.buildShopStock(run, equipment, consumables, trailGuidesFree, layoutMetrics);
 
     // ─── Box 2: Voucher + Booster packs ───
+    const { box2Top, box2H, cardCY2, CARD_H, BOX_RADIUS, BOX_PAD, BTN_COL_W } = layoutMetrics;
     const packBox = this.add.graphics();
     packBox.fillStyle(0x0d0d1a, 0.75);
     packBox.fillRoundedRect(contentL, box2Top, contentW, box2H, BOX_RADIUS);
@@ -472,12 +289,11 @@ export class ShopScene extends Scene {
     const voucherY = cardCY2;
 
     this.permitCard = null;
-    const permit = this.getOrGeneratePermit(player);
-    this.renderPermitCard(permit, player, voucherX, voucherY, voucherW, voucherH, 'FRONTIER PERMIT', true);
-    const bonusPermit = player.bonusShopPermit;
+    const permit = this.getOrGeneratePermit();
+    this.renderPermitCard(permit, voucherX, voucherY, voucherW, voucherH, 'FRONTIER PERMIT', true);
     if (bonusPermit && bonusPermit.id !== permit?.id) {
       const bonusX = voucherX + voucherW + 24;
-      this.renderPermitCard(bonusPermit, player, bonusX, voucherY, voucherW, voucherH, 'BONUS PERMIT', false);
+      this.renderPermitCard(bonusPermit, bonusX, voucherY, voucherW, voucherH, 'BONUS PERMIT', false);
     }
 
     // Booster packs (right side of box 2)
@@ -492,17 +308,17 @@ export class ShopScene extends Scene {
       const packCard = new BoosterPackCard(this, packX0 + i * CARD_SPACING, cardCY2, packInst);
       packCard.setDepth(10);
       // Explorer's Guild: trail guide packs are free
-      const isTrailGuidePack = packInst.def.category === 'trail_guide' && player.trailGuidesFree;
+      const isTrailGuidePack = packInst.def.category === 'trail_guide' && trailGuidesFree;
       const discountedPackCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packInst.def.cost);
       if (discountedPackCost !== packInst.def.cost) {
         packCard.setCostDisplay(discountedPackCost);
       }
 
-      if ((packInst as unknown as { _opened?: boolean })._opened) {
+      if (this.isPackOpened(packInst)) {
         packCard.markSold();
       } else {
-        packCard.setAffordable(player.canAfford(discountedPackCost));
-        packCard.on('pointerdown', () => this.onBuyPack(packCard, packInst));
+        packCard.setAffordable(canAfford(run, discountedPackCost));
+        packCard.on('pointerdown', () => this.onBuyPack(packCard, i));
         packCard.on('pointerover', () => {
           if (!packCard.sold) this.tweens.add({ targets: packCard, scaleX: 1.05, scaleY: 1.05, duration: 100 });
         });
@@ -522,22 +338,28 @@ export class ShopScene extends Scene {
         this.addDevIcon(packX0 + i * CARD_SPACING + 60, cardCY2 - 125, () => this.devSwapPack(i));
       }
     }
+
+    this.tearDownShopSubscriptions();
+    this.displayStoreUnsubs = [
+      bindStore(this, runStore, selectShopAffordabilityInputs, () => this.updateDisplays()),
+      bindStore(this, sceneStore, selectShopStockRevision, () => this.onShopStockRevisionChanged()),
+    ];
   }
 
-  private onBuyPack(card: BoosterPackCard, pack: PackInstance): void {
+  private onBuyPack(card: BoosterPackCard, packIndex: number): void {
     if (card.sold) return;
-    const player = getPlayerState();
-    // Explorer's Guild: trail guide packs are free
-    const isTrailGuidePack = pack.def.category === 'trail_guide' && player.trailGuidesFree;
+    const pack = this.packs[packIndex];
+    if (!pack) return;
+    const isTrailGuidePack = pack.def.category === 'trail_guide' && selectTrailGuidesFree(getRunState());
     const cost = isTrailGuidePack ? 0 : this.getDiscountedCost(pack.def.cost);
-    if (!player.trySpend(cost)) {
+    if (!shopBuyActions.buyPack(cost).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
 
     card.markSold();
-    (pack as unknown as { _opened?: boolean })._opened = true;
-    this.updateDisplays();
+    sceneActions.markShopPackOpened(packIndex);
+    this.syncShopToStore();
 
     // Burst open animation + SFX
     this.sound.play('sfx_explosion_release', { volume: 0.5 });
@@ -560,29 +382,21 @@ export class ShopScene extends Scene {
     const shopItem = this.stockItems[stockIndex];
     if (!shopItem || shopItem.type !== 'equipment') return;
     const def = shopItem.def;
-    const player = getPlayerState();
-    if (def.aura?.id !== 'ghost' && player.usedEquipmentSlots >= player.maxEquipmentSlots) {
+    const run = getRunState();
+    if (def.aura?.id !== 'ghost' && selectUsedEquipmentSlots(run) >= run.maxEquipmentSlots) {
       this.showCardPopup(card, 'No space!');
       return;
     }
-    const instance = acquireEquipmentInstance(def, player.purchasedPermits, shopItem.preview.modifiers);
-    const listPrice = getEquipmentListPrice(def);
-    const cost = getEquipmentPurchasePrice(def, instance.modifiers, listPrice, player.purchasedPermits);
-    if (!player.trySpend(cost)) {
-      this.showCardPopup(card, "Can't afford!");
+    const result = shopBuyActions.buyEquipment(def, shopItem.preview, getEquipmentListPrice(def));
+    if (!result.ok) {
+      this.showCardPopup(card, result.reason === 'no_space' ? 'No space!' : "Can't afford!");
       return;
     }
-    player.equipment.push(instance);
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
-    this.updateDisplays();
-    this.equipBar.refresh();
     this.updateEquipHints();
 
-    // Animate card shrinking toward equipment bar
-    const targetX = this.equipBar.x + this.equipBar.width / 2;
-    const targetY = this.equipBar.y + UI.EQUIP_BAR_HEIGHT / 2;
     card.setDepth(200);
     this.tweens.add({
       targets: card,
@@ -598,18 +412,14 @@ export class ShopScene extends Scene {
 
   private onBuyDie(card: ItemCard, shopItem: { type: 'dice'; die: Die; displayDef: EquipmentDef }): void {
     if (card.sold) return;
-    const player = getPlayerState();
     const cost = this.getDiscountedCost(shopItem.displayDef.cost);
-    if (!player.trySpend(cost)) {
+    if (!shopBuyActions.buyDie(shopItem.die, cost).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
-    player.addDie(shopItem.die);
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
-    this.updateDisplays();
-    this.dicePouch.refresh();
 
     // Animate card shrinking toward dice pouch
     card.setDepth(200);
@@ -626,24 +436,15 @@ export class ShopScene extends Scene {
 
   private onBuyConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
-    const player = getPlayerState();
-    // Explorer's Guild: trail guides are free
-    const cost = def.category === 'trail_guide' && player.trailGuidesFree ? 0 : this.getDiscountedCost(def.cost);
-    if (!player.canAfford(cost)) {
-      this.showCardPopup(card, "Can't afford!");
+    const cost = shopBuyActions.consumableCost(def, this.getDiscountedCost(def.cost));
+    const result = shopBuyActions.buyConsumable(def, cost);
+    if (!result.ok) {
+      this.showCardPopup(card, result.reason === 'no_space' ? 'No space!' : "Can't afford!");
       return;
     }
-    if (!player.canAddConsumable(def)) {
-      this.showCardPopup(card, 'No space!');
-      return;
-    }
-    player.trySpend(cost);
-    player.addConsumable(def);
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
-    this.updateDisplays();
-    this.consumableBar.refresh();
 
     // Animate card shrinking toward consumable bar
     const targetX = this.consumableBar.x + this.consumableBar.width / 2;
@@ -665,13 +466,7 @@ export class ShopScene extends Scene {
   /** Buy a consumable and immediately use it (bypasses consumable slot limit) */
   private onBuyAndUseConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
-    const player = getPlayerState();
-    // Explorer's Guild: trail guides are free
-    const cost = def.category === 'trail_guide' && player.trailGuidesFree ? 0 : this.getDiscountedCost(def.cost);
-    if (!player.trySpend(cost)) {
-      this.showCardPopup(card, "Can't afford!");
-      return;
-    }
+    const cost = shopBuyActions.consumableCost(def, this.getDiscountedCost(def.cost));
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_tarot1', { volume: 0.5 });
@@ -688,8 +483,7 @@ export class ShopScene extends Scene {
       onComplete: () => card.destroy(),
     });
 
-    // Use consumable directly (handles lastUsedConsumable tracking)
-    const result = useConsumableDirectly(def, player);
+    const result = shopBuyActions.buyAndUseConsumable(def, cost);
     this.handleConsumableResult(result);
   }
 
@@ -827,8 +621,7 @@ export class ShopScene extends Scene {
   }
 
   private handleConsumableUsed(consumed: ConsumableInstance): void {
-    const player = getPlayerState();
-    const result = executeConsumableEffect(consumed, player);
+    const result = executeConsumableEffect(consumed);
     this.handleConsumableResult(result);
   }
 
@@ -837,15 +630,7 @@ export class ShopScene extends Scene {
   }
 
   private async handleConsumableResultAsync(result: ReturnType<typeof executeConsumableEffect>): Promise<void> {
-    await applyConsumableAnimEvents(this, this.equipBar, result.consumableAnimEvents ?? [], {
-      destroyDice: async () => {},
-    });
-
-    this.updateDisplays();
-    this.equipBar.refresh();
-    this.consumableBar.refresh();
-    this.dicePouch.refresh();
-    await playEquipmentCreatedPopIn(this, this.equipBar, result.equipmentCreatedCount);
+    enqueueConsumablePlayback(result);
 
     if (!result.success && result.failReason) {
       // Show popup at center of consumable bar area
@@ -875,7 +660,7 @@ export class ShopScene extends Scene {
       this.scene.start('DiceSelection', {
         config: result.diceSelection,
         returnScene: 'Shop',
-        returnSceneData: { restoreShop: this.getSaveContext() },
+        returnSceneData: {},
       });
     }
 
@@ -922,77 +707,339 @@ export class ShopScene extends Scene {
   }
 
   private onRerollShop(): void {
-    const player = getPlayerState();
-    if (!player.payShopReroll()) return;
+    this.suppressStockRefresh = true;
+    try {
+      if (!shopSceneActions.rerollShop()) return;
+      EventBus.emit(Events.TAG_QUEUE_CHANGED);
+      this.refreshShopStockFromStore();
+    } finally {
+      this.suppressStockRefresh = false;
+    }
+  }
 
-    this.stockItems = this.generateMixedStock(player);
-    applyInjectTagsToShopStock(this.stockItems, player);
-    applyAuraTagsToShopStock(this.stockItems, player);
-    EventBus.emit(Events.TAG_QUEUE_CHANGED);
+  private onShopStockRevisionChanged(): void {
+    if (this.suppressStockRefresh) return;
+    this.refreshShopStockFromStore();
+    this.syncPackCardsSoldFromStore();
+  }
 
-    this.children.removeAll(true);
+  /** Rebuild shop stock row from scene store (after reroll, restore, or external patch). */
+  private refreshShopStockFromStore(): void {
+    const shop = getSceneState().shop;
+    if (!shop) return;
+    this.hydrateStockFromState(shop);
+    this.rebuildShopStockOnly();
+  }
+
+  /** Mark pack cards sold when store records them opened (e.g. after restore). */
+  private syncPackCardsSoldFromStore(): void {
+    const shop = getSceneState().shop;
+    if (!shop) return;
+    for (let i = 0; i < this.packCards.length; i++) {
+      const packCard = this.packCards[i];
+      if (packCard.sold || !shop.packs[i]?.opened) continue;
+      packCard.markSold();
+      packCard.removeAllListeners();
+    }
+  }
+
+  private getShopLayoutMetrics(contentL: number, contentW: number) {
+    const equipBarH = UI.EQUIP_BAR_HEIGHT;
+    const BOX_RADIUS = 12;
+    const BOX_PAD = 16;
+    const BOX_GAP = 12;
+    const CARD_H = 235;
+    const PRICE_TAG_SPACE = 36;
+    const BTN_COL_W = 130;
+    const rowInnerH = CARD_H + PRICE_TAG_SPACE + BOX_PAD * 2;
+    const box1Top = equipBarH + 20;
+    const box1H = rowInnerH;
+    const box2Top = box1Top + box1H + BOX_GAP;
+    const box2H = rowInnerH;
+    const cardCY1 = box1Top + BOX_PAD + PRICE_TAG_SPACE + CARD_H / 2;
+    const cardCY2 = box2Top + BOX_PAD + PRICE_TAG_SPACE + CARD_H / 2;
+    return {
+      contentL,
+      contentW,
+      box1Top,
+      box1H,
+      box2Top,
+      box2H,
+      cardCY1,
+      cardCY2,
+      CARD_H,
+      BOX_RADIUS,
+      BOX_PAD,
+      BTN_COL_W,
+    };
+  }
+
+  private trackShopStockObject(obj: Phaser.GameObjects.GameObject): void {
+    this.shopStockObjects.push(obj);
+  }
+
+  private clearShopStock(): void {
+    this.dismissActiveTab();
+    for (const obj of this.shopStockObjects) {
+      if (obj.scene) obj.destroy();
+    }
+    this.shopStockObjects = [];
+    for (const card of this.cards) {
+      if (card.scene) card.destroy();
+    }
     this.cards = [];
-    this.packCards = [];
-    this.buildLayout();
+    this.rerollBtn = null!;
+  }
+
+  private buildShopStock(
+    run: ReturnType<typeof getRunState>,
+    equipment: EquipmentInstance[],
+    consumables: ReturnType<typeof resolveConsumableList>,
+    trailGuidesFree: boolean,
+    metrics: ReturnType<typeof this.getShopLayoutMetrics>,
+  ): void {
+    const { contentL, contentW, box1Top, box1H, cardCY1, BOX_RADIUS, BOX_PAD, BTN_COL_W } = metrics;
+    this.shopStockObjects = [];
+
+    const shopBox = this.add.graphics();
+    shopBox.fillStyle(0x0d0d1a, 0.75);
+    shopBox.fillRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
+    shopBox.lineStyle(2, 0x333355, 0.6);
+    shopBox.strokeRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
+    this.trackShopStockObject(shopBox);
+
+    const btnColX = contentL + BOX_PAD + BTN_COL_W / 2 - 6;
+    const btnW = BTN_COL_W - 16;
+    const btnH = 52;
+
+    const hitTrailBtn = new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
+      .setColor(0x8b2020, 0xb03030)
+      .onClick(() => {
+        processEquipmentOnShopEnd(resolveEquipmentList());
+        this.tearDownShopSubscriptions();
+        sceneActions.clearShop();
+        this.scene.start('RoundSelect', {});
+      });
+    this.trackShopStockObject(hitTrailBtn);
+
+    this.rerollBtn = new Button(
+      this,
+      btnColX,
+      cardCY1 + btnH / 2 + 8,
+      `Reroll\n$${selectShopRerollCost(run)}`,
+      btnW,
+      btnH,
+    );
+    this.rerollBtn.setColor(0x2d6b2d, 0x3d8b3d);
+    this.rerollBtn.setEnabled(shopActions.canRerollShop(run));
+    this.rerollBtn.onClick(() => this.onRerollShop());
+    this.trackShopStockObject(this.rerollBtn);
+
+    this.cards = [];
+    const cardAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
+    const cardAreaW = contentW - BOX_PAD * 2 - BTN_COL_W - 8;
+    const equipTotalW = this.stockItems.length > 1 ? (this.stockItems.length - 1) * CARD_SPACING : 0;
+    const cardStartX = cardAreaLeft + cardAreaW / 2 - equipTotalW / 2;
+    const shopDiscount = getPermitShopDiscount(run.purchasedPermits);
+
+    for (let i = 0; i < this.stockItems.length; i++) {
+      const shopItem = this.stockItems[i];
+      const texturePrefix =
+        shopItem.type === 'consumable' ? getConsumableTexturePrefix(shopItem.def.category) : undefined;
+      const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
+      const isTrailGuideFree =
+        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && trailGuidesFree;
+      let displayDef = isTrailGuideFree
+        ? { ...itemDef, cost: 0 }
+        : shopDiscount > 0 && shopItem.type !== 'equipment'
+          ? { ...itemDef, cost: Math.max(1, Math.floor(itemDef.cost * (1 - shopDiscount))) }
+          : itemDef;
+      if (shopItem.type === 'equipment') {
+        const listPrice = getEquipmentListPrice(shopItem.def);
+        const purchaseCost = getEquipmentPurchasePrice(
+          shopItem.def,
+          shopItem.preview.modifiers,
+          listPrice,
+          run.purchasedPermits,
+        );
+        displayDef = { ...shopItem.def, cost: purchaseCost };
+      }
+      const cardData = (displayDef as { display?: unknown }).display
+        ? displayDef
+        : {
+            ...displayDef,
+            display: () => ({
+              hint: [],
+              tooltip: [[{ text: (displayDef as { description?: string }).description ?? '', style: 'text' }]],
+            }),
+          };
+      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, cardData as CardData, {
+        mode: 'shop',
+        showCost: true,
+        ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
+        ...(texturePrefix != null ? { texturePrefix } : {}),
+      });
+      card.setTooltipContext(null, getItemDisplayContext(run));
+      card.setDepth(10);
+      this.trackShopStockObject(card);
+
+      if (shopItem.sold) {
+        card.markSold();
+        this.cards.push(card);
+        continue;
+      }
+
+      const discountedCost = displayDef.cost ?? 0;
+      if (shopItem.type === 'equipment') {
+        const alreadyOwned = equipment.some((e) => e.def.id === shopItem.def.id);
+        if (alreadyOwned) {
+          card.markSold();
+        } else {
+          const canAffordEquip =
+            canAfford(run, discountedCost) &&
+            (shopItem.def.aura?.id === 'ghost' || selectUsedEquipmentSlots(run) < run.maxEquipmentSlots);
+          card.setAffordable(canAffordEquip);
+          this.setupShopCardClick(card, i);
+        }
+      } else if (shopItem.type === 'consumable') {
+        const alreadyOwned = consumables.some((c) => c.def.id === shopItem.def.id);
+        if (alreadyOwned) {
+          card.markSold();
+        } else {
+          card.setAffordable(canAfford(run, discountedCost));
+          this.setupShopCardClick(card, i);
+        }
+      } else {
+        card.setAffordable(canAfford(run, discountedCost));
+        this.setupShopCardClick(card, i);
+      }
+
+      this.cards.push(card);
+    }
+
+    if (isDevMode()) {
+      for (let i = 0; i < this.cards.length; i++) {
+        const card = this.cards[i];
+        if (card.sold) continue;
+        this.addDevIcon(cardStartX + i * CARD_SPACING + 60, cardCY1 - 125, () => this.devSwapShopItem(i));
+      }
+    }
+  }
+
+  private rebuildShopStockOnly(): void {
+    this.clearShopStock();
+    const run = getRunState();
+    const { width } = this.scale;
+    const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
+    const contentL = sidebarW + UI.FELT_PADDING;
+    const contentW = width - sidebarW - UI.FELT_PADDING * 2;
+    const metrics = this.getShopLayoutMetrics(contentL, contentW);
+    this.buildShopStock(
+      run,
+      resolveEquipmentList(run),
+      resolveConsumableList(run),
+      selectTrailGuidesFree(run),
+      metrics,
+    );
+    this.updateDisplays();
+  }
+
+  private hydrateStockFromState(shop: ShopSceneState): void {
+    this.stockItems = shop.stock.map((s) => this.deserializeShopItem(s));
+  }
+
+  private hydratePacksFromState(shop: ShopSceneState): void {
+    this.packs = shop.packs.map((p) => {
+      const def = getPackDefById(p.defId);
+      if (!def) throw new Error(`Unknown pack: ${p.defId}`);
+      return { def, id: p.instanceId };
+    });
+  }
+
+  private hydrateShopFromState(shop: ShopSceneState): void {
+    this.hydrateStockFromState(shop);
+    this.hydratePacksFromState(shop);
+    if (getRunState().shopRerollCount !== shop.shopRerollCount) {
+      runActions.patch({ shopRerollCount: shop.shopRerollCount });
+    }
+  }
+
+  private tearDownShopSubscriptions(): void {
+    for (const unsub of this.displayStoreUnsubs) unsub();
+    this.displayStoreUnsubs = [];
   }
 
   private updateDisplays(): void {
-    const player = getPlayerState();
-    this.sidebar.refreshMoney();
+    if (!this.stockItems) return;
+
+    const run = getRunState();
+    const shopInputs = selectShopAffordabilityInputs(run);
 
     for (let i = 0; i < this.cards.length; i++) {
       const card = this.cards[i];
       if (card.sold) continue;
       const shopItem = this.stockItems[i];
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
-      // Explorer's Guild: trail guides are free
       const isTrailGuideFree =
-        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && player.trailGuidesFree;
+        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && shopInputs.trailGuidesFree;
       let cost = isTrailGuideFree ? 0 : this.getDiscountedCost(itemDef.cost);
       if (shopItem.type === 'equipment') {
         const listPrice = getEquipmentListPrice(shopItem.def);
-        cost = getEquipmentPurchasePrice(shopItem.def, shopItem.preview.modifiers, listPrice, player.purchasedPermits);
+        cost = getEquipmentPurchasePrice(shopItem.def, shopItem.preview.modifiers, listPrice, run.purchasedPermits);
         const canAffordEquip =
-          player.canAfford(cost) &&
-          (shopItem.def.aura?.id === 'ghost' || player.usedEquipmentSlots < player.maxEquipmentSlots);
+          canAfford(run, cost) &&
+          (shopItem.def.aura?.id === 'ghost' || shopInputs.usedEquipmentSlots < shopInputs.maxEquipmentSlots);
         card.setAffordable(canAffordEquip);
       } else {
-        card.setAffordable(player.canAfford(cost));
+        card.setAffordable(canAfford(run, cost));
       }
     }
 
     for (const packCard of this.packCards) {
       if (!packCard.sold) {
-        // Explorer's Guild: trail guide packs are free
-        const isTrailGuidePack = packCard.pack.def.category === 'trail_guide' && player.trailGuidesFree;
+        const isTrailGuidePack = packCard.pack.def.category === 'trail_guide' && shopInputs.trailGuidesFree;
         const packCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packCard.pack.def.cost);
-        packCard.setAffordable(player.canAfford(packCost));
+        packCard.setAffordable(canAfford(run, packCost));
       }
     }
 
-    // Update permit card affordability
     if (this.permitCard && !this.permitCard.sold) {
-      const permit = player.currentLegPermit;
+      const permit = run.currentLegPermitId ? getPermitById(run.currentLegPermitId) : null;
       if (permit) {
-        this.permitCard.setAffordable(player.canAfford(this.getPermitCost(permit, player)));
+        this.permitCard.setAffordable(canAfford(run, this.getPermitCost(permit, run.purchasedPermits)));
       }
     }
 
-    this.rerollBtn.setEnabled(player.canRerollShop());
-    const rerollCost = player.shopRerollCost;
-    this.rerollBtn.setText(rerollCost === 0 ? 'Reroll\nFREE' : `Reroll\n$${rerollCost}`);
-    this.dicePouch.refresh();
+    if (this.rerollBtn?.scene) {
+      this.rerollBtn.setEnabled(shopInputs.canRerollShop);
+      const rerollCost = shopInputs.shopRerollCost;
+      this.rerollBtn.setText(rerollCost === 0 ? 'Reroll\nFREE' : `Reroll\n$${rerollCost}`);
+    }
   }
 
   private onResize(): void {
+    const shop = getSceneState().shop;
+    if (shop) {
+      this.stockItems = shop.stock.map((s) => this.deserializeShopItem(s));
+      this.packs = shop.packs.map((p) => {
+        const def = getPackDefById(p.defId);
+        if (!def) throw new Error(`Unknown pack: ${p.defId}`);
+        return { def, id: p.instanceId };
+      });
+      if (getRunState().shopRerollCount !== shop.shopRerollCount) {
+        runActions.patch({ shopRerollCount: shop.shopRerollCount });
+      }
+    }
+    this.shopStockObjects = [];
     this.children.removeAll(true);
     this.cards = [];
     this.packCards = [];
+    this.rerollBtn = null!;
     this.buildLayout();
   }
 
   private updateEquipHints(): void {
-    this.equipBar.updateHints(null, getPlayerState());
+    this.equipBar.setHintRound(null);
   }
 
   /** Mark a stock item as sold by matching the card's index in this.cards */
@@ -1000,119 +1047,23 @@ export class ShopScene extends Scene {
     const idx = this.cards.indexOf(card);
     if (idx >= 0 && this.stockItems[idx]) {
       this.stockItems[idx].sold = true;
+      sceneActions.markShopStockSold(idx);
+      this.syncShopToStore();
     }
   }
 
   /** Get IDs of equipment and consumables the player already owns */
-  private getOwnedItemIds(player: ReturnType<typeof getPlayerState>): string[] {
-    const equipIds = player.equipment.map((e) => e.def.id);
-    const consumableIds = player.consumables.map((c) => c.def.id);
+  private getOwnedItemIds(): string[] {
+    const run = getRunState();
+    const equipIds = resolveEquipmentList(run).map((e) => e.def.id);
+    const consumableIds = resolveConsumableList(run).map((c) => c.def.id);
     return [...equipIds, ...consumableIds];
   }
 
-  /** Apply tag modifications to freshly generated shop stock. */
-  private applyShopTagMods(tagMods: ShopTagModifications, player: ReturnType<typeof getPlayerState>): void {
-    applyInjectTagsToShopStock(this.stockItems, player);
-
-    if (tagMods.freeShop) {
-      for (const stockItem of this.stockItems) {
-        if (stockItem.type === 'equipment') {
-          stockItem.def = { ...stockItem.def, cost: 0 };
-        } else if (stockItem.type === 'consumable') {
-          stockItem.def = { ...stockItem.def, cost: 0 };
-        } else if (stockItem.type === 'dice') {
-          stockItem.displayDef = { ...stockItem.displayDef, cost: 0 };
-        }
-      }
-      for (const pack of this.packs ?? []) {
-        pack.def = { ...pack.def, cost: 0 };
-      }
-    }
-
-    applyAuraTagsToShopStock(this.stockItems, player);
-    this.syncEquipmentPreviews();
-  }
-
-  /** Keep preview instances aligned with stock defs (aura tags, free shop, inject tags). */
-  private syncEquipmentPreviews(): void {
-    const player = getPlayerState();
-    for (const item of this.stockItems) {
-      if (item.type !== 'equipment') continue;
-      if (!item.preview) {
-        item.preview = rollShopEquipmentPreview(item.def, player.purchasedPermits);
-        continue;
-      }
-      item.preview.def = item.def;
-      applyModifiersToEquipment(item.preview, item.preview.modifiers);
-    }
-  }
-
-  /** Generate a mix of equipment and consumable cards for the shop stock.
-   *  Each slot is independently rolled from a weighted category pool. */
-  private generateMixedStock(player: ReturnType<typeof getPlayerState>): ShopItem[] {
-    const slotCount = Math.max(1, player.shopSlots);
-    const items: ShopItem[] = [];
-    const excludeIds = this.getOwnedItemIds(player);
-
-    // If permit allows dice in shop, always include one die as the first slot
-    const diceMode = hasPermitDiceInShop(player.purchasedPermits);
-    if (diceMode !== 'none') {
-      const { die, displayDef } = generateShopDie(diceMode);
-      items.push({ type: 'dice', die, displayDef });
-    }
-
-    // Build weighted category table
-    const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier'; weight: number }[] = [
-      { type: 'equipment', weight: SHOP_WEIGHTS.equipment },
-      { type: 'supply', weight: SHOP_WEIGHTS.supply },
-      { type: 'trail_guide', weight: SHOP_WEIGHTS.trail_guide },
-    ];
-    if (player.profession?.modifiers?.frontierInShop) {
-      categories.push({ type: 'frontier', weight: SHOP_WEIGHTS.frontier });
-    }
-
-    const totalWeight = categories.reduce((sum, c) => sum + c.weight, 0);
-    const remainingSlots = slotCount - items.length;
-
-    for (let i = 0; i < remainingSlots; i++) {
-      let roll = rngFloat('shop') * totalWeight;
-      let picked = categories[0].type;
-      for (const cat of categories) {
-        roll -= cat.weight;
-        if (roll <= 0) {
-          picked = cat.type;
-          break;
-        }
-      }
-
-      if (picked === 'equipment') {
-        const [def] = generateShopStock(1, excludeIds);
-        items.push({
-          type: 'equipment',
-          def,
-          preview: rollShopEquipmentPreview(def, player.purchasedPermits),
-        });
-        excludeIds.push(def.id); // also exclude from subsequent slots
-      } else {
-        let def: ConsumableDef;
-        if (picked === 'supply') {
-          def = getRandomSupplyDef(undefined, excludeIds);
-        } else if (picked === 'trail_guide') {
-          def = getRandomTrailGuideDef(undefined, excludeIds);
-        } else {
-          def = getShopRandomFrontierDef(undefined, excludeIds);
-        }
-        items.push({ type: 'consumable', def });
-        excludeIds.push(def.id); // also exclude from subsequent slots
-      }
-    }
-
-    return items;
-  }
-
   /** Generate a single random stock item using the same category weights */
-  private generateOneStockItem(player: ReturnType<typeof getPlayerState>): ShopItem {
-    const excludeIds = this.getOwnedItemIds(player);
+  private generateOneStockItem(): ShopItem {
+    const run = getRunState();
+    const excludeIds = this.getOwnedItemIds();
     // Also exclude items already in current stock
     for (const item of this.stockItems) {
       if (item.type === 'equipment') excludeIds.push(item.def.id);
@@ -1124,7 +1075,7 @@ export class ShopScene extends Scene {
       { type: 'supply', weight: SHOP_WEIGHTS.supply },
       { type: 'trail_guide', weight: SHOP_WEIGHTS.trail_guide },
     ];
-    if (player.profession?.modifiers?.frontierInShop) {
+    if (selectProfession(run)?.modifiers?.frontierInShop) {
       categories.push({ type: 'frontier', weight: SHOP_WEIGHTS.frontier });
     }
     const totalWeight = categories.reduce((sum, c) => sum + c.weight, 0);
@@ -1142,7 +1093,7 @@ export class ShopScene extends Scene {
       return {
         type: 'equipment',
         def,
-        preview: rollShopEquipmentPreview(def, player.purchasedPermits),
+        preview: rollShopEquipmentPreview(def, run.purchasedPermits),
       };
     }
     let def: ConsumableDef;
@@ -1156,7 +1107,6 @@ export class ShopScene extends Scene {
 
   private renderPermitCard(
     permit: PermitDef | null,
-    player: ReturnType<typeof getPlayerState>,
     voucherX: number,
     voucherY: number,
     voucherW: number,
@@ -1168,7 +1118,7 @@ export class ShopScene extends Scene {
       const permitDisplayDef = {
         id: permit.id,
         name: permit.name,
-        cost: this.getPermitCost(permit, player),
+        cost: this.getPermitCost(permit),
         rarity: 'permit' as string,
         effectType: 'PERMIT',
         effectParams: {},
@@ -1186,9 +1136,9 @@ export class ShopScene extends Scene {
         cardScale: 1.2,
         tabAnchorX: 45,
       });
-      permitItemCard.setTooltipContext(null, player);
+      permitItemCard.setTooltipContext(null, getItemDisplayContext());
       permitItemCard.setDepth(10);
-      permitItemCard.setAffordable(player.canAfford(permitDisplayDef.cost));
+      permitItemCard.setAffordable(canAfford(getRunState(), permitDisplayDef.cost));
       this.setupPermitCardClick(permitItemCard, permit, isPrimary);
       if (isPrimary) this.permitCard = permitItemCard;
 
@@ -1230,24 +1180,27 @@ export class ShopScene extends Scene {
   }
 
   /** Get or generate the permit for this leg */
-  private getOrGeneratePermit(player: ReturnType<typeof getPlayerState>): PermitDef | null {
-    // Already purchased a permit this leg — no new one until next leg
-    if (player.permitPurchasedThisLeg) return null;
-    if (player.currentLegPermit) return player.currentLegPermit;
-    const permit = generateShopPermit(player.purchasedPermits);
-    if (permit) player.currentLegPermit = permit;
+  private getOrGeneratePermit(): PermitDef | null {
+    const run = getRunState();
+    if (run.permitPurchasedThisLeg) return null;
+    if (run.currentLegPermitId) return getPermitById(run.currentLegPermitId);
+    const permit = generateShopPermit(run.purchasedPermits);
+    if (permit) runActions.patch({ currentLegPermitId: permit.id });
     return permit;
   }
 
   /** Get permit cost after shop discount */
-  private getPermitCost(permit: PermitDef, player: ReturnType<typeof getPlayerState>): number {
-    const discount = getPermitShopDiscount(player.purchasedPermits);
+  private getPermitCost(
+    permit: PermitDef,
+    purchasedPermits: readonly string[] = getRunState().purchasedPermits,
+  ): number {
+    const discount = getPermitShopDiscount(purchasedPermits);
     return Math.max(1, Math.floor(permit.cost * (1 - discount)));
   }
 
   /** Get the discounted cost for any shop item */
   private getDiscountedCost(baseCost: number): number {
-    return getDiscountedShopPrice(baseCost, getPlayerState().purchasedPermits);
+    return getDiscountedShopPrice(baseCost, getRunState().purchasedPermits);
   }
 
   /** Set up click-to-buy on the permit card */
@@ -1317,22 +1270,10 @@ export class ShopScene extends Scene {
   /** Handle purchasing a permit */
   private onBuyPermit(card: ItemCard, permit: PermitDef, isPrimary: boolean): void {
     if (card.sold) return;
-    const player = getPlayerState();
-    const cost = this.getPermitCost(permit, player);
-
-    if (!player.trySpend(cost)) {
+    const cost = this.getPermitCost(permit);
+    if (!shopBuyActions.buyPermit(permit, cost, isPrimary).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
-    }
-
-    // Apply permit after spending
-    player.purchasedPermits.push(permit.id);
-    applyPermitEffect(permit, player);
-    if (isPrimary) {
-      player.currentLegPermit = null;
-      player.permitPurchasedThisLeg = true;
-    } else {
-      player.bonusShopPermit = null;
     }
 
     card.markSold();
@@ -1351,10 +1292,11 @@ export class ShopScene extends Scene {
       onComplete: () => {
         card.destroy();
         // If permit increased shop slots, append new items (keep existing stock)
-        const newSlotCount = Math.max(1, player.shopSlots);
+        const newSlotCount = Math.max(1, getRunState().shopSlots);
         while (this.stockItems.length < newSlotCount) {
-          this.stockItems.push(this.generateOneStockItem(player));
+          this.stockItems.push(this.generateOneStockItem());
         }
+        this.syncShopToStore();
         // Rebuild layout to reflect all permit changes (prices, sidebar, slots)
         this.children.removeAll(true);
         this.cards = [];
@@ -1394,15 +1336,15 @@ export class ShopScene extends Scene {
       return;
     }
     if (result.type === 'equipment') {
-      const player = getPlayerState();
       this.stockItems[index] = {
         type: 'equipment',
         def: result.def,
-        preview: rollShopEquipmentPreview(result.def, player.purchasedPermits),
+        preview: rollShopEquipmentPreview(result.def, getRunState().purchasedPermits),
       };
     } else {
       this.stockItems[index] = { type: 'consumable', def: result.def };
     }
+    this.syncShopToStore();
     // Rebuild
     this.children.removeAll(true);
     this.cards = [];
@@ -1421,6 +1363,7 @@ export class ShopScene extends Scene {
       return;
     }
     this.packs[index] = { def: packDef as any, id: `pack_dev_${Date.now()}` };
+    this.syncShopToStore();
     // Rebuild
     this.children.removeAll(true);
     this.cards = [];
@@ -1438,9 +1381,7 @@ export class ShopScene extends Scene {
       this.showDevMessage('ID not found');
       return;
     }
-    const player = getPlayerState();
-    player.currentLegPermit = permit;
-    player.permitPurchasedThisLeg = false;
+    runActions.patch({ currentLegPermitId: permit.id, permitPurchasedThisLeg: false });
     // Rebuild
     this.children.removeAll(true);
     this.cards = [];

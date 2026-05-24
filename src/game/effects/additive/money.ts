@@ -2,7 +2,6 @@
 
 import { effectRegistry } from '../registry';
 import { HandType } from '../../types';
-import { getPlayerState } from '../../PlayerState';
 import { resolveEffectParam } from '../helpers';
 
 effectRegistry.registerAdditive('WANTED_HAND_MONEY', (ctx, equip, index) => {
@@ -12,7 +11,7 @@ effectRegistry.registerAdditive('WANTED_HAND_MONEY', (ctx, equip, index) => {
   const handType = ctx.handResult.type;
   if (handType === targetHand) {
     const p = equip.def.effectParams as Record<string, unknown>;
-    const value = resolveEffectParam<number>(p, 'value', getPlayerState().profession?.id);
+    const value = resolveEffectParam<number>(p, 'value', ctx.professionId ?? undefined);
     ctx.mutations.moneyEarned += value;
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'money', value });
     console.log(`  [equip] ${equip.def.name}: +$${value} (hand matched ${targetHand})`);

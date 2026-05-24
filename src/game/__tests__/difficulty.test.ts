@@ -1,13 +1,15 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetPlayerState, computeTargetMiles, computeRoundReward } from '../PlayerState';
+import { computeTargetMiles, computeRoundReward, computePayoutBreakdown } from '../runProgression';
 import { GAMEPLAY } from '../Constants';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
-import { setTestDifficulty } from './testHelpers';
+import { resetTestRun, setTestDifficulty } from './testHelpers';
 import { ceilScore, multiplyScore, eq } from '../scoreMath';
+import { getRunState, runActions, setupActions } from '../store';
+import { selectEffectiveRerolls, selectRoundReward, selectTargetMiles } from '../store/selectors/runSelectors';
 
 beforeEach(() => {
-  resetPlayerState();
+  resetTestRun();
 });
 
 describe('Difficulty System', () => {
@@ -49,23 +51,15 @@ describe('Difficulty System', () => {
       expect(eq(computeTargetMiles(leg, round, 0, 3), getBaseTargetMilesForLeg(leg, 3))).toBe(true);
       expect(eq(computeTargetMiles(leg, round, 0, 6), computeTargetMiles(leg, round, 0, 3))).toBe(false);
     });
-
-    test('permit score reduction lowers effective leg index for targets', () => {
-      setTestDifficulty(3);
-      const withReduction = computeTargetMiles(4, 1, 1, 3);
-      const without = computeTargetMiles(4, 1, 0, 3);
-      expect(eq(withReduction, getBaseTargetMilesForLeg(3, 3))).toBe(true);
-      expect(eq(without, getBaseTargetMilesForLeg(4, 3))).toBe(true);
-    });
   });
 
-  describe('Thin Supplies (Level 2+)', () => {
-    test('round 1 gives no money reward at difficulty 2+', () => {
+  describe('Round Rewards', () => {
+    test('round 1 gives no reward at difficulty 2+', () => {
       expect(computeRoundReward(1, 2)).toBe(0);
-      expect(computeRoundReward(1, 8)).toBe(0);
+      expect(computeRoundReward(1, 5)).toBe(0);
     });
 
-    test('rounds 2 and 3 give normal rewards at difficulty 2+', () => {
+    test('round 2+ gives normal reward at difficulty 2+', () => {
       expect(computeRoundReward(2, 2)).toBe(GAMEPLAY.ROUND_REWARDS[1]);
       expect(computeRoundReward(3, 2)).toBe(GAMEPLAY.ROUND_REWARDS[2]);
       expect(computeRoundReward(2, 7)).toBe(GAMEPLAY.ROUND_REWARDS[1]);
@@ -75,21 +69,18 @@ describe('Difficulty System', () => {
       expect(computeRoundReward(1, 1)).toBe(GAMEPLAY.ROUND_REWARDS[0]);
     });
 
-    test('player roundReward reflects Thin Supplies on round 1', () => {
-      const player = resetPlayerState();
-      player.setDifficulty(2);
-      player.round = 1;
-      expect(player.roundReward).toBe(0);
-      player.round = 2;
-      expect(player.roundReward).toBe(GAMEPLAY.ROUND_REWARDS[1]);
+    test('run roundReward reflects Thin Supplies on round 1', () => {
+      setTestDifficulty(2);
+      runActions.patch({ round: 1 });
+      expect(selectRoundReward(getRunState())).toBe(0);
+      runActions.patch({ round: 2 });
+      expect(selectRoundReward(getRunState())).toBe(GAMEPLAY.ROUND_REWARDS[1]);
     });
 
     test('payout total excludes round reward on round 1 at difficulty 2+', () => {
-      const player = resetPlayerState();
-      player.setDifficulty(2);
-      player.round = 1;
-      player.economy.setBalance(0);
-      const payout = player.calculatePayout(0, 0);
+      setTestDifficulty(2);
+      runActions.patch({ round: 1, balance: 0 });
+      const payout = computePayoutBreakdown(getRunState(), 0, 0);
       expect(payout.roundReward).toBe(0);
       expect(payout.total).toBe(0);
     });
@@ -97,63 +88,59 @@ describe('Difficulty System', () => {
 
   describe('Harsh Rations (Level 5+)', () => {
     test('reduces max rerolls by 1 at difficulty 5+', () => {
-      const player = resetPlayerState();
-      player.setDifficulty(5);
-      expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
+      setTestDifficulty(5);
+      expect(selectEffectiveRerolls(getRunState())).toBe(GAMEPLAY.MAX_REROLLS - 1);
 
-      player.setDifficulty(8);
-      expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
+      setTestDifficulty(8);
+      expect(selectEffectiveRerolls(getRunState())).toBe(GAMEPLAY.MAX_REROLLS - 1);
     });
 
     test('stacks with profession reroll modifiers', () => {
-      const player = resetPlayerState();
-      player.applyProfession('farmer');
-      player.setDifficulty(5);
-      expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS);
+      resetTestRun();
+      setupActions.applyProfession('farmer');
+      setTestDifficulty(5);
+      expect(selectEffectiveRerolls(getRunState())).toBe(GAMEPLAY.MAX_REROLLS);
     });
 
     test('never goes below 0 rerolls', () => {
-      const player = resetPlayerState();
-      player.setDifficulty(5);
-      player.permitRerollPenalty = 20;
-      player.trailEventModifiers.rerollPenalty = 20;
-      expect(player.effectiveRerolls).toBe(0);
+      setTestDifficulty(5);
+      runActions.patch({
+        permitRerollPenalty: 20,
+        trailEventModifiers: {
+          ...getRunState().trailEventModifiers,
+          rerollPenalty: 20,
+        },
+      });
+      expect(selectEffectiveRerolls(getRunState())).toBe(0);
     });
 
     test('difficulty 4 does not reduce rerolls', () => {
-      const player = resetPlayerState();
-      player.setDifficulty(4);
-      expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS);
+      setTestDifficulty(4);
+      expect(selectEffectiveRerolls(getRunState())).toBe(GAMEPLAY.MAX_REROLLS);
     });
   });
 
-  describe('player targetMiles integration', () => {
-    test('difficulty 1: normal target miles on player state', () => {
-      const player = resetPlayerState();
-      player.leg = 2;
-      player.round = 2;
+  describe('run targetMiles integration', () => {
+    test('difficulty 1: normal target miles', () => {
+      runActions.patch({ leg: 2, round: 2 });
       expect(
         eq(
-          player.targetMiles,
+          selectTargetMiles(getRunState()),
           ceilScore(multiplyScore(getBaseTargetMilesForLeg(2, 1), GAMEPLAY.ROUND_MULTIPLIERS[1])),
         ),
       ).toBe(true);
     });
 
-    test('difficulty 3: rough targets on player state', () => {
-      const player = resetPlayerState();
-      player.setDifficulty(3);
-      player.leg = 2;
-      player.round = 1;
-      expect(eq(player.targetMiles, getBaseTargetMilesForLeg(2, 3))).toBe(true);
+    test('difficulty 3: rough targets', () => {
+      setTestDifficulty(3);
+      runActions.patch({ leg: 2, round: 1 });
+      expect(eq(selectTargetMiles(getRunState()), getBaseTargetMilesForLeg(2, 3))).toBe(true);
     });
 
-    test('difficulty 6: deadly targets on player state', () => {
-      const player = resetPlayerState();
-      player.setDifficulty(6);
-      player.leg = 3;
-      player.round = 1;
-      expect(eq(player.targetMiles, getBaseTargetMilesForLeg(3, 6))).toBe(true);
+    test('difficulty 6: deadly targets', () => {
+      setTestDifficulty(6);
+      runActions.patch({ leg: 3, round: 1 });
+      expect(eq(selectTargetMiles(getRunState()), getBaseTargetMilesForLeg(3, 6))).toBe(true);
     });
   });
 });

@@ -3,7 +3,10 @@
 // Used by supply cards (mirage, shallow_grave) and frontier encounters (gold_rush, etc.).
 
 import { Die, DiceAura, DiceEnhancement, DiceSticker } from './types';
-import { getPlayerState } from './PlayerState';
+import { getRunState, runStore } from './store/runStore';
+import { diceActions } from './store/actions/diceActions';
+import { replaceEquipmentList, resolveEquipmentList } from './store/resolve';
+import { storedFromEquipmentInstances } from './store/resolve';
 import { setDieEnhancement } from './DiceSystem';
 import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
 import { CHANCES } from './Constants';
@@ -50,6 +53,20 @@ export function shouldUpdateDisplayedDiceValue(effectType: DiceSelectionEffectTy
   return effectType === 'BUMP_VALUE';
 }
 
+function findRunDie(dieId: string): Die | undefined {
+  return getRunState().dice.find((d) => d.id === dieId);
+}
+
+function patchRunDie(dieId: string, updater: (die: Die) => Die): boolean {
+  const state = getRunState();
+  const idx = state.dice.findIndex((d) => d.id === dieId);
+  if (idx < 0) return false;
+  const dice = [...state.dice];
+  dice[idx] = updater({ ...dice[idx]! });
+  runStore.setState({ dice });
+  return true;
+}
+
 // ─── Drawing Dice ───
 
 /**
@@ -58,15 +75,16 @@ export function shouldUpdateDisplayedDiceValue(effectType: DiceSelectionEffectTy
  * Returns copies (not references) so originals stay in pool.
  */
 export function drawDiceForSelection(count: number): Die[] {
-  const player = getPlayerState();
+  const run = getRunState();
   // drawCount 0 means "show handSize dice from non-spent pool"
-  const effectiveCount = count > 0 ? count : player.handSize;
+  const effectiveCount = count > 0 ? count : run.handSize;
+  const spent = new Set(run.spentDiceIds);
   const pool =
     count > 0
-      ? rngShuffle('dice', player.dice)
+      ? rngShuffle('dice', run.dice)
       : rngShuffle(
           'dice',
-          player.dice.filter((d) => !player.spentDiceIds.has(d.id)),
+          run.dice.filter((d) => !spent.has(d.id)),
         );
   return pool.slice(0, Math.min(effectiveCount, pool.length)).map((d) => ({ ...d }));
 }
@@ -78,69 +96,72 @@ export function drawDiceForSelection(count: number): Die[] {
  * Returns a description of what happened.
  */
 export function applyDiceSelectionEffect(config: DiceSelectionConfig, selectedDice: Die[]): string {
-  const player = getPlayerState();
-
   switch (config.effectType) {
     case 'DESTROY':
-      return applyDestroy(player, selectedDice);
+      return applyDestroy(selectedDice);
     case 'COPY':
-      return applyCopy(player, selectedDice, config.effectParams.copyCount ?? 2);
+      return applyCopy(selectedDice, config.effectParams.copyCount ?? 2);
     case 'ADD_STICKER':
-      return applyAddSticker(player, selectedDice, config.effectParams.sticker!);
+      return applyAddSticker(selectedDice, config.effectParams.sticker!);
     case 'CLONE':
-      return applyClone(player, selectedDice);
+      return applyClone(selectedDice);
     case 'APPLY_AURA':
-      return applyAura(player, selectedDice, config.effectParams.aura ?? null);
+      return applyAura(selectedDice, config.effectParams.aura ?? null);
     case 'BUMP_VALUE':
-      return applyBumpValue(player, selectedDice, config.effectParams.bumpDirection ?? 'up');
+      return applyBumpValue(selectedDice, config.effectParams.bumpDirection ?? 'up');
     case 'ENHANCE':
-      return applyEnhance(player, selectedDice, config.effectParams.enhancement ?? null);
+      return applyEnhance(selectedDice, config.effectParams.enhancement ?? null);
   }
 }
 
-function applyDestroy(player: ReturnType<typeof getPlayerState>, selectedDice: Die[]): string {
+function applyDestroy(selectedDice: Die[]): string {
   const ids = new Set(selectedDice.map((d) => d.id));
   const enhancedCount = selectedDice.filter((d) => d.enhancement !== null).length;
-  const before = player.dice.length;
-  player.dice = player.dice.filter((d) => !ids.has(d.id));
-  const removed = before - player.dice.length;
+  const state = getRunState();
+  const before = state.dice.length;
+  const equipment = resolveEquipmentList();
+  const dice = state.dice.filter((d) => !ids.has(d.id));
+  const removed = before - dice.length;
   if (removed > 0) {
-    processEquipmentOnDiceDestroyed(player.equipment, removed, enhancedCount);
+    processEquipmentOnDiceDestroyed(equipment, removed, enhancedCount);
+    runStore.setState({ dice, equipment: storedFromEquipmentInstances(equipment) });
+    replaceEquipmentList(equipment);
   }
   return `Destroyed ${removed} dice`;
 }
 
-function applyCopy(player: ReturnType<typeof getPlayerState>, selectedDice: Die[], copyCount: number): string {
+function applyCopy(selectedDice: Die[], copyCount: number): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
-  const original = player.dice.find((d) => d.id === die.id);
+  const original = findRunDie(die.id);
   if (!original) return 'Die not found';
   for (let i = 0; i < copyCount; i++) {
-    player.addDie({ ...original });
+    diceActions.addDie({ ...original });
   }
   return `Created ${copyCount} copies`;
 }
 
-function applyAddSticker(player: ReturnType<typeof getPlayerState>, selectedDice: Die[], sticker: DiceSticker): string {
+function applyAddSticker(selectedDice: Die[], sticker: DiceSticker): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
-  const original = player.dice.find((d) => d.id === die.id);
-  if (!original) return 'Die not found';
-
-  original.sticker = sticker;
+  if (!findRunDie(die.id)) return 'Die not found';
+  patchRunDie(die.id, (d) => ({ ...d, sticker }));
   return `Applied ${sticker} sticker`;
 }
 
-function applyClone(player: ReturnType<typeof getPlayerState>, selectedDice: Die[]): string {
+function applyClone(selectedDice: Die[]): string {
   if (selectedDice.length < 2) return 'Select 2 dice';
-  const left = player.dice.find((d) => d.id === selectedDice[0].id);
-  const right = player.dice.find((d) => d.id === selectedDice[1].id);
+  const left = findRunDie(selectedDice[0].id);
+  const right = findRunDie(selectedDice[1].id);
   if (!left || !right) return 'Dice not found';
 
-  // Left becomes a copy of right (keep left's id; face value follows enhancement rules)
-  setDieEnhancement(left, right.enhancement);
-  left.sticker = right.sticker;
-  left.aura = right.aura;
+  patchRunDie(left.id, (d) => {
+    const cloned = { ...d };
+    setDieEnhancement(cloned, right.enhancement);
+    cloned.sticker = right.sticker;
+    cloned.aura = right.aura;
+    return cloned;
+  });
 
   return `Cloned ${right.enhancement ?? 'standard'} die`;
 }
@@ -155,50 +176,44 @@ export function pickRandomAura(): DiceAura {
   return 'icy';
 }
 
-function applyAura(player: ReturnType<typeof getPlayerState>, selectedDice: Die[], aura: DiceAura): string {
+function applyAura(selectedDice: Die[], aura: DiceAura | null): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
-  const original = player.dice.find((d) => d.id === die.id);
-  if (!original) return 'Die not found';
+  if (!findRunDie(die.id)) return 'Die not found';
 
   const chosenAura = aura ?? pickRandomAura();
-  original.aura = chosenAura;
+  patchRunDie(die.id, (d) => ({ ...d, aura: chosenAura }));
 
   const info = diceAuras.find((a) => a.id === chosenAura);
   const auraName = info ? info.name : chosenAura;
   return `Applied ${auraName} aura`;
 }
 
-function applyEnhance(
-  player: ReturnType<typeof getPlayerState>,
-  selectedDice: Die[],
-  enhancement: DiceEnhancement,
-): string {
+function applyEnhance(selectedDice: Die[], enhancement: DiceEnhancement): string {
   let count = 0;
   for (const die of selectedDice) {
-    const original = player.dice.find((d) => d.id === die.id);
-    if (!original) continue;
-    setDieEnhancement(original, enhancement);
+    const updated = patchRunDie(die.id, (original) => {
+      const next = { ...original };
+      setDieEnhancement(next, enhancement);
+      return next;
+    });
+    if (!updated) continue;
+    setDieEnhancement(die, enhancement);
     count++;
   }
   return `Enhanced ${count} dice to ${enhancement ?? 'standard'}`;
 }
 
-function applyBumpValue(
-  player: ReturnType<typeof getPlayerState>,
-  selectedDice: Die[],
-  direction: 'up' | 'down',
-): string {
+function applyBumpValue(selectedDice: Die[], direction: 'up' | 'down'): string {
   const die = selectedDice[0];
   if (!die) return 'No die selected';
-  const original = player.dice.find((d) => d.id === die.id);
-  if (!original) return 'Die not found';
+  if (!findRunDie(die.id)) return 'Die not found';
 
   // Use the visible value (from the passed-in die, which may be a rolled copy)
   const currentValue = die.value;
   const delta = direction === 'up' ? 1 : -1;
   const newValue = Math.min(12, Math.max(1, currentValue + delta));
   if (newValue === currentValue) return `Already at ${currentValue}`;
-  original.value = newValue;
+  patchRunDie(die.id, (d) => ({ ...d, value: newValue }));
   return `Bumped die from ${currentValue} to ${newValue}`;
 }

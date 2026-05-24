@@ -4,7 +4,7 @@
 // Each permit has 2 stages; stage 2 requires stage 1 to be purchased first.
 
 import permitsData, { getPermitById as findPermitById, type PermitDef, type PermitEffect } from '../data/permits';
-import type { PlayerState } from './PlayerState';
+import { getRunState, runActions } from './store/runStore';
 import { rngPick } from './RunRng';
 
 export type { PermitDef, PermitEffect };
@@ -57,91 +57,46 @@ export function generateShopPermit(purchasedIds: string[]): PermitDef | null {
 // ─── Effect Application ───
 
 /**
- * Apply a permit's permanent effect to the player.
+ * Apply a permit's permanent effect to run store state.
  * Called immediately on purchase.
  */
-export function applyPermitEffect(permit: PermitDef, player: PlayerState): void {
+export function applyPermitEffectToRun(permit: PermitDef, state = getRunState()): void {
   const effect = permit.effect;
+  const patch: Partial<typeof state> = {};
 
   switch (effect.type) {
     case 'SHOP_SLOTS':
-      player.shopSlots += effect.value as number;
+      patch.shopSlots = state.shopSlots + (effect.value as number);
       break;
-
-    case 'SHOP_DISCOUNT':
-      // Stored as cumulative — later queries check which permits are owned
-      // No immediate state change needed; discount is query-based
-      break;
-
-    case 'AURA_MULTIPLIER':
-      // Query-based — no immediate state change
-      break;
-
-    case 'SHOP_REROLL_DISCOUNT':
-      // Query-based — no immediate state change
-      break;
-
     case 'CONSUMABLE_SLOTS':
-      player.maxConsumableSlots += effect.value as number;
+      patch.maxConsumableSlots = state.maxConsumableSlots + (effect.value as number);
       break;
-
-    case 'FRONTIER_IN_PACKS':
-      // Query-based — no immediate state change
-      break;
-
-    case 'TRAIL_GUIDE_TARGETING':
-      // Query-based — no immediate state change
-      break;
-
-    case 'TRAIL_GUIDE_MULT':
-      // Query-based — no immediate state change
-      break;
-
     case 'DAY_BONUS':
-      player.permitDayBonus += effect.value as number;
+      patch.permitDayBonus = state.permitDayBonus + (effect.value as number);
       break;
-
     case 'REROLL_BONUS':
-      player.permitRerollBonus += effect.value as number;
+      patch.permitRerollBonus = state.permitRerollBonus + (effect.value as number);
       break;
-
-    case 'SHOP_WEIGHT_SUPPLY':
-      // Query-based — no immediate state change
-      break;
-
-    case 'SHOP_WEIGHT_TRAIL_GUIDE':
-      // Query-based — no immediate state change
-      break;
-
     case 'INTEREST_CAP':
-      player.interestCap = effect.value as number;
+      patch.interestCap = effect.value as number;
       break;
-
-    case 'NONE':
-      // Strange Coin — does nothing
-      break;
-
     case 'EQUIPMENT_SLOTS':
-      player.maxEquipmentSlots += effect.value as number;
+      patch.maxEquipmentSlots = state.maxEquipmentSlots + (effect.value as number);
       break;
-
-    case 'DICE_IN_SHOP':
-      // Query-based — no immediate state change
-      break;
-
     case 'SHORTCUT':
-      if (effect.dayPenalty) player.permitDayPenalty += effect.dayPenalty;
-      if (effect.rerollPenalty) player.permitRerollPenalty += effect.rerollPenalty;
-      player.permitScoreReduction += effect.scoreLegReduction ?? 0;
+      patch.permitDayPenalty = state.permitDayPenalty + (effect.dayPenalty ?? 0);
+      patch.permitRerollPenalty = state.permitRerollPenalty + (effect.rerollPenalty ?? 0);
+      patch.permitScoreReduction = state.permitScoreReduction + (effect.scoreLegReduction ?? 0);
       break;
-
-    case 'BOSS_REROLL':
-      // Query-based — no immediate state change
-      break;
-
     case 'HAND_SIZE':
-      player.handSize += effect.value as number;
+      patch.handSize = state.handSize + (effect.value as number);
       break;
+    default:
+      break;
+  }
+
+  if (Object.keys(patch).length > 0) {
+    runActions.patch(patch);
   }
 }
 
@@ -149,7 +104,7 @@ export function applyPermitEffect(permit: PermitDef, player: PlayerState): void 
 // These check which permits the player has purchased and return derived values.
 
 /** Get the current shop discount (0, 0.25, or 0.50) */
-export function getPermitShopDiscount(purchasedIds: string[]): number {
+export function getPermitShopDiscount(purchasedIds: readonly string[]): number {
   if (purchasedIds.includes('estate_auction')) return 0.5;
   if (purchasedIds.includes('bargain_bin')) return 0.25;
   return 0;

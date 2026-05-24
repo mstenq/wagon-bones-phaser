@@ -1,11 +1,13 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState, resetPlayerState } from '../../game/PlayerState';
+import { getRunState, resetAllGameStores, runActions } from '../../game/store';
+import { selectStoryVictoryOffered } from '../../game/store/selectors/runSelectors';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
 import type { DecimalSource } from '../../game/decimal';
 import { Button } from '../ui/Button';
 import { clearAutoSave } from '../AutoSaveManager';
+import { sceneActions } from '../../game/store/sceneStore';
 import { getRunSeed } from '../../game/RunRng';
 
 export interface GameOverData {
@@ -29,6 +31,7 @@ export class GameOver extends Scene {
   private sceneData: GameOverData;
 
   create(data: GameOverData) {
+    sceneActions.enterScene('none');
     if (!data.offerEndless) {
       clearAutoSave();
     }
@@ -132,20 +135,18 @@ export class GameOver extends Scene {
 
     if (isStoryVictory) {
       new Button(this, width / 2, btnBaseY, 'Keep Wandering', 220, 48).onClick(() => {
-        const player = getPlayerState();
-        player.endlessMode = true;
-        player.storyVictoryPending = false;
+        runActions.patch({ endlessMode: true, storyVictoryPending: false });
         this.scene.start('TrailEvent', {});
       });
       new Button(this, width / 2, btnBaseY + 58, 'Make Camp', 220, 48).onClick(() => {
         clearAutoSave();
-        resetPlayerState();
+        resetAllGameStores();
         this.scene.start('MainMenu', {});
       });
     } else {
       new Button(this, width / 2, btnBaseY, 'Play Again', 200, 48).onClick(() => {
         clearAutoSave();
-        resetPlayerState();
+        resetAllGameStores();
         this.scene.start('MainMenu', {});
       });
     }
@@ -159,12 +160,8 @@ export class GameOver extends Scene {
 }
 
 /** Build GameOver scene data after a round win that ends the journey arc. */
-export function buildVictoryGameOverData(
-  totalMiles: DecimalSource,
-  targetMiles: DecimalSource,
-): GameOverData {
-  const player = getPlayerState();
-  if (player.storyVictoryOffered) {
+export function buildVictoryGameOverData(totalMiles: DecimalSource, targetMiles: DecimalSource): GameOverData {
+  if (selectStoryVictoryOffered(getRunState())) {
     return {
       won: true,
       victory: true,
@@ -175,13 +172,14 @@ export function buildVictoryGameOverData(
       round: GAMEPLAY.ROUNDS_PER_LEG,
     };
   }
+  const run = getRunState();
   return {
     won: true,
     victory: true,
-    endlessComplete: player.leg > GAMEPLAY.MAX_LEGS,
+    endlessComplete: run.leg > GAMEPLAY.MAX_LEGS,
     totalMiles,
     targetMiles,
-    leg: player.leg > GAMEPLAY.MAX_LEGS ? GAMEPLAY.MAX_LEGS : player.leg - 1,
+    leg: run.leg > GAMEPLAY.MAX_LEGS ? GAMEPLAY.MAX_LEGS : run.leg - 1,
     round: GAMEPLAY.ROUNDS_PER_LEG,
   };
 }

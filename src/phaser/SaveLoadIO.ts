@@ -8,18 +8,13 @@ import {
   getSaveFilename,
   assertSaveIntegrity,
   type GameSaveSnapshot,
-  type SceneSaveContext,
   type ActiveScene,
-  type GameRoundSaveData,
 } from '../game/SaveLoad';
-import { getPlayerState } from '../game/PlayerState';
-import { GameScene } from './scenes/GameScene';
-import { ShopScene } from './scenes/ShopScene';
-import { BoosterPackScene } from './scenes/BoosterPackScene';
-import { TrailEventScene } from './scenes/TrailEventScene';
+import { getRunState } from '../game/store/runStore';
 import { readPreviousAutoSaveFromStorage } from '../game/AutoSave';
 import { startAutoSaveLoop } from './AutoSaveManager';
 import { ensureBackgroundMusic } from './BackgroundMusic';
+import { sceneActions } from '../game/store/sceneStore';
 
 export function downloadSave(snapshot: GameSaveSnapshot, filename?: string): void {
   const json = JSON.stringify(snapshot, null, 2);
@@ -87,47 +82,21 @@ export function pickAndParseSave(): Promise<GameSaveSnapshot> {
   });
 }
 
+/** Ensure sceneStore activeScene matches the Phaser scene before snapshotting. */
+export function syncSceneStoreFromScene(scene: Scene): ActiveScene {
+  const key = scene.scene.key as ActiveScene;
+  sceneActions.setActiveScene(key);
+  return key;
+}
+
 export function buildSnapshotFromScene(scene: Scene): GameSaveSnapshot {
-  return buildSaveSnapshot(collectSceneContext(scene));
+  syncSceneStoreFromScene(scene);
+  return buildSaveSnapshot();
 }
 
 export function restoreSnapshotToScene(hostScene: Scene, snapshot: GameSaveSnapshot): void {
-  const { scene: targetScene, sceneData } = applySaveSnapshot(snapshot);
-  hostScene.scene.start(targetScene, sceneData);
-}
-
-function collectSceneContext(scene: Scene): SceneSaveContext {
-  const key = scene.scene.key as ActiveScene;
-
-  switch (key) {
-    case 'Game': {
-      const gameScene = scene as GameScene;
-      const gs = gameScene.getGameState();
-      const data: GameRoundSaveData = {
-        config: { ...gs.config },
-        state: {
-          ...gs.state,
-          spent: [...gs.state.spent],
-          hand: [...gs.state.hand],
-          selectedForRoll: [...gs.state.selectedForRoll],
-          rolledDice: [...gs.state.rolledDice],
-          selectedForScore: [...gs.state.selectedForScore],
-          handHistory: [...gs.state.handHistory],
-        },
-      };
-      return { activeScene: 'Game', data };
-    }
-    case 'Shop':
-      return { activeScene: 'Shop', data: (scene as ShopScene).getSaveContext() };
-    case 'BoosterPack':
-      return { activeScene: 'BoosterPack', data: (scene as BoosterPackScene).getSaveContext() };
-    case 'TrailEvent':
-      return { activeScene: 'TrailEvent', data: (scene as TrailEventScene).getSaveContext() };
-    case 'RoundSelect':
-      return { activeScene: 'RoundSelect' };
-    default:
-      throw new Error(`Cannot export from scene: ${key}`);
-  }
+  const { scene: targetScene } = applySaveSnapshot(snapshot);
+  hostScene.scene.start(targetScene, {});
 }
 
 export function exportGameFromScene(scene: Scene): void {
@@ -141,8 +110,7 @@ export function exportGameFromScene(scene: Scene): void {
 }
 
 export async function performLoadGame(scene: Scene, options?: { confirmOverwrite?: boolean }): Promise<void> {
-  const player = getPlayerState();
-  const needsConfirm = options?.confirmOverwrite ?? player.profession !== null;
+  const needsConfirm = options?.confirmOverwrite ?? getRunState().professionId !== null;
 
   if (needsConfirm) {
     const ok = window.confirm('Load a save file? Your current run will be replaced.');

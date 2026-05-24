@@ -2,32 +2,35 @@
 // Gates shop and random equipment pools until prerequisites are met.
 // Keep this module free of ItemsSystem/PlayerState imports to avoid circular init.
 
-import type { GameState } from './GameState';
-import type { PlayerState } from './PlayerState';
+import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
 import type { DiceEnhancement } from './types';
+import { runStore } from './store/runStore';
 
-export type EquipmentUnlockCondition = (game: GameState | null, player: PlayerState) => boolean;
+export type EquipmentUnlockCondition = (round: RoundHintContext | null, player: ItemDisplayContext) => boolean;
 
-export function playerHasDiceEnhancement(player: PlayerState, enhancement: NonNullable<DiceEnhancement>): boolean {
+export function playerHasDiceEnhancement(
+  player: ItemDisplayContext,
+  enhancement: NonNullable<DiceEnhancement>,
+): boolean {
   return player.dice.some((d) => d.enhancement === enhancement);
 }
 
-export function playerHasAnyEnhancedDice(player: PlayerState): boolean {
+export function playerHasAnyEnhancedDice(player: ItemDisplayContext): boolean {
   return player.dice.some((d) => d.enhancement !== null);
 }
 
-export function playerHasDistinctEnhancedTypes(player: PlayerState, min: number): boolean {
+export function playerHasDistinctEnhancedTypes(player: ItemDisplayContext, min: number): boolean {
   const types = new Set(player.dice.filter((d) => d.enhancement !== null).map((d) => d.enhancement));
   return types.size >= min;
 }
 
 export function unlockByEnhancement(enhancement: NonNullable<DiceEnhancement>): EquipmentUnlockCondition {
-  return (_game, player) => playerHasDiceEnhancement(player, enhancement);
+  return (_round, player) => playerHasDiceEnhancement(player, enhancement);
 }
 
-export const unlockAnyEnhanced: EquipmentUnlockCondition = (_game, player) => playerHasAnyEnhancedDice(player);
+export const unlockAnyEnhanced: EquipmentUnlockCondition = (_round, player) => playerHasAnyEnhancedDice(player);
 
-export const unlockTwoEnhancedTypes: EquipmentUnlockCondition = (_game, player) =>
+export const unlockTwoEnhancedTypes: EquipmentUnlockCondition = (_round, player) =>
   playerHasDistinctEnhancedTypes(player, 2);
 
-export const unlockNitro: EquipmentUnlockCondition = (_game, player) => player.dynamiteSelfDestructed;
+export const unlockNitro: EquipmentUnlockCondition = () => runStore.getState().dynamiteSelfDestructed;

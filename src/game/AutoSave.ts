@@ -70,5 +70,5 @@ export function clearPreviousAutoSaveStorage(): void {
 
 export function hasRunnableAutoSave(): boolean {
   const snapshot = readAutoSaveFromStorage();
-  return snapshot !== null && snapshot.player.professionId !== null;
+  return snapshot !== null && snapshot.run.professionId !== null;
 }

@@ -8,11 +8,12 @@ import {
   processEquipmentOnRoundStart,
 } from '../../EquipmentEffects';
 import { getLoadedDiceMultiplier } from '../../equipmentUtils';
+import { gt, lte } from '../../scoreMath';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
 import { getItemAuraById } from '../../ItemsSystem';
 import { HandType } from '../../types';
 import { rollDie } from '../../DiceSystem';
-import { getPlayerState, resetPlayerState } from '../../PlayerState';
+import { getPlayerState, resetPlayerState } from '../testRunPlayer';
 import '../../effects';
 
 beforeEach(() => {
@@ -190,7 +191,6 @@ describe('loaded enhancement rolling', () => {
 describe('Loaded Dice + Dynamite (ADD_MULT_RISKY)', () => {
   test('doubles destroy chance with one Loaded Dice', () => {
     // Dynamite: destroyChance [1, 6] → normally ~16.7%, with loaded dice → ~33.3%
-    const equipment = [item('dynamite'), item('loaded_dice')];
     let destroyed = 0;
     const trials = 10000;
 
@@ -457,7 +457,7 @@ describe('Loaded Dice + Bone Charm (BONE_DICE_XMULT_CHANCE)', () => {
       });
       // PAIR baseMult=1, +4 per bone die (2 dice=+8), bone charm x1.5 per trigger
       // Without charm: (1+8)*1 = 9, with both triggered: (1+8)*1.5*1.5 = 20.25
-      if (result.mult > 9.5) triggered++;
+      if (gt(result.mult, 9.5)) triggered++;
     }
 
     // Should be guaranteed with loaded dice (100% per die)
@@ -475,7 +475,7 @@ describe('Loaded Dice + Bone Charm (BONE_DICE_XMULT_CHANCE)', () => {
       });
       // PAIR baseMult=1, +4 from bone die, bone charm x1.5 when triggered
       // Without charm: (1+4)*1 = 5, with charm triggered: (1+4)*1.5 = 7.5
-      if (result.mult <= 5.1) neitherTriggered++;
+      if (lte(result.mult, 5.1)) neitherTriggered++;
     }
 
     const noTriggerRate = neitherTriggered / runs;
@@ -498,7 +498,7 @@ describe('Loaded Dice + Lucky dice enhancement', () => {
         equipment: [item('loaded_dice')],
       });
       // Base PAIR mult = 1, lucky +20 when triggered
-      if (result.mult > 10) multHits++;
+      if (gt(result.mult, 10)) multHits++;
     }
 
     const rate = multHits / runs;
@@ -535,7 +535,7 @@ describe('Loaded Dice + Lucky dice enhancement', () => {
         scoredDice: [die({ value: 5, enhancement: 'lucky' })],
         equipment: [],
       });
-      if (result.mult > 10) multHits++;
+      if (gt(result.mult, 10)) multHits++;
     }
 
     const rate = multHits / runs;
@@ -594,7 +594,7 @@ describe('Loaded Dice + Bless supply card', () => {
       const blessDef = getSupplyDefById('bless');
       if (!blessDef) throw new Error('bless not found');
       const consumed = createConsumableInstance(blessDef);
-      executeConsumableEffect(consumed, player);
+      executeConsumableEffect(consumed);
 
       // Check if any equipment got an aura
       if (player.equipment.some((e) => e.def.aura)) totalBlessed++;
@@ -618,7 +618,7 @@ describe('Loaded Dice + Bless supply card', () => {
       const blessDef = getSupplyDefById('bless');
       if (!blessDef) throw new Error('bless not found');
       const consumed = createConsumableInstance(blessDef);
-      executeConsumableEffect(consumed, player);
+      executeConsumableEffect(consumed);
 
       if (player.equipment[0].def.aura) totalBlessed++;
     }
@@ -634,13 +634,15 @@ describe('Loaded Dice + Bless supply card', () => {
       equipment: [item('horseshoe')],
       money: 10,
     });
-    // Manually add an aura
-    player.equipment[0].def = { ...player.equipment[0].def, aura: getItemAuraById('fire')! };
+    // Manually add an aura (persist to run store — bless reads resolveEquipmentList)
+    const eq = player.equipment[0];
+    eq.def = { ...eq.def, aura: getItemAuraById('fire')! };
+    player.persistEquipment();
 
     const blessDef = getSupplyDefById('bless');
     if (!blessDef) throw new Error('bless not found');
     const consumed = createConsumableInstance(blessDef);
-    const result = executeConsumableEffect(consumed, player);
+    const result = executeConsumableEffect(consumed);
 
     expect(result.success).toBe(false);
     expect(result.failReason).toBe('All equipment already has auras!');

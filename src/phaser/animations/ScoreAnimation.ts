@@ -15,6 +15,8 @@ import { ensureAuraTextures } from '../ui/AuraFX';
 import { ANIM } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
 import { addScore, multiplyScore, D } from '../../game/scoreMath';
+import { milesToSave } from '../../game/scoreMath';
+import { roundActions } from '../../game/store/actions/roundActions';
 
 // ─── Floating Score Popup ───
 
@@ -132,7 +134,6 @@ function animateGrantToConsumableBar(
   const prefix = getConsumableTexturePrefix(def.category);
   const textureKey = `${prefix}${def.id}`;
   if (!scene.textures.exists(textureKey)) {
-    consumableBar.refresh();
     onComplete();
     return;
   }
@@ -152,7 +153,6 @@ function animateGrantToConsumableBar(
     ease: 'Power2',
     onComplete: () => {
       ghost.destroy();
-      consumableBar.refresh();
       onComplete();
     },
   });
@@ -512,7 +512,6 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         if (sprite && def) {
           animateGrantToConsumableBar(scene, sprite.x, sprite.y, def, consumableBar, done);
         } else {
-          consumableBar.refresh();
           done();
         }
         return;
@@ -542,7 +541,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       // Show popup on die if target involves a die
       if (target.kind === 'die' || target.kind === 'both') {
         const sprite = dieSpriteMap.get(target.dieId);
-        if (sprite && popupType !== 'trail_guide') {
+        if (sprite) {
           popupForDie(scene, sprite, popupType, value);
         }
       }
@@ -569,10 +568,6 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       }
 
       // Refresh consumable bar on supply card grants
-      if (popupType === 'supply') {
-        consumableBar.refresh();
-      }
-
       // Play sound
       const sfx = getSoundForType(popupType, stepIdx);
       scene.sound.play(sfx.key, sfx.config);
@@ -583,7 +578,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
     function finishScoring() {
       scene.time.delayedCall(ANIM.SCORE_FINAL_FLASH_DELAY, () => {
-        sidebar.updateData({ milesBase: 0, mult: 0 });
+        roundActions.setSidebarOverlay({ milesBaseSave: milesToSave(0), multSave: milesToSave(0) });
         sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));
         scene.sound.play('sfx_timpani', { volume: 0.5 });
         scene.time.delayedCall(ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);

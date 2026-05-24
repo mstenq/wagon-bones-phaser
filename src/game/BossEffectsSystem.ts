@@ -2,12 +2,25 @@
 // Applies boss modifiers during boss rounds, unless negated by Saint Elmo's Shield
 // or Sheriff's Badge (sold this round).
 
-import { Die, HandResult, HandType } from './types';
-import { getPlayerState } from './PlayerState';
+import { Die, HandResult, HandType, type HandStats } from './types';
 import { isBossEffectNegated, dieMatchesParity } from './effects/helpers';
 import { getMostPlayedHandTypes } from './handStatsHelpers';
 import { buildHandResult } from './DiceSystem';
 import { rngFloat, rngShuffle } from './RunRng';
+import { getRunState } from './store/runStore';
+import { resolveEquipmentList } from './store/resolve';
+import {
+  getBossRoundState,
+  patchBossRoundState,
+  resetBossRoundStateSlice,
+  updateBossRoundState,
+} from './store/bossRoundState';
+import { selectAvailableDice, selectCurrentBoss } from './store/selectors/runSelectors';
+import { economyActions } from './store/actions/economyActions';
+import { diceActions } from './store/actions/diceActions';
+
+export type { BossRoundState } from './store/types';
+export { EMPTY_BOSS_ROUND_STATE } from './store/types';
 
 export interface BossRoundConfigMods {
   targetMilesMultiplier: number;
@@ -17,55 +30,22 @@ export interface BossRoundConfigMods {
   setMaxDays: number | null;
 }
 
-export interface BossRoundState {
-  /** Equipment slot indices disabled by Jinx (current day only) */
-  disabledEquipmentIndices: number[];
-  /** Bounty: dice locked into score selection after first roll each day */
-  lockedDiceIds: string[];
-  /** Preacher: hand type locked after first play */
-  preacherLockedHand: HandType | null;
-  /** Call Girl: hand types already played this round */
-  handsPlayedThisRound: HandType[];
-  /** Land Slide: shuffled display order (original indices) */
-  equipmentDisplayOrder: number[] | null;
-  /** Land Slide: card faces hidden */
-  equipmentHidden: boolean;
-  /** Land Slide: hints/tooltips enabled after first scored hand */
-  landSlideRevealed: boolean;
-  /** Bank Lien: dice scoring re-enabled after selling one equipment */
-  diceScoringReenabledBySell: boolean;
-}
-
 const NO_MODS: BossRoundConfigMods = {
   targetMilesMultiplier: 1,
   setMaxRerolls: null,
   setMaxDays: null,
 };
 
-export const EMPTY_BOSS_ROUND_STATE: BossRoundState = {
-  disabledEquipmentIndices: [],
-  lockedDiceIds: [],
-  preacherLockedHand: null,
-  handsPlayedThisRound: [],
-  equipmentDisplayOrder: null,
-  equipmentHidden: false,
-  landSlideRevealed: false,
-  diceScoringReenabledBySell: false,
-};
-
 function getActiveBoss() {
   if (isBossEffectNegated()) return null;
-  return getPlayerState().currentBoss;
-}
-
-/** Mutable per-round boss state on PlayerState */
-export function getBossRoundState(): BossRoundState {
-  return getPlayerState().bossRoundState;
+  return selectCurrentBoss(getRunState());
 }
 
 export function resetBossRoundState(): void {
-  getPlayerState().bossRoundState = { ...EMPTY_BOSS_ROUND_STATE, disabledEquipmentIndices: [] };
+  resetBossRoundStateSlice();
 }
+
+export { getBossRoundState } from './store/bossRoundState';
 
 /** Initialize boss-specific state at round start */
 export function initBossRoundState(): void {
@@ -73,19 +53,16 @@ export function initBossRoundState(): void {
   const boss = getActiveBoss();
   if (!boss) return;
 
-  const state = getBossRoundState();
-
-  switch (boss.effectType) {
-    case 'HIDE_EQUIPMENT': {
-      const player = getPlayerState();
-      state.equipmentDisplayOrder = rngShuffle(
+  if (boss.effectType === 'HIDE_EQUIPMENT') {
+    const equipment = resolveEquipmentList();
+    patchBossRoundState({
+      equipmentDisplayOrder: rngShuffle(
         'boss',
-        player.equipment.map((_, i) => i),
-      );
-      state.equipmentHidden = true;
-      state.landSlideRevealed = false;
-      break;
-    }
+        equipment.map((_, i) => i),
+      ),
+      equipmentHidden: true,
+      landSlideRevealed: false,
+    });
   }
 }
 
@@ -110,7 +87,7 @@ export function getBossRoundConfigMods(): BossRoundConfigMods {
 
 /** Whether the current boss's round effects are actively applying */
 export function isBossEffectActive(): boolean {
-  return !isBossEffectNegated() && getPlayerState().currentBoss !== null;
+  return !isBossEffectNegated() && selectCurrentBoss(getRunState()) !== null;
 }
 
 /** Start-of-day boss hooks (Jinx disables equipment) */
@@ -118,21 +95,18 @@ export function applyBossOnDayStart(day: number): void {
   const boss = getActiveBoss();
   if (!boss) return;
 
-  const state = getBossRoundState();
-  const player = getPlayerState();
-
   if (boss.effectType === 'DISABLE_RANDOM_EQUIPMENT') {
     const count = (boss.effectParams.count as number) ?? 1;
-    // Only the current day's disable applies — previous day is re-enabled.
-    state.disabledEquipmentIndices = [];
-    const available = player.equipment.map((_, i) => i);
+    const equipment = resolveEquipmentList();
+    const disabledEquipmentIndices: number[] = [];
+    const available = equipment.map((_, i) => i);
     for (let n = 0; n < count && available.length > 0; n++) {
       const pick = available.splice(Math.floor(rngFloat('boss') * available.length), 1)[0];
-      state.disabledEquipmentIndices.push(pick);
+      disabledEquipmentIndices.push(pick);
     }
+    patchBossRoundState({ disabledEquipmentIndices });
   }
 
-  // Bounty locks dice after first roll — handled in applyBossAfterRoll
   void day;
 }
 
@@ -141,16 +115,15 @@ export function applyBossAfterRoll(rolledDice: Die[]): void {
   const boss = getActiveBoss();
   if (!boss || boss.effectType !== 'LOCK_RANDOM_DICE') return;
 
-  const state = getBossRoundState();
-  state.lockedDiceIds = [];
-
+  const lockedDiceIds: string[] = [];
   const count = (boss.effectParams.count as number) ?? 1;
   const pool = [...rolledDice];
   for (let i = 0; i < count && pool.length > 0; i++) {
     const idx = Math.floor(rngFloat('boss') * pool.length);
     const [picked] = pool.splice(idx, 1);
-    state.lockedDiceIds.push(picked.id);
+    lockedDiceIds.push(picked.id);
   }
+  patchBossRoundState({ lockedDiceIds });
 }
 
 /** Bounty-locked dice cannot be unlocked */
@@ -172,12 +145,10 @@ export function isDiceScoringDisabledByBoss(die: Die): boolean {
 
   if (boss.effectType !== 'DISABLE_VALUES') return false;
 
-  // Stone dice have no face value (0) — neither odd nor even for boss parity
   if (die.enhancement === 'stone') return false;
 
   const parity = boss.effectParams.parity as 'even' | 'odd';
-  const player = getPlayerState();
-  return dieMatchesParity(die, parity, player.equipment);
+  return dieMatchesParity(die, parity, resolveEquipmentList());
 }
 
 /** @deprecated Use isDiceScoringDisabledByBoss — kept for call-site clarity */
@@ -189,7 +160,7 @@ export function isDiceDisabledByBoss(die: Die): boolean {
 export function onBossRoundEquipmentSold(): void {
   const boss = getActiveBoss();
   if (!boss || boss.effectType !== 'DISABLE_ALL_DICE') return;
-  getBossRoundState().diceScoringReenabledBySell = true;
+  patchBossRoundState({ diceScoringReenabledBySell: true });
 }
 
 /** Jinx-disabled equipment does not score (only while the boss round is active). */
@@ -227,16 +198,14 @@ export function recordBossHandPlayed(handType: HandType): void {
   const boss = getActiveBoss();
   if (!boss) return;
 
-  const state = getBossRoundState();
-
-  if (boss.effectType === 'SINGLE_HAND_TYPE' && state.preacherLockedHand === null) {
-    state.preacherLockedHand = handType;
-  }
-  if (boss.effectType === 'UNIQUE_HANDS_ONLY') {
-    if (!state.handsPlayedThisRound.includes(handType)) {
-      state.handsPlayedThisRound.push(handType);
+  updateBossRoundState((state) => {
+    if (boss.effectType === 'SINGLE_HAND_TYPE' && state.preacherLockedHand === null) {
+      state.preacherLockedHand = handType;
     }
-  }
+    if (boss.effectType === 'UNIQUE_HANDS_ONLY' && !state.handsPlayedThisRound.includes(handType)) {
+      state.handsPlayedThisRound = [...state.handsPlayedThisRound, handType];
+    }
+  });
 }
 
 /** Trickster: reduce hand level before scoring (min level 1) */
@@ -284,18 +253,18 @@ export function applyBossOnScore(handType: HandType, playedDice: Die[]): void {
   const boss = getActiveBoss();
   if (!boss) return;
 
-  const player = getPlayerState();
+  const run = getRunState();
 
   if (boss.effectType === 'ZERO_MONEY_ON_MOST_PLAYED') {
-    const mostPlayed = getMostPlayedHandTypes(player.handStats);
+    const mostPlayed = getMostPlayedHandTypes(run.handStats);
     if (mostPlayed.includes(handType)) {
-      player.economy.setBalance(0);
+      economyActions.setBalance(0);
     }
   }
 
   if (boss.effectType === 'LOSE_MONEY_PER_PLAYED') {
     const perDie = (boss.effectParams.value as number) ?? 1;
-    player.economy.spend(perDie * playedDice.length);
+    economyActions.trySpend(perDie * playedDice.length);
   }
 }
 
@@ -304,23 +273,22 @@ export function applyBossAfterScore(): void {
   const boss = getActiveBoss();
   if (!boss) return;
 
-  const player = getPlayerState();
   const state = getBossRoundState();
 
   if (boss.effectType === 'SPEND_RANDOM_AFTER_SCORE') {
     const count = (boss.effectParams.count as number) ?? 2;
-    const available = player.availableDice;
+    const available = selectAvailableDice(getRunState());
     const toSpend: string[] = [];
     const pool = [...available];
     for (let i = 0; i < count && pool.length > 0; i++) {
       const idx = Math.floor(rngFloat('boss') * pool.length);
       toSpend.push(pool.splice(idx, 1)[0].id);
     }
-    if (toSpend.length > 0) player.markDiceSpent(toSpend);
+    if (toSpend.length > 0) diceActions.markDiceSpent(toSpend);
   }
 
   if (boss.effectType === 'HIDE_EQUIPMENT' && !state.landSlideRevealed) {
-    state.landSlideRevealed = true;
+    patchBossRoundState({ landSlideRevealed: true });
   }
 }
 
@@ -334,24 +302,25 @@ export function syncEquipmentDisplayOrder(): void {
   const boss = getActiveBoss();
   if (!boss || boss.effectType !== 'HIDE_EQUIPMENT') return;
 
-  const state = getBossRoundState();
-  const count = getPlayerState().equipment.length;
+  const count = resolveEquipmentList().length;
   if (count === 0) {
-    state.equipmentDisplayOrder = [];
+    patchBossRoundState({ equipmentDisplayOrder: [] });
     return;
   }
 
-  let order = (state.equipmentDisplayOrder ?? []).filter((i) => i < count);
-  const present = new Set(order);
-  const missing: number[] = [];
-  for (let i = 0; i < count; i++) {
-    if (!present.has(i)) missing.push(i);
-  }
-  for (const idx of missing) {
-    const slot = Math.floor(rngFloat('boss') * (order.length + 1));
-    order.splice(slot, 0, idx);
-  }
-  state.equipmentDisplayOrder = order;
+  updateBossRoundState((state) => {
+    let order = (state.equipmentDisplayOrder ?? []).filter((i) => i < count);
+    const present = new Set(order);
+    const missing: number[] = [];
+    for (let i = 0; i < count; i++) {
+      if (!present.has(i)) missing.push(i);
+    }
+    for (const idx of missing) {
+      const slot = Math.floor(rngFloat('boss') * (order.length + 1));
+      order.splice(slot, 0, idx);
+    }
+    state.equipmentDisplayOrder = order;
+  });
 }
 
 /** Update stored indices after the player reorders underlying equipment */
@@ -359,11 +328,13 @@ export function remapEquipmentDisplayOrderAfterReorder(fromIndex: number, toInde
   const order = getBossRoundState().equipmentDisplayOrder;
   if (!order) return;
 
-  getBossRoundState().equipmentDisplayOrder = order.map((idx) => {
-    if (idx === fromIndex) return toIndex;
-    if (fromIndex < toIndex && idx > fromIndex && idx <= toIndex) return idx - 1;
-    if (fromIndex > toIndex && idx >= toIndex && idx < fromIndex) return idx + 1;
-    return idx;
+  patchBossRoundState({
+    equipmentDisplayOrder: order.map((idx) => {
+      if (idx === fromIndex) return toIndex;
+      if (fromIndex < toIndex && idx > fromIndex && idx <= toIndex) return idx - 1;
+      if (fromIndex > toIndex && idx >= toIndex && idx < fromIndex) return idx + 1;
+      return idx;
+    }),
   });
 }
 
@@ -372,9 +343,11 @@ export function remapEquipmentDisplayOrderAfterRemove(removedIndex: number): voi
   const state = getBossRoundState();
   if (!state.equipmentDisplayOrder) return;
 
-  state.equipmentDisplayOrder = state.equipmentDisplayOrder
-    .filter((idx) => idx !== removedIndex)
-    .map((idx) => (idx > removedIndex ? idx - 1 : idx));
+  patchBossRoundState({
+    equipmentDisplayOrder: state.equipmentDisplayOrder
+      .filter((idx) => idx !== removedIndex)
+      .map((idx) => (idx > removedIndex ? idx - 1 : idx)),
+  });
 }
 
 export function isBossEquipmentHidden(): boolean {
@@ -392,5 +365,5 @@ export function isBossEquipmentHintsHidden(): boolean {
 /** Mark first score animation complete — enables hints while faces stay hidden */
 export function revealLandSlideHints(): void {
   const state = getBossRoundState();
-  if (state.equipmentHidden) state.landSlideRevealed = true;
+  if (state.equipmentHidden) patchBossRoundState({ landSlideRevealed: true });
 }

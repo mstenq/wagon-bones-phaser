@@ -1,25 +1,32 @@
 // ─── Items System (No Phaser imports) ───
 // Equipment definitions, shop stock generation, aura system.
 
-import allItems from '../data/items';
+import {
+  getEquipmentPool,
+  getEquipmentDefById as lookupEquipmentDefById,
+  getItemAuraById as lookupItemAuraById,
+} from './equipmentCatalog';
 import itemAuras, { type ItemAura } from '../data/item_auras';
 
 export type { HintSegment, HintStyle, HintSize, ItemDisplayResult, CardTemplate } from '../data/items';
 import type { ItemDisplayResult } from '../data/items';
 
-import type { GameState } from './GameState';
-import type { PlayerState } from './PlayerState';
 import type { EquipmentModifier } from './types';
 import { getDiscountedShopPrice } from './PermitsSystem';
 import { CHANCES } from './Constants';
-import { getPlayerState } from './PlayerState';
+import { getItemDisplayContext, getRoundHintContext } from './displayContext';
+import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
 import { rngFloat, rngPick, type RngStream } from './RunRng';
 
 export type { EquipmentUnlockCondition } from './equipmentUnlock';
 
-export function isEquipmentUnlocked(def: EquipmentDef, game: GameState | null = null, player?: PlayerState): boolean {
+export function isEquipmentUnlocked(
+  def: EquipmentDef,
+  round: RoundHintContext | null = getRoundHintContext(),
+  player: ItemDisplayContext = getItemDisplayContext(),
+): boolean {
   if (!def.unlockCondition) return true;
-  return def.unlockCondition(game, player ?? getPlayerState());
+  return def.unlockCondition(round, player);
 }
 
 export type { ItemAura };
@@ -33,8 +40,8 @@ export interface EquipmentDef {
   effectParams: Record<string, unknown>;
   initialState?: Record<string, number>;
   aura?: ItemAura | null;
-  display: (game: GameState | null, player: PlayerState) => ItemDisplayResult;
-  unlockCondition?: (game: GameState | null, player: PlayerState) => boolean;
+  display: (round: RoundHintContext | null, player: ItemDisplayContext) => ItemDisplayResult;
+  unlockCondition?: (round: RoundHintContext | null, player: ItemDisplayContext) => boolean;
   modifierImmunity?: EquipmentModifier[];
 }
 
@@ -68,8 +75,11 @@ export function isEquipmentLeased(instance: EquipmentInstance): boolean {
   return hasEquipmentModifier(instance, 'leased');
 }
 
-const ITEMS_POOL: EquipmentDef[] = allItems as EquipmentDef[];
 const ITEM_AURAS: ItemAura[] = itemAuras;
+
+function itemsPool(): EquipmentDef[] {
+  return getEquipmentPool() as EquipmentDef[];
+}
 
 const SHOP_SIZE = 5;
 const LEGENDARY_RARITY = 'legendary';
@@ -77,10 +87,10 @@ const LEGENDARY_RARITY = 'legendary';
 /** Equipment pool eligible for shop stock and random rolls (excludes legendaries and locked items). */
 function getShopEquipmentPool(
   excludeIds?: string[],
-  game: GameState | null = null,
-  player?: PlayerState,
+  round: RoundHintContext | null = getRoundHintContext(),
+  player: ItemDisplayContext = getItemDisplayContext(),
 ): EquipmentDef[] {
-  let pool = ITEMS_POOL.filter((i) => i.rarity !== LEGENDARY_RARITY && isEquipmentUnlocked(i, game, player));
+  let pool = itemsPool().filter((i) => i.rarity !== LEGENDARY_RARITY && isEquipmentUnlocked(i, round, player));
   if (excludeIds && excludeIds.length > 0) {
     const excluded = new Set(excludeIds);
     pool = pool.filter((i) => !excluded.has(i.id));
@@ -92,8 +102,7 @@ function getShopEquipmentPool(
 
 /** Get an aura by its id. Returns null if not found. */
 export function getItemAuraById(id: string): ItemAura | null {
-  const aura = ITEM_AURAS.find((a) => a.id === id);
-  return aura ? { ...aura } : null;
+  return lookupItemAuraById(id);
 }
 
 /** Roll for a random aura. Returns null most of the time. */
@@ -122,7 +131,7 @@ export function applyRandomAura(def: EquipmentDef): EquipmentDef {
 /** Generate a random shop stock of equipment, with random aura rolls.
  *  Each slot rolls rarity via CHANCES (5% rare / 25% uncommon / 70% common), then picks uniformly within that tier. */
 export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string[]): EquipmentDef[] {
-  const horseshoe = ITEMS_POOL.find((i) => i.id === 'horseshoe') ?? ITEMS_POOL[0];
+  const horseshoe = itemsPool().find((i) => i.id === 'horseshoe') ?? itemsPool()[0];
   const usedIds = new Set(excludeIds ?? []);
   const stock: EquipmentDef[] = [];
 
@@ -150,7 +159,7 @@ export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string
 
 /** Get all equipment definitions */
 export function getAllEquipment(): EquipmentDef[] {
-  return ITEMS_POOL;
+  return itemsPool();
 }
 
 function pickWeightedEquipmentRarity(pool: EquipmentDef[], stream: RngStream = 'shop'): string | null {
@@ -179,7 +188,7 @@ function pickWeightedEquipmentRarity(pool: EquipmentDef[], stream: RngStream = '
  *  Applies a random aura roll. */
 /** Look up the canonical base definition for an equipment id. */
 export function getEquipmentDefById(id: string): EquipmentDef | undefined {
-  return ITEMS_POOL.find((i) => i.id === id);
+  return lookupEquipmentDefById(id) as EquipmentDef | undefined;
 }
 
 /** Camp shop list price before permit discounts (includes aura cost bump).
@@ -210,7 +219,7 @@ export function createEquipmentInstance(def: EquipmentDef, purchasedPermitIds: s
 }
 
 export function generateRandomEquipment(options?: { rarity?: string; excludeRarity?: string }): EquipmentDef {
-  let pool = ITEMS_POOL.filter((i) => isEquipmentUnlocked(i));
+  let pool = itemsPool().filter((i) => isEquipmentUnlocked(i));
   const stream: RngStream =
     options?.rarity === 'rare'
       ? 'createRare'

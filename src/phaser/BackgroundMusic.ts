@@ -23,7 +23,9 @@ export function stopBackgroundMusic(scene: Scene): void {
 /** Set volume on all background-music instances (normally only one). */
 export function setBackgroundMusicVolume(scene: Scene, volume: number): void {
   for (const sound of soundManager(scene).getAll(BG_MUSIC_KEY)) {
-    sound.setVolume(volume);
+    if ('setVolume' in sound && typeof sound.setVolume === 'function') {
+      sound.setVolume(volume);
+    }
   }
 }
 

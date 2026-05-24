@@ -4,7 +4,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import { resetPlayerState } from '../../game/PlayerState';
+import { resetAllGameStores } from '../../game/store';
 import { Button } from './Button';
 import { EquipmentCatalogModal } from './EquipmentCatalogModal';
 import { SoundsSettingsModal } from './SoundsSettingsModal';
@@ -104,7 +104,7 @@ export class OptionsModal extends GameObjects.Container {
     newRunBtn.onClick(() => {
       this.destroy();
       clearAutoSave();
-      resetPlayerState();
+      resetAllGameStores();
       scene.scene.start('MainMenu', {});
     });
     this.add(newRunBtn);

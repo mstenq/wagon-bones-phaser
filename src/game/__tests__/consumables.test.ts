@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
 import { resetDieIds, setupGame, die, item, equipWithModifiers } from './testHelpers';
-import { resetPlayerState } from '../PlayerState';
+import { resetPlayerState } from './testRunPlayer';
 import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
@@ -169,7 +169,7 @@ describe('PlayerState consumable management', () => {
 
     // Use a coffee tin first to set lastUsedConsumable
     player.addConsumable(coffeeDef);
-    const used = player.useConsumable(0);
+    player.useConsumable(0);
     expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
 
     // Now add and use second_helpings
@@ -179,7 +179,7 @@ describe('PlayerState consumable management', () => {
     // lastUsedConsumable should NOT have been overwritten to second_helpings
     expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
 
-    const result = executeConsumableEffect(secondHelpings, player);
+    const result = executeConsumableEffect(secondHelpings);
     expect(result.success).toBe(true);
     expect(result.consumablesCreated).toBe(1);
     expect(player.consumables).toHaveLength(1);
@@ -192,7 +192,7 @@ describe('PlayerState consumable management', () => {
     const secondHelpingsDef = getSupplyDefById('second_helpings')!;
     player.addConsumable(secondHelpingsDef);
     const secondHelpings = player.useConsumable(0)!;
-    const result = executeConsumableEffect(secondHelpings, player);
+    const result = executeConsumableEffect(secondHelpings);
     expect(result.success).toBe(false);
   });
 
@@ -200,7 +200,7 @@ describe('PlayerState consumable management', () => {
     const player = resetPlayerState();
     player.maxConsumableSlots = 4;
     const coffeeDef = getSupplyDefById('coffee_tin')!;
-    useConsumableDirectly(coffeeDef, player);
+    useConsumableDirectly(coffeeDef);
     expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
   });
 
@@ -211,11 +211,11 @@ describe('PlayerState consumable management', () => {
     const secondHelpingsDef = getSupplyDefById('second_helpings')!;
 
     // Use coffee first
-    useConsumableDirectly(coffeeDef, player);
+    useConsumableDirectly(coffeeDef);
     expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
 
     // Use second_helpings — should clone coffee, not overwrite lastUsedConsumable
-    const result = useConsumableDirectly(secondHelpingsDef, player);
+    const result = useConsumableDirectly(secondHelpingsDef);
     expect(result.success).toBe(true);
     expect(result.consumablesCreated).toBe(1);
     expect(player.consumables[0].def.id).toBe('coffee_tin');
@@ -227,7 +227,7 @@ describe('PlayerState consumable management', () => {
     const player = resetPlayerState();
     player.maxConsumableSlots = 4;
     const secondHelpingsDef = getSupplyDefById('second_helpings')!;
-    const result = useConsumableDirectly(secondHelpingsDef, player);
+    const result = useConsumableDirectly(secondHelpingsDef);
     expect(result.success).toBe(false);
   });
 
@@ -260,7 +260,7 @@ describe('PlayerState consumable management', () => {
     player.addConsumable(secondHelpingsDef);
     const secondHelpings = player.useConsumable(0)!;
 
-    const result = executeConsumableEffect(secondHelpings, player);
+    const result = executeConsumableEffect(secondHelpings);
     expect(result.success).toBe(true);
     expect(player.consumables[0].def.id).toBe('coffee_tin');
   });
@@ -283,7 +283,7 @@ describe('PlayerState consumable management', () => {
 
     player.addConsumable(secondHelpingsDef);
     const secondHelpings = player.useConsumable(0)!;
-    const result = executeConsumableEffect(secondHelpings, player);
+    const result = executeConsumableEffect(secondHelpings);
 
     expect(result.success).toBe(true);
     expect(result.consumablesCreated).toBe(1);
@@ -304,7 +304,7 @@ describe('PlayerState consumable management', () => {
 
     player.addConsumable(secondHelpingsDef);
     const secondHelpings = player.useConsumable(0)!;
-    const result = executeConsumableEffect(secondHelpings, player);
+    const result = executeConsumableEffect(secondHelpings);
     expect(result.success).toBe(false);
   });
 
@@ -367,7 +367,7 @@ describe('profession starting consumables', () => {
 
   test('grantGhostMedicine adds one ghost medicine consumable', () => {
     const { player } = setupGame({ profession: 'farmer' });
-    expect(grantGhostMedicine(player)).toBe(true);
+    expect(grantGhostMedicine()).toBe(true);
     expect(player.consumables).toHaveLength(1);
     expect(player.consumables[0].def.id).toBe('medicine');
     expect(player.consumables[0].def.aura?.id).toBe('ghost');
@@ -406,7 +406,9 @@ describe('profession starting dice', () => {
     const enhanced = player.dice.filter((d) => d.enhancement !== null);
     expect(enhanced).toHaveLength(8);
     const types = enhanced.map((d) => d.enhancement).sort();
-    expect(types).toEqual((['bone', 'diamond', 'gold', 'loaded', 'lucky', 'steel', 'stone', 'wooden'] as DiceEnhancement[]).sort());
+    expect(types).toEqual(
+      (['bone', 'diamond', 'gold', 'loaded', 'lucky', 'steel', 'stone', 'wooden'] as DiceEnhancement[]).sort(),
+    );
     expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 8);
   });
 
@@ -510,7 +512,7 @@ describe('pre-roll consumable targeting regression', () => {
     const loadedDef = getSupplyDefById('loaded');
     expect(loadedDef).not.toBeNull();
 
-    const useResult = executeConsumableEffect(createConsumableInstance(loadedDef!), player);
+    const useResult = executeConsumableEffect(createConsumableInstance(loadedDef!));
     expect(useResult.success).toBe(true);
     expect(useResult.diceSelection).toBeDefined();
 
@@ -569,7 +571,7 @@ describe('Bless supply card aura weighting', () => {
       const blessDef = getSupplyDefById('bless');
       if (!blessDef) throw new Error('bless not found');
       const consumed = createConsumableInstance(blessDef);
-      executeConsumableEffect(consumed, player);
+      executeConsumableEffect(consumed);
 
       const aura = player.equipment[0].def.aura;
       if (aura) {
@@ -604,8 +606,8 @@ describe('frontier cards and cursed equipment', () => {
     const original = Math.random;
     Math.random = () => 0; // bless horseshoe (index 0), not the cursed war_drums
     try {
-      const result = useConsumableDirectly(def, player);
-      finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
+      const result = useConsumableDirectly(def);
+      finalizeConsumableEquipmentEvents(result.consumableAnimEvents);
 
       expect(result.success).toBe(true);
       expect(player.equipment).toHaveLength(2);
@@ -625,8 +627,8 @@ describe('frontier cards and cursed equipment', () => {
     const original = Math.random;
     Math.random = () => 0;
     try {
-      const result = useConsumableDirectly(def, player);
-      finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
+      const result = useConsumableDirectly(def);
+      finalizeConsumableEquipmentEvents(result.consumableAnimEvents);
 
       expect(result.success).toBe(true);
       expect(result.consumableAnimEvents?.[0]?.type).toBe('destroy_equipment');
@@ -644,8 +646,8 @@ describe('frontier cards and cursed equipment', () => {
     player.equipment.push(equipWithModifiers('war_drums', ['cursed']));
 
     const def = getFrontierDefById('skin_walker')!;
-    const result = useConsumableDirectly(def, player);
-    finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
+    const result = useConsumableDirectly(def);
+    finalizeConsumableEquipmentEvents(result.consumableAnimEvents);
 
     expect(result.success).toBe(true);
     expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
@@ -658,8 +660,8 @@ describe('frontier cards and cursed equipment', () => {
     player.equipment.push(equipWithModifiers('horseshoe', ['cursed']));
 
     const def = getFrontierDefById('skin_walker')!;
-    const result = useConsumableDirectly(def, player);
-    finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
+    const result = useConsumableDirectly(def);
+    finalizeConsumableEquipmentEvents(result.consumableAnimEvents);
 
     expect(player.equipment.length).toBe(2);
     expect(player.equipment.every((e) => isEquipmentCursed(e))).toBe(true);
@@ -675,8 +677,8 @@ describe('frontier cards and cursed equipment', () => {
     const original = Math.random;
     Math.random = () => 0; // choose horseshoe (index 0)
     try {
-      const result = useConsumableDirectly(def, player);
-      finalizeConsumableEquipmentEvents(player, result.consumableAnimEvents);
+      const result = useConsumableDirectly(def);
+      finalizeConsumableEquipmentEvents(result.consumableAnimEvents);
 
       expect(result.success).toBe(true);
       expect(result.consumableAnimEvents?.[0]?.type).toBe('destroy_equipment');
@@ -695,7 +697,7 @@ describe('frontier encounter wiring and raid rules', () => {
     player.economy.setBalance(0);
     const def = getFrontierDefById('raid')!;
 
-    const result = executeConsumableEffect(createConsumableInstance(def), player);
+    const result = executeConsumableEffect(createConsumableInstance(def));
 
     expect(result.success).toBe(false);
     expect(result.failReason).toContain('visible');
@@ -721,7 +723,7 @@ describe('frontier encounter wiring and raid rules', () => {
     player.equipment = [item('six_feet_under'), item('book_of_the_dead')];
 
     const def = getFrontierDefById('raid')!;
-    const result = executeConsumableEffect(createConsumableInstance(def), player, {
+    const result = executeConsumableEffect(createConsumableInstance(def), {
       visibleDiceIds: visible.map((d) => d.id),
     });
 
@@ -735,7 +737,10 @@ describe('frontier encounter wiring and raid rules', () => {
     expect(result.success).toBe(true);
     expect(result.consumableAnimEvents).toBeDefined();
     expect(result.consumableAnimEvents?.[0]?.type).toBe('destroy_dice');
-    expect(result.consumableAnimEvents?.[0]?.diceIds.length).toBe(5);
+    const destroyEvent = result.consumableAnimEvents?.[0];
+    if (destroyEvent?.type === 'destroy_dice') {
+      expect(destroyEvent.diceIds.length).toBe(5);
+    }
     expect(removedVisibleCount).toBe(5);
     expect(removedHiddenCount).toBe(0);
     expect(player.economy.balance).toBe(20);
@@ -744,10 +749,10 @@ describe('frontier encounter wiring and raid rules', () => {
   });
 
   test('blood moon fails with no equipment', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const def = getFrontierDefById('blood_moon')!;
 
-    const result = executeConsumableEffect(createConsumableInstance(def), player);
+    const result = executeConsumableEffect(createConsumableInstance(def));
 
     expect(result.success).toBe(false);
     expect(result.failReason).toBe('No equipment!');
@@ -761,7 +766,7 @@ describe('frontier encounter wiring and raid rules', () => {
     const originalRandom = Math.random;
     Math.random = () => 0;
     try {
-      const result = executeConsumableEffect(createConsumableInstance(def), player);
+      const result = executeConsumableEffect(createConsumableInstance(def));
       expect(result.success).toBe(true);
       expect(player.equipment[0].def.aura?.id).toBe('ghost');
       expect(player.trailEventModifiers.rerollPenalty).toBe(1);
@@ -777,7 +782,7 @@ describe('frontier encounter wiring and raid rules', () => {
     );
     const def = getFrontierDefById('spiritual_journey')!;
 
-    const result = executeConsumableEffect(createConsumableInstance(def), player);
+    const result = executeConsumableEffect(createConsumableInstance(def));
 
     expect(result.success).toBe(true);
     expect(result.handUpgrades?.length).toBe(Object.values(HandType).length);
@@ -817,8 +822,8 @@ describe('supply/frontier execution parity for shared effect engines', () => {
     const supplyDef = getSupplyDefById('shallow_grave')!;
     const frontierDef = getFrontierDefById('gold_rush')!;
 
-    const supplyResult = executeConsumableEffect(createConsumableInstance(supplyDef), player);
-    const frontierResult = executeConsumableEffect(createConsumableInstance(frontierDef), player);
+    const supplyResult = executeConsumableEffect(createConsumableInstance(supplyDef));
+    const frontierResult = executeConsumableEffect(createConsumableInstance(frontierDef));
 
     expect(supplyResult.success).toBe(true);
     expect(frontierResult.success).toBe(true);
@@ -827,21 +832,26 @@ describe('supply/frontier execution parity for shared effect engines', () => {
     expect(player.dice).toHaveLength(5);
   });
 
-  test('both supply and frontier instant effects resolve through core consumable execution', () => {
-    const supplyPlayer = resetPlayerState();
-    supplyPlayer.economy.setBalance(10);
-    const frontierPlayer = resetPlayerState();
-    frontierPlayer.economy.setBalance(10);
+  test('supply instant effects resolve through core consumable execution', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(10);
     const supplyDef = getSupplyDefById('treasure_map')!;
-    const frontierDef = getFrontierDefById('magic_beans')!;
 
-    const supplyResult = executeConsumableEffect(createConsumableInstance(supplyDef), supplyPlayer);
-    const frontierResult = executeConsumableEffect(createConsumableInstance(frontierDef), frontierPlayer);
+    const supplyResult = executeConsumableEffect(createConsumableInstance(supplyDef));
 
     expect(supplyResult.success).toBe(true);
+    expect(player.economy.balance).toBe(20);
+  });
+
+  test('frontier instant effects resolve through core consumable execution', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(10);
+    const frontierDef = getFrontierDefById('magic_beans')!;
+
+    const frontierResult = executeConsumableEffect(createConsumableInstance(frontierDef));
+
     expect(frontierResult.success).toBe(true);
-    expect(supplyPlayer.economy.balance).toBe(20);
-    expect(frontierPlayer.economy.balance).toBe(0);
+    expect(player.economy.balance).toBe(0);
   });
 });
 

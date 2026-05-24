@@ -3,17 +3,21 @@
 
 import { Die, DiceEnhancement, HandType, HandResult, HandDefinition, ScoreResult, ScoreAnimEvent } from './types';
 import hands from '../data/hands';
-import { getPlayerState } from './PlayerState';
+import { getRunState, runStore } from './store/runStore';
+import { diceActions } from './store/actions/diceActions';
+import { consumableActions } from './store/actions/consumableActions';
+import { selectResolvedLoadedDieTarget } from './store/selectors/runSelectors';
+import { resolveEquipmentList } from './store/resolve';
 import type { EquipmentInstance } from './ItemsSystem';
 import { effectRegistry, getScoredRetriggerCount, type ScoringPipelineContext } from './effects';
 import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from './EquipmentEffects';
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
-import { getRandomSupplyDef, createConsumableInstance, getRandomFrontierDef } from './ConsumablesSystem';
+import { getRandomSupplyDef, getRandomFrontierDef } from './ConsumablesSystem';
 import { GAMEPLAY } from './Constants';
 import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './equipmentUtils';
 import { getEnhancementScoreDestroyChance } from '../data/dice_enhancements';
-import { dieMatchesPip, hasStackedDeck, multiplyCtxXMult } from './effects/helpers';
-import { multiplyScore, addScore, D, ZERO, ONE, floorScore, ceilScore, gte } from './scoreMath';
+import { dieMatchesPip, hasStackedDeck } from './effects/helpers';
+import { multiplyScore, addScore, D, ZERO, ONE } from './scoreMath';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
 import type { TrailRoundEffects } from './TrailEventsSystem';
@@ -110,10 +114,11 @@ export function createRunStartingPouch(
 export function rollDie(die: Die): Die {
   // Stone dice never get a numeric value
   if (die.enhancement === 'stone') return { ...die, value: 0 };
-  const player = getPlayerState();
-  const loadedTarget = player.getResolvedLoadedDieTarget();
+  const run = getRunState();
+  const equipment = resolveEquipmentList();
+  const loadedTarget = selectResolvedLoadedDieTarget(run);
   if (die.enhancement === 'loaded' && loadedTarget !== null) {
-    const loadedChance = Math.min(1, getLoadedDiceMultiplier(player.equipment) / 6);
+    const loadedChance = Math.min(1, getLoadedDiceMultiplier(equipment) / 6);
     const otherFaces = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((face) => face !== loadedTarget);
     if (rngFloat('loadedDice') < loadedChance) return { ...die, value: loadedTarget };
     return { ...die, value: rngPick('loadedDice', otherFaces) };
@@ -318,11 +323,26 @@ export function scoreHand(
   let totalValue = 0;
   let bonusMult = ZERO;
   let xMult = ONE;
-  const player = getPlayerState();
+  const run = getRunState();
   const animEvents: ScoreAnimEvent[] = [];
+
+  const patchRunDice = (updater: (dice: Die[]) => Die[]): void => {
+    runStore.setState((s) => ({ dice: updater(s.dice) }));
+  };
+
+  const removeRunDie = (dieId: string, enhancedCount = 0): boolean => {
+    const current = getRunState();
+    const idx = current.dice.findIndex((d) => d.id === dieId);
+    if (idx < 0) return false;
+    const wasEnhanced = current.dice[idx].enhancement !== null;
+    patchRunDice((dice) => dice.filter((d) => d.id !== dieId));
+    processEquipmentOnDiceDestroyed(equipment, 1, wasEnhanced ? 1 : enhancedCount);
+    return true;
+  };
 
   // ─── Pre-scoring pass: Graverobber strips enhancements before dice score ───
   const maxCopyDepthGrave = equipment.length;
+  const graverobberStrippedDieIds = new Set<string>();
   for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
     let equip = equipment[eIdx];
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
@@ -348,10 +368,26 @@ export function scoreHand(
         );
         // Strip from the scored die (rolled copy) and pouch die
         setDieEnhancement(die, null);
-        const pouchDie = player.dice.find((d) => d.id === die.id);
-        if (pouchDie) setDieEnhancement(pouchDie, null);
+        const pouchDie = getRunState().dice.find((d) => d.id === die.id);
+        if (pouchDie && pouchDie !== die) {
+          setDieEnhancement(pouchDie, null);
+        }
+        graverobberStrippedDieIds.add(die.id);
       }
     }
+  }
+  if (graverobberStrippedDieIds.size > 0) {
+    runStore.setState((state) => ({
+      dice: state.dice.map((d) =>
+        graverobberStrippedDieIds.has(d.id)
+          ? (() => {
+              const next = { ...d };
+              setDieEnhancement(next, null);
+              return next;
+            })()
+          : d,
+      ),
+    }));
   }
 
   // ─── Pre-scoring pass: Golden Spike, Lucky Find, etc. ───
@@ -369,7 +405,7 @@ export function scoreHand(
 
   console.log('  [scoreHand] Step 3: Per-die scoring');
 
-  const trailRound = player.trailRoundEffects;
+  const trailRound = run.trailRoundEffects;
   const standardDiceDay1 = scoreContext?.currentDay === 1 && trailRound.standardDiceDay1;
   const scoringEnhancement = (die: Die): Die['enhancement'] => (standardDiceDay1 ? null : die.enhancement);
 
@@ -387,7 +423,8 @@ export function scoreHand(
     maxDays: scoreContext?.maxDays ?? 5,
     allDice: scoreContext?.allDice ?? [],
     handType: handResult.type,
-    playerBalance: player.economy.balance,
+    playerBalance: run.balance,
+    professionId: run.professionId,
     totalValue,
     bonusMult: ZERO,
     xMult: ONE,
@@ -525,7 +562,7 @@ export function scoreHand(
             for (const e of equipment) dispatchLifecycle('on-lucky-trigger', e);
           }
           if (checkLoadedChance(luckyMoneyChance, equipment, 'luckyDice')) {
-            player.economy.earn(20);
+            pipelineCtx.mutations.moneyEarned += 20;
             animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 20, dieId: die.id });
             console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} LUCKY: hit $20!`);
             for (const e of equipment) dispatchLifecycle('on-lucky-trigger', e);
@@ -556,7 +593,7 @@ export function scoreHand(
       // Sticker effects (scored dice)
       if (die.sticker === 'purple_flower') {
         const supplyDef = getRandomSupplyDef();
-        if (player.addConsumable(supplyDef)) {
+        if (consumableActions.addConsumable(supplyDef)) {
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'supply', value: 0, dieId: die.id });
           console.log(
             `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER purple_flower: granted supply card '${supplyDef.name}'`,
@@ -565,7 +602,7 @@ export function scoreHand(
       }
 
       if (die.sticker === 'golden_dollar') {
-        player.economy.earn(3);
+        pipelineCtx.mutations.moneyEarned += 3;
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 3, dieId: die.id });
         console.log(`  [scoreHand]   Die ${die.id}${triggerLabel} STICKER golden_dollar: +$3`);
       }
@@ -620,15 +657,16 @@ export function scoreHand(
       if (equip.def.effectType === 'FIRST_DAY_SOLO_COPY') {
         // Bloodline: copy the solo die into the collection
         const target = handResult.scoringDice[0];
-        const copy = createDie({
-          value: target.value,
-          enhancement: target.enhancement,
-          sticker: target.sticker,
-          aura: target.aura,
-          bonusMiles: target.bonusMiles,
-        });
-        player.dice.push(copy);
-        console.log(`  [scoreHand] ${equip.def.name}: copied die ${target.id} → ${copy.id}`);
+        const added = diceActions.addDie(
+          createDie({
+            value: target.value,
+            enhancement: target.enhancement,
+            sticker: target.sticker,
+            aura: target.aura,
+            bonusMiles: target.bonusMiles,
+          }),
+        );
+        console.log(`  [scoreHand] ${equip.def.name}: copied die ${target.id} → ${added.id}`);
       }
     }
   }
@@ -640,17 +678,11 @@ export function scoreHand(
       if (equip.def.effectType === 'FIRST_HAND_ENHANCED_SIX') {
         const target = handResult.scoringDice.find((d) => d.value === 6 && d.enhancement !== null);
         if (target) {
-          // Mark die for destruction by removing from player's collection
-          const idx = player.dice.findIndex((d) => d.id === target.id);
-          if (idx >= 0) {
-            const wasEnhanced = player.dice[idx].enhancement !== null;
-            player.dice.splice(idx, 1);
-            processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
+          if (removeRunDie(target.id)) {
             console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced 6 (${target.id}), granting frontier card`);
-            // Grant frontier encounter card
             const frontierDef = getRandomFrontierDef();
             if (frontierDef) {
-              player.consumables.push(createConsumableInstance(frontierDef));
+              consumableActions.addConsumable(frontierDef);
               animEvents.push({ target: { kind: 'equip', equipIndex: eIdx }, popupType: 'supply', value: 0 });
             }
           }
@@ -665,15 +697,11 @@ export function scoreHand(
     if (!destroyChance) continue;
     if (!checkLoadedChance(destroyChance, equipment, 'diamondDice')) continue;
 
-    const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
-    if (idx < 0) continue;
+    if (!removeRunDie(scoredDie.id)) continue;
 
     animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
 
-    const wasDiamond = player.dice[idx].enhancement === 'diamond';
-    const wasEnhanced = player.dice[idx].enhancement !== null;
-    player.dice.splice(idx, 1);
-    processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
+    const wasDiamond = scoredDie.enhancement === 'diamond';
     console.log(`  [scoreHand] Score destroy (${scoredDie.enhancement}): destroyed die ${scoredDie.id}`);
     if (wasDiamond) {
       for (const e of equipment) dispatchLifecycle('on-diamond-destroyed', e);
@@ -685,12 +713,8 @@ export function scoreHand(
   if (destroyChance > 0) {
     for (const scoredDie of handResult.scoringDice) {
       if (rngFloat('dice') >= destroyChance) continue;
-      const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
-      if (idx < 0) continue;
+      if (!removeRunDie(scoredDie.id)) continue;
       animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
-      const wasEnhanced = player.dice[idx].enhancement !== null;
-      player.dice.splice(idx, 1);
-      processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
       console.log(`  [scoreHand] Trail curse: destroyed scored die ${scoredDie.id}`);
     }
   }
@@ -709,14 +733,9 @@ export function scoreHand(
       const chanceTuple = p.destroyChance as [number, number];
       if (!checkLoadedChance(chanceTuple, equipment)) continue;
 
-      const idx = player.dice.findIndex((d) => d.id === scoredDie.id);
-      if (idx < 0) continue;
+      if (!removeRunDie(scoredDie.id)) continue;
 
       animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
-
-      const wasEnhanced = player.dice[idx].enhancement !== null;
-      player.dice.splice(idx, 1);
-      processEquipmentOnDiceDestroyed(player.equipment, 1, wasEnhanced ? 1 : 0);
       console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced die ${scoredDie.id} (${scoredDie.enhancement})`);
     }
   }

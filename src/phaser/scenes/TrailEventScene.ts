@@ -5,17 +5,17 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState, type PlayerState } from '../../game/PlayerState';
+import { equipmentActions } from '../../game/store';
+import { resolveEquipmentList } from '../../game/store/resolve';
+import { selectEffectiveDays, selectEffectiveRerolls } from '../../game/store/selectors/runSelectors';
+import { markTrailEventSeen } from '../../game/TrailEventsSystem';
 import { isEquipmentCursed } from '../../game/ItemsSystem';
-import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constants';
 import { trailEventImageKey, trailEventImagePath } from '../../game/trailEventAssets';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
 import { createLayout, type LayoutResult } from '../ui/SceneLayout';
 import { Sidebar } from '../ui/Sidebar';
-import { EquipmentBar } from '../ui/EquipmentBar';
-import { ConsumableBar } from '../ui/ConsumableBar';
-import { DicePouch } from '../ui/DicePouch';
 import {
   selectTrailEvent,
   getAvailableChoices,
@@ -34,6 +34,8 @@ import {
 } from '../../game/TrailEventsSystem';
 import { rngFloat } from '../../game/RunRng';
 import type { TrailEventSaveData } from '../../game/SaveLoad';
+import { getSceneState, sceneActions } from '../../game/store/sceneStore';
+import { getRunState, runActions } from '../../game/store/runStore';
 import { flushAutoSave } from '../AutoSaveManager';
 import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
 
@@ -53,17 +55,12 @@ const CATEGORY_COLORS: Record<string, number> = {
 
 export class TrailEventScene extends Scene {
   private sidebar: Sidebar;
-  private equipBar: EquipmentBar;
-  private consumableBar: ConsumableBar;
-  private dicePouch: DicePouch;
 
   private currentEvent: TrailEventDef;
   private resolved: boolean = false;
   private spyglassRevealed: boolean = false;
   private choiceButtons: Button[] = [];
   private resultContainer: Phaser.GameObjects.Container | null = null;
-  private pendingRestoreTrail: TrailEventSaveData | null = null;
-
   constructor() {
     super('TrailEvent');
   }
@@ -80,12 +77,11 @@ export class TrailEventScene extends Scene {
     this.currentEvent = null!;
     this.resolved = false;
     this.spyglassRevealed = false;
-    this.pendingRestoreTrail = null;
-
-    if (data.restoreTrail) {
-      this.pendingRestoreTrail = data.restoreTrail;
+    const sceneTrail = getSceneState().trailEvent;
+    if (sceneTrail) {
       return;
     }
+
     if (data.eventId) {
       const event = getTrailEventById(data.eventId);
       if (event) {
@@ -96,43 +92,42 @@ export class TrailEventScene extends Scene {
     }
   }
 
-  getSaveContext(): TrailEventSaveData {
-    const player = getPlayerState();
-    this.syncSpyglassPendingForSave(player);
-    const eventId = this.currentEvent?.id ?? player.pendingTrailEvent?.id;
-    if (!eventId) {
-      throw new Error('Trail event save context missing event id');
+  private syncTrailToStore(): void {
+    const eventId = this.currentEvent?.id ?? getSceneState().trailEvent?.eventId;
+    if (!eventId) return;
+    const slice = {
+      eventId,
+      resolved: this.resolved,
+      spyglassRevealed: this.spyglassRevealed,
+    };
+    if (getSceneState().trailEvent) {
+      sceneActions.patchTrailEvent(slice);
+    } else {
+      sceneActions.enterTrailEvent(slice);
     }
-    return {
-      eventId,
-      resolved: this.resolved,
-      spyglassRevealed: this.spyglassRevealed,
-    };
+    sceneActions.enterScene('TrailEvent');
+    if (hasScoutsSpyglass() && !this.spyglassRevealed) {
+      runActions.patch({ pendingTrailEventId: eventId });
+    } else {
+      runActions.patch({ pendingTrailEventId: null });
+    }
   }
 
-  /** Keep player.pendingTrailEvent aligned with scene event while on spyglass preview (autosave). */
-  private syncSpyglassPendingForSave(player: PlayerState): void {
-    if (!hasScoutsSpyglass(player) || this.spyglassRevealed) return;
-    const event = this.currentEvent ?? player.pendingTrailEvent;
-    if (event) player.pendingTrailEvent = event;
-  }
-
-  private getSceneRestartData(): {
-    eventId?: string;
-    spyglassRevealed: boolean;
-    resolved: boolean;
-  } {
-    const player = getPlayerState();
-    const eventId = this.currentEvent?.id ?? player.pendingTrailEvent?.id;
-    return {
-      eventId,
-      spyglassRevealed: this.spyglassRevealed,
-      resolved: this.resolved,
-    };
+  private hydrateTrailFromStore(): void {
+    const trail = getSceneState().trailEvent;
+    if (!trail) return;
+    const event = getTrailEventById(trail.eventId);
+    if (!event) throw new Error(`Unknown trail event: ${trail.eventId}`);
+    this.currentEvent = event;
+    this.resolved = trail.resolved;
+    this.spyglassRevealed = trail.spyglassRevealed;
   }
 
   create() {
-    const player = getPlayerState();
+    if (getSceneState().trailEvent) {
+      this.hydrateTrailFromStore();
+      if (this.currentEvent) markTrailEventSeen(this.currentEvent.id);
+    }
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
@@ -140,56 +135,46 @@ export class TrailEventScene extends Scene {
     // Standard layout with sidebar, equip bar, consumable bar, pouch
     const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'TRAIL' });
     this.sidebar = layout.sidebar;
-    this.equipBar = layout.equipBar;
-    this.consumableBar = layout.consumableBar;
-    this.dicePouch = layout.dicePouch;
-
-    if (this.pendingRestoreTrail) {
-      const restore = this.pendingRestoreTrail;
-      const event = getTrailEventById(restore.eventId);
-      if (!event) throw new Error(`Unknown trail event: ${restore.eventId}`);
-      this.currentEvent = event;
-      this.resolved = restore.resolved;
-      this.spyglassRevealed = restore.spyglassRevealed;
-      this.pendingRestoreTrail = null;
-      // Restored event has already been shown to the player — never re-roll it.
-      player.seenTrailEventIds.add(event.id);
-      if (hasScoutsSpyglass(player) && !this.spyglassRevealed) {
-        player.pendingTrailEvent = this.currentEvent;
-      }
-    }
 
     // Select / preview trail event (persist across resize restarts)
     if (!this.currentEvent) {
-      if (hasScoutsSpyglass(player)) {
-        if (!player.pendingTrailEvent) {
-          player.pendingTrailEvent = selectTrailEvent(player);
-          // Commit the selection so autosave / refresh can't re-roll it.
-          player.seenTrailEventIds.add(player.pendingTrailEvent.id);
+      if (hasScoutsSpyglass()) {
+        const pendingId = getSceneState().trailEvent?.eventId ?? getRunState().pendingTrailEventId;
+        if (!pendingId) {
+          this.currentEvent = selectTrailEvent();
+          markTrailEventSeen(this.currentEvent.id);
+          this.syncTrailToStore();
+        } else {
+          const event = getTrailEventById(pendingId);
+          if (!event) throw new Error(`Unknown trail event: ${pendingId}`);
+          this.currentEvent = event;
         }
         if (!this.spyglassRevealed) {
+          this.syncTrailToStore();
           this.buildSpyglassPreview(layout);
           flushAutoSave();
           EventBus.emit(Events.SCENE_READY, this);
           return;
         }
-        this.currentEvent = player.pendingTrailEvent!;
-        player.pendingTrailEvent = null;
+        runActions.patch({ pendingTrailEventId: null });
       } else {
-        this.currentEvent = selectTrailEvent(player);
-        player.seenTrailEventIds.add(this.currentEvent.id);
+        this.currentEvent = selectTrailEvent();
+        markTrailEventSeen(this.currentEvent.id);
+        this.syncTrailToStore();
       }
       // Persist the seen-set update immediately so a refresh within the
       // 10s autosave window can't restore a snapshot that allows a repeat.
       flushAutoSave();
     }
 
-    if (hasScoutsSpyglass(player) && !this.spyglassRevealed) {
-      player.pendingTrailEvent = this.currentEvent ?? player.pendingTrailEvent;
+    if (hasScoutsSpyglass() && !this.spyglassRevealed) {
+      this.syncTrailToStore();
       this.buildSpyglassPreview(layout);
       EventBus.emit(Events.SCENE_READY, this);
       return;
     }
+
+    this.syncTrailToStore();
 
     const onDisplayReady = () => {
       this.buildEventDisplay(layout);
@@ -212,32 +197,32 @@ export class TrailEventScene extends Scene {
     EventBus.emit(Events.SCENE_READY, this);
   }
 
-  private resolveSpyglassPreviewEvent(player: PlayerState): TrailEventDef {
-    const event = player.pendingTrailEvent ?? this.currentEvent;
+  private resolveSpyglassPreviewEvent(): TrailEventDef {
+    const eventId = getSceneState().trailEvent?.eventId ?? this.currentEvent?.id;
+    const event = eventId ? getTrailEventById(eventId) : this.currentEvent;
     if (!event) {
       throw new Error('Spyglass preview missing trail event');
     }
-    player.pendingTrailEvent = event;
+    this.currentEvent = event;
     return event;
   }
 
   private buildSpyglassPreview(
     layout: Pick<LayoutResult, 'contentX' | 'contentW' | 'contentCX' | 'contentTop' | 'contentBottom'>,
   ): void {
-    const player = getPlayerState();
-    const event = this.resolveSpyglassPreviewEvent(player);
+    const event = this.resolveSpyglassPreviewEvent();
     SpyglassTrailPreview.show(this, layout, event.id, {
       onAvoid: () => {
-        applySpyglassAvoid(player);
+        applySpyglassAvoid();
         this.proceedToNextScene();
       },
       onInvestigate: () => {
-        const committed = this.resolveSpyglassPreviewEvent(player);
-        applySpyglassInvestigate(player);
-        this.equipBar.refresh();
+        const committed = this.resolveSpyglassPreviewEvent();
+        applySpyglassInvestigate();
         this.currentEvent = committed;
-        player.pendingTrailEvent = null;
         this.spyglassRevealed = true;
+        runActions.patch({ pendingTrailEventId: null });
+        sceneActions.patchTrailEvent({ spyglassRevealed: true, eventId: committed.id });
         this.scene.restart({
           eventId: committed.id,
           spyglassRevealed: true,
@@ -250,8 +235,6 @@ export class TrailEventScene extends Scene {
   private buildEventDisplay(layout: { contentX: number; contentW: number; contentCX: number }): void {
     const { contentW, contentCX } = layout;
     const event = this.currentEvent;
-    const player = getPlayerState();
-
     // ─── Event card panel ───
     const panelW = Math.min(560, contentW - 40);
     const panelX = contentCX - panelW / 2;
@@ -318,7 +301,7 @@ export class TrailEventScene extends Scene {
 
     // ─── Choice buttons ───
     const choicesY = descY + descText.height + 28;
-    const availableChoices = getAvailableChoices(event, player);
+    const availableChoices = getAvailableChoices(event);
 
     this.choiceButtons = [];
     for (let i = 0; i < availableChoices.length; i++) {
@@ -341,14 +324,14 @@ export class TrailEventScene extends Scene {
   }
 
   private onChoiceSelected(choice: TrailEventChoice): void {
-    const player = getPlayerState();
+    const run = getRunState();
     this.resolved = true;
+    sceneActions.patchTrailEvent({ resolved: true, selectedChoiceId: choice.id });
 
-    // Snapshot counts before resolution (for display)
-    const enhancedDiceBeforeCount = player.dice.filter(
+    const enhancedDiceBeforeCount = run.dice.filter(
       (d) => d.enhancement !== null || d.sticker !== null || d.aura !== null,
     ).length;
-    const equipmentBeforeCount = player.equipment.length;
+    const equipmentBeforeCount = resolveEquipmentList(run).length;
 
     // Disable all choice buttons
     for (const btn of this.choiceButtons) {
@@ -356,13 +339,12 @@ export class TrailEventScene extends Scene {
     }
 
     // Resolve the choice
-    const result = resolveChoice(this.currentEvent, choice.id, player, () => rngFloat('trail'));
+    const result = resolveChoice(this.currentEvent, choice.id, () => rngFloat('trail'));
 
-    // Store modifiers on player for next round
-    player.trailEventModifiers = result.modifiers;
-    if (result.modifiers.skipNextShop) {
-      player.skipNextShop = true;
-    }
+    runActions.patch({
+      trailEventModifiers: result.modifiers,
+      ...(result.modifiers.skipNextShop ? { skipNextShop: true } : {}),
+    });
 
     // Persist the resolved state immediately. Without this flush, a refresh
     // between resolveChoice and the next 10s autosave tick would restore the
@@ -384,10 +366,10 @@ export class TrailEventScene extends Scene {
     this.resultContainer = this.add.container(0, 0);
     this.resultContainer.setAlpha(0);
 
-    const player = getPlayerState();
-    const shieldEquip = player.equipment.find((e) => e.def.id === 'saint_elmos_shield');
-    const repairKitEquip = findTrailRepairKit(player);
-    const negatesNegatives = isTrailNegativeNegated(player);
+    const equipment = resolveEquipmentList();
+    const shieldEquip = equipment.find((e) => e.def.id === 'saint_elmos_shield');
+    const repairKitEquip = findTrailRepairKit();
+    const negatesNegatives = isTrailNegativeNegated();
 
     // Build effect summary lines
     const effectLines: { text: string; color: string; negative: boolean }[] = [];
@@ -498,7 +480,7 @@ export class TrailEventScene extends Scene {
     const loseEquipEffect = result.effects.find(
       (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(isNegativeEffect(e) && negatesNegatives),
     );
-    const sacrificableCount = player.equipment.filter((e) => !isEquipmentCursed(e)).length;
+    const sacrificableCount = equipment.filter((e) => !isEquipmentCursed(e)).length;
     const needsEquipChoice = loseEquipEffect && sacrificableCount > 0;
 
     // Continue button (after a short delay)
@@ -525,23 +507,19 @@ export class TrailEventScene extends Scene {
     });
 
     // Refresh UI elements
-    this.equipBar.refresh();
-    this.consumableBar.refresh();
-    this.dicePouch.refresh();
 
     // Update sidebar to reflect pending modifiers (days/rerolls penalties)
+    const run = getRunState();
     this.sidebar.updateData({
-      daysRemaining: player.effectiveDays,
-      rerolls: player.effectiveRerolls,
+      daysRemaining: selectEffectiveDays(run),
+      rerolls: selectEffectiveRerolls(run),
     });
   }
 
   private showEquipmentPicker(count: number, cx: number, y: number, onComplete: () => void): void {
-    const player = getPlayerState();
-    const sacrificableIndices = player.equipment
-      .map((e, idx) => (!isEquipmentCursed(e) ? idx : -1))
-      .filter((idx) => idx >= 0);
-    let remaining = Math.min(count, sacrificableIndices.length);
+    let remaining = count;
+    const initialSacrificable = resolveEquipmentList().filter((e) => !isEquipmentCursed(e)).length;
+    remaining = Math.min(count, initialSacrificable);
 
     if (remaining === 0) {
       onComplete();
@@ -564,8 +542,11 @@ export class TrailEventScene extends Scene {
     const spacing = 130;
 
     const buildCards = () => {
-      // Clear existing cards
       cardContainer.removeAll(true);
+      const equipment = resolveEquipmentList();
+      const sacrificableIndices = equipment
+        .map((e, idx) => (!isEquipmentCursed(e) ? idx : -1))
+        .filter((idx) => idx >= 0);
 
       if (sacrificableIndices.length === 0 || remaining === 0) {
         promptText.destroy();
@@ -580,14 +561,14 @@ export class TrailEventScene extends Scene {
       const startX = cx - totalW / 2;
 
       for (let slot = 0; slot < sacrificableIndices.length; slot++) {
-        const equipIndex = sacrificableIndices[slot];
-        const equipItem = player.equipment[equipIndex];
+        const equipIndex = sacrificableIndices[slot]!;
+        const equipItem = equipment[equipIndex]!;
         const card = new ItemCard(this, startX + slot * spacing, y + 110, equipItem.def, {
           mode: 'compact',
           cardScale,
           equipment: equipItem,
         });
-        card.setTooltipContext(null, player);
+        card.setTooltipContext(null, null);
         card.setDepth(200);
 
         // Highlight on hover
@@ -599,9 +580,8 @@ export class TrailEventScene extends Scene {
         });
 
         card.on('pointerdown', () => {
-          const idx = player.equipment.findIndex((e) => e === equipItem);
-          if (idx !== -1) {
-            player.destroyEquipment(idx);
+          if (equipIndex >= 0) {
+            equipmentActions.destroyEquipment(equipIndex);
           }
           remaining--;
 
@@ -614,7 +594,6 @@ export class TrailEventScene extends Scene {
             duration: 300,
             ease: 'Power2',
             onComplete: () => {
-              this.equipBar.refresh();
               this.safePlaySound('sfx_explosion');
 
               if (remaining <= 0) {
@@ -747,7 +726,6 @@ export class TrailEventScene extends Scene {
       onComplete: () => {
         dieGfx.destroy();
         dieText.destroy();
-        this.dicePouch.refresh();
         this.safePlaySound('sfx_coin');
       },
     });
@@ -888,8 +866,11 @@ export class TrailEventScene extends Scene {
       case 'LOSE_RANDOM_SUPPLY_CARD':
         text = 'Lost a supply card';
         break;
-      default:
-        text = effect.type.replace(/_/g, ' ').toLowerCase();
+      default: {
+        const unknown = effect as { type: string };
+        text = unknown.type.replace(/_/g, ' ').toLowerCase();
+        break;
+      }
     }
 
     if (negated) {
@@ -908,14 +889,13 @@ export class TrailEventScene extends Scene {
   }
 
   private proceedToNextScene(): void {
-    const player = getPlayerState();
-    // Clear state so a fresh event is picked next time
+    const skipShop = getRunState().skipNextShop;
     this.currentEvent = null!;
     this.resolved = false;
     this.spyglassRevealed = false;
-    player.pendingTrailEvent = null;
-    if (player.skipNextShop) {
-      player.skipNextShop = false;
+    sceneActions.clearTrailEvent();
+    runActions.patch({ pendingTrailEventId: null, ...(skipShop ? { skipNextShop: false } : {}) });
+    if (skipShop) {
       this.scene.start('RoundSelect', {});
     } else {
       this.scene.start('Shop', {});
@@ -938,9 +918,9 @@ export class TrailEventScene extends Scene {
   }
 
   private onResize(): void {
-    // Don't restart after choice is resolved — effects already applied
     if (!this.resolved) {
-      this.scene.restart(this.getSceneRestartData());
+      this.syncTrailToStore();
+      this.scene.restart({});
     }
   }
 }

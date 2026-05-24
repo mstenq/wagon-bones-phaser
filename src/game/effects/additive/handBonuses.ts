@@ -2,7 +2,8 @@
 
 import { effectRegistry } from '../registry';
 import { handTypeMatches } from '../helpers';
-import { getPlayerState } from '../../PlayerState';
+import { getRunState } from '../../store/runStore';
+import { selectHandStats } from '../../store/selectors/runSelectors';
 import { addScore } from '../../scoreMath';
 
 effectRegistry.registerAdditive('HAND_MULT', (ctx, equip, index) => {
@@ -26,8 +27,7 @@ effectRegistry.registerAdditive('HAND_MILES', (ctx, equip, index) => {
 effectRegistry.registerAdditive('HAND_TIMES_PLAYED_MULT', (ctx, equip, index) => {
   // Trail Journal: add times this hand type has been played as mult
   if (ctx.handType) {
-    const player = getPlayerState();
-    const stats = player.getHandStats(ctx.handType);
+    const stats = selectHandStats(getRunState(), ctx.handType);
     const val = stats.timesPlayed;
     if (val > 0) {
       ctx.bonusMult = addScore(ctx.bonusMult, val);

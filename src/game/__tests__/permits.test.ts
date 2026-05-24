@@ -1,13 +1,12 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, die, diceWithValue, calculateTestScore, item } from './testHelpers';
-import { resetPlayerState, getPlayerState } from '../PlayerState';
+import { resetDieIds, setupGame, die, diceWithValue, item } from './testHelpers';
+import { resetPlayerState, getPlayerState } from './testRunPlayer';
 import {
   getAllPermits,
   getPermitById,
   getAvailablePermits,
   generateShopPermit,
-  applyPermitEffect,
   getPermitShopDiscount,
   getPermitShopRerollDiscount,
   getPermitAuraMultiplier,
@@ -18,7 +17,6 @@ import {
   getPermitTrailGuideMult,
   hasPermitDiceInShop,
   getPermitBossRerollLimit,
-  PermitDef,
 } from '../PermitsSystem';
 import { GAMEPLAY } from '../Constants';
 import { lt } from '../scoreMath';
@@ -57,7 +55,7 @@ describe('Reroll overhaul (per-round, not per-day)', () => {
   });
 
   test('rerolls are NOT reset between days', () => {
-    const { game, player } = setupGame({ dice: diceWithValue(5, 50) });
+    const { game } = setupGame({ dice: diceWithValue(5, 50) });
     game.startRound();
 
     // Use some rerolls
@@ -399,7 +397,6 @@ describe('Permit effects: NONE (Strange Coin)', () => {
   test('Strange Coin does nothing', () => {
     const player = resetPlayerState();
     player.economy.setBalance(20);
-    const before = { ...player };
     player.buyPermit(getPermitById('strange_coin')!);
     // Only balance and purchasedPermits/currentLegPermit should change
     expect(player.economy.balance).toBe(10);

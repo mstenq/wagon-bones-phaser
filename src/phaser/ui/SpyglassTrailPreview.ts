@@ -4,7 +4,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, TRAIL_EVENT } from '../../game/Constants';
-import { getPlayerState } from '../../game/PlayerState';
+import { getItemDisplayContext } from '../../game/displayContext';
 import { getScoutsSpyglassInvestigateMiles } from '../../game/TrailEventsSystem';
 import { computeCoverCrop, trailEventSpyImageKey, trailEventSpyImagePath } from '../../game/trailEventAssets';
 import { Button } from './Button';
@@ -71,7 +71,7 @@ export class SpyglassTrailPreview {
     ring.strokeCircle(contentCX, circleY, viewRadius - 2);
     preview.track(ring);
 
-    const investigateMiles = getScoutsSpyglassInvestigateMiles(getPlayerState());
+    const investigateMiles = getScoutsSpyglassInvestigateMiles(getItemDisplayContext());
 
     const btnW = Math.min(360, contentW - 48);
     const btnY = contentBottom - 96;

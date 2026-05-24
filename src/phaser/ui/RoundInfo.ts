@@ -4,7 +4,14 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { GAMEPLAY, TEXT_COLORS, FONTS } from '../../game/Constants';
-import { computeRoundReward, computeTargetMiles, getPlayerState } from '../../game/PlayerState';
+import { computeRoundReward, computeTargetMiles } from '../../game/runProgression';
+import { getRunState } from '../../game/store/runStore';
+import {
+  selectBossForLeg,
+  selectBossPermitRerollLimit,
+  selectSkipPreviewTagForRound,
+  selectSkippedTagForRound,
+} from '../../game/store/selectors/runSelectors';
 import type { DifficultyLevel } from '../../game/types';
 import { formatScore } from '../../game/formatScore';
 import type { DecimalSource } from '../../game/decimal';
@@ -42,7 +49,7 @@ export function targetMilesForRound(
   permitScoreReduction: number,
   difficulty: DifficultyLevel = 1,
 ): DecimalSource {
-  const boss = round === GAMEPLAY.ROUNDS_PER_LEG ? getPlayerState().getBossForLeg(leg) : null;
+  const boss = round === GAMEPLAY.ROUNDS_PER_LEG ? selectBossForLeg(getRunState(), leg) : null;
   return computeTargetMiles(leg, round, permitScoreReduction, difficulty, boss);
 }
 
@@ -73,7 +80,7 @@ export interface RoundInfoConfig {
   onSkip?: () => void;
   onRerollBoss?: () => void;
   canRerollBoss?: () => boolean;
-  onTagHover?: (tag: TrailTagDef, anchorX: number, anchorY: number) => void;
+  onTagHover?: (tag: TrailTagDef, round: number, anchorX: number, anchorY: number) => void;
   onTagHoverEnd?: () => void;
 }
 
@@ -96,7 +103,7 @@ export interface LegRoundPanelsConfig {
   onSkip?: () => void;
   onRerollBoss?: () => void;
   canRerollBoss?: () => boolean;
-  onTagHover?: (tag: TrailTagDef, anchorX: number, anchorY: number) => void;
+  onTagHover?: (tag: TrailTagDef, round: number, anchorX: number, anchorY: number) => void;
   onTagHoverEnd?: () => void;
 }
 
@@ -159,16 +166,16 @@ export function createLegRoundPanelsForPlayer(
     | 'getSkipPreviewTagForRound'
   >,
 ): RoundInfoPanel[] {
-  const player = getPlayerState();
+  const run = getRunState();
   return createLegRoundPanels(scene, {
     bounds,
-    currentRound: player.round,
-    leg: player.leg,
-    difficulty: player.difficulty,
-    permitScoreReduction: player.permitScoreReduction,
-    skippedRoundsThisLeg: player.skippedRoundsThisLeg,
-    getSkippedTagForRound: (r) => player.getSkippedTagForRound(r),
-    getSkipPreviewTagForRound: (r) => player.getSkipPreviewTagForRound(r),
+    currentRound: run.round,
+    leg: run.leg,
+    difficulty: run.difficulty,
+    permitScoreReduction: run.permitScoreReduction,
+    skippedRoundsThisLeg: run.skippedRoundsThisLeg,
+    getSkippedTagForRound: (r) => selectSkippedTagForRound(run, r),
+    getSkipPreviewTagForRound: (r) => selectSkipPreviewTagForRound(run, r),
     ...options,
   });
 }
@@ -192,7 +199,7 @@ export class RoundInfoPanel extends GameObjects.Container {
       !isSkipped &&
       config.state !== 'complete' &&
       !!config.onRerollBoss &&
-      getPlayerState().bossPermitRerollLimit !== 0;
+      selectBossPermitRerollLimit(getRunState()) !== 0;
 
     const bg = scene.add.graphics();
     const bgColor = isActive ? 0x1a2a1a : isSkipped ? 0x151520 : 0x0d0d1a;
@@ -233,7 +240,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     cy += compact ? 28 : 34;
 
     if (isBoss) {
-      const boss = getPlayerState().getBossForLeg(config.leg);
+      const boss = selectBossForLeg(getRunState(), config.leg);
       if (boss) {
         cy += compact ? BOSS_PORTRAIT_TOP_GAP.compact : BOSS_PORTRAIT_TOP_GAP.normal;
         const portraitSize = compact ? BOSS_PORTRAIT_SIZE.compact : BOSS_PORTRAIT_SIZE.normal;
@@ -352,7 +359,7 @@ export class RoundInfoPanel extends GameObjects.Container {
           if (config.onTagHover) {
             const ax = x + tagX + TAG_SIZE / 2;
             const ay = y + tagY;
-            skipBtn.on('pointerover', () => config.onTagHover!(tag, ax, ay));
+            skipBtn.on('pointerover', () => config.onTagHover!(tag, config.round, ax, ay));
             skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
           }
         }
@@ -430,7 +437,7 @@ export class RoundInfoPanel extends GameObjects.Container {
       const zone = this.scene.add.zone(x + size / 2, y + size / 2, size, size).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => {
         const matrix = this.getWorldTransformMatrix();
-        config.onTagHover!(tag, matrix.tx + x + size / 2, matrix.ty + y);
+        config.onTagHover!(tag, config.round, matrix.tx + x + size / 2, matrix.ty + y);
       });
       zone.on('pointerout', () => config.onTagHoverEnd?.());
       this.add(zone);

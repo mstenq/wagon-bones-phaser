@@ -3,7 +3,7 @@
 import type { Scene } from 'phaser';
 import type { ConsumableAnimEvent } from '../../game/ConsumablesSystem';
 import type { EquipmentBar } from '../ui/EquipmentBar';
-import { getPlayerState } from '../../game/PlayerState';
+import { replaceEquipmentList, resolveEquipmentList } from '../../game/store/resolve';
 import { animateEquipmentFireDestructionParallel } from './EquipmentFireDestroyAnimation';
 import { animateEquipmentPopIn } from './EquipmentPopInAnimation';
 
@@ -34,10 +34,9 @@ function playConsumableAnimEvent(
 
   return new Promise((resolve) => {
     animateEquipmentFireDestructionParallel(scene, equipBar, event.destructions, () => {
-      const player = getPlayerState();
       const addCount = event.equipmentToAdd?.length ?? 0;
       if (addCount > 0) {
-        player.equipment.push(...event.equipmentToAdd!);
+        replaceEquipmentList([...resolveEquipmentList(), ...event.equipmentToAdd!]);
       }
       void animateEquipmentPopIn(scene, equipBar, addCount).then(resolve);
     });

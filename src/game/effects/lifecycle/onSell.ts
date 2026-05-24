@@ -2,6 +2,7 @@
 
 import type { Die } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { replaceEquipmentList } from '../../store/resolve';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 
@@ -55,12 +56,14 @@ export function processEquipmentOnSell(equipment: EquipmentInstance[]): void {
   for (const equip of equipment) {
     dispatchLifecycle('on-sell', equip);
   }
+  replaceEquipmentList(equipment);
 }
 
 export function processEquipmentOnBossDefeat(equipment: EquipmentInstance[]): void {
   for (const equip of equipment) {
     dispatchLifecycle('on-boss-defeat', equip);
   }
+  replaceEquipmentList(equipment);
 }
 
 export function processEquipmentOnDiceSpent(equipment: EquipmentInstance[], spentDice: Die[]): void {

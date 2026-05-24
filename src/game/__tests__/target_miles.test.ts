@@ -1,11 +1,14 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
 import './setup';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
-import { computeTargetMiles, resetPlayerState } from '../PlayerState';
+import { computeTargetMiles } from '../runProgression';
 import { GAMEPLAY } from '../Constants';
+import { resetTestRun } from './testHelpers';
+import { getRunState, runActions, progressionActions } from '../store';
+import { selectJourneyComplete, selectStoryVictoryOffered } from '../store/selectors/runSelectors';
 
 beforeEach(() => {
-  resetPlayerState();
+  resetTestRun();
 });
 
 describe('target_miles', () => {
@@ -28,27 +31,21 @@ describe('target_miles', () => {
   });
 
   test('advancing past leg 8 sets storyVictoryPending', () => {
-    const player = resetPlayerState();
-    player.leg = 8;
-    player.round = 3;
-    expect(player.advanceRound()).toBe(true);
-    expect(player.leg).toBe(9);
-    expect(player.storyVictoryPending).toBe(true);
-    expect(player.storyVictoryOffered).toBe(true);
+    runActions.patch({ leg: 8, round: 3 });
+    expect(progressionActions.advanceRound()).toBe(true);
+    const run = getRunState();
+    expect(run.leg).toBe(9);
+    expect(run.storyVictoryPending).toBe(true);
+    expect(selectStoryVictoryOffered(run)).toBe(true);
   });
 
   test('endless mode clears story victory gate', () => {
-    const player = resetPlayerState();
-    player.leg = 9;
-    player.storyVictoryPending = true;
-    player.endlessMode = true;
-    expect(player.journeyComplete).toBe(false);
+    runActions.patch({ leg: 9, storyVictoryPending: true, endlessMode: true });
+    expect(selectJourneyComplete(getRunState())).toBe(false);
   });
 
   test('leg beyond MAX_LEGS completes journey', () => {
-    const player = resetPlayerState();
-    player.leg = GAMEPLAY.MAX_LEGS + 1;
-    player.endlessMode = true;
-    expect(player.journeyComplete).toBe(true);
+    runActions.patch({ leg: GAMEPLAY.MAX_LEGS + 1, endlessMode: true });
+    expect(selectJourneyComplete(getRunState())).toBe(true);
   });
 });

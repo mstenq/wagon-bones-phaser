@@ -15,7 +15,7 @@ import { eq, gt, balanceMilesAndMult } from '../scoreMath';
 import { resolveScoreDestroyChance } from '../DiceSystem';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
-import { resetPlayerState } from '../PlayerState';
+import { resetPlayerState } from '../__tests__/testRunPlayer';
 import { detectBestHand, rollDie, setDieEnhancement } from '../DiceSystem';
 import { initRunRng } from '../RunRng';
 import { GAMEPLAY } from '../Constants';

@@ -5,10 +5,10 @@ import {
   diceWithValue,
   diceFromValues,
   item,
-  itemWithState,
   calculateTestScore,
   setupGame,
   resetDieIds,
+  pushEquipmentState,
 } from '../testHelpers';
 import { processEquipmentOnHandPlayed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
@@ -376,6 +376,7 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
     game.startRound();
     // Set target AFTER startRound (which randomizes it)
     inst.state.targetHand = pairIdx;
+    pushEquipmentState(inst);
 
     game.state.phase = 'ROLL';
     game.state.rolledDice = diceWithValue(5, 2);
@@ -433,6 +434,7 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
 
     game.startRound();
     inst.state.targetHand = pairIdx;
+    pushEquipmentState(inst);
 
     game.state.phase = 'ROLL';
     game.state.rolledDice = diceWithValue(5, 2);

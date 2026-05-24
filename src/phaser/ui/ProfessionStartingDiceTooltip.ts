@@ -35,11 +35,8 @@ export class ProfessionStartingDiceTooltip {
   private sprites: DiceSprite[] = [];
   private hideTimer: Phaser.Time.TimerEvent | null = null;
   private activeProfId: string | null = null;
-  private scene: Scene | null = null;
-
   show(scene: Scene, prof: ProfessionDef, anchor: TooltipAnchor, clamp: TooltipClampBounds, depth = 160): void {
     this.cancelHideTimer();
-    this.scene = scene;
     if (this.activeProfId === prof.id && this.container) return;
 
     this.hide();
@@ -177,7 +174,6 @@ export class ProfessionStartingDiceTooltip {
   hide(): void {
     this.cancelHideTimer();
     this.activeProfId = null;
-    this.scene = null;
 
     for (const s of this.sprites) s.destroy();
     this.sprites = [];

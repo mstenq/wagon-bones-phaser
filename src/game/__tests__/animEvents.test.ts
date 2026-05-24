@@ -1,6 +1,14 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
 import { die, diceFromValues, item, itemWithState, calculateTestScore, resetDieIds } from './testHelpers';
+import type { ScoreAnimEvent } from '../types';
+
+function findLastAnimIndex(events: ScoreAnimEvent[], pred: (event: ScoreAnimEvent) => boolean): number {
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (pred(events[i])) return i;
+  }
+  return -1;
+}
 
 beforeEach(() => {
   resetDieIds();
@@ -193,7 +201,7 @@ describe('animEvents: ordering', () => {
 
     // Per-die events target scored dice (dieId set), held events target held dice
     const scoredDieIds = new Set(scoredDice.map((d) => d.id));
-    const lastScoredIdx = result.animEvents.findLastIndex((e) => e.dieId && scoredDieIds.has(e.dieId));
+    const lastScoredIdx = findLastAnimIndex(result.animEvents, (e) => !!e.dieId && scoredDieIds.has(e.dieId));
     const heldDieIds = new Set(heldDice.map((d) => d.id));
     const firstHeldIdx = result.animEvents.findIndex((e) => e.target.kind === 'die' && heldDieIds.has(e.target.dieId));
 
@@ -213,7 +221,8 @@ describe('animEvents: ordering', () => {
     });
 
     const heldDieIds = new Set(heldDice.map((d) => d.id));
-    const lastHeldIdx = result.animEvents.findLastIndex(
+    const lastHeldIdx = findLastAnimIndex(
+      result.animEvents,
       (e) => e.target.kind === 'die' && heldDieIds.has(e.target.dieId),
     );
     const firstEquipOnlyIdx = result.animEvents.findIndex((e) => e.target.kind === 'equip');

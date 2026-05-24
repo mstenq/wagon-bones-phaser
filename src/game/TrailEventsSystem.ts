@@ -11,7 +11,19 @@ import trailEventsData, {
   type TrailEventEffect,
   type TrailEventOutcome,
 } from '../data/trail_events';
-import type { PlayerState } from './PlayerState';
+import type { ItemDisplayContext } from './displayContext';
+import { getItemDisplayContext } from './displayContext';
+import { getRunState, runActions } from './store/runStore';
+import type { RunState } from './store/types';
+import {
+  replaceConsumableList,
+  replaceEquipmentList,
+  resolveConsumableList,
+  resolveEquipmentList,
+} from './store/resolve';
+import { selectBossForLeg, selectProfession } from './store/selectors/runSelectors';
+import { economyActions } from './store/actions/economyActions';
+import { diceActions } from './store/actions/diceActions';
 import type { DiceEnhancement, DiceAura, DiceSticker } from './types';
 import {
   getRandomSupplyDef,
@@ -41,32 +53,9 @@ export type {
 
 export { getTrailEventMinimumLeg } from '../data/trail_events';
 
-export interface TrailEventModifiers {
-  dayPenalty: number;
-  rerollPenalty: number;
-  handSizePenalty: number;
-  scoreMultiplier: number;
-  disableRerollDay1: boolean;
-  standardDiceDay1: boolean;
-  moneyPerDayLoss: number;
-  diamondCrackDoubled: boolean;
-  luckyOddsHalved: boolean;
-  scoredDiceDestroyChance: number;
-  bossUpgradeMultiplier: number;
-  flatMilesPenalty: number;
-  skipNextShop: boolean;
-  loseAllRerolls: boolean;
-}
-
-/** Round-duration trail penalties applied after startRound consumes trailEventModifiers. */
-export interface TrailRoundEffects {
-  disableRerollDay1: boolean;
-  standardDiceDay1: boolean;
-  moneyPerDayLoss: number;
-  diamondCrackDoubled: boolean;
-  luckyOddsHalved: boolean;
-  scoredDiceDestroyChance: number;
-}
+import { createEmptyModifiers, type TrailEventModifiers, type TrailRoundEffects } from './trailEventDefaults';
+export type { TrailEventModifiers, TrailRoundEffects } from './trailEventDefaults';
+export { createEmptyModifiers, createEmptyTrailRoundEffects } from './trailEventDefaults';
 
 export interface TrailEventResult {
   event: TrailEventDef;
@@ -89,37 +78,6 @@ export function getAllTrailEvents(): TrailEventDef[] {
 /** Get a trail event by its id */
 export function getTrailEventById(id: string): TrailEventDef | null {
   return findTrailEventById(id) ?? null;
-}
-
-/** Create a fresh (zeroed) modifiers object */
-export function createEmptyModifiers(): TrailEventModifiers {
-  return {
-    dayPenalty: 0,
-    rerollPenalty: 0,
-    handSizePenalty: 0,
-    scoreMultiplier: 1.0,
-    disableRerollDay1: false,
-    standardDiceDay1: false,
-    moneyPerDayLoss: 0,
-    diamondCrackDoubled: false,
-    luckyOddsHalved: false,
-    scoredDiceDestroyChance: 0,
-    bossUpgradeMultiplier: 1.0,
-    flatMilesPenalty: 0,
-    skipNextShop: false,
-    loseAllRerolls: false,
-  };
-}
-
-export function createEmptyTrailRoundEffects(): TrailRoundEffects {
-  return {
-    disableRerollDay1: false,
-    standardDiceDay1: false,
-    moneyPerDayLoss: 0,
-    diamondCrackDoubled: false,
-    luckyOddsHalved: false,
-    scoredDiceDestroyChance: 0,
-  };
 }
 
 /** Copy round-duration fields from pending trail modifiers into active round effects. */
@@ -147,11 +105,12 @@ export function hasActiveTrailRoundEffects(effects: TrailRoundEffects): boolean 
 }
 
 /** Sidebar debuffs: active round effects, or pending modifiers before the next Game startRound. */
-export function getPlayerTrailDebuffLines(player: PlayerState): string[] {
-  if (hasActiveTrailRoundEffects(player.trailRoundEffects)) {
-    return getTrailDebuffLines(player.trailRoundEffects);
+export function getPlayerTrailDebuffLines(): string[] {
+  const run = getRunState();
+  if (hasActiveTrailRoundEffects(run.trailRoundEffects)) {
+    return getTrailDebuffLines(run.trailRoundEffects);
   }
-  return getTrailDebuffLines(trailRoundEffectsFromModifiers(player.trailEventModifiers));
+  return getTrailDebuffLines(trailRoundEffectsFromModifiers(run.trailEventModifiers));
 }
 
 /** Human-readable debuff lines for the GameScene sidebar (whole round). */
@@ -184,38 +143,51 @@ export function getTrailDebuffLines(effects: TrailRoundEffects): string[] {
 const DEMON_HUNTER_POOL_CHANCE = 0.3;
 
 /** Whether the player has Scout's Spyglass equipped. */
-export function hasScoutsSpyglass(player: PlayerState): boolean {
-  return player.equipment.some((e) => e.def.id === 'scouts_spyglass');
+export function hasScoutsSpyglass(): boolean {
+  return resolveEquipmentList().some((e) => e.def.id === 'scouts_spyglass');
+}
+
+/** Record a trail event as seen for this run (no-repeat pool). */
+export function markTrailEventSeen(eventId: string): void {
+  const run = getRunState();
+  if (run.seenTrailEventIds.includes(eventId)) return;
+  runActions.patch({ seenTrailEventIds: [...run.seenTrailEventIds, eventId] });
 }
 
 /** Skip the pending trail event (no miles). */
-export function applySpyglassAvoid(player: PlayerState): void {
-  player.pendingTrailEvent = null;
+export function applySpyglassAvoid(): void {
+  runActions.patch({ pendingTrailEventId: null });
 }
 
 /** Miles granted when investigating with Scout's Spyglass equipped. */
-export function getScoutsSpyglassInvestigateMiles(player: PlayerState): number {
-  const spyglass = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
+export function getScoutsSpyglassInvestigateMiles(ctx: ItemDisplayContext = getItemDisplayContext()): number {
+  const spyglass = ctx.equipment.find((e) => e.def.id === 'scouts_spyglass');
   if (!spyglass) return 0;
-  return resolveEffectParam<number>(spyglass.def.effectParams, 'investigateMiles', player.profession?.id);
+  return resolveEffectParam<number>(spyglass.def.effectParams, 'investigateMiles', selectProfession(getRunState())?.id);
 }
 
 /** Commit to the pending trail event; store investigate miles on the spyglass item. */
-export function applySpyglassInvestigate(player: PlayerState): void {
-  const spyglass = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
-  if (spyglass) {
-    const gain = getScoutsSpyglassInvestigateMiles(player);
-    spyglass.state.miles = (spyglass.state.miles ?? 0) + gain;
-  }
+export function applySpyglassInvestigate(): void {
+  const gain = getScoutsSpyglassInvestigateMiles();
+  const list = resolveEquipmentList();
+  const index = list.findIndex((e) => e.def.id === 'scouts_spyglass');
+  if (index < 0) return;
+  const spyglass = list[index]!;
+  const next = [...list];
+  next[index] = {
+    ...spyglass,
+    state: { ...spyglass.state, miles: (spyglass.state.miles ?? 0) + gain },
+  };
+  replaceEquipmentList(next);
 }
 
-export function findTrailRepairKit(player: PlayerState): EquipmentInstance | undefined {
-  return player.equipment.find((e) => e.def.id === 'trail_repair_kit');
+export function findTrailRepairKit(): EquipmentInstance | undefined {
+  return resolveEquipmentList().find((e) => e.def.id === 'trail_repair_kit');
 }
 
 /** True when shield or Trail Repair Kit negates a negative trail effect. */
-export function isTrailNegativeNegated(player: PlayerState): boolean {
-  return player.equipment.some((e) => e.def.id === 'saint_elmos_shield') || findTrailRepairKit(player) !== undefined;
+export function isTrailNegativeNegated(): boolean {
+  return resolveEquipmentList().some((e) => e.def.id === 'saint_elmos_shield') || findTrailRepairKit() !== undefined;
 }
 
 /** Filter events eligible for the current leg (mirrors boss minimumLeg). */
@@ -224,10 +196,16 @@ export function filterEventsByLeg(pool: TrailEventDef[], leg: number): TrailEven
   return eligible.length > 0 ? eligible : pool;
 }
 
+function resolveSeenTrailEventIds(seenIds?: readonly string[]): readonly string[] {
+  return seenIds ?? getRunState().seenTrailEventIds;
+}
+
 /** Exclude events the player has already encountered this run. */
-export function filterUnseenEvents(pool: TrailEventDef[], player: PlayerState): TrailEventDef[] {
-  if (player.seenTrailEventIds.size === 0) return pool;
-  const unseen = pool.filter((e) => !player.seenTrailEventIds.has(e.id));
+export function filterUnseenEvents(pool: TrailEventDef[], seenIds?: readonly string[]): TrailEventDef[] {
+  const resolvedSeen = resolveSeenTrailEventIds(seenIds);
+  if (resolvedSeen.length === 0) return pool;
+  const seen = new Set(resolvedSeen);
+  const unseen = pool.filter((e) => !seen.has(e.id));
   return unseen.length > 0 ? unseen : pool;
 }
 
@@ -244,8 +222,8 @@ export function eventHasEffect(event: TrailEventDef, effectType: TrailEventEffec
 }
 
 /** True when the next round is The Standoff boss (trail event fires after round 3 payout). */
-export function isStandoffBossRound(player: PlayerState): boolean {
-  return player.round === GAMEPLAY.ROUNDS_PER_LEG && player.getBossForLeg(player.leg)?.id === 'the_standoff';
+export function isStandoffBossRound(state: RunState = getRunState()): boolean {
+  return state.round === GAMEPLAY.ROUNDS_PER_LEG && selectBossForLeg(state, state.leg)?.id === 'the_standoff';
 }
 
 function filterStandoffBlockedEvents(pool: TrailEventDef[]): TrailEventDef[] {
@@ -258,9 +236,12 @@ function filterStandoffBlockedEvents(pool: TrailEventDef[]): TrailEventDef[] {
  * Filters demon_hunter events based on profession and minimumLeg.
  * When playing as demon_hunter, ~30% chance to draw from exclusive pool.
  */
-export function selectTrailEvent(player: PlayerState, rng: () => number = () => rngFloat('trail')): TrailEventDef {
-  const isDemonHunter = player.profession?.id === 'demon_hunter';
-  const leg = player.leg;
+export function selectTrailEvent(rng: () => number = () => rngFloat('trail')): TrailEventDef {
+  const run = getRunState();
+  const profession = selectProfession(run);
+  const isDemonHunter = profession?.id === 'demon_hunter';
+  const leg = run.leg;
+  const seenIds = run.seenTrailEventIds;
 
   // Decide which pool to draw from
   if (isDemonHunter && rng() < DEMON_HUNTER_POOL_CHANCE) {
@@ -269,7 +250,7 @@ export function selectTrailEvent(player: PlayerState, rng: () => number = () => 
         ALL_EVENTS.filter((e) => e.demonHunterOnly),
         leg,
       ),
-      player,
+      seenIds,
     );
     return weightedRandomPick(demonPool, rng);
   }
@@ -279,9 +260,9 @@ export function selectTrailEvent(player: PlayerState, rng: () => number = () => 
       ALL_EVENTS.filter((e) => !e.demonHunterOnly),
       leg,
     ),
-    player,
+    seenIds,
   );
-  if (isStandoffBossRound(player)) {
+  if (isStandoffBossRound(run)) {
     standardPool = filterStandoffBlockedEvents(standardPool);
   }
   return weightedRandomPick(standardPool, rng);
@@ -305,49 +286,50 @@ function weightedRandomPick(pool: TrailEventDef[], rng: () => number): TrailEven
  * Get choices available to the player for a given event.
  * Filters out choices whose conditions are not met.
  */
-export function getAvailableChoices(event: TrailEventDef, player: PlayerState): TrailEventChoice[] {
+export function getAvailableChoices(event: TrailEventDef): TrailEventChoice[] {
   return event.choices.filter((choice) => {
     if (!choice.condition) return true;
-    return checkCondition(choice.condition, player);
+    return checkCondition(choice.condition);
   });
 }
 
-/** Check if a condition is met by the player */
-export function checkCondition(condition: TrailEventCondition, player: PlayerState): boolean {
+/** Check if a condition is met by the current run state. */
+export function checkCondition(condition: TrailEventCondition): boolean {
+  const run = getRunState();
+  const equipment = resolveEquipmentList(run);
+  const consumables = resolveConsumableList(run);
   switch (condition.type) {
     case 'HAS_MONEY':
-      return player.economy.balance >= (condition.amount ?? 0);
+      return run.balance >= (condition.amount ?? 0);
 
     case 'HAS_EQUIPMENT':
-      return player.equipment.some((e) => e.def.id === condition.id);
+      return equipment.some((e) => e.def.id === condition.id);
 
     case 'HAS_EQUIPMENT_ANY':
-      return player.equipment.length > 0;
+      return equipment.length > 0;
 
     case 'HAS_MEDICINE':
-      // Check for medicine-type supply card in consumables
-      return player.consumables.some(
+      return consumables.some(
         (c) => c.def.id === 'medicine' || c.def.id === 'wild_vegetables' || c.def.category === 'supply',
       );
 
     case 'HAS_WEAPON':
-      // Check for weapon-type equipment (rifle, etc.)
-      return player.equipment.some((e) => {
+      return equipment.some((e) => {
         const id = e.def.id;
         return id === '22_rifle' || id === 'shotgun' || id === 'revolver' || id === 'hunting_rifle';
       });
 
     case 'HAS_SUPPLY_CARDS':
-      return player.consumables.some((c) => c.def.category === 'supply');
+      return consumables.some((c) => c.def.category === 'supply');
 
     case 'HAS_CONSUMABLE_ANY':
-      return player.consumables.length > 0;
+      return consumables.length > 0;
 
     case 'NOT_HAS_CONSUMABLE_ANY':
-      return player.consumables.length === 0;
+      return consumables.length === 0;
 
     case 'IS_PROFESSION':
-      return player.profession?.id === condition.id;
+      return selectProfession(run)?.id === condition.id;
 
     default:
       return true;
@@ -363,7 +345,6 @@ export function checkCondition(condition: TrailEventCondition, player: PlayerSta
 export function resolveChoice(
   event: TrailEventDef,
   choiceId: string,
-  player: PlayerState,
   rng: () => number = () => rngFloat('trail'),
 ): TrailEventResult {
   const choice = event.choices.find((c) => c.id === choiceId);
@@ -371,36 +352,44 @@ export function resolveChoice(
     throw new Error(`Invalid choice "${choiceId}" for event "${event.id}"`);
   }
 
-  const shieldEquip = player.equipment.find((e) => e.def.id === 'saint_elmos_shield');
-  const trailRepairKit = player.equipment.find((e) => e.def.id === 'trail_repair_kit');
+  const equipment = resolveEquipmentList();
+  const shieldEquip = equipment.find((e) => e.def.id === 'saint_elmos_shield');
+  const trailRepairKit = equipment.find((e) => e.def.id === 'trail_repair_kit');
 
-  // Roll for outcome
   const outcomeIndex = rollOutcome(choice.outcomes, rng);
   const outcome = choice.outcomes[outcomeIndex];
   const modifiers = createEmptyModifiers();
 
   let trailRepairKitNegatedEvent = false;
 
-  // Apply effects
   for (const effect of outcome.effects) {
     if (isNegativeEffect(effect) && (shieldEquip || trailRepairKit)) {
       if (trailRepairKit) trailRepairKitNegatedEvent = true;
       continue;
     }
-    applyEffect(effect, player, modifiers, rng);
+    applyEffect(effect, modifiers, rng);
   }
 
   if (trailRepairKit && trailRepairKitNegatedEvent) {
     const gain = resolveEffectParam<number>(
       trailRepairKit.def.effectParams,
       'xMultGainPerNegation',
-      player.profession?.id,
+      selectProfession(getRunState())?.id,
     );
-    trailRepairKit.state.xMult = (trailRepairKit.state.xMult ?? 1) + gain;
+    const kitIndex = equipment.findIndex((e) => e.def.id === 'trail_repair_kit');
+    if (kitIndex >= 0) {
+      const kit = equipment[kitIndex]!;
+      const next = [...equipment];
+      next[kitIndex] = {
+        ...kit,
+        state: { ...kit.state, xMult: (kit.state.xMult ?? 1) + gain },
+      };
+      replaceEquipmentList(next);
+    }
   }
 
-  player.seenTrailEventIds.add(event.id);
-  player.pendingTrailEvent = null;
+  markTrailEventSeen(event.id);
+  runActions.patch({ pendingTrailEventId: null });
 
   return {
     event,
@@ -461,23 +450,24 @@ export function isNegativeEffect(effect: TrailEventEffect): boolean {
  */
 export function applyEffect(
   effect: TrailEventEffect,
-  player: PlayerState,
   modifiers: TrailEventModifiers,
   rng: () => number = () => rngFloat('trail'),
 ): void {
+  const run = getRunState();
   switch (effect.type) {
     case 'LOSE_MONEY':
-      player.economy.spend(Math.min(effect.amount ?? 0, player.economy.balance));
+      economyActions.spend(Math.min(effect.amount ?? 0, run.balance));
       break;
 
     case 'LOSE_MONEY_PERCENT': {
-      const amount = Math.floor(player.economy.balance * ((effect.percent ?? 0) / 100));
-      player.economy.spend(amount);
+      const state = getRunState();
+      const amount = Math.floor(state.balance * ((effect.percent ?? 0) / 100));
+      economyActions.spend(amount);
       break;
     }
 
     case 'GAIN_MONEY':
-      player.economy.earn(effect.amount ?? 0);
+      economyActions.earn(effect.amount ?? 0);
       break;
 
     case 'LOSE_DAYS':
@@ -502,73 +492,75 @@ export function applyEffect(
       break;
 
     case 'LOSE_RANDOM_DICE': {
-      // Only target enhanced dice (has enhancement, sticker, or aura)
-      const enhancedDice = player.dice.filter((d) => d.enhancement !== null || d.sticker !== null || d.aura !== null);
+      const dice = getRunState().dice;
+      const enhancedDice = dice.filter((d) => d.enhancement !== null || d.sticker !== null || d.aura !== null);
       if (enhancedDice.length === 0) {
-        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE; // $3 per missing die as penalty
-        player.economy.setBalance(player.economy.balance - lostAmount);
+        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE;
+        economyActions.setBalance(getRunState().balance - lostAmount);
         break;
       }
+      let nextDice = [...dice];
       const count = Math.min(effect.count ?? 0, enhancedDice.length);
       for (let i = 0; i < count; i++) {
-        const remaining = player.dice.filter((d) => d.enhancement !== null || d.sticker !== null || d.aura !== null);
+        const remaining = nextDice.filter((d) => d.enhancement !== null || d.sticker !== null || d.aura !== null);
         if (remaining.length === 0) break;
-        const pick = remaining[Math.floor(rng() * remaining.length)];
-        const idx = player.dice.indexOf(pick);
-        if (idx >= 0) player.dice.splice(idx, 1);
+        const pick = remaining[Math.floor(rng() * remaining.length)]!;
+        nextDice = nextDice.filter((d) => d.id !== pick.id);
       }
+      runActions.patch({ dice: nextDice });
       break;
     }
 
     case 'LOSE_RANDOM_EQUIPMENT': {
-      if (player.equipment.length === 0) {
-        // Fallback: lose $4 per missing equipment (can go negative)
+      const equipment = resolveEquipmentList();
+      if (equipment.length === 0) {
         const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP;
-        player.economy.setBalance(player.economy.balance - lostAmount);
+        economyActions.setBalance(getRunState().balance - lostAmount);
         break;
       }
-      const eligibleIndices = player.equipment.map((e, i) => (isEquipmentCursed(e) ? -1 : i)).filter((i) => i >= 0);
+      const eligibleIndices = equipment.map((e, i) => (isEquipmentCursed(e) ? -1 : i)).filter((i) => i >= 0);
       if (eligibleIndices.length === 0) {
         const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP;
-        player.economy.setBalance(player.economy.balance - lostAmount);
+        economyActions.setBalance(getRunState().balance - lostAmount);
         break;
       }
+      let list = [...equipment];
       const count = Math.min(effect.count ?? 0, eligibleIndices.length);
       for (let i = 0; i < count; i++) {
-        const remaining = player.equipment.map((e, idx) => (isEquipmentCursed(e) ? -1 : idx)).filter((idx) => idx >= 0);
+        const remaining = list.map((e, idx) => (isEquipmentCursed(e) ? -1 : idx)).filter((idx) => idx >= 0);
         if (remaining.length === 0) break;
-        const pick = remaining[Math.floor(rng() * remaining.length)];
-        player.equipment.splice(pick, 1);
+        const pick = remaining[Math.floor(rng() * remaining.length)]!;
+        list = list.filter((_, idx) => idx !== pick);
       }
+      replaceEquipmentList(list);
       break;
     }
 
     case 'LOSE_EQUIPMENT_CHOICE': {
-      // Deferred to UI — the scene will prompt the player to choose.
-      // If no equipment, fallback $10 penalty applied here.
-      if (player.equipment.length === 0) {
-        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
-        player.economy.setBalance(player.economy.balance - lostAmount);
+      if (resolveEquipmentList().length === 0) {
+        const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP;
+        economyActions.setBalance(getRunState().balance - lostAmount);
       }
       break;
     }
 
     case 'LOSE_ALL_SUPPLY_CARDS': {
-      // Remove all supply-category consumables
-      player.consumables = player.consumables.filter((c) => c.def.category !== 'supply');
+      replaceConsumableList(resolveConsumableList().filter((c) => c.def.category !== 'supply'));
       break;
     }
 
     case 'LOSE_RANDOM_SUPPLY_CARD': {
+      let list = resolveConsumableList();
       const count = effect.count ?? 1;
       for (let i = 0; i < count; i++) {
-        const supplyIndices = player.consumables
+        const supplyIndices = list
           .map((c, idx) => (c.def.category === 'supply' || c.def.category === 'trail_guide' ? idx : -1))
           .filter((idx) => idx >= 0);
         if (supplyIndices.length === 0) break;
-        const removeIdx = supplyIndices[Math.floor(rng() * supplyIndices.length)];
-        player.consumables.splice(removeIdx, 1);
+        const removeIdx = supplyIndices[Math.floor(rng() * supplyIndices.length)]!;
+        list = list.filter((_, idx) => idx !== removeIdx);
       }
+      replaceConsumableList(list);
       break;
     }
 
@@ -577,15 +569,15 @@ export function applyEffect(
       break;
 
     case 'LOSE_EQUIPMENT_SLOT_PERMANENT':
-      player.maxEquipmentSlots = Math.max(1, player.maxEquipmentSlots - 1);
+      runActions.patch({ maxEquipmentSlots: Math.max(1, getRunState().maxEquipmentSlots - 1) });
       break;
 
     case 'GAIN_DICE': {
       const count = effect.count ?? 1;
       for (let i = 0; i < count; i++) {
         const enhancement = (effect.enhancement as DiceEnhancement) ?? null;
-        player.addDie({
-          id: '', // PlayerState.addDie assigns a proper id
+        diceActions.addDie({
+          id: '',
           value: enhancement === 'stone' ? 0 : Math.floor(rng() * 12) + 1,
           enhancement,
           sticker: (effect.sticker as DiceSticker) ?? null,
@@ -597,88 +589,87 @@ export function applyEffect(
     }
 
     case 'GAIN_RANDOM_SUPPLY_CARD': {
-      // Import handled dynamically — add a generic supply card
-      // In the actual game this would use getRandomSupplyDef, but for logic
-      // purposes we just mark that it should happen. The count is tracked.
+      const list = resolveConsumableList();
       const count = effect.count ?? 1;
       for (let i = 0; i < count; i++) {
-        const def = getRandomSupplyDef();
-        const inst = createConsumableInstance(def);
-        player.consumables.push(inst);
+        list.push(createConsumableInstance(getRandomSupplyDef()));
       }
+      replaceConsumableList(list);
       break;
     }
 
     case 'GAIN_SPECIFIC_SUPPLY_CARD': {
       const def = getSupplyDefById(effect.id ?? '');
       if (def) {
-        const inst = createConsumableInstance(def);
-        player.consumables.push(inst);
+        replaceConsumableList([...resolveConsumableList(), createConsumableInstance(def)]);
       }
       break;
     }
 
     case 'GAIN_RANDOM_EQUIPMENT': {
-      // Generate a single equipment item of the requested rarity
       const stock = generateShopStock(20);
-      const rarityFilter = effect.rarity ? stock.filter((e: any) => e.rarity === effect.rarity) : stock;
+      const rarityFilter = effect.rarity ? stock.filter((e) => e.rarity === effect.rarity) : stock;
       const pick = rarityFilter.length > 0 ? rarityFilter[0] : stock[0];
       if (pick) {
         const def = effect.aura
           ? { ...pick, aura: { id: effect.aura, name: effect.aura, description: '', costIncrease: 0, chance: 0 } }
           : pick;
-        player.equipment.push(acquireRewardEquipmentInstance(def, player.purchasedPermits));
+        const list = resolveEquipmentList();
+        list.push(acquireRewardEquipmentInstance(def, getRunState().purchasedPermits));
+        replaceEquipmentList(list);
       }
       break;
     }
 
     case 'GAIN_TRAIL_GUIDES': {
+      const list = resolveConsumableList();
       const count = effect.count ?? 1;
       for (let i = 0; i < count; i++) {
-        const def = getRandomTrailGuideDef();
-        const inst = createConsumableInstance(def);
-        player.consumables.push(inst);
+        list.push(createConsumableInstance(getRandomTrailGuideDef()));
       }
+      replaceConsumableList(list);
       break;
     }
 
     case 'GAIN_MEDICINE_CARD': {
       const def = getSupplyDefById('medicine');
       if (def) {
-        player.consumables.push(createConsumableInstance(def));
+        replaceConsumableList([...resolveConsumableList(), createConsumableInstance(def)]);
       }
       break;
     }
 
     case 'GAIN_FRONTIER_ENCOUNTER': {
-      const def = getRandomFrontierDef();
-      player.consumables.push(createConsumableInstance(def));
+      replaceConsumableList([...resolveConsumableList(), createConsumableInstance(getRandomFrontierDef())]);
       break;
     }
 
     case 'USE_MEDICINE': {
-      // Remove one supply-category consumable (first found)
-      const idx = player.consumables.findIndex((c) => c.def.category === 'supply');
-      if (idx >= 0) player.consumables.splice(idx, 1);
+      const list = resolveConsumableList();
+      const idx = list.findIndex((c) => c.def.category === 'supply');
+      if (idx >= 0) replaceConsumableList(list.filter((_, i) => i !== idx));
       break;
     }
 
     case 'DESTROY_EQUIPMENT': {
-      const idx = player.equipment.findIndex((e) => e.def.id === effect.id);
-      if (idx >= 0 && !isEquipmentCursed(player.equipment[idx])) {
-        player.equipment.splice(idx, 1);
+      const list = resolveEquipmentList();
+      const idx = list.findIndex((e) => e.def.id === effect.id);
+      if (idx >= 0 && !isEquipmentCursed(list[idx]!)) {
+        replaceEquipmentList(list.filter((_, i) => i !== idx));
       }
       break;
     }
 
     case 'ADD_AURA_TO_RANDOM_DICE': {
-      const count = Math.min(effect.count ?? 0, player.dice.length);
-      const shuffled = rngShuffle('trail', player.dice);
+      const dice = [...getRunState().dice];
+      const count = Math.min(effect.count ?? 0, dice.length);
+      const shuffled = rngShuffle('trail', dice);
       for (let i = 0; i < count; i++) {
         if (shuffled[i]) {
           shuffled[i].aura = (effect.aura as DiceAura) ?? null;
         }
       }
+      runActions.patch({ dice: shuffled });
       break;
     }
 

@@ -10,7 +10,8 @@ import {
 } from '../BoosterPackSystem';
 import { generateShopStock, getAllEquipment } from '../ItemsSystem';
 import { CHANCES } from '../Constants';
-import { resetPlayerState, getPlayerState } from '../PlayerState';
+import { resetPlayerState, getPlayerState } from './testRunPlayer';
+import { getRunState } from '../store/runStore';
 import { item } from './testHelpers';
 import { HandType } from '../types';
 
@@ -109,7 +110,7 @@ describe('equipment pack duplicate filtering', () => {
   test('excludes owned equipment ids from pack stock', () => {
     const player = getPlayerState();
     player.equipment = [item('horseshoe')];
-    expect(playerAllowsDuplicateItems(player)).toBe(false);
+    expect(playerAllowsDuplicateItems(getRunState())).toBe(false);
 
     for (let i = 0; i < 30; i++) {
       const items = generatePackContents(equipmentPack);
@@ -122,8 +123,8 @@ describe('equipment pack duplicate filtering', () => {
   test('allows duplicates with counterfeit_goods', () => {
     const player = getPlayerState();
     player.equipment = [item('horseshoe'), item('counterfeit_goods')];
-    expect(playerAllowsDuplicateItems(player)).toBe(true);
-    expect(getEquipmentPackExcludeIds(player)).toBeUndefined();
+    expect(playerAllowsDuplicateItems(getRunState())).toBe(true);
+    expect(getEquipmentPackExcludeIds(getRunState())).toBeUndefined();
 
     // Owned horseshoe is not excluded from stock when duplicates are allowed
     const excludeAllButHorseshoe = getAllEquipment()

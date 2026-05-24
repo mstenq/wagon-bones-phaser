@@ -6,7 +6,7 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { getAllEquipment, type EquipmentDef } from '../../game/ItemsSystem';
-import { getPlayerState } from '../../game/PlayerState';
+import { getItemDisplayContext } from '../../game/displayContext';
 import type { CardTemplate } from '../../data/items';
 import { Button } from './Button';
 import { ItemCard } from './ItemCard';
@@ -246,7 +246,7 @@ export class EquipmentCatalogModal extends GameObjects.Container {
     const cardData = {
       id: def.id,
       name: def.name,
-      description: def.description,
+      description: '',
       cost: def.cost,
       rarity: def.rarity,
       aura: def.aura,
@@ -257,7 +257,7 @@ export class EquipmentCatalogModal extends GameObjects.Container {
       mode: 'shop',
       showCost: false,
     });
-    card.setTooltipContext(null, getPlayerState());
+    card.setTooltipContext(null, getItemDisplayContext());
     card.setSuppressHints(true);
     return card;
   }

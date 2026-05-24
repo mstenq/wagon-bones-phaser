@@ -20,7 +20,7 @@ interface PreScoringContext {
 }
 
 effectRegistry.registerLifecycle('on-pre-scoring', (equip, ctx, equipIndex) => {
-  const { scoringDice, currentDay, maxDays, equipment, mutations, animEvents } = ctx as PreScoringContext;
+  const { scoringDice, currentDay, equipment, mutations, animEvents } = ctx as PreScoringContext;
   const eIdx = equipIndex as number;
 
   switch (equip.def.effectType) {

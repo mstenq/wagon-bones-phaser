@@ -17,6 +17,7 @@ export class TagTooltip {
   show(
     scene: Scene,
     tag: TrailTagDef,
+    description: string,
     anchorX: number,
     anchorY: number,
     clamp?: TagTooltipClampBounds,
@@ -34,7 +35,7 @@ export class TagTooltip {
       wordWrap: { width: maxW - pad * 2 },
     });
 
-    const body = scene.add.text(0, pad + title.height + 6, tag.description, {
+    const body = scene.add.text(0, pad + title.height + 6, description, {
       fontFamily: FONTS.PRIMARY,
       fontSize: '11px',
       color: '#c8c8c8',

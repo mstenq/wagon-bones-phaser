@@ -5,7 +5,9 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import { getPlayerState } from '../../game/PlayerState';
+import { runStore } from '../../game/store/runStore';
+import { selectDicePouchCounts } from '../../game/store/selectors/uiSelectors';
+import { bindGameObject } from '../store/subscribe';
 
 export class DicePouch extends GameObjects.Container {
   private bg: GameObjects.Graphics;
@@ -51,7 +53,9 @@ export class DicePouch extends GameObjects.Container {
     this.setDepth(150);
     scene.add.existing(this);
 
-    this.refresh();
+    bindGameObject(this, runStore, selectDicePouchCounts, (counts) => {
+      this.countText.setText(`${counts.available}/${counts.total}`);
+    });
   }
 
   private drawBg(hover: boolean): void {
@@ -61,13 +65,6 @@ export class DicePouch extends GameObjects.Container {
     this.bg.fillRoundedRect(0, 0, size, size, 8);
     this.bg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
     this.bg.strokeRoundedRect(0, 0, size, size, 8);
-  }
-
-  refresh(): void {
-    const player = getPlayerState();
-    const available = player.availableDice.length;
-    const total = player.dice.length;
-    this.countText.setText(`${available}/${total}`);
   }
 
   setClickCallback(cb: () => void): void {

@@ -4,15 +4,22 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
 import { formatScore, formatScoreComponent, formatMult } from '../../game/formatScore';
+import { milesFromSave } from '../../game/scoreMath';
 import type { DecimalSource } from '../../game/decimal';
-import { getPlayerState, ProfessionDef } from '../../game/PlayerState';
+import type { ProfessionDef } from '../../data/professions';
 import type { BossDef } from '../../game/types';
+import { runStore } from '../../game/store/runStore';
+import { roundStore } from '../../game/store/roundStore';
+import { getRunProfession } from '../../game/store/runReads';
+import { selectRunSidebarModel, selectSidebarOverlayRevision } from '../../game/store/selectors/uiSelectors';
+import { selectRoundTotalMiles } from '../../game/store/selectors/roundSelectors';
 import { Button } from './Button';
 import { isDevMode } from '../../game/DevMode';
 import { addDifficultyImage, getDifficultyDef } from './DifficultyAssets';
 import { DifficultyTooltip } from './DifficultyTooltip';
+import { bindGameObject } from '../store/subscribe';
 
 export interface SidebarData {
   /** Title shown at top: "SHOP", "The Inspector", etc. */
@@ -89,6 +96,7 @@ export class Sidebar extends GameObjects.Container {
   private onJourneyInfo: (() => void) | null = null;
   private onDevBossTest: (() => void) | null = null;
   private onOptions: (() => void) | null = null;
+  private subscribedDifficulty = 1;
 
   /** Y coordinate of the hand display area in sidebar space (for upgrade animation positioning) */
   private handDisplayY: number = 0;
@@ -122,7 +130,7 @@ export class Sidebar extends GameObjects.Container {
   private buildContent(scene: Scene, w: number, _h: number): void {
     const pad = UI.SIDEBAR_PADDING;
     const cx = w / 2;
-    let y = pad;
+    let y: number = pad;
 
     // ─── Title Section (scene name + difficulty stake) ───
     const titleH = this.titleSectionH;
@@ -142,7 +150,7 @@ export class Sidebar extends GameObjects.Container {
     this.difficultyIcon = addDifficultyImage(
       scene,
       this,
-      getPlayerState().difficulty,
+      selectRunSidebarModel().difficulty,
       titleIconX,
       titleIconY,
       titleIconSize,
@@ -164,7 +172,7 @@ export class Sidebar extends GameObjects.Container {
         .setInteractive({ useHandCursor: true });
       this.add(iconHit);
       iconHit.on('pointerover', () => {
-        const def = getDifficultyDef(getPlayerState().difficulty);
+        const def = getDifficultyDef(selectRunSidebarModel().difficulty);
         this.difficultyTooltip.show(
           this.scene,
           def,
@@ -236,15 +244,13 @@ export class Sidebar extends GameObjects.Container {
     y = 0;
 
     // ─── Profession Display ───
-    const player = getPlayerState();
+    const prof = getRunProfession();
     const profImgSize = 120;
     const profH = 130;
     this.professionContainer = scene.add.container(0, 0);
     this.mainContentContainer.add(this.professionContainer);
 
-    if (player.profession) {
-      const profY = 0;
-
+    if (prof) {
       const profBg = scene.add.graphics();
       profBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
       profBg.fillRoundedRect(pad, y, w - pad * 2, profH, 6);
@@ -252,7 +258,7 @@ export class Sidebar extends GameObjects.Container {
       profBg.strokeRoundedRect(pad, y, w - pad * 2, profH, 6);
       this.professionContainer.add(profBg);
 
-      const imgKey = `prof_${player.profession.id}`;
+      const imgKey = `prof_${prof.id}`;
       if (scene.textures.exists(imgKey)) {
         const profImg = scene.add.image(pad + 6 + profImgSize / 2, y + profH / 2, imgKey);
         const tex = profImg.texture.getSourceImage();
@@ -267,7 +273,7 @@ export class Sidebar extends GameObjects.Container {
       const rightEdge = rightX + rightW - pad;
 
       // Title
-      const profNameText = scene.add.text(rightX, y + 8, player.profession.title, {
+      const profNameText = scene.add.text(rightX, y + 8, prof.title, {
         fontFamily: FONTS.HEADING,
         fontSize: '16px',
         color: TEXT_COLORS.GOLD,
@@ -275,7 +281,7 @@ export class Sidebar extends GameObjects.Container {
       this.professionContainer.add(profNameText);
 
       // Full name
-      const profCharName = scene.add.text(rightX, y + 28, player.profession.name, {
+      const profCharName = scene.add.text(rightX, y + 28, prof.name, {
         fontFamily: FONTS.PRIMARY,
         fontSize: '11px',
         color: TEXT_COLORS.SECONDARY,
@@ -347,7 +353,7 @@ export class Sidebar extends GameObjects.Container {
       hitZone.setInteractive(new Phaser.Geom.Rectangle(pad, y, w - pad * 2, profH), Phaser.Geom.Rectangle.Contains);
 
       hitZone.on('pointerover', () => {
-        this.showProfTooltip(scene, w, this.getMainContentBaseY() + profH + 4, player.profession!);
+        this.showProfTooltip(scene, w, this.getMainContentBaseY() + profH + 4, prof);
       });
       hitZone.on('pointerout', () => {
         this.hideProfTooltip();
@@ -593,6 +599,81 @@ export class Sidebar extends GameObjects.Container {
     y += 46;
 
     this.syncMainContentOffset(false);
+
+    bindGameObject(this, runStore, selectRunSidebarModel, (model) => this.applyRunModel(model));
+    bindGameObject(
+      this,
+      roundStore,
+      (round) =>
+        round ? `${round.day}:${round.rerollsRemaining}:${round.config.maxDays}:${round.config.targetMiles}` : '',
+      () => this.applyRunModel(selectRunSidebarModel()),
+    );
+    bindGameObject(this, roundStore, selectSidebarOverlayRevision, () => this.applySidebarOverlay());
+    this.syncRoundScoreFromStore();
+  }
+
+  /** Sync round score label from store (not live during score animation — use setRoundScoreAnimated). */
+  syncRoundScoreFromStore(): void {
+    const miles = selectRoundTotalMiles();
+    if (miles !== null) {
+      this.roundScoreText.setText(formatScore(miles));
+    }
+  }
+
+  private applySidebarOverlay(): void {
+    const round = roundStore.getState();
+    const overlay = round?.sidebarOverlay;
+    if (!overlay) return;
+    if (overlay.title !== undefined) this.titleText.setText(overlay.title);
+    if (overlay.handName !== undefined) {
+      if (overlay.handName) {
+        this.handNameText.setText(overlay.handName);
+        this.handNameText.setVisible(true);
+      } else {
+        this.handNameText.setVisible(false);
+      }
+    }
+    if (overlay.handLevel !== undefined) {
+      if (overlay.handLevel > 0) {
+        this.handLevelText.setText(`lvl.${overlay.handLevel}`);
+        this.handLevelText.setVisible(true);
+      } else {
+        this.handLevelText.setVisible(false);
+      }
+    }
+    if (overlay.milesBaseSave !== undefined) {
+      this.milesBaseText.setText(formatScoreComponent(milesFromSave(overlay.milesBaseSave)));
+    }
+    if (overlay.multSave !== undefined) {
+      this.multText.setText(formatMult(milesFromSave(overlay.multSave)));
+    }
+  }
+
+  private applyRunModel(model: ReturnType<typeof selectRunSidebarModel>): void {
+    this.moneyText.setText(`$${model.balance}`);
+    this.daysText.setText(`${model.daysRemaining}`);
+    this.rerollsText.setText(`${model.rerolls}`);
+    this.legText.setText(`Leg ${model.leg} - ${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
+    this.targetText.setText(`${formatScore(model.targetMiles)} mi`);
+    this.updateBossPanel(model.boss);
+    this.updateTrailDebuffPanel(model.trailDebuffs);
+
+    if (this.subscribedDifficulty !== model.difficulty && this.difficultyIcon) {
+      this.subscribedDifficulty = model.difficulty;
+      const pad = UI.SIDEBAR_PADDING;
+      const titleIconX = pad + 18;
+      const titleIconY = this.titleSectionY + this.titleSectionH / 2;
+      const titleIconSize = 42;
+      this.difficultyIcon.destroy();
+      this.difficultyIcon = addDifficultyImage(
+        this.scene,
+        this,
+        model.difficulty,
+        titleIconX,
+        titleIconY,
+        titleIconSize,
+      );
+    }
   }
 
   /** Sidebar-space Y where main content block starts (includes boss offset). */
@@ -658,13 +739,7 @@ export class Sidebar extends GameObjects.Container {
       this.updateBossPanel(data.boss);
     }
 
-    if (data.trailDebuffs !== undefined) {
-      this.updateTrailDebuffPanel(data.trailDebuffs);
-    }
-
-    // Always refresh money from player state
-    const player = getPlayerState();
-    this.moneyText.setText(`$${player.economy.balance}`);
+    // trailDebuffs, boss, money, leg, days, rerolls, targetMiles: driven by store subscriptions
   }
 
   private updateTrailDebuffPanel(lines: string[]): void {
@@ -747,11 +822,6 @@ export class Sidebar extends GameObjects.Container {
       const placeholder = this.bossContainer.getData('bossImgPlaceholder') as GameObjects.Rectangle;
       placeholder?.setVisible(false);
     }
-  }
-
-  refreshMoney(): void {
-    const player = getPlayerState();
-    this.moneyText.setText(`$${player.economy.balance}`);
   }
 
   setJourneyInfoCallback(cb: () => void): void {

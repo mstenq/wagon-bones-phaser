@@ -1,7 +1,7 @@
 // ─── CONDITIONAL_MULT, MULT_PER_EQUIPMENT, MILES_PER_DOLLAR, etc. ───
 
 import { effectRegistry } from '../registry';
-import { getPlayerState } from '../../PlayerState';
+import { getRunState } from '../../store/runStore';
 import { addScore } from '../../scoreMath';
 
 effectRegistry.registerAdditive('CONDITIONAL_MULT', (ctx, equip, index) => {
@@ -77,10 +77,10 @@ effectRegistry.registerAdditive('MULT_PER_MONEY_CHUNK', (ctx, equip, index) => {
 });
 
 effectRegistry.registerAdditive('MULT_PER_MISSING_DICE', (ctx, equip, index) => {
-  const player = getPlayerState();
+  const run = getRunState();
   const p = equip.def.effectParams as Record<string, unknown>;
   const perDie = (p.value as number) ?? 10;
-  const missing = Math.max(0, player.startingDiceCount - ctx.allDice.length);
+  const missing = Math.max(0, run.startingDiceCount - ctx.allDice.length);
   if (missing > 0) {
     const total = missing * perDie;
     ctx.bonusMult = addScore(ctx.bonusMult, total);

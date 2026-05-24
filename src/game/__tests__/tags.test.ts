@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import trailTags, { getTrailTagById } from '../../data/trail_tags';
+import trailTags, { getTrailTagById, resolveTagDescription } from '../../data/trail_tags';
 import type { TrailTagDef } from '../../data/trail_tags';
 import {
   getTagPool,
@@ -11,12 +11,21 @@ import {
   processBossPayoutTags,
   processChangeOfGuardTags,
 } from '../TagSystem';
-import { createEquipmentInstance, getEquipmentListPrice, getEquipmentSellValue, getItemAuraById, type EquipmentDef } from '../ItemsSystem';
+import {
+  createEquipmentInstance,
+  getEquipmentListPrice,
+  getEquipmentSellValue,
+  getItemAuraById,
+  type EquipmentDef,
+} from '../ItemsSystem';
 import { getEquipmentPurchasePrice } from '../EquipmentModifiers';
 import { EQUIPMENT_MODIFIER } from '../Constants';
-import { getPlayerState, resetPlayerState } from '../PlayerState';
+import { HandType } from '../types';
+import { getPlayerState, resetPlayerState } from '../__tests__/testRunPlayer';
 
 const ALL_TAGS = trailTags;
+
+const stubEquipmentDisplay: EquipmentDef['display'] = () => ({ hint: [], tooltip: [] });
 
 describe('Trail Tags Data', () => {
   it('exports all 24 tags', () => {
@@ -27,7 +36,7 @@ describe('Trail Tags Data', () => {
     for (const tag of trailTags) {
       expect(tag.id).toBeTruthy();
       expect(tag.name).toBeTruthy();
-      expect(tag.description).toBeTruthy();
+      expect(resolveTagDescription(tag)).toBeTruthy();
       expect(tag.category).toBeTruthy();
       expect(typeof tag.minLeg).toBe('number');
       expect(typeof tag.weight).toBe('number');
@@ -130,6 +139,35 @@ describe('TagSystem', () => {
       const stats = player.getHandStats(results[0].handType!);
       expect(stats.level).toBe(4);
     });
+
+    it('uses pre-rolled hand from pending tag meta', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_surveyor')!;
+      player.pendingTags = [{ def: tag, copies: 1, surveyorHand: HandType.FULL_HOUSE }];
+      const results = processImmediateTags(player);
+      expect(results[0].handType).toBe(HandType.FULL_HOUSE);
+      expect(player.getHandStats(HandType.FULL_HOUSE).level).toBe(4);
+    });
+
+    it('returns handUpgrade info for the upgrade animation', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_surveyor')!;
+      player.addTag(tag);
+      const results = processImmediateTags(player);
+      const upgrade = results[0].handUpgrade;
+      expect(upgrade).toBeDefined();
+      expect(upgrade!.oldLevel).toBe(1);
+      expect(upgrade!.newLevel).toBe(4);
+      expect(upgrade!.handName).toBeTruthy();
+      expect(upgrade!.newBaseMiles).toBeGreaterThan(upgrade!.oldBaseMiles);
+    });
+
+    it('description names the pre-rolled hand on skip preview', () => {
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_surveyor')!;
+      const desc = resolveTagDescription(tag, { surveyorHand: HandType.PAIR });
+      expect(desc).toContain('Pair');
+      expect(desc).not.toContain('random');
+    });
   });
 
   describe('Shop Tags', () => {
@@ -225,6 +263,7 @@ describe('TagSystem', () => {
         description: '',
         effectType: 'SHOP_REROLL_MULT_GAIN',
         effectParams: {},
+        display: stubEquipmentDisplay,
       };
       const listPrice = getEquipmentListPrice(def);
       expect(listPrice).toBeGreaterThan(0);
@@ -243,6 +282,7 @@ describe('TagSystem', () => {
         effectType: 'SHOP_REROLL_MULT_GAIN',
         effectParams: {},
         aura: icy,
+        display: stubEquipmentDisplay,
       };
       const listPrice = getEquipmentListPrice(def);
       expect(listPrice).toBeGreaterThan(0);
@@ -267,6 +307,7 @@ describe('TagSystem', () => {
             description: '',
             effectType: 'ADD_MULT',
             effectParams: {},
+            display: stubEquipmentDisplay,
           } as EquipmentDef,
         },
       ];
@@ -322,6 +363,7 @@ describe('TagSystem', () => {
         description: '',
         effectType: 'SHOP_REROLL_MULT_GAIN',
         effectParams: {},
+        display: stubEquipmentDisplay,
       };
       expect(getEquipmentListPrice(def)).toBe(6);
       expect(getEquipmentSellValue(def)).toBe(3);
@@ -338,6 +380,7 @@ describe('TagSystem', () => {
         effectType: 'SHOP_REROLL_MULT_GAIN',
         effectParams: {},
         aura: fire,
+        display: stubEquipmentDisplay,
       };
       expect(getEquipmentListPrice(def)).toBe(10);
       expect(getEquipmentSellValue(def)).toBe(5);
@@ -352,6 +395,7 @@ describe('TagSystem', () => {
         description: '',
         effectType: 'SHOP_REROLL_MULT_GAIN',
         effectParams: {},
+        display: stubEquipmentDisplay,
       };
       const inst = createEquipmentInstance(def, ['bargain_bin']);
       expect(inst.sellValue).toBe(2);

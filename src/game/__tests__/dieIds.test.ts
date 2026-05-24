@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetPlayerState } from '../PlayerState';
+import { resetPlayerState } from '../__tests__/testRunPlayer';
 import { createDie } from '../DiceSystem';
 
 const d6 = () => createDie({ value: 6 });

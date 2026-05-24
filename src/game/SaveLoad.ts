@@ -1,31 +1,49 @@
 // ─── Save / Load (No Phaser imports) ───
-// Versioned JSON snapshots for debugging and sharing game state.
+// Versioned JSON snapshots read from and hydrate Zustand stores directly.
 
-import type { Die, DifficultyLevel, GameConfig, HandStats, RoundState } from './types';
+import type { Die, DifficultyLevel, GameConfig, HandStats, RoundState, HandType } from './types';
 import type { EquipmentModifier } from './types';
 import { HandType as HandTypeEnum } from './types';
-import { getPlayerState, resetPlayerState, type PlayerState } from './PlayerState';
 import { getEquipmentDefById } from './ItemsSystem';
 import type { EquipmentInstance } from './ItemsSystem';
 import { acquireEquipmentInstance } from './EquipmentModifiers';
-import { createConsumableInstance, getConsumableDefById, type ConsumableInstance } from './ConsumablesSystem';
-import { getPermitById } from './PermitsSystem';
-import { getProfessionById } from '../data/professions';
-import { getTrailTagById } from '../data/trail_tags';
-import { getTrailEventById } from './TrailEventsSystem';
-import { createEmptyTrailRoundEffects, type TrailEventModifiers, type TrailRoundEffects } from './TrailEventsSystem';
-import type { BossRoundState } from './BossEffectsSystem';
-import type { TrailTagInstance } from '../data/trail_tags';
-import bosses from '../data/bosses';
 import { type PackItem, type PackCategory, type InstantEffect } from './BoosterPackSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import { getRunRngState, getRunSeed, restoreRunRng, type RunRngState } from './RunRng';
 import { milesToSave, milesFromSave } from './scoreMath';
-import type { Decimal } from './decimal';
+import { getRunState, runActions } from './store/runStore';
+import { getRoundState, roundStore } from './store/roundStore';
+import { getSceneState, sceneActions } from './store/sceneStore';
+import { roundActions } from './store/actions/roundActions';
+import { legacyRoundStateToRuntime } from './store/roundResolve';
+import type { StoredTagInstance } from './store/types';
+import {
+  deserializeRunState,
+  deserializeRoundState,
+  deserializeSceneState,
+  serializeRunState,
+  serializeRoundState,
+  serializeSceneState,
+  type SerializedRunState,
+  type SerializedRoundRuntimeState,
+  type SerializedSceneRuntimeState,
+} from './store/serialization';
+import type {
+  ActiveSceneKey,
+  BoosterPackSceneState,
+  SceneRuntimeState,
+  ShopSceneState,
+  StoredShopItem,
+  StoredPackItem,
+  TrailEventSceneState,
+} from './store/types';
+import { createEmptyTrailRoundEffects } from './TrailEventsSystem';
+import { getTrailTagById } from '../data/trail_tags';
+import bosses from '../data/bosses';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
-export type ActiveScene = 'Game' | 'Shop' | 'BoosterPack' | 'TrailEvent' | 'RoundSelect';
+export type ActiveScene = Exclude<ActiveSceneKey, 'none' | 'Payout'>;
 
 export interface SerializedEquipmentInstance {
   defId: string;
@@ -38,8 +56,10 @@ export interface SerializedEquipmentInstance {
 export interface SerializedTagInstance {
   tagId: string;
   copies: number;
+  surveyorHand?: HandType;
 }
 
+/** @deprecated v3 save payload — migrated on load only. */
 export interface PlayerSaveData {
   balance: number;
   dice: Die[];
@@ -68,15 +88,15 @@ export interface PlayerSaveData {
   permitDayPenalty: number;
   permitRerollPenalty: number;
   permitScoreReduction: number;
-  trailEventModifiers: TrailEventModifiers;
-  trailRoundEffects: TrailRoundEffects;
+  trailEventModifiers: import('./TrailEventsSystem').TrailEventModifiers;
+  trailRoundEffects: import('./TrailEventsSystem').TrailRoundEffects;
   pendingTrailEventId: string | null;
   seenTrailEventIds: string[];
   skipNextShop: boolean;
   trailGuidesUsed: number;
   startingDiceCount: number;
   bossEffectDisabled: boolean;
-  bossRoundState: BossRoundState;
+  bossRoundState: import('./store/types').BossRoundState;
   pendingNewDiceIds: string[];
   pendingHandDiceIds: string[];
   pendingAnimatedDestructions: { sourceIdx: number; victimIdx: number }[];
@@ -92,7 +112,9 @@ export interface PlayerSaveData {
   bonusShopPermitId: string | null;
   skippedRoundsThisLeg: number[];
   skippedRoundTags: Record<number, string>;
+  skippedRoundTagMeta?: Record<number, { surveyorHand?: HandType }>;
   roundSkipPreviewTags: Record<number, string>;
+  roundSkipPreviewMeta?: Record<number, { surveyorHand?: HandType }>;
   bossRerollsUsedThisLeg: number;
   dynamiteSelfDestructed: boolean;
   endlessMode?: boolean;
@@ -128,14 +150,11 @@ export function deserializeGameRound(data: SerializedGameRoundSaveData): GameRou
 
 export interface ShopSaveData {
   stock: SerializedShopItem[];
-  packs: { defId: string; instanceId: string }[];
+  packs: { defId: string; instanceId: string; opened?: boolean }[];
   shopRerollCount: number;
 }
 
-export type SerializedShopItem =
-  | { type: 'equipment'; defId: string; preview: SerializedEquipmentInstance; sold?: boolean }
-  | { type: 'consumable'; defId: string; sold?: boolean }
-  | { type: 'dice'; die: Die; sold?: boolean };
+export type SerializedShopItem = StoredShopItem;
 
 export interface SerializedPackItem {
   id: string;
@@ -166,29 +185,21 @@ export interface TrailEventSaveData {
   spyglassRevealed: boolean;
 }
 
-export type SceneSaveData =
-  | SerializedGameRoundSaveData
-  | ShopSaveData
-  | BoosterPackSaveData
-  | TrailEventSaveData
-  | Record<string, never>;
-
 export interface GameSaveSnapshot {
   version: number;
   exportedAt: string;
   activeScene: ActiveScene;
   runSeed: string;
   rngState: RunRngState;
-  player: PlayerSaveData;
-  scene?: SceneSaveData;
+  run: SerializedRunState;
+  round: SerializedRoundRuntimeState | null;
+  scene: SerializedSceneRuntimeState;
 }
 
-export type SceneSaveContext =
-  | { activeScene: 'Game'; data: GameRoundSaveData }
-  | { activeScene: 'Shop'; data: ShopSaveData }
-  | { activeScene: 'BoosterPack'; data: BoosterPackSaveData }
-  | { activeScene: 'TrailEvent'; data: TrailEventSaveData }
-  | { activeScene: 'RoundSelect' };
+export interface BuildSaveSnapshotOptions {
+  activeScene?: ActiveScene;
+  scene?: Partial<SceneRuntimeState>;
+}
 
 const ACTIVE_SCENES: ActiveScene[] = ['Game', 'Shop', 'BoosterPack', 'TrailEvent', 'RoundSelect'];
 
@@ -202,10 +213,13 @@ export function serializeEquipmentInstance(inst: EquipmentInstance): SerializedE
   };
 }
 
-export function deserializeEquipmentInstance(data: SerializedEquipmentInstance): EquipmentInstance {
+export function deserializeEquipmentInstance(
+  data: SerializedEquipmentInstance,
+  purchasedPermitIds: string[] = getRunState().purchasedPermits,
+): EquipmentInstance {
   const def = getEquipmentDefById(data.defId);
   if (!def) throw new Error(`Unknown equipment id: ${data.defId}`);
-  const inst = acquireEquipmentInstance(def, getPlayerState().purchasedPermits, data.modifiers);
+  const inst = acquireEquipmentInstance(def, purchasedPermitIds, data.modifiers);
   inst.sellValue = data.sellValue;
   inst.state = { ...data.state };
   if (data.perishableRoundsLeft !== undefined) {
@@ -214,283 +228,285 @@ export function deserializeEquipmentInstance(data: SerializedEquipmentInstance):
   return inst;
 }
 
-function serializePlayer(player: PlayerState): PlayerSaveData {
-  const skippedRoundTags: Record<number, string> = {};
-  for (const [k, v] of Object.entries(player.skippedRoundTags)) {
-    if (v) skippedRoundTags[Number(k)] = v.id;
-  }
-  const roundSkipPreviewTags: Record<number, string> = {};
-  for (const [k, v] of Object.entries(player.roundSkipPreviewTags)) {
-    if (v) roundSkipPreviewTags[Number(k)] = v.id;
-  }
+function deserializeTags(items: SerializedTagInstance[]): StoredTagInstance[] {
+  return items.map(({ tagId, copies, surveyorHand }) => {
+    const def = getTrailTagById(tagId);
+    if (!def) throw new Error(`Unknown trail tag id: ${tagId}`);
+    const stored: StoredTagInstance = { tagId, copies };
+    if (surveyorHand) stored.surveyorHand = surveyorHand;
+    return stored;
+  });
+}
 
-  const handStats: Record<string, HandStats> = {};
-  for (const [type, stats] of player.handStats) {
-    handStats[type] = { ...stats };
+function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
+  const handStats = {} as Record<HandType, HandStats>;
+  for (const type of Object.values(HandTypeEnum)) {
+    const stats = data.handStats[type];
+    if (stats) handStats[type] = { ...stats };
   }
 
   return {
-    balance: player.economy.balance,
-    dice: player.dice.map((d) => ({ ...d })),
-    loadedDieTarget: player.loadedDieTarget,
-    loadedDieSyncLucky: player.loadedDieSyncLucky,
-    spentDiceIds: [...player.spentDiceIds],
-    equipment: player.equipment.map(serializeEquipmentInstance),
-    maxEquipmentSlots: player.maxEquipmentSlots,
-    maxConsumableSlots: player.maxConsumableSlots,
-    consumables: player.consumables.map((c) => ({
-      defId: c.def.id,
-      sellValue: c.sellValue,
-    })),
-    lastUsedConsumableId: player.lastUsedConsumable?.id ?? null,
-    shopSlots: player.shopSlots,
-    leg: player.leg,
-    round: player.round,
-    interestCap: player.interestCap,
+    balance: data.balance,
+    dice: data.dice.map((d) => ({ ...d })),
+    loadedDieTarget: data.loadedDieTarget,
+    loadedDieSyncLucky: data.loadedDieSyncLucky ?? false,
+    spentDiceIds: [...data.spentDiceIds],
+    equipment: data.equipment.map((eq) => ({ ...eq })),
+    maxEquipmentSlots: data.maxEquipmentSlots,
+    maxConsumableSlots: data.maxConsumableSlots,
+    consumables: data.consumables.map((c) => ({ ...c })),
+    lastUsedConsumableId: data.lastUsedConsumableId,
+    shopSlots: data.shopSlots,
+    shopRerollCount: data.shopRerollCount,
+    leg: data.leg,
+    round: data.round,
+    interestCap: data.interestCap,
     handStats,
-    professionId: player.profession?.id ?? null,
-    difficulty: player.difficulty,
-    handSize: player.handSize,
-    shopRerollCount: player.shopRerollCount,
-    purchasedPermits: [...player.purchasedPermits],
-    currentLegPermitId: player.currentLegPermit?.id ?? null,
-    permitPurchasedThisLeg: player.permitPurchasedThisLeg,
-    permitDayBonus: player.permitDayBonus,
-    permitRerollBonus: player.permitRerollBonus,
-    permitDayPenalty: player.permitDayPenalty,
-    permitRerollPenalty: player.permitRerollPenalty,
-    permitScoreReduction: player.permitScoreReduction,
-    trailEventModifiers: { ...player.trailEventModifiers },
-    trailRoundEffects: { ...player.trailRoundEffects },
-    pendingTrailEventId: player.pendingTrailEvent?.id ?? null,
-    seenTrailEventIds: [...player.seenTrailEventIds],
-    skipNextShop: player.skipNextShop,
-    trailGuidesUsed: player.trailGuidesUsed,
-    startingDiceCount: player.startingDiceCount,
-    bossEffectDisabled: player.bossEffectDisabled,
+    professionId: data.professionId,
+    difficulty: data.difficulty,
+    handSize: data.handSize,
+    purchasedPermits: [...data.purchasedPermits],
+    currentLegPermitId: data.currentLegPermitId,
+    permitPurchasedThisLeg: data.permitPurchasedThisLeg,
+    permitDayBonus: data.permitDayBonus,
+    permitRerollBonus: data.permitRerollBonus,
+    permitDayPenalty: data.permitDayPenalty,
+    permitRerollPenalty: data.permitRerollPenalty,
+    permitScoreReduction: data.permitScoreReduction,
+    trailEventModifiers: { ...data.trailEventModifiers },
+    trailRoundEffects: data.trailRoundEffects ? { ...data.trailRoundEffects } : createEmptyTrailRoundEffects(),
+    pendingTrailEventId: data.pendingTrailEventId,
+    seenTrailEventIds: [...data.seenTrailEventIds],
+    skipNextShop: data.skipNextShop,
+    trailGuidesUsed: data.trailGuidesUsed,
+    startingDiceCount: data.startingDiceCount,
+    bossEffectDisabled: data.bossEffectDisabled,
     bossRoundState: {
-      ...player.bossRoundState,
-      disabledEquipmentIndices: [...player.bossRoundState.disabledEquipmentIndices],
-      lockedDiceIds: [...player.bossRoundState.lockedDiceIds],
-      handsPlayedThisRound: [...player.bossRoundState.handsPlayedThisRound],
-      equipmentDisplayOrder: player.bossRoundState.equipmentDisplayOrder
-        ? [...player.bossRoundState.equipmentDisplayOrder]
+      ...data.bossRoundState,
+      disabledEquipmentIndices: [...data.bossRoundState.disabledEquipmentIndices],
+      lockedDiceIds: [...data.bossRoundState.lockedDiceIds],
+      handsPlayedThisRound: [...data.bossRoundState.handsPlayedThisRound],
+      equipmentDisplayOrder: data.bossRoundState.equipmentDisplayOrder
+        ? [...data.bossRoundState.equipmentDisplayOrder]
         : null,
     },
-    pendingNewDiceIds: [...player.pendingNewDiceIds],
-    pendingHandDiceIds: [...player.pendingHandDiceIds],
-    pendingAnimatedDestructions: player.pendingAnimatedDestructions.map((d) => ({ ...d })),
-    pendingJunkDealerCount: player.pendingJunkDealerCount,
-    pendingTags: player.pendingTags.map((t) => ({ tagId: t.def.id, copies: t.copies })),
-    storedAuraTags: player.storedAuraTags.map((t) => ({ tagId: t.def.id, copies: t.copies })),
-    roundsSkipped: player.roundsSkipped,
-    daysScored: player.daysScored,
-    unusedRerollsTotal: player.unusedRerollsTotal,
-    twinWagonCount: player.twinWagonCount,
-    wideSaddleBonus: player.wideSaddleBonus,
-    tagFreeReroll: player.tagFreeReroll,
-    bonusShopPermitId: player.bonusShopPermit?.id ?? null,
-    skippedRoundsThisLeg: [...player.skippedRoundsThisLeg],
-    skippedRoundTags,
-    roundSkipPreviewTags,
-    bossRerollsUsedThisLeg: player.bossRerollsUsedThisLeg,
-    dynamiteSelfDestructed: player.dynamiteSelfDestructed,
-    endlessMode: player.endlessMode,
-    storyVictoryPending: player.storyVictoryPending,
-    bossAssignmentIds: player.getBossAssignmentIds(),
-    nextDieId: player.getNextDieIdForSave(),
+    pendingNewDiceIds: [...data.pendingNewDiceIds],
+    pendingHandDiceIds: [...data.pendingHandDiceIds],
+    pendingAnimatedDestructions: data.pendingAnimatedDestructions.map((d) => ({ ...d })),
+    pendingJunkDealerCount: data.pendingJunkDealerCount,
+    pendingTags: deserializeTags(data.pendingTags),
+    storedAuraTags: deserializeTags(data.storedAuraTags),
+    roundsSkipped: data.roundsSkipped,
+    daysScored: data.daysScored,
+    unusedRerollsTotal: data.unusedRerollsTotal,
+    twinWagonCount: data.twinWagonCount,
+    wideSaddleBonus: data.wideSaddleBonus,
+    tagFreeReroll: data.tagFreeReroll,
+    bonusShopPermitId: data.bonusShopPermitId,
+    skippedRoundsThisLeg: [...data.skippedRoundsThisLeg],
+    skippedRoundTags: { ...data.skippedRoundTags },
+    skippedRoundTagMeta: { ...(data.skippedRoundTagMeta ?? {}) },
+    roundSkipPreviewTags: { ...data.roundSkipPreviewTags },
+    roundSkipPreviewMeta: { ...(data.roundSkipPreviewMeta ?? {}) },
+    bossRerollsUsedThisLeg: data.bossRerollsUsedThisLeg,
+    dynamiteSelfDestructed: data.dynamiteSelfDestructed,
+    endlessMode: data.endlessMode ?? false,
+    storyVictoryPending: data.storyVictoryPending ?? false,
+    bossAssignmentIds: [...data.bossAssignmentIds],
+    nextDieId: data.nextDieId,
   };
 }
 
-function deserializeTags(items: SerializedTagInstance[]): TrailTagInstance[] {
-  return items.map(({ tagId, copies }) => {
-    const def = getTrailTagById(tagId);
-    if (!def) throw new Error(`Unknown trail tag id: ${tagId}`);
-    return { def, copies };
-  });
-}
-
-function applyPlayerSaveData(data: PlayerSaveData): void {
-  const player = getPlayerState();
-
-  player.economy.setBalance(data.balance);
-  player.dice = data.dice.map((d) => ({ ...d }));
-  player.loadedDieTarget = data.loadedDieTarget;
-  player.loadedDieSyncLucky = data.loadedDieSyncLucky ?? false;
-  if (player.loadedDieSyncLucky && !player.hasLuckyNumberEquipment()) {
-    player.loadedDieSyncLucky = false;
-  }
-  player.spentDiceIds = new Set(data.spentDiceIds);
-  player.equipment = data.equipment.map(deserializeEquipmentInstance);
-  player.maxEquipmentSlots = data.maxEquipmentSlots;
-  player.maxConsumableSlots = data.maxConsumableSlots;
-  player.consumables = data.consumables.map((c) => {
-    const def = getConsumableDefById(c.defId);
-    if (!def) throw new Error(`Unknown consumable id: ${c.defId}`);
-    const inst = createConsumableInstance(def);
-    inst.sellValue = c.sellValue;
-    return inst;
-  });
-  if (data.lastUsedConsumableId) {
-    player.lastUsedConsumable = getConsumableDefById(data.lastUsedConsumableId);
-  } else {
-    player.lastUsedConsumable = null;
-  }
-  player.shopSlots = data.shopSlots;
-  player.leg = data.leg;
-  player.round = data.round;
-  player.interestCap = data.interestCap;
-
-  player.handStats = new Map();
-  for (const type of Object.values(HandTypeEnum)) {
-    const stats = data.handStats[type];
-    if (stats) {
-      player.handStats.set(type, { ...stats });
+function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): SerializedSceneRuntimeState {
+  switch (activeScene) {
+    case 'Game':
+      return {
+        activeScene: 'Game',
+        shop: null,
+        boosterPack: null,
+        trailEvent: null,
+        payout: null,
+        roundSelect: null,
+      };
+    case 'Shop': {
+      const data = scene as ShopSaveData;
+      return {
+        activeScene: 'Shop',
+        shop: {
+          stock: data.stock,
+          packs: data.packs.map((p) => ({
+            defId: p.defId,
+            instanceId: p.instanceId,
+            opened: p.opened,
+          })),
+          shopRerollCount: data.shopRerollCount,
+        },
+        boosterPack: null,
+        trailEvent: null,
+        payout: null,
+        roundSelect: null,
+      };
     }
+    case 'BoosterPack': {
+      const data = scene as BoosterPackSaveData;
+      return {
+        activeScene: 'BoosterPack',
+        shop: null,
+        boosterPack: {
+          packDefId: data.packDefId,
+          returnScene: data.returnScene,
+          contents: data.contents as StoredPackItem[],
+          picksRemaining: data.picksRemaining,
+          usedCardIndices: [...data.usedCardIndices],
+        },
+        trailEvent: null,
+        payout: null,
+        roundSelect: null,
+      };
+    }
+    case 'TrailEvent': {
+      const data = scene as TrailEventSaveData;
+      return {
+        activeScene: 'TrailEvent',
+        shop: null,
+        boosterPack: null,
+        trailEvent: {
+          eventId: data.eventId,
+          resolved: data.resolved,
+          spyglassRevealed: data.spyglassRevealed,
+        },
+        payout: null,
+        roundSelect: null,
+      };
+    }
+    case 'RoundSelect':
+      return {
+        activeScene: 'RoundSelect',
+        shop: null,
+        boosterPack: null,
+        trailEvent: null,
+        payout: null,
+        roundSelect: null,
+      };
   }
-
-  player.profession = data.professionId ? (getProfessionById(data.professionId) ?? null) : null;
-  player.difficulty = data.difficulty;
-  player.handSize = data.handSize;
-  player.shopRerollCount = data.shopRerollCount;
-  player.purchasedPermits = [...data.purchasedPermits];
-  player.currentLegPermit = data.currentLegPermitId ? (getPermitById(data.currentLegPermitId) ?? null) : null;
-  player.permitPurchasedThisLeg = data.permitPurchasedThisLeg;
-  player.permitDayBonus = data.permitDayBonus;
-  player.permitRerollBonus = data.permitRerollBonus;
-  player.permitDayPenalty = data.permitDayPenalty;
-  player.permitRerollPenalty = data.permitRerollPenalty;
-  player.permitScoreReduction = data.permitScoreReduction;
-  player.trailEventModifiers = { ...data.trailEventModifiers };
-  player.trailRoundEffects = data.trailRoundEffects ? { ...data.trailRoundEffects } : createEmptyTrailRoundEffects();
-  player.pendingTrailEvent = data.pendingTrailEventId ? getTrailEventById(data.pendingTrailEventId) : null;
-  player.seenTrailEventIds = new Set(data.seenTrailEventIds);
-  player.skipNextShop = data.skipNextShop;
-  player.trailGuidesUsed = data.trailGuidesUsed;
-  player.startingDiceCount = data.startingDiceCount;
-  player.bossEffectDisabled = data.bossEffectDisabled;
-  player.bossRoundState = {
-    ...data.bossRoundState,
-    disabledEquipmentIndices: [...data.bossRoundState.disabledEquipmentIndices],
-    lockedDiceIds: [...data.bossRoundState.lockedDiceIds],
-    handsPlayedThisRound: [...data.bossRoundState.handsPlayedThisRound],
-    equipmentDisplayOrder: data.bossRoundState.equipmentDisplayOrder
-      ? [...data.bossRoundState.equipmentDisplayOrder]
-      : null,
-  };
-  player.pendingNewDiceIds = [...data.pendingNewDiceIds];
-  player.pendingHandDiceIds = [...data.pendingHandDiceIds];
-  player.pendingAnimatedDestructions = data.pendingAnimatedDestructions.map((d) => ({ ...d }));
-  player.pendingJunkDealerCount = data.pendingJunkDealerCount;
-  player.pendingTags = deserializeTags(data.pendingTags);
-  player.storedAuraTags = deserializeTags(data.storedAuraTags);
-  player.roundsSkipped = data.roundsSkipped;
-  player.daysScored = data.daysScored;
-  player.unusedRerollsTotal = data.unusedRerollsTotal;
-  player.twinWagonCount = data.twinWagonCount;
-  player.wideSaddleBonus = data.wideSaddleBonus;
-  player.tagFreeReroll = data.tagFreeReroll;
-  player.bonusShopPermit = data.bonusShopPermitId ? (getPermitById(data.bonusShopPermitId) ?? null) : null;
-  player.skippedRoundsThisLeg = [...data.skippedRoundsThisLeg];
-  player.skippedRoundTags = {};
-  for (const [k, tagId] of Object.entries(data.skippedRoundTags)) {
-    const def = getTrailTagById(tagId);
-    if (def) player.skippedRoundTags[Number(k)] = def;
-  }
-  player.roundSkipPreviewTags = {};
-  for (const [k, tagId] of Object.entries(data.roundSkipPreviewTags)) {
-    const def = getTrailTagById(tagId);
-    if (def) player.roundSkipPreviewTags[Number(k)] = def;
-  }
-  player.bossRerollsUsedThisLeg = data.bossRerollsUsedThisLeg;
-  player.dynamiteSelfDestructed = data.dynamiteSelfDestructed;
-  player.endlessMode = data.endlessMode ?? false;
-  player.storyVictoryPending = data.storyVictoryPending ?? false;
-  player.restoreBossAssignments(data.bossAssignmentIds);
-  player.setNextDieIdForRestore(data.nextDieId);
 }
 
-export function buildSaveSnapshot(context: SceneSaveContext): GameSaveSnapshot {
-  const player = getPlayerState();
-  const snapshot: GameSaveSnapshot = {
+function normalizeSnapshot(data: unknown): GameSaveSnapshot | null {
+  if (!data || typeof data !== 'object') return null;
+  const snap = data as Record<string, unknown>;
+
+  if (snap.version === SAVE_VERSION && snap.run && typeof snap.run === 'object') {
+    return snap as unknown as GameSaveSnapshot;
+  }
+
+  if (snap.version === 3 && snap.player && typeof snap.player === 'object') {
+    const v3 = snap as {
+      version: number;
+      exportedAt: string;
+      activeScene: ActiveScene;
+      runSeed: string;
+      rngState: RunRngState;
+      player: PlayerSaveData;
+      scene?: unknown;
+    };
+    if (!ACTIVE_SCENES.includes(v3.activeScene)) return null;
+
+    let round: SerializedRoundRuntimeState | null = null;
+    if (v3.activeScene === 'Game' && v3.scene) {
+      const gameData = deserializeGameRound(v3.scene as SerializedGameRoundSaveData);
+      round = serializeRoundState(legacyRoundStateToRuntime(gameData.config, gameData.state));
+    }
+
+    return {
+      version: SAVE_VERSION,
+      exportedAt: v3.exportedAt,
+      activeScene: v3.activeScene,
+      runSeed: v3.runSeed,
+      rngState: v3.rngState,
+      run: playerSaveToRunState(v3.player),
+      round,
+      scene: legacySceneToRuntime(v3.activeScene, v3.scene ?? {}),
+    };
+  }
+
+  return null;
+}
+
+export function buildSaveSnapshot(options: BuildSaveSnapshotOptions = {}): GameSaveSnapshot {
+  const run = getRunState();
+  const round = getRoundState();
+  const sceneState = getSceneState();
+
+  const activeScene =
+    options.activeScene ?? (sceneState.activeScene === 'none' ? 'RoundSelect' : sceneState.activeScene);
+  const scene: SerializedSceneRuntimeState = serializeSceneState({
+    ...sceneState,
+    ...options.scene,
+    activeScene,
+  });
+
+  return {
     version: SAVE_VERSION,
     exportedAt: new Date().toISOString(),
-    activeScene: context.activeScene,
+    activeScene: activeScene as ActiveScene,
     runSeed: getRunSeed(),
     rngState: getRunRngState(),
-    player: serializePlayer(player),
+    run: serializeRunState(run),
+    round: serializeRoundState(round),
+    scene,
   };
-
-  if (context.activeScene !== 'RoundSelect') {
-    snapshot.scene =
-      context.activeScene === 'Game' ? serializeGameRound(context.data) : context.data;
-  }
-
-  return snapshot;
 }
 
 export function validateSaveSnapshot(data: unknown): GameSaveSnapshot | null {
-  if (!data || typeof data !== 'object') return null;
-  const snap = data as GameSaveSnapshot;
-  if (snap.version !== SAVE_VERSION) return null;
-  if (!ACTIVE_SCENES.includes(snap.activeScene)) return null;
-  if (typeof snap.runSeed !== 'string') return null;
-  if (!snap.rngState || typeof snap.rngState !== 'object') return null;
-  if (!snap.player || typeof snap.player !== 'object') return null;
-  if (typeof snap.player.balance !== 'number') return null;
-  if (!Array.isArray(snap.player.dice)) return null;
-  if (!Array.isArray(snap.player.bossAssignmentIds)) return null;
-  return snap;
+  const normalized = normalizeSnapshot(data);
+  if (!normalized) return null;
+  if (normalized.version !== SAVE_VERSION) return null;
+  if (!ACTIVE_SCENES.includes(normalized.activeScene)) return null;
+  if (typeof normalized.runSeed !== 'string') return null;
+  if (!normalized.rngState || typeof normalized.rngState !== 'object') return null;
+  if (!normalized.run || typeof normalized.run !== 'object') return null;
+  if (typeof normalized.run.balance !== 'number') return null;
+  if (!Array.isArray(normalized.run.dice)) return null;
+  if (!Array.isArray(normalized.run.bossAssignmentIds)) return null;
+  if (!normalized.scene || typeof normalized.scene !== 'object') return null;
+  return normalized;
 }
 
-export function applySaveSnapshot(snapshot: GameSaveSnapshot): {
-  scene: ActiveScene;
-  sceneData: Record<string, unknown>;
-} {
-  if (snapshot.version !== SAVE_VERSION) {
-    throw new Error(`Unsupported save version: ${snapshot.version}`);
+export function applySaveSnapshot(snapshot: GameSaveSnapshot): { scene: ActiveScene } {
+  const normalized = normalizeSnapshot(snapshot);
+  if (!normalized) {
+    throw new Error(`Unsupported save version: ${(snapshot as GameSaveSnapshot).version}`);
   }
 
-  assertSaveIntegrity(snapshot);
-  resetPlayerState();
-  restoreRunRng(snapshot.runSeed, snapshot.rngState);
-  applyPlayerSaveData(snapshot.player);
+  assertSaveIntegrity(normalized);
 
-  const sceneData: Record<string, unknown> = {};
+  runActions.reset();
+  roundStore.setState(null, true);
+  sceneActions.reset();
 
-  switch (snapshot.activeScene) {
-    case 'Game': {
-      const data = deserializeGameRound(snapshot.scene as SerializedGameRoundSaveData);
-      sceneData.restore = data;
-      break;
-    }
-    case 'Shop': {
-      const data = snapshot.scene as ShopSaveData;
-      sceneData.restoreShop = data;
-      break;
-    }
-    case 'BoosterPack': {
-      const data = snapshot.scene as BoosterPackSaveData;
-      sceneData.restorePack = data;
-      if (data.returnScene) sceneData.returnScene = data.returnScene;
-      sceneData.packDefId = data.packDefId;
-      break;
-    }
-    case 'TrailEvent': {
-      const data = snapshot.scene as TrailEventSaveData;
-      sceneData.restoreTrail = data;
-      break;
-    }
-    case 'RoundSelect':
-      break;
+  restoreRunRng(normalized.runSeed, normalized.rngState);
+
+  const run = deserializeRunState(normalized.run);
+  if (run.loadedDieSyncLucky) {
+    const hasLucky = run.equipment.some((eq) => eq.defId === 'lucky_number');
+    if (!hasLucky) run.loadedDieSyncLucky = false;
   }
 
-  return { scene: snapshot.activeScene, sceneData };
+  runActions.hydrate(run);
+
+  const round = deserializeRoundState(normalized.round);
+  if (round) {
+    roundActions.hydrate(round);
+  }
+
+  sceneActions.hydrate(deserializeSceneState(normalized.scene));
+
+  return { scene: normalized.activeScene };
 }
 
 export function getSaveFilename(snapshot: GameSaveSnapshot): string {
   const ts = snapshot.exportedAt.replace(/[:.]/g, '-').slice(0, 19);
-  return `wagon-bones-L${snapshot.player.leg}R${snapshot.player.round}-${snapshot.activeScene}-${ts}.json`;
+  return `wagon-bones-L${snapshot.run.leg}R${snapshot.run.round}-${snapshot.activeScene}-${ts}.json`;
 }
 
 export function serializePackItem(item: PackItem): SerializedPackItem {
@@ -534,14 +550,44 @@ export function deserializePackItem(s: SerializedPackItem): PackItem {
 
 /** Verify boss IDs exist (called during validation). */
 export function assertSaveIntegrity(snapshot: GameSaveSnapshot): void {
-  for (const id of snapshot.player.bossAssignmentIds) {
+  for (const id of snapshot.run.bossAssignmentIds) {
     if (!bosses.find((b) => b.id === id)) {
       throw new Error(`Save references unknown boss: ${id}`);
     }
   }
-  for (const eq of snapshot.player.equipment) {
+  for (const eq of snapshot.run.equipment) {
     if (!getEquipmentDefById(eq.defId)) {
       throw new Error(`Save references unknown equipment: ${eq.defId}`);
     }
   }
+}
+
+export function shopSceneStateToSaveData(shop: ShopSceneState): ShopSaveData {
+  return {
+    stock: shop.stock,
+    packs: shop.packs.map((p) => ({
+      defId: p.defId,
+      instanceId: p.instanceId,
+      ...(p.opened ? { opened: true } : {}),
+    })),
+    shopRerollCount: shop.shopRerollCount,
+  };
+}
+
+export function boosterPackSceneStateToSaveData(pack: BoosterPackSceneState): BoosterPackSaveData {
+  return {
+    packDefId: pack.packDefId,
+    returnScene: pack.returnScene,
+    contents: pack.contents as SerializedPackItem[],
+    picksRemaining: pack.picksRemaining,
+    usedCardIndices: [...pack.usedCardIndices],
+  };
+}
+
+export function trailEventSceneStateToSaveData(trail: TrailEventSceneState): TrailEventSaveData {
+  return {
+    eventId: trail.eventId,
+    resolved: trail.resolved,
+    spyglassRevealed: trail.spyglassRevealed,
+  };
 }

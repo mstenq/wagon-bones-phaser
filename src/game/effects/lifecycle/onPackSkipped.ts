@@ -1,6 +1,7 @@
 // ─── on-pack-skipped lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { replaceEquipmentList } from '../../store/resolve';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 
@@ -14,4 +15,5 @@ export function processEquipmentOnPackSkipped(equipment: EquipmentInstance[]): v
   for (const equip of equipment) {
     dispatchLifecycle('on-pack-skipped', equip);
   }
+  replaceEquipmentList(equipment);
 }

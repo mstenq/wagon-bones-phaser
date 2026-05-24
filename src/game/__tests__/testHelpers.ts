@@ -1,24 +1,28 @@
 // ─── Test Helpers ───
 // Factories and utilities for setting up game state in tests.
-// Usage: const { game, player } = setupGame({ equipment: [item('horseshoe')] });
+// Usage: const { game, run } = setupGame({ equipment: [item('horseshoe')] });
 
-import {
-  Die,
-  DiceEnhancement,
-  DiceAura,
-  DiceSticker,
-  HandType,
-  BossDef,
-  DifficultyLevel,
-  EquipmentModifier,
-} from '../types';
+import { Die, HandType, BossDef, DifficultyLevel, EquipmentModifier } from '../types';
 import { getBossById } from '../../data/bosses';
-import { GameState } from '../GameState';
-import { PlayerState, resetPlayerState, ProfessionDef, getPlayerState } from '../PlayerState';
+import { GameState } from './testGameState';
+import { getPlayerState, type PlayerState } from './testRunPlayer';
+import { resetRunRng } from '../RunRng';
+import {
+  bossActions,
+  economyActions,
+  equipmentActions,
+  progressionActions,
+  roundActions,
+  runActions,
+  setupActions,
+} from '../store';
+import { getRunState } from '../store/runStore';
+import { getRoundState } from '../store/roundStore';
 import { EquipmentDef, EquipmentInstance, getAllEquipment, createEquipmentInstance } from '../ItemsSystem';
 import { EQUIPMENT_MODIFIER } from '../Constants';
-import { createDie, createPouch } from '../DiceSystem';
+import { createPouch } from '../DiceSystem';
 import { GAMEPLAY } from '../Constants';
+import type { RunState } from '../store/types';
 
 // ─── Item Lookup ───
 
@@ -72,7 +76,7 @@ export function itemWithState(id: string, stateOverrides: Record<string, number>
 }
 
 export function setTestDifficulty(level: DifficultyLevel): void {
-  getPlayerState().setDifficulty(level);
+  setupActions.setDifficulty(level);
 }
 
 /** Build equipment with explicit modifiers (no random roll). */
@@ -124,6 +128,84 @@ export function resetDieIds(): void {
   _testDieId = 0;
 }
 
+/** Copy live run equipment state onto instances tests still hold by reference. */
+export function persistPlayerEquipment(): void {
+  getPlayerState().persistEquipment();
+}
+
+/** Seed ROLL phase with dice that exist in the run pouch (adds missing dice to run). */
+export function seedTestRoll(rolled: Die[], options?: { rerolls?: number }): void {
+  const run = getRunState();
+  const existingIds = new Set(run.dice.map((d) => d.id));
+  const merged = [...run.dice];
+  for (const d of rolled) {
+    if (!existingIds.has(d.id)) {
+      merged.push(d);
+      existingIds.add(d.id);
+    }
+  }
+  if (merged.length !== run.dice.length) {
+    runActions.patch({ dice: merged });
+  }
+
+  const dieValuesByDieId: Record<string, number> = {};
+  for (const d of rolled) dieValuesByDieId[d.id] = d.value;
+
+  roundActions.patch({
+    phase: 'ROLL',
+    rolledDice: rolled.map((d) => ({ id: d.id, value: d.value })),
+    selectedForRollIds: rolled.map((d) => d.id),
+    dieValuesByDieId,
+    rerollsRemaining: options?.rerolls ?? 6,
+  });
+}
+
+/** Copy run-store equipment onto instances tests still hold by reference. */
+export function syncEquipmentInstances(...instances: EquipmentInstance[]): void {
+  const player = getPlayerState();
+  for (const orig of instances) {
+    const live = player.equipment.find((e) => e.def.id === orig.def.id);
+    if (!live) continue;
+    orig.state = { ...live.state };
+    orig.def = live.def;
+    orig.perishableRoundsLeft = live.perishableRoundsLeft;
+    orig.sellValue = live.sellValue;
+    orig.modifiers = [...live.modifiers];
+  }
+}
+
+/** Push in-test equipment edits (state/def) into the run store before store-driven actions. */
+export function pushEquipmentState(...instances: EquipmentInstance[]): void {
+  const player = getPlayerState();
+  player.syncFromStore();
+  for (const orig of instances) {
+    const live = player.equipment.find((e) => e.def.id === orig.def.id);
+    if (!live) continue;
+    live.state = { ...orig.state };
+    live.def = orig.def;
+    live.perishableRoundsLeft = orig.perishableRoundsLeft;
+    live.sellValue = orig.sellValue;
+    live.modifiers = [...orig.modifiers];
+  }
+  player.persistEquipment();
+}
+
+/** Reset run + round stores for isolated tests. */
+export function resetGameStores(): void {
+  resetRunRng();
+  runActions.reset();
+  roundActions.reset();
+}
+
+/** Same as `resetGameStores` + sync legacy player facade cache (prefer store APIs in new tests). */
+export function resetTestRun(): void {
+  resetGameStores();
+  getPlayerState().syncFromStore();
+}
+
+/** @deprecated Use `resetTestRun` or `resetGameStores`. */
+export const resetPlayerState = resetTestRun;
+
 // ─── Game Setup ───
 
 export interface GameSetupOptions {
@@ -150,57 +232,62 @@ export interface GameSetupOptions {
 }
 
 export interface GameSetupResult {
+  /** Round facade for scoring / phase transitions in tests */
   game: GameState;
+  /** Run slice after setup */
+  run: RunState;
+  /** @deprecated Use `run` + store actions; kept for existing tests during step 7 */
   player: PlayerState;
 }
 
 /**
  * Set up a fresh game environment with sensible defaults and easy overrides.
- * Resets the global PlayerState singleton so tests are isolated.
  */
 export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
-  // Reset global singleton
-  const player = resetPlayerState();
+  resetGameStores();
 
-  // Apply options
-  if (options.money !== undefined) player.economy.setBalance(options.money);
-  if (options.leg !== undefined) player.leg = options.leg;
-  if (options.round !== undefined) player.round = options.round;
-  if (options.profession) player.applyProfession(options.profession);
-  if (options.equipment) player.equipment = [...options.equipment];
-  if (options.dice) player.dice = [...options.dice];
-  if (!options.profession && !options.dice) {
-    player.dice = createPouch(GAMEPLAY.STARTING_DICE);
+  if (options.money !== undefined) economyActions.setBalance(options.money);
+  if (options.leg !== undefined) runActions.patch({ leg: options.leg });
+  if (options.round !== undefined) runActions.patch({ round: options.round });
+  if (options.profession) setupActions.applyProfession(options.profession);
+  if (options.equipment) {
+    equipmentActions.setEquipment([...options.equipment]);
   }
-  player.finalizeRunSetup();
-  if (options.handSize !== undefined) player.handSize = options.handSize;
-  if (options.maxEquipmentSlots !== undefined) player.maxEquipmentSlots = options.maxEquipmentSlots;
+  if (options.dice) runActions.patch({ dice: [...options.dice] });
+  if (!options.profession && !options.dice) {
+    runActions.patch({ dice: createPouch(GAMEPLAY.STARTING_DICE) });
+  }
+  setupActions.finalizeRunSetup();
+  if (options.handSize !== undefined) runActions.patch({ handSize: options.handSize });
+  if (options.maxEquipmentSlots !== undefined) runActions.patch({ maxEquipmentSlots: options.maxEquipmentSlots });
 
   if (options.handLevels) {
     for (const [handType, level] of Object.entries(options.handLevels)) {
       if (level !== undefined && level > 1) {
-        player.upgradeHandLevel(handType as HandType, level - 1);
+        progressionActions.upgradeHandLevel(handType as HandType, level - 1);
       }
     }
   }
 
   if (options.bossId) {
-    player.round = 3;
+    runActions.patch({ round: 3 });
     const boss = getBossById(options.bossId);
     if (!boss) throw new Error(`Unknown boss id: "${options.bossId}"`);
-    player.setBossForCurrentLeg(boss);
+    bossActions.setBossForCurrentLeg(boss);
   }
 
   const game = new GameState();
-  return { game, player };
+  const player = getPlayerState();
+  player.syncFromStore();
+  return { game, run: getRunState(), player };
 }
 
 /** Force boss on current leg (round 3) */
-export function setBoss(player: PlayerState, bossId: string): BossDef {
+export function setBoss(_run: RunState, bossId: string): BossDef {
   const boss = getBossById(bossId);
   if (!boss) throw new Error(`Unknown boss id: "${bossId}"`);
-  player.round = 3;
-  player.setBossForCurrentLeg(boss);
+  runActions.patch({ round: 3 });
+  bossActions.setBossForCurrentLeg(boss);
   return boss;
 }
 
@@ -231,44 +318,58 @@ export interface ScoreTestOptions {
 
 /**
  * Run the full score calculation pipeline and return the result.
- * This drives the GameState through SELECT → ROLL → SCORE phases,
- * injecting the specified dice directly (no randomness).
  */
 export function calculateTestScore(options: ScoreTestOptions) {
   const allDice = [...options.scoredDice, ...(options.heldDice ?? [])];
   const scoredIds = options.scoredDice.map((d) => d.id);
 
-  const { game, player } = setupGame({
+  const { game, run } = setupGame({
     equipment: options.equipment ?? [],
-    dice: [...allDice, ...diceWithValue(1, 50)], // pad dice pool
+    dice: [...allDice, ...diceWithValue(1, 50)],
     money: options.money ?? 10,
     profession: options.profession,
     handLevels: options.handLevels,
     bossId: options.bossId,
   });
 
-  // Set rerolls (default matches GAMEPLAY.MAX_REROLLS = 6)
   const rerolls = options.rerollsRemaining ?? 6;
 
-  // Start round
   game.startRound();
 
-  // Override day/maxDays if specified
-  if (options.currentDay !== undefined) game.state.day = options.currentDay;
-  if (options.maxDays !== undefined) game.config.maxDays = options.maxDays;
+  if (options.currentDay !== undefined) {
+    roundActions.patch({ day: options.currentDay });
+  }
+  if (options.maxDays !== undefined) {
+    const round = getRoundState();
+    if (round) roundActions.patch({ config: { ...round.config, maxDays: options.maxDays } });
+  }
 
-  // Force the game state to have our specific dice
-  game.state.phase = 'ROLL';
-  game.state.rolledDice = allDice;
-  game.state.selectedForRoll = allDice;
-  game.state.rerollsRemaining = rerolls;
+  const dieValuesByDieId: Record<string, number> = {};
+  for (const d of allDice) dieValuesByDieId[d.id] = d.value;
+  roundActions.patch({
+    phase: 'ROLL',
+    rolledDice: allDice.map((d) => ({ id: d.id, value: d.value })),
+    selectedForRollIds: allDice.map((d) => d.id),
+    dieValuesByDieId,
+    rerollsRemaining: rerolls,
+  });
 
-  // Select dice for scoring
   game.selectForScore(scoredIds);
 
-  // Calculate
   const result = game.calculateScore();
   if (!result) throw new Error('calculateScore returned null');
 
-  return { result, game, player };
+  const player = getPlayerState();
+  // Scoring mutates store-resolved equipment; sync state onto instances tests still hold.
+  if (options.equipment) {
+    for (const orig of options.equipment) {
+      const live = player.equipment.find((e) => e.def.id === orig.def.id);
+      if (live) {
+        orig.state = { ...live.state };
+        orig.perishableRoundsLeft = live.perishableRoundsLeft;
+      }
+    }
+  }
+
+  return { result, game, run, player };
 }

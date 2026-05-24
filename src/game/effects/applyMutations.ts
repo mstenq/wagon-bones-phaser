@@ -1,12 +1,17 @@
-// ─── Scoring Mutations Application ───
+// ─── Scoring mutation application (No Phaser imports) ───
+// Applies effect mutations through run store actions instead of PlayerState.
 
-import { getPlayerState } from '../PlayerState';
 import { getConsumableDefById } from '../ConsumablesSystem';
 import { setDieEnhancement } from '../DiceSystem';
-import { Die } from '../types';
-import { ScoringMutations } from './types';
+import type { Die } from '../types';
+import type { ScoringMutations } from './types';
 import { processEquipmentOnDiceDestroyed } from './lifecycle/onDiceDestroyed';
 import { ZERO, addScore } from '../scoreMath';
+import { getRunState, runStore } from '../store/runStore';
+import { replaceEquipmentList, resolveEquipmentList } from '../store/resolve';
+import { storedFromEquipmentInstances } from '../store/resolve';
+import { economyActions } from '../store/actions/economyActions';
+import { consumableActions } from '../store/actions/consumableActions';
 
 export function createEmptyScoringMutations(): ScoringMutations {
   return {
@@ -58,73 +63,96 @@ export function mergeMutations(target: ScoringMutations, source: ScoringMutation
 
 /** Apply dice enhancement mutations immediately (used during pre-scoring). */
 export function applyDiceEnhancementMutations(mutations: ScoringMutations, scoringDice: Die[]): void {
-  const player = getPlayerState();
+  const run = getRunState();
+  const dice = [...run.dice];
+  let changed = false;
+
   for (const { id, enhancement } of mutations.diceEnhanced) {
     const scored = scoringDice.find((d) => d.id === id);
     if (scored) setDieEnhancement(scored, enhancement);
-    const pouchDie = player.dice.find((d) => d.id === id);
-    if (pouchDie) setDieEnhancement(pouchDie, enhancement);
+    const idx = dice.findIndex((d) => d.id === id);
+    if (idx >= 0) {
+      setDieEnhancement(dice[idx], enhancement);
+      changed = true;
+    }
   }
+
+  if (changed) runStore.setState({ dice });
 }
 
 /**
- * Apply the accumulated mutations from scoring to the player state.
+ * Apply the accumulated mutations from scoring to run store state.
  * Called after scoring completes.
  */
 export function applyScoringMutations(mutations: ScoringMutations): void {
-  const player = getPlayerState();
-
-  // Money earned during scoring
   if (mutations.moneyEarned > 0) {
-    player.economy.earn(mutations.moneyEarned);
+    economyActions.earn(mutations.moneyEarned);
   }
 
-  // Dice destroyed during scoring
   if (mutations.diceDestroyed.length > 0) {
+    const run = getRunState();
     let enhancedCount = 0;
-    for (const dieId of mutations.diceDestroyed) {
-      const idx = player.dice.findIndex((d) => d.id === dieId);
-      if (idx >= 0) {
-        if (player.dice[idx].enhancement !== null) enhancedCount++;
-        player.dice.splice(idx, 1);
-      }
-    }
-    processEquipmentOnDiceDestroyed(player.equipment, mutations.diceDestroyed.length, enhancedCount);
+    const destroyedSet = new Set(mutations.diceDestroyed);
+    const dice = run.dice.filter((d) => {
+      if (!destroyedSet.has(d.id)) return true;
+      if (d.enhancement !== null) enhancedCount++;
+      return false;
+    });
+
+    const equipment = resolveEquipmentList();
+    processEquipmentOnDiceDestroyed(equipment, mutations.diceDestroyed.length, enhancedCount);
+    replaceEquipmentList(equipment);
+    runStore.setState({
+      dice,
+      equipment: storedFromEquipmentInstances(equipment),
+    });
   }
 
-  // Dice enhanced during scoring
-  for (const { id, enhancement } of mutations.diceEnhanced) {
-    const die = player.dice.find((d) => d.id === id);
-    if (die) setDieEnhancement(die, enhancement);
+  if (mutations.diceEnhanced.length > 0) {
+    const run = getRunState();
+    const dice = run.dice.map((d) => {
+      const patch = mutations.diceEnhanced.find((e) => e.id === d.id);
+      if (!patch) return d;
+      const next = { ...d };
+      setDieEnhancement(next, patch.enhancement);
+      return next;
+    });
+    runStore.setState({ dice });
   }
 
-  // Consumables granted during scoring
   for (const consumableId of mutations.consumablesGranted) {
     const consumableDef = getConsumableDefById(consumableId);
-    if (consumableDef) {
-      player.addConsumable(consumableDef);
+    if (consumableDef) consumableActions.addConsumable(consumableDef);
+  }
+
+  if (mutations.diceCopied.length > 0) {
+    const run = getRunState();
+    const copied: Die[] = [];
+    for (const diePartial of mutations.diceCopied) {
+      if (diePartial.id && diePartial.value !== undefined) {
+        copied.push({
+          id: diePartial.id,
+          value: diePartial.value,
+          enhancement: diePartial.enhancement ?? null,
+          sticker: diePartial.sticker ?? null,
+          aura: diePartial.aura ?? null,
+          bonusMiles: diePartial.bonusMiles ?? 0,
+        });
+      }
+    }
+    if (copied.length > 0) {
+      runStore.setState({ dice: [...run.dice, ...copied] });
     }
   }
 
-  // Dice copied during scoring
-  for (const diePartial of mutations.diceCopied) {
-    if (diePartial.id && diePartial.value !== undefined) {
-      player.dice.push({
-        id: diePartial.id,
-        value: diePartial.value,
-        enhancement: diePartial.enhancement ?? null,
-        sticker: diePartial.sticker ?? null,
-        aura: diePartial.aura ?? null,
-        bonusMiles: diePartial.bonusMiles ?? 0,
-      });
-    }
-  }
-
-  // Permanent bonus miles granted during scoring
-  for (const { id, amount } of mutations.dieBonusMilesAdded) {
-    const die = player.dice.find((d) => d.id === id);
-    if (die) {
-      die.bonusMiles += amount;
-    }
+  if (mutations.dieBonusMilesAdded.length > 0) {
+    const run = getRunState();
+    const bonusById = new Map(mutations.dieBonusMilesAdded.map((b) => [b.id, b.amount]));
+    runStore.setState({
+      dice: run.dice.map((d) => {
+        const amount = bonusById.get(d.id);
+        return amount !== undefined ? { ...d, bonusMiles: d.bonusMiles + amount } : d;
+      }),
+    });
   }
 }

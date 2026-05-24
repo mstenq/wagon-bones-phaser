@@ -3,7 +3,6 @@
 import { effectRegistry } from '../registry';
 import { checkLoadedChance } from '../../equipmentUtils';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
-import { getPlayerState } from '../../PlayerState';
 import { dieMatchesPip, multiplyCtxXMult, resolveChance, resolveEffectParam } from '../helpers';
 import { addScore } from '../../scoreMath';
 
@@ -40,7 +39,7 @@ effectRegistry.registerPerDie('PIP_MILES', (ctx, equip, _idx, die, _t) => {
 effectRegistry.registerPerDie('LUCKY_NUMBER_PIP_XMULT', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
   if (dieMatchesPip(die, equip.state.pip ?? 0, ctx.equipment, ctx.hasStackedDeck)) {
-    const xVal = resolveEffectParam<number>(p, 'value', getPlayerState().profession?.id);
+    const xVal = resolveEffectParam<number>(p, 'value', ctx.professionId ?? undefined);
     multiplyCtxXMult(ctx, xVal);
     ctx.animEvents.push({
       target: { kind: 'both', dieId: die.id, equipIndex: _idx },
@@ -55,7 +54,7 @@ effectRegistry.registerPerDie('LUCKY_NUMBER_PIP_XMULT', (ctx, equip, _idx, die, 
 effectRegistry.registerPerDie('PIP_SUPPLY_CHANCE', (ctx, equip, _idx, die, _t) => {
   const p = equip.def.effectParams as Record<string, unknown>;
   if (dieMatchesPip(die, p.pip as number, ctx.equipment, ctx.hasStackedDeck)) {
-    const chance = resolveChance(p, getPlayerState().profession?.id);
+    const chance = resolveChance(p, ctx.professionId ?? undefined);
     if (checkLoadedChance(chance, ctx.equipment)) {
       const supplyDef = getRandomSupplyDef();
       ctx.mutations.consumablesGranted.push(supplyDef.id);

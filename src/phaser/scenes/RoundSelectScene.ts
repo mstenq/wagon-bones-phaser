@@ -3,10 +3,9 @@
 
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState } from '../../game/PlayerState';
 import { TEXT_COLORS, FONTS, TAG_STACK, GAMEPLAY } from '../../game/Constants';
 import { createLayout, LayoutResult } from '../ui/SceneLayout';
-import { createLegRoundPanels, type RoundInfoPanel } from '../ui/RoundInfo';
+import { createLegRoundPanels } from '../ui/RoundInfo';
 import { TagTooltip } from '../ui/TagTooltip';
 import {
   ensureRoundSkipPreviewTags,
@@ -18,9 +17,23 @@ import {
   isImmediateTag,
   type ImmediateTagResult,
 } from '../../game/TagSystem';
+import { resolveTagDescription } from '../../data/trail_tags';
 import type { TrailTagInstance } from '../../game/types';
+import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { getPackDefById } from '../../game/BoosterPackSystem';
 import { buildVictoryGameOverData } from './GameOver';
+import { bossActions, getRunState, progressionActions, tagActions } from '../../game/store';
+import { canAfford } from '../../game/store/economy';
+import {
+  selectBossPermitRerollLimit,
+  selectCanBossPermitReroll,
+  selectJourneyComplete,
+  selectSkipPreviewTagForRound,
+  selectTagDescriptionContextForRound,
+  selectSkippedTagForRound,
+  selectTargetMiles,
+} from '../../game/store/selectors/runSelectors';
+import { sceneActions } from '../../game/store/sceneStore';
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
 
@@ -35,7 +48,6 @@ const TAG_FLY_COLORS: Record<string, number> = {
 export class RoundSelectScene extends Scene {
   private layout!: LayoutResult;
   private tagTooltip = new TagTooltip();
-  private roundPanels: RoundInfoPanel[] = [];
   private readonly onPermitsChanged = () => this.scene.restart();
 
   constructor() {
@@ -43,8 +55,6 @@ export class RoundSelectScene extends Scene {
   }
 
   create() {
-    const player = getPlayerState();
-
     this.scale.on('resize', this.onResize, this);
     EventBus.on(Events.PERMITS_CHANGED, this.onPermitsChanged);
     this.events.on('shutdown', () => {
@@ -59,7 +69,8 @@ export class RoundSelectScene extends Scene {
       sidebarTitle: 'TRAIL MAP',
     });
 
-    ensureRoundSkipPreviewTags(player);
+    ensureRoundSkipPreviewTags();
+    sceneActions.syncRoundSelectFromRun(getRunState().roundSkipPreviewTags);
 
     this.buildRoundColumns();
 
@@ -67,14 +78,13 @@ export class RoundSelectScene extends Scene {
   }
 
   private onPermitBossReroll(): void {
-    const player = getPlayerState();
-    if (!player.tryBossPermitReroll()) return;
+    if (!bossActions.tryBossPermitReroll()) return;
     this.tagTooltip.hide();
     this.scene.restart();
   }
 
   private buildRoundColumns(): void {
-    const player = getPlayerState();
+    const run = getRunState();
     const { contentCX, contentW, contentTop, contentBottom, contentX } = this.layout;
     const titleY = contentTop + 28;
     this.add
@@ -89,33 +99,40 @@ export class RoundSelectScene extends Scene {
     const colY = titleY + 44;
     const colH = contentBottom - colY - 14;
 
-    this.roundPanels = createLegRoundPanels(this, {
+    createLegRoundPanels(this, {
       bounds: {
         x: contentCX - contentW / 2,
         y: colY,
         width: contentW,
         height: colH,
       },
-      currentRound: player.round,
-      leg: player.leg,
-      difficulty: player.difficulty,
-      permitScoreReduction: player.permitScoreReduction,
-      skippedRoundsThisLeg: player.skippedRoundsThisLeg,
-      getSkippedTagForRound: (r) => player.getSkippedTagForRound(r),
-      getSkipPreviewTagForRound: (r) => player.getSkipPreviewTagForRound(r),
+      currentRound: run.round,
+      leg: run.leg,
+      difficulty: run.difficulty,
+      permitScoreReduction: run.permitScoreReduction,
+      skippedRoundsThisLeg: run.skippedRoundsThisLeg,
+      getSkippedTagForRound: (r) => selectSkippedTagForRound(run, r),
+      getSkipPreviewTagForRound: (r) => selectSkipPreviewTagForRound(run, r),
       showActions: true,
       depth: COL_DEPTH,
       onPlay: () => this.onPlay(),
       onSkip: () => this.onSkip(),
       onRerollBoss: () => this.onPermitBossReroll(),
       canRerollBoss: () => {
-        const p = getPlayerState();
-        return p.bossPermitRerollLimit !== 0 && p.canBossPermitReroll() && p.canAfford(GAMEPLAY.BOSS_REROLL_COST);
+        const s = getRunState();
+        return (
+          selectBossPermitRerollLimit(s) !== 0 &&
+          selectCanBossPermitReroll(s) &&
+          canAfford(s, GAMEPLAY.BOSS_REROLL_COST)
+        );
       },
-      onTagHover: (tag, ax, ay) => {
+      onTagHover: (tag, round, ax, ay) => {
+        const run = getRunState();
+        const desc = resolveTagDescription(tag, selectTagDescriptionContextForRound(run, round));
         this.tagTooltip.show(
           this,
           tag,
+          desc,
           ax,
           ay,
           {
@@ -132,25 +149,27 @@ export class RoundSelectScene extends Scene {
 
   private onPlay(): void {
     this.tagTooltip.hide();
+    sceneActions.clearRoundSelect();
     this.scene.start('Game', {});
   }
 
   private onSkip(): void {
-    const player = getPlayerState();
-    const tagDef = player.getSkipPreviewTagForRound(player.round);
+    const run = getRunState();
+    const tagDef = selectSkipPreviewTagForRound(run, run.round);
     if (!tagDef) return;
     this.tagTooltip.hide();
 
-    const skippedRound = player.round;
+    const skippedRound = run.round;
+    const previewMeta = selectTagDescriptionContextForRound(run, skippedRound);
 
-    player.recordRoundSkipped(tagDef);
-    const tagInstance = grantTag(tagDef);
-    player.advanceRound(true);
+    tagActions.recordRoundSkipped(tagDef, previewMeta);
+    const tagInstance = grantTag(tagDef, previewMeta);
+    progressionActions.advanceRound(true);
 
     EventBus.emit(Events.TAG_EARNED, { tag: tagInstance, round: skippedRound });
     EventBus.emit(Events.ROUND_SKIPPED, { tag: tagInstance, round: skippedRound });
 
-    const finishSkip = () => this.finishAfterSkip(player);
+    const finishSkip = () => this.finishAfterSkip();
 
     if (!isImmediateTag(tagInstance.def.category)) {
       this.playTagEarnedAnimation(tagInstance, skippedRound, finishSkip);
@@ -159,15 +178,35 @@ export class RoundSelectScene extends Scene {
     }
   }
 
-  private finishAfterSkip(player = getPlayerState()): void {
-    processChangeOfGuardTags(player);
+  private finishAfterSkip(): void {
+    processChangeOfGuardTags();
 
-    const immediateResults = processImmediateTags(player);
+    const immediateResults = processImmediateTags();
     for (const result of immediateResults) {
-      this.showImmediateResult(result);
+      if (result.type === 'money') {
+        this.showImmediateResult(result);
+      }
     }
 
-    const packTags = player.consumeTagsByCategory('immediate_pack');
+    const handUpgrades = immediateResults
+      .map((r) => r.handUpgrade)
+      .filter((u): u is NonNullable<typeof u> => u != null);
+
+    if (handUpgrades.length > 0) {
+      playHandUpgradeAnimation({
+        scene: this,
+        sidebar: this.layout.sidebar,
+        upgrades: handUpgrades,
+        onComplete: () => this.continueAfterImmediateTags(),
+      });
+      return;
+    }
+
+    this.continueAfterImmediateTags();
+  }
+
+  private continueAfterImmediateTags(): void {
+    const packTags = tagActions.consumeTagsByCategory('immediate_pack');
     if (packTags.length > 0) {
       const packTag = packTags[0];
       const packDefId = getPackDefIdForTag(packTag.def.id);
@@ -182,13 +221,14 @@ export class RoundSelectScene extends Scene {
       }
     }
 
-    const equipTags = player.consumeTagsByCategory('immediate_equipment');
+    const equipTags = tagActions.consumeTagsByCategory('immediate_equipment');
     for (const tag of equipTags) {
-      processJunkPileTag(tag, player);
+      processJunkPileTag(tag);
     }
 
-    if (player.journeyComplete) {
-      this.scene.start('GameOver', buildVictoryGameOverData(0, player.targetMiles));
+    const run = getRunState();
+    if (selectJourneyComplete(run)) {
+      this.scene.start('GameOver', buildVictoryGameOverData(0, selectTargetMiles(run)));
       return;
     }
 
@@ -230,7 +270,6 @@ export class RoundSelectScene extends Scene {
       ease: 'Back.easeIn',
       onComplete: () => {
         tempBadge.destroy();
-        this.layout.tagStack.refresh();
         onComplete();
       },
     });
@@ -241,8 +280,6 @@ export class RoundSelectScene extends Scene {
     let message = '';
     if (result.type === 'money' && result.amount) {
       message = `+$${result.amount}`;
-    } else if (result.type === 'upgrade' && result.handType) {
-      message = `${result.handType} +${result.levelsGained} levels`;
     } else {
       return;
     }

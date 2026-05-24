@@ -6,7 +6,8 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { TEXT_COLORS, FONTS, UI, DICE } from '../../game/Constants';
-import { getPlayerState } from '../../game/PlayerState';
+import { getRunState } from '../../game/store/runStore';
+import { selectAvailableDice, selectSpentDice } from '../../game/store/selectors/runSelectors';
 import { Die } from '../../game/types';
 import { DiceSprite } from './DiceSprite';
 import { Button } from './Button';
@@ -117,8 +118,7 @@ export class DicePouchModal extends GameObjects.Container {
 
   /** Group dice by visual identity, preserving spent/available status */
   private groupDice(dice: Die[], markSpent: boolean): DiceGroup[] {
-    const player = getPlayerState();
-    const spentIds = player.spentDiceIds;
+    const spentIds = new Set(getRunState().spentDiceIds);
     const groups = new Map<string, DiceGroup>();
 
     for (const die of dice) {
@@ -149,21 +149,21 @@ export class DicePouchModal extends GameObjects.Container {
     this.diceSprites = [];
     this.diceContainer.removeAll(true);
 
-    const player = getPlayerState();
+    const run = getRunState();
     const { panelX, panelY, panelW, panelH } = this;
     const startY = panelY + 80;
     const availH = panelH - 120;
     const summaryY = startY + 12;
     const gridStartY = summaryY + 22 + DICE.SIZE / 2;
 
-    let dice = player.dice;
+    let dice = run.dice;
     if (this.filterMode === 'available') {
-      dice = player.availableDice;
+      dice = selectAvailableDice(run);
     } else if (this.filterMode === 'spent') {
-      dice = player.spentDice;
+      dice = selectSpentDice(run);
     }
 
-    const spentCount = player.spentDice.length;
+    const spentCount = selectSpentDice(run).length;
 
     if (dice.length === 0) {
       const emptyText = this.scene.add
@@ -218,7 +218,7 @@ export class DicePouchModal extends GameObjects.Container {
     // Summary text
     const summaryParts: string[] = [];
     if (this.filterMode === 'all') {
-      summaryParts.push(`${player.availableDice.length} available, ${spentCount} spent`);
+      summaryParts.push(`${selectAvailableDice(run).length} available, ${spentCount} spent`);
     } else {
       summaryParts.push(`${dice.length} dice`);
     }

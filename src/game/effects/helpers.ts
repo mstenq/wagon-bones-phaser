@@ -3,10 +3,11 @@
 import { EquipmentInstance } from '../ItemsSystem';
 import { resolveCopyTarget } from '../equipmentUtils';
 import { Die, HandType } from '../types';
-import { getPlayerState } from '../PlayerState';
-import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 import type { ScoringPipelineContext } from './types';
 import { addScore, D, gte, multiplyScore, type Decimal, type DecimalSource } from '../scoreMath';
+import { getRunState } from '../store/runStore';
+import { resolveEquipmentList } from '../store/resolve';
+import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 
 export type UnresolvedCopyBehavior = 'none' | 'skip';
 
@@ -197,9 +198,9 @@ export function dieMatchesParity(
 
 /** Boss effects are negated by Saint Elmo's Shield or selling Sheriff's Badge this round. */
 export function isBossEffectNegated(): boolean {
-  const player = getPlayerState();
-  if (player.equipment.some((e) => e.def.id === 'saint_elmos_shield')) return true;
-  return player.bossEffectDisabled;
+  const state = getRunState();
+  if (resolveEquipmentList(state).some((e) => e.def.id === 'saint_elmos_shield')) return true;
+  return state.bossEffectDisabled;
 }
 
 export function handTypeMatches(played: HandType, required: string): boolean {

@@ -4,7 +4,7 @@
 import * as Phaser from 'phaser';
 import type { Scene } from 'phaser';
 import { ANIM } from '../../game/Constants';
-import { getPlayerState } from '../../game/PlayerState';
+import { equipmentActions } from '../../game/store/actions/equipmentActions';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import type { EquipmentBar } from '../ui/EquipmentBar';
 
@@ -52,9 +52,7 @@ export function animateEquipmentFireDestruction(
   const victimCard = equipBar.getCardByEquipIndex(victimIndex);
   if (!sourceCard || !victimCard) {
     if (!options.deferStateUpdate) {
-      const player = getPlayerState();
-      player.equipment.splice(victimIndex, 1);
-      equipBar.refresh();
+      equipmentActions.destroyEquipment(victimIndex);
     }
     onComplete?.();
     return;
@@ -93,9 +91,7 @@ export function animateEquipmentFireDestruction(
 
   const finishDestruction = () => {
     if (!options.deferStateUpdate) {
-      const player = getPlayerState();
-      player.equipment.splice(victimIndex, 1);
-      equipBar.refresh();
+      equipmentActions.destroyEquipment(victimIndex);
     }
     onComplete?.();
   };
@@ -203,13 +199,9 @@ export function animateEquipmentFireDestructionParallel(
     completed++;
     if (completed < destructions.length) return;
 
-    const player = getPlayerState();
-    for (const idx of victimIndices) {
-      if (idx >= 0 && idx < player.equipment.length) {
-        player.equipment.splice(idx, 1);
-      }
+    for (const idx of [...victimIndices].sort((a, b) => b - a)) {
+      equipmentActions.destroyEquipment(idx);
     }
-    equipBar.refresh();
     onComplete?.();
   };
 

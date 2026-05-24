@@ -1,7 +1,8 @@
 // ─── on-pack-opened lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
-import { getPlayerState } from '../../PlayerState';
+import { getRunState } from '../../store/runStore';
+import { selectProfession } from '../../store/selectors/runSelectors';
 import { checkLoadedChance } from '../../equipmentUtils';
 import { resolveChance } from '../helpers';
 import { effectRegistry } from '../registry';
@@ -16,7 +17,7 @@ effectRegistry.registerLifecycle('on-pack-opened', (equip, ctxUnknown) => {
   const ctx = ctxUnknown as PackOpenedContext;
   if (equip.def.effectType === 'PACK_OPEN_SUPPLY_CHANCE') {
     const p = equip.def.effectParams as Record<string, unknown>;
-    const chance = resolveChance(p, getPlayerState().profession?.id);
+    const chance = resolveChance(p, selectProfession(getRunState())?.id);
     if (checkLoadedChance(chance, ctx.equipment)) {
       ctx.triggered = true;
     }

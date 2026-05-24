@@ -6,17 +6,42 @@
 import { Scene } from 'phaser';
 import * as Phaser from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { GameState } from '../../game/GameState';
-import type { GameRoundSaveData } from '../../game/SaveLoad';
+import {
+  getActiveRoundConfig,
+  initRoundSession,
+  patchLegacyRoundState,
+  readRoundState,
+  startRoundSession,
+} from '../../game/store/roundView';
+import { getRoundHintContext } from '../../game/displayContext';
+import { getRunState, runActions } from '../../game/store/runStore';
+import { getRoundState } from '../../game/store/roundStore';
+import { getSceneState, sceneActions } from '../../game/store/sceneStore';
+import { enqueueConsumablePlayback } from '../../game/store/uiEffectHelpers';
+import { roundActions } from '../../game/store/actions/roundActions';
+import { milesToSave } from '../../game/scoreMath';
+import { processBossPayoutTags, grantTag } from '../../game/TagSystem';
+import { getTrailTagById } from '../../data/trail_tags';
+import { grantGhostMedicine } from '../../game/ConsumablesSystem';
+import { bindConsumableUiEffects } from '../store/consumableUiEffects';
 import { Die, ScoreResult, HandType } from '../../game/types';
 import { detectBestHand } from '../../game/DiceSystem';
-import { getPlayerState } from '../../game/PlayerState';
-import { addScore, D } from '../../game/scoreMath';
+
+import { diceActions } from '../../game/store/actions/diceActions';
+import { economyActions } from '../../game/store/actions/economyActions';
+import { resolveEquipmentList } from '../../game/store/resolve';
+import { runHasLuckyNumberEquipment, getResolvedLoadedDieTarget, getRunHandStats } from '../../game/store/runReads';
+import { selectAvailableDice } from '../../game/store/selectors/runSelectors';
 import {
-  hasActiveTrailRoundEffects,
-  trailRoundEffectsFromModifiers,
-  getPlayerTrailDebuffLines,
-} from '../../game/TrailEventsSystem';
+  selectHandStats,
+  selectCurrentBoss,
+  selectIsBossRound,
+  selectProfession,
+} from '../../game/store/selectors/runSelectors';
+import { selectTargetMiles } from '../../game/store/selectors/runSelectors';
+import { computePayoutBreakdown } from '../../game/runProgression';
+import { addScore, D } from '../../game/scoreMath';
+import { hasActiveTrailRoundEffects, trailRoundEffectsFromModifiers } from '../../game/TrailEventsSystem';
 import { applyEquipmentModifierDestructions, processEquipmentModifiersEndOfRound } from '../../game/EquipmentModifiers';
 import { isEquipmentLeased } from '../../game/ItemsSystem';
 import { consumeNextRoundTags } from '../../game/TagSystem';
@@ -26,12 +51,7 @@ import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import {
-  ConsumableAnimEvent,
-  ConsumableDef,
-  ConsumableInstance,
-  executeConsumableEffect,
-} from '../../game/ConsumablesSystem';
+import { ConsumableDef, ConsumableInstance, executeConsumableEffect } from '../../game/ConsumablesSystem';
 import {
   DiceSelectionConfig,
   applyDiceSelectionEffect,
@@ -48,10 +68,6 @@ import {
   animateEquipmentFireDestruction,
   animateEquipmentFireDestructionSequence,
 } from '../animations/EquipmentFireDestroyAnimation';
-import {
-  applyConsumableAnimEvents as playConsumableAnimEvents,
-  playEquipmentCreatedPopIn,
-} from '../animations/ConsumableAnimPlayback';
 import { animateEquipmentPopIn } from '../animations/EquipmentPopInAnimation';
 import { rngShuffle } from '../../game/RunRng';
 import { getLoadedDiceMultiplier } from '../../game/equipmentUtils';
@@ -71,7 +87,7 @@ interface DiceStackData {
 }
 
 export class GameScene extends Scene {
-  private gameState: GameState;
+  private roundSessionActive = false;
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
@@ -79,7 +95,7 @@ export class GameScene extends Scene {
 
   /** Dynamic roll size that respects permits and trail event penalties */
   private get maxSelectForRoll(): number {
-    return this.gameState.config.rollSize;
+    return getActiveRoundConfig().rollSize;
   }
 
   // Layout helpers
@@ -142,7 +158,6 @@ export class GameScene extends Scene {
   private marqueePointerId: number | null = null;
 
   // Loaded die target control
-  private loadedDiceLabel: Phaser.GameObjects.Text;
   private loadedDiceValueBg: Phaser.GameObjects.Graphics;
   private loadedDiceValueText: Phaser.GameObjects.Text;
   private loadedDiceValueHitArea: Phaser.GameObjects.Zone;
@@ -164,41 +179,70 @@ export class GameScene extends Scene {
 
   // Dice IDs to animate popping in on first draw phase (Mystery Crate, Quarry Stone, etc.)
   private pendingNewDiceIds: string[] = [];
-  private pendingRestore: GameRoundSaveData | null = null;
 
-  init(data: { restore?: GameRoundSaveData } = {}) {
-    // Always discard prior round state — the scene instance is reused across rounds and
-    // shutdown may not run before the next start (e.g. after autosave restore → win → new round).
-    this.pendingRestore = data.restore ?? null;
-    this.gameState = null!;
+  init(_data: Record<string, unknown> = {}) {
+    // Round state lives in roundStore (hydrated by applySaveSnapshot or cleared between rounds).
+    this.roundSessionActive = false;
   }
 
-  getGameState(): GameState {
-    return this.gameState;
+  /** Legacy die-object snapshot of active round (use patchRound for writes). */
+  private rs() {
+    return readRoundState();
+  }
+
+  private patchRound(
+    partial: Parameters<typeof patchLegacyRoundState>[0],
+    config?: Parameters<typeof patchLegacyRoundState>[1],
+  ): void {
+    patchLegacyRoundState(partial, config);
+  }
+
+  private takeDiceAddedUiEffects(): string[] {
+    const effects = runActions.takeUiEffects((e) => e.kind === 'dice-added');
+    return effects.flatMap((e) => (e.kind === 'dice-added' ? e.dieIds : []));
+  }
+
+  /** Consume one-shot round-start animations queued in the run store (with legacy save fallback). */
+  private consumeRoundStartUiEffects(): void {
+    const destructionEffects = runActions.takeUiEffects((e) => e.kind === 'round-start-destructions');
+    for (const effect of destructionEffects) {
+      if (effect.kind === 'round-start-destructions') {
+        this.animateRoundStartDestructions(effect.entries);
+      }
+    }
+
+    const createEffects = runActions.takeUiEffects((e) => e.kind === 'round-start-equipment-created');
+    for (const effect of createEffects) {
+      if (effect.kind === 'round-start-equipment-created') {
+        this.animateJunkDealerCreation(effect.count);
+      }
+    }
   }
 
   create() {
     // Initialize game state only on first create (not on relayout)
-    if (!this.gameState) {
-      const player = getPlayerState();
-      if (this.pendingRestore) {
-        this.gameState = new GameState();
-        this.gameState.restoreRound(this.pendingRestore.config, this.pendingRestore.state);
-        this.pendingRestore = null;
+    if (!this.roundSessionActive) {
+      const run = getRunState();
+      const restoredRound = getRoundState();
+      if (restoredRound && getSceneState().activeScene === 'Game') {
+        initRoundSession();
+        this.roundSessionActive = true;
         this.pendingNewDiceIds = [];
-        // Autosave from Shop may have pending modifiers not yet copied by startRound
         if (
-          !hasActiveTrailRoundEffects(player.trailRoundEffects) &&
-          hasActiveTrailRoundEffects(trailRoundEffectsFromModifiers(player.trailEventModifiers))
+          !hasActiveTrailRoundEffects(run.trailRoundEffects) &&
+          hasActiveTrailRoundEffects(trailRoundEffectsFromModifiers(run.trailEventModifiers))
         ) {
-          player.trailRoundEffects = trailRoundEffectsFromModifiers(player.trailEventModifiers);
+          runActions.patch({
+            trailRoundEffects: trailRoundEffectsFromModifiers(run.trailEventModifiers),
+          });
         }
       } else {
-        consumeNextRoundTags(player);
-        this.gameState = new GameState({ targetMiles: player.targetMiles });
-        this.gameState.startRound();
+        consumeNextRoundTags();
+        initRoundSession({ targetMiles: selectTargetMiles(run) });
+        startRoundSession({ targetMiles: selectTargetMiles(run) });
+        this.roundSessionActive = true;
         // Pick up any dice added during leg transition or round start
-        this.pendingNewDiceIds = player.pendingNewDiceIds.splice(0);
+        this.pendingNewDiceIds = this.takeDiceAddedUiEffects();
       }
       // Clear selection state from previous round (scene instance is reused)
       this.selectedHandIds = new Set();
@@ -210,24 +254,14 @@ export class GameScene extends Scene {
       this.scale.off('resize', this.onResize, this);
       this.destroyLoadedDicePicker();
       this.stopEquipDestroySounds();
-      this.gameState = null!;
+      this.roundSessionActive = false;
     });
 
     this.setupDragHandlers();
     this.buildLayout(false);
 
-    // Animate round-start equipment destructions (Funeral Pyre, Haunted Totem, etc.)
-    const pyrePlayer = getPlayerState();
-    if (pyrePlayer.pendingAnimatedDestructions.length > 0) {
-      this.animateRoundStartDestructions([...pyrePlayer.pendingAnimatedDestructions]);
-      pyrePlayer.pendingAnimatedDestructions = [];
-    }
-
-    // Animate Junk Dealer equipment creation if pending
-    if (pyrePlayer.pendingJunkDealerCount > 0) {
-      this.animateJunkDealerCreation(pyrePlayer.pendingJunkDealerCount);
-      pyrePlayer.pendingJunkDealerCount = 0;
-    }
+    sceneActions.enterScene('Game');
+    this.consumeRoundStartUiEffects();
 
     this.flashLeasedBadgeReminders();
   }
@@ -254,24 +288,21 @@ export class GameScene extends Scene {
     this.sidebarW = layout.sidebarW;
     this.contentCX = layout.contentCX;
 
-    // Refresh displays when equipment is sold from the bar
+    this.equipBar.setHintRound(getRoundHintContext());
     this.equipBar.on('equipment-changed', () => {
-      this.sidebar.refreshMoney();
-      this.dicePouch.refresh();
-      this.equipBar.updateHints(this.gameState, getPlayerState());
       this.applyBossRollDiceState();
     });
 
-    // Refresh displays when consumables change
-    this.consumableBar.on('consumable-changed', () => {
-      this.sidebar.refreshMoney();
-      this.dicePouch.refresh();
-      this.equipBar.updateHints(this.gameState, getPlayerState());
+    bindConsumableUiEffects(this, this.equipBar, {
+      destroyDice: (diceIds) =>
+        this.animateConsumableDiceDestruction(diceIds, {
+          refillSelectHand: true,
+          floatingText: `Raid destroyed ${diceIds.length} dice`,
+        }),
     });
 
-    // Execute consumable effect when used
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      this.handleConsumableUsed(consumed);
+      void this.handleConsumableUsed(consumed);
     });
 
     // Instruction text
@@ -340,7 +371,7 @@ export class GameScene extends Scene {
   }
 
   private enterCurrentPhase(isRelayout: boolean = false): void {
-    const phase = this.gameState.state.phase;
+    const phase = this.rs().phase;
     if (phase === 'SELECT') {
       this.enterDrawPhase(false, null, { autoRoll: !isRelayout });
     } else if (phase === 'ROLL') {
@@ -375,10 +406,14 @@ export class GameScene extends Scene {
     options: { autoRoll?: boolean } = {},
   ): void {
     this.clearSprites();
-    this.selectedHandIds = new Set(this.gameState.state.hand.map((die) => die.id));
+    this.selectedHandIds = new Set(this.rs().hand.map((die) => die.id));
     this.hideAllButtons();
-    this.sidebar.clearHandDisplay();
-    this.sidebar.updateData({ milesBase: 0, mult: 0 });
+    roundActions.setSidebarOverlay({
+      handName: '',
+      handLevel: 0,
+      milesBaseSave: milesToSave(0),
+      multSave: milesToSave(0),
+    });
     this.enterDrawPhaseLayout(animateFromPouch, carryoverPositions, options);
   }
 
@@ -392,7 +427,7 @@ export class GameScene extends Scene {
     this.playAreaY = height * UI.ROLL_Y_RATIO;
     this.availableY = height * UI.HAND_Y_RATIO;
 
-    const hand = this.gameState.state.hand;
+    const hand = this.rs().hand;
     this.handSprites = this.createDiceRow(hand, this.playAreaY);
     this.playAreaSprites = [...this.handSprites];
     for (const sprite of this.playAreaSprites) {
@@ -462,7 +497,7 @@ export class GameScene extends Scene {
     this.readyBtn.setVisible(true);
     this.updateDrawButtons();
 
-    const spent = this.gameState.state.spent.length;
+    const spent = this.rs().spent.length;
     this.instructionText.setText(`Roll ${hand.length} drawn dice (${spent} spent)`);
 
     this.updateHUD();
@@ -476,8 +511,8 @@ export class GameScene extends Scene {
   private maybeAutoRollFirstHand(): void {
     if (!getGameplayPreferences().autoRollFirstHand) return;
     if (this.animating) return;
-    if (this.gameState.state.phase !== 'SELECT') return;
-    if (this.gameState.state.hand.length === 0) return;
+    if (this.rs().phase !== 'SELECT') return;
+    if (this.rs().hand.length === 0) return;
     this.onReadyToRoll();
   }
 
@@ -487,7 +522,7 @@ export class GameScene extends Scene {
     this.hideAllButtons();
 
     // Create sprites for rolled dice
-    const rolled = this.gameState.state.rolledDice;
+    const rolled = this.rs().rolledDice;
     this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
     this.createLockIcons();
 
@@ -523,7 +558,9 @@ export class GameScene extends Scene {
         if (this.lockIcons[lockIdx]) this.lockIcons[lockIdx].setVisible(true);
       }
     }
-    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
+    this.patchRound({
+      selectedForScore: this.rs().rolledDice.filter((d) => this.lockedDiceIds.has(d.id)),
+    });
     this.updateRollButtons();
   }
 
@@ -551,7 +588,9 @@ export class GameScene extends Scene {
   }
 
   private syncSelectedForScore(): void {
-    this.gameState.state.selectedForScore = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
+    this.patchRound({
+      selectedForScore: this.rs().rolledDice.filter((d) => this.lockedDiceIds.has(d.id)),
+    });
   }
 
   /** Shared: wire up click handlers on roll sprites (click to lock/unlock, drag to reorder) */
@@ -579,12 +618,7 @@ export class GameScene extends Scene {
   }
 
   private canUseMarquee(): boolean {
-    return (
-      !this.animating &&
-      !this.consumableTargeting &&
-      this.rollSprites.length > 0 &&
-      this.gameState.state.phase === 'ROLL'
-    );
+    return !this.animating && !this.consumableTargeting && this.rollSprites.length > 0 && this.rs().phase === 'ROLL';
   }
 
   private getRollMarqueeZoneBounds(): { width: number; height: number; cx: number; cy: number } {
@@ -722,7 +756,7 @@ export class GameScene extends Scene {
     this.lockedDiceIds.clear();
     this.hideAllButtons();
 
-    const rolled = this.gameState.state.rolledDice;
+    const rolled = this.rs().rolledDice;
     this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
     this.createLockIcons();
     this.setupRollSpriteInteraction();
@@ -744,17 +778,16 @@ export class GameScene extends Scene {
     this.clearLockIcons();
 
     // Show hand name and level in sidebar
-    const player = getPlayerState();
     const handType = result.handResult.type as HandType;
-    const stats = player.getHandStats(handType);
-    this.sidebar.updateData({
+    const stats = selectHandStats(getRunState(), handType);
+    roundActions.setSidebarOverlay({
       title: 'SCORING',
       handName: result.handResult.name,
       handLevel: stats.level,
     });
 
     // Store round score before this hand for the animation
-    const roundScoreBefore = this.gameState.state.totalMiles.minus(result.miles);
+    const roundScoreBefore = this.rs().totalMiles.minus(result.miles);
     result.roundScoreBefore = roundScoreBefore;
 
     // Play sequential scoring animation
@@ -770,7 +803,7 @@ export class GameScene extends Scene {
       contentCX: this.contentCX,
       onComplete: () => {
         revealLandSlideHints();
-        this.equipBar.updateHints(this.gameState, getPlayerState());
+        this.equipBar.setHintRound(getRoundHintContext());
 
         // If hand upgrades occurred during scoring (e.g. Surveyor's Transit), animate them
         if (result.handUpgrades && result.handUpgrades.length > 0) {
@@ -803,8 +836,8 @@ export class GameScene extends Scene {
 
   private onReadyToRoll(): void {
     if (this.animating) return;
-    const ids = this.gameState.state.hand.map((die) => die.id);
-    const success = this.gameState.selectForRoll(ids);
+    const ids = this.rs().hand.map((die) => die.id);
+    const success = roundActions.selectForRoll(ids);
     if (success) {
       this.enterRollPhase();
     }
@@ -818,19 +851,19 @@ export class GameScene extends Scene {
     if (this.animating) return;
 
     // Re-roll all dice that are NOT locked
-    const allIds = this.gameState.state.rolledDice.map((d) => d.id);
+    const allIds = this.rs().rolledDice.map((d) => d.id);
     const idsToReroll = allIds.filter((id) => !this.lockedDiceIds.has(id));
     if (idsToReroll.length === 0) return;
 
-    const success = this.gameState.reroll(idsToReroll);
-    if (!success && this.gameState.state.rerollsRemaining > 0 && !this.gameState.canUseReroll()) {
+    const success = roundActions.reroll(idsToReroll);
+    if (!success && this.rs().rerollsRemaining > 0 && !roundActions.canUseReroll()) {
       this.showFloatingText('No re-rolls on Day 1', 0xffaa44);
       return;
     }
     if (success) {
       this.animating = true;
       const rerolledSprites = this.rollSprites.filter((s) => idsToReroll.includes(s.dieData.id));
-      const rolled = this.gameState.state.rolledDice;
+      const rolled = this.rs().rolledDice;
 
       playRollAnimation(
         this,
@@ -860,21 +893,21 @@ export class GameScene extends Scene {
     const ids = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     if (ids.length === 0) return;
 
-    const validation = this.gameState.validateScoreSelection(ids);
+    const validation = roundActions.validateScoreSelection(ids);
     if (!validation.allowed) {
       this.showFloatingText(validation.reason ?? 'Cannot play this hand', 0xff6644);
       return;
     }
 
-    const success = this.gameState.selectForScore(ids);
+    const success = roundActions.selectForScore(ids);
     if (!success) return;
 
     this.syncRolledDiceFromSprites();
-    const result = this.gameState.calculateScore();
+    const result = roundActions.calculateScore();
     if (result) {
       this.enterScorePhase(result);
     } else {
-      this.gameState.cancelScore();
+      roundActions.cancelScore();
       this.showFloatingText('Cannot play this hand', 0xff6644);
       this.updateRollButtons();
     }
@@ -886,8 +919,8 @@ export class GameScene extends Scene {
 
     this.hideAllButtons();
     this.clearSprites();
-    this.gameState.state.totalMiles = D(1_000_000);
-    this.gameState.state.phase = 'DAY_END';
+    this.patchRound({ totalMiles: D(1_000_000), phase: 'DAY_END' });
+    this.sidebar.syncRoundScoreFromStore();
     this.updateHUD();
     this.onContinue();
   }
@@ -895,18 +928,17 @@ export class GameScene extends Scene {
   private onContinue(): void {
     if (this.animating) return;
 
-    const scoredIds = new Set(this.gameState.state.selectedForScore.map((d) => d.id));
-    const heldDice = this.gameState.state.rolledDice.filter((d) => !scoredIds.has(d.id));
-    const player = getPlayerState();
-    const goldHeld = processGoldHeldAtRoundEnd(heldDice, player.equipment);
+    const scoredIds = new Set(this.rs().selectedForScore.map((d) => d.id));
+    const heldDice = this.rs().rolledDice.filter((d) => !scoredIds.has(d.id));
+    const goldHeld = processGoldHeldAtRoundEnd(heldDice, resolveEquipmentList());
 
-    const { outcome, destroyedEquipment, deferredDestroyIndices } = this.gameState.endDay({
+    const { outcome, destroyedEquipment, deferredDestroyIndices } = roundActions.endDay({
       deferEquipmentDestructionAnimation: true,
     });
 
     const afterDestroyedEquipmentFeedback = () => {
       if (outcome === 'won' || outcome === 'lost') {
-        this.finishDayEndAfterEquipmentDestroyed(outcome, goldHeld, player);
+        this.finishDayEndAfterEquipmentDestroyed(outcome, goldHeld);
         return;
       }
 
@@ -920,7 +952,6 @@ export class GameScene extends Scene {
     if (deferredDestroyIndices.length > 0) {
       this.animating = true;
       this.animateEndOfRoundSelfDestructs(deferredDestroyIndices, () => {
-        this.equipBar.refresh();
         for (const name of destroyedEquipment) {
           this.showFloatingText(`💥 ${name} destroyed!`, 0xff4444);
         }
@@ -939,7 +970,6 @@ export class GameScene extends Scene {
     }
 
     if (destroyedEquipment.length > 0) {
-      this.equipBar.refresh();
       for (const name of destroyedEquipment) {
         this.showFloatingText(`💥 ${name} destroyed!`, 0xff4444);
       }
@@ -951,12 +981,10 @@ export class GameScene extends Scene {
   private finishDayEndAfterEquipmentDestroyed(
     outcome: 'won' | 'lost',
     goldHeld: ReturnType<typeof processGoldHeldAtRoundEnd>,
-    player: ReturnType<typeof getPlayerState>,
   ): void {
     const playGoldThenFinish = () => {
       if (goldHeld.moneyEarned > 0) {
-        player.economy.earn(goldHeld.moneyEarned);
-        this.sidebar.refreshMoney();
+        economyActions.earn(goldHeld.moneyEarned);
       }
       this.runRoundEndModifierFeedback(() => this.transitionAfterRoundEnd(outcome));
     };
@@ -978,8 +1006,7 @@ export class GameScene extends Scene {
   }
 
   private runRoundEndModifierFeedback(onComplete: () => void): void {
-    const player = getPlayerState();
-    const modifierResult = processEquipmentModifiersEndOfRound(player, { applyDestruction: false });
+    const modifierResult = processEquipmentModifiersEndOfRound({ applyDestruction: false });
     const hasDestroy = modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
 
     const showModifierFeedback = () => {
@@ -997,10 +1024,9 @@ export class GameScene extends Scene {
       }
 
       if (!hasDestroy) {
-        applyEquipmentModifierDestructions(player, modifierResult);
-        this.equipBar.refresh();
+        applyEquipmentModifierDestructions(modifierResult);
       }
-      this.equipBar.updateHints(this.gameState, player);
+      this.equipBar.setHintRound(getRoundHintContext());
       this.equipBar.flashPerishableWarnings();
       onComplete();
     };
@@ -1015,28 +1041,48 @@ export class GameScene extends Scene {
   private transitionAfterRoundEnd(outcome: 'won' | 'lost'): void {
     if (outcome === 'won') {
       this.sound.play('sfx_win', { volume: 0.6 });
-      const player = getPlayerState();
-      const daysRemaining = this.gameState.config.maxDays - this.gameState.state.day;
-      const rerollsRemaining = this.gameState.state.rerollsRemaining;
-      this.scene.start('Payout', {
-        totalMiles: this.gameState.state.totalMiles,
-        targetMiles: this.gameState.config.targetMiles,
-        daysRemaining,
-        rerollsRemaining,
-        leg: player.leg,
-        round: player.round,
-        isVictory: player.isBossRound && player.leg === GAMEPLAY.LEGS && !player.endlessMode,
+      const run = getRunState();
+      const daysRemaining = getActiveRoundConfig().maxDays - this.rs().day;
+      const rerollsRemaining = this.rs().rerollsRemaining;
+      const totalMiles = this.rs().totalMiles;
+      const targetMiles = getActiveRoundConfig().targetMiles;
+      const payout = computePayoutBreakdown(run, daysRemaining, rerollsRemaining);
+      let investmentBonus = 0;
+      if (run.round === GAMEPLAY.ROUNDS_PER_LEG) {
+        investmentBonus = processBossPayoutTags();
+        const profMods = selectProfession(run)?.modifiers as Record<string, unknown> | undefined;
+        if (profMods?.doubleTagOnBoss) {
+          const twinWagonDef = getTrailTagById('tag_twin_wagon');
+          if (twinWagonDef) grantTag(twinWagonDef);
+        }
+        if (profMods?.ghostMedicineOnBoss) {
+          grantGhostMedicine();
+        }
+      }
+      sceneActions.enterPayout({
+        breakdown: payout,
+        presentation: {
+          totalMilesSave: milesToSave(totalMiles),
+          targetMilesSave: milesToSave(targetMiles),
+          daysRemaining,
+          rerollsRemaining,
+          leg: run.leg,
+          round: run.round,
+          isVictory: selectIsBossRound(run) && run.leg === GAMEPLAY.LEGS && !run.endlessMode,
+          investmentBonus,
+        },
       });
+      this.scene.start('Payout', {});
     } else {
       this.sound.play('sfx_negative', { volume: 0.5 });
-      const player = getPlayerState();
+      const run = getRunState();
       this.scene.start('GameOver', {
         won: false,
         victory: false,
-        totalMiles: this.gameState.state.totalMiles,
-        targetMiles: this.gameState.config.targetMiles,
-        leg: player.leg,
-        round: player.round,
+        totalMiles: this.rs().totalMiles,
+        targetMiles: getActiveRoundConfig().targetMiles,
+        leg: run.leg,
+        round: run.round,
       });
     }
   }
@@ -1086,18 +1132,18 @@ export class GameScene extends Scene {
   }
 
   private updateDrawButtons(): void {
-    const drawCount = this.gameState.state.hand.length;
+    const drawCount = this.rs().hand.length;
     this.readyBtn.setText(drawCount > 0 ? `Roll ${drawCount} Dice` : 'No Dice To Roll');
     this.readyBtn.setEnabled(drawCount > 0);
   }
 
   private updateRollButtons(): void {
     const lockedCount = this.lockedDiceIds.size;
-    const totalCount = this.gameState.state.rolledDice.length;
+    const totalCount = this.rs().rolledDice.length;
     const rerollCount = totalCount - lockedCount;
-    const remaining = this.gameState.state.rerollsRemaining;
+    const remaining = this.rs().rerollsRemaining;
     const hasRerolls = remaining > 0;
-    const canUseReroll = this.gameState.canUseReroll();
+    const canUseReroll = roundActions.canUseReroll();
 
     this.rerollBtn.setEnabled(rerollCount > 0 && canUseReroll);
     this.rerollBtn.setText(
@@ -1115,28 +1161,28 @@ export class GameScene extends Scene {
 
     // Preview hand type when dice are locked
     if (lockedCount > 0) {
-      const lockedDice = this.gameState.state.rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
+      const lockedDice = this.rs().rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
       const handResult = detectBestHand(lockedDice);
-      const player = getPlayerState();
-      const stats = player.getHandStats(handResult.type);
+      const stats = getRunHandStats(handResult.type);
       const levelBonus = stats.level - 1;
       const baseMiles = addScore(handResult.baseMiles, stats.milesPerLevel * levelBonus);
       const baseMult = addScore(handResult.baseMult, stats.multPerLevel * levelBonus);
-      this.sidebar.updateData({
+      roundActions.setSidebarOverlay({
         handName: handResult.name,
         handLevel: stats.level,
-        milesBase: baseMiles,
-        mult: baseMult,
+        milesBaseSave: milesToSave(baseMiles),
+        multSave: milesToSave(baseMult),
       });
     } else {
-      this.sidebar.clearHandDisplay();
-      this.sidebar.updateData({ milesBase: 0, mult: 0 });
+      roundActions.setSidebarOverlay({
+        handName: '',
+        handLevel: 0,
+        milesBaseSave: milesToSave(0),
+        multSave: milesToSave(0),
+      });
     }
 
-    // Refresh equipment hints so items reading selectedForScore update live
-    if (this.equipBar) {
-      this.equipBar.updateHints(this.gameState, getPlayerState());
-    }
+    this.equipBar?.setHintRound(getRoundHintContext());
   }
 
   /** Sort roll sprites by die value and reposition them with lock icons */
@@ -1184,7 +1230,7 @@ export class GameScene extends Scene {
 
   /** Keep game-state dice order aligned with on-screen roll sprite order (held-in-hand scoring). */
   private syncRolledDiceFromSprites(): void {
-    this.gameState.state.rolledDice = this.rollSprites.map((s) => s.dieData);
+    this.patchRound({ rolledDice: this.rollSprites.map((s) => s.dieData) });
   }
 
   private setSortOrder(order: 'asc' | 'desc'): void {
@@ -1205,11 +1251,9 @@ export class GameScene extends Scene {
   }
 
   private updateHUD(): void {
-    const s = this.gameState.state;
-    const player = getPlayerState();
-    const boss = player.currentBoss;
-    this.sidebar.updateData({
-      boss: boss ?? null,
+    const s = this.rs();
+    const boss = selectCurrentBoss(getRunState());
+    roundActions.setSidebarOverlay({
       title: boss
         ? boss.name
         : s.phase === 'SELECT'
@@ -1221,23 +1265,10 @@ export class GameScene extends Scene {
               : s.phase === 'DAY_END'
                 ? 'DAY COMPLETE'
                 : 'GAME',
-      roundScore: s.totalMiles,
-      milesBase: 0,
-      mult: 0,
-      daysRemaining: this.gameState.config.maxDays - s.day + 1,
-      rerolls: s.rerollsRemaining,
-      leg: player.leg,
-      totalLegs: player.endlessMode ? undefined : GAMEPLAY.LEGS,
-      round: player.round,
-      totalRounds: GAMEPLAY.ROUNDS_PER_LEG,
-      targetMiles: this.gameState.config.targetMiles,
-      trailDebuffs: getPlayerTrailDebuffLines(player),
+      milesBaseSave: milesToSave(0),
+      multSave: milesToSave(0),
     });
-    if (this.dicePouch) this.dicePouch.refresh();
-    if (this.equipBar) {
-      this.equipBar.refresh();
-      this.equipBar.updateHints(this.gameState, player);
-    }
+    this.equipBar.setHintRound(getRoundHintContext());
     this.updateLoadedDiceControl();
   }
 
@@ -1249,7 +1280,7 @@ export class GameScene extends Scene {
     const boxHeight = 28;
     const boxCenterX = controlLeft + 50;
 
-    this.loadedDiceLabel = this.add
+    this.add
       .text(controlLeft, controlY - 26, 'Loaded Die Number', {
         fontFamily: FONTS.PRIMARY,
         fontSize: '11px',
@@ -1303,10 +1334,10 @@ export class GameScene extends Scene {
   }
 
   private adjustLoadedDieTarget(delta: number): void {
-    const player = getPlayerState();
-    if (player.loadedDieSyncLucky) return;
+    const run = getRunState();
+    if (run.loadedDieSyncLucky) return;
 
-    const current = player.loadedDieTarget;
+    const current = run.loadedDieTarget;
 
     let nextValue: number | null;
     if (delta > 0) {
@@ -1315,7 +1346,7 @@ export class GameScene extends Scene {
       nextValue = current === null ? null : current === 1 ? null : current - 1;
     }
 
-    player.setLoadedDieTarget(nextValue);
+    diceActions.setLoadedDieTarget(nextValue);
     this.updateLoadedDiceControl();
     this.destroyLoadedDicePicker();
   }
@@ -1324,9 +1355,9 @@ export class GameScene extends Scene {
     if (!this.loadedDiceValueText || !this.loadedDiceDecBtn || !this.loadedDiceIncBtn || !this.loadedDiceValueBg)
       return;
 
-    const player = getPlayerState();
-    const syncLucky = player.loadedDieSyncLucky && player.hasLuckyNumberEquipment();
-    const target = player.getResolvedLoadedDieTarget();
+    const run = getRunState();
+    const syncLucky = run.loadedDieSyncLucky && runHasLuckyNumberEquipment(run);
+    const target = getResolvedLoadedDieTarget(run);
 
     if (syncLucky) {
       this.loadedDiceValueText.setText('🍀');
@@ -1378,8 +1409,8 @@ export class GameScene extends Scene {
   private buildLoadedDicePicker(): Phaser.GameObjects.Container {
     const controlX = this.loadedDiceValueHitArea.x;
     const controlY = this.loadedDiceValueHitArea.y;
-    const player = getPlayerState();
-    const showLuckySync = player.hasLuckyNumberEquipment();
+    const run = getRunState();
+    const showLuckySync = runHasLuckyNumberEquipment(run);
     const panelWidth = 208;
     const panelHeight = showLuckySync ? 248 : 214;
     const panelX = Phaser.Math.Clamp(controlX - panelWidth / 2, this.sidebarW + 12, this.scale.width - panelWidth - 12);
@@ -1421,8 +1452,8 @@ export class GameScene extends Scene {
     const gridWidth = cols * cellWidth + (cols - 1) * cellGap;
     const gridStartX = panelX + (panelWidth - gridWidth) / 2 + cellWidth / 2;
     const gridStartY = panelY + 72 + cellHeight / 2;
-    const syncLucky = player.loadedDieSyncLucky && showLuckySync;
-    const selected = syncLucky ? null : player.loadedDieTarget;
+    const syncLucky = run.loadedDieSyncLucky && showLuckySync;
+    const selected = syncLucky ? null : run.loadedDieTarget;
 
     for (let value = 1; value <= 12; value++) {
       const col = (value - 1) % cols;
@@ -1435,7 +1466,7 @@ export class GameScene extends Scene {
         cellWidth,
         cellHeight,
       ).onClick(() => {
-        getPlayerState().setLoadedDieTarget(value);
+        diceActions.setLoadedDieTarget(value);
         this.destroyLoadedDicePicker();
       });
       button.setDepth(501);
@@ -1457,12 +1488,10 @@ export class GameScene extends Scene {
         'Sync Loaded Die with Lucky Number',
         panelWidth - 28,
         26,
-      ).onClick(
-        () => {
-          getPlayerState().setLoadedDieSyncLucky(true);
-          this.destroyLoadedDicePicker();
-        },
-      );
+      ).onClick(() => {
+        diceActions.setLoadedDieSyncLucky(true);
+        this.destroyLoadedDicePicker();
+      });
       syncBtn.setDepth(501);
       (syncBtn as any).label?.setFontSize?.(10);
       if (syncLucky) {
@@ -1474,7 +1503,7 @@ export class GameScene extends Scene {
     }
 
     const clearBtn = new Button(this, panelCenterX, clearBtnY, 'Clear', 86, 26).onClick(() => {
-      getPlayerState().setLoadedDieTarget(null);
+      diceActions.setLoadedDieTarget(null);
       this.destroyLoadedDicePicker();
     });
     clearBtn.setDepth(501);
@@ -1486,7 +1515,7 @@ export class GameScene extends Scene {
   }
 
   private getLoadedDiceOddsNote(): string {
-    const chance = Math.min(1, getLoadedDiceMultiplier(getPlayerState().equipment) / 6);
+    const chance = Math.min(1, getLoadedDiceMultiplier(resolveEquipmentList()) / 6);
     if (chance >= 1) return 'Selected face is guaranteed to roll.';
     if (chance === 2 / 3) return 'Selected face rolls at 2 in 3.';
     if (chance === 1 / 3) return 'Selected face rolls at 1 in 3.';
@@ -1509,13 +1538,6 @@ export class GameScene extends Scene {
 
     for (let i = 0; i < visibleStacks.length; i++) {
       visibleStacks[i].targetX = startX + i * spacing;
-    }
-  }
-
-  /** Render all stacks at their target positions */
-  private renderAllStacks(): void {
-    for (const stack of this.availableStacks) {
-      this.renderStack(stack);
     }
   }
 
@@ -1666,8 +1688,7 @@ export class GameScene extends Scene {
     }
 
     // Wiggle the Mystery Crate equipment card
-    const player = getPlayerState();
-    const crateIndex = player.equipment.findIndex((e) => e.def.effectType === 'ROUND_START_ADD_DICE');
+    const crateIndex = resolveEquipmentList().findIndex((e) => e.def.effectType === 'ROUND_START_ADD_DICE');
     if (crateIndex >= 0) {
       const card = this.equipBar.getCardByEquipIndex(crateIndex);
       if (card) {
@@ -1720,14 +1741,6 @@ export class GameScene extends Scene {
     });
 
     this.sound.play('sfx_foil1', { volume: 0.4 });
-  }
-
-  private trackEquipDestroySound(sound: Phaser.Sound.BaseSound): void {
-    this.activeEquipDestroySounds.push(sound);
-    sound.once('destroy', () => {
-      const i = this.activeEquipDestroySounds.indexOf(sound);
-      if (i >= 0) this.activeEquipDestroySounds.splice(i, 1);
-    });
   }
 
   private stopEquipDestroySounds(): void {
@@ -1946,30 +1959,6 @@ export class GameScene extends Scene {
     this.updateDrawButtons();
   }
 
-  /** Refresh the add buttons on all stacks to reflect current remaining slots */
-  private refreshAllAddButtons(): void {
-    for (const stack of this.availableStacks) {
-      if (stack.addBtn) {
-        stack.addBtn.destroy();
-        stack.addBtn = null;
-      }
-      const remaining = this.maxSelectForRoll - this.selectedHandIds.size;
-      if (remaining > 0 && stack.dice.length > 0) {
-        const addCount = Math.min(remaining, stack.dice.length);
-        stack.addBtn = new Button(
-          this,
-          stack.targetX,
-          this.availableY + (stack.dice.length > 1 ? 72 : 56),
-          `Add ${addCount}`,
-          72,
-          28,
-        );
-        stack.addBtn.setDepth(15);
-        stack.addBtn.onClick(() => this.onAddAllClick(stack));
-      }
-    }
-  }
-
   /** Handle clicking a die in the play area to send it back to a stack */
   private onPlayAreaDiceClick(sprite: DiceSprite): void {
     console.log('[DEBUG] onPlayAreaDiceClick: animating:', this.animating, 'dieId:', sprite.dieData.id);
@@ -2058,7 +2047,7 @@ export class GameScene extends Scene {
 
   /** Get the row Y and position calculator for the active draggable list */
   private getDraggableRowY(): number {
-    const phase = this.gameState.state.phase;
+    const phase = this.rs().phase;
     if (phase === 'SELECT') return this.playAreaY;
     return this.scale.height * UI.ROLL_Y_RATIO;
   }
@@ -2271,18 +2260,11 @@ export class GameScene extends Scene {
   }
 
   private async handleConsumableUsed(consumed: ConsumableInstance): Promise<void> {
-    const player = getPlayerState();
-    const result = executeConsumableEffect(consumed, player, {
+    const result = executeConsumableEffect(consumed, {
       visibleDiceIds: this.getVisibleConsumableDiceIds(),
     });
 
-    await this.applyConsumableAnimEvents(result.consumableAnimEvents ?? []);
-
-    this.sidebar.refreshMoney();
-    this.equipBar.refresh();
-    this.consumableBar.refresh();
-    this.dicePouch.refresh();
-    await playEquipmentCreatedPopIn(this, this.equipBar, result.equipmentCreatedCount);
+    enqueueConsumablePlayback(result);
 
     if (!result.success && result.failReason) {
       const text = this.add
@@ -2335,22 +2317,12 @@ export class GameScene extends Scene {
     return this.getTargetableDice().dice.map((d) => d.id);
   }
 
-  private async applyConsumableAnimEvents(events: ConsumableAnimEvent[]): Promise<void> {
-    await playConsumableAnimEvents(this, this.equipBar, events, {
-      destroyDice: (diceIds) =>
-        this.animateConsumableDiceDestruction(diceIds, {
-          refillSelectHand: true,
-          floatingText: `Raid destroyed ${diceIds.length} dice`,
-        }),
-    });
-  }
-
   private animateConsumableDiceDestruction(
     destroyedIds: string[],
     options: { refillSelectHand?: boolean; floatingText?: string } = {},
   ): Promise<void> {
     const destroyedSet = new Set(destroyedIds);
-    const phase = this.gameState.state.phase;
+    const phase = this.rs().phase;
 
     this.removeDestroyedDiceFromRoundState(destroyedSet);
 
@@ -2451,17 +2423,17 @@ export class GameScene extends Scene {
   }
 
   private removeDestroyedDiceFromRoundState(destroyedSet: Set<string>): void {
-    const phase = this.gameState.state.phase;
+    const phase = this.rs().phase;
     if (phase === 'SELECT') {
-      this.gameState.state.hand = this.gameState.state.hand.filter((d) => !destroyedSet.has(d.id));
+      this.patchRound({ hand: this.rs().hand.filter((d) => !destroyedSet.has(d.id)) });
       this.selectedHandIds = new Set([...this.selectedHandIds].filter((id) => !destroyedSet.has(id)));
       return;
     }
     if (phase === 'ROLL') {
-      this.gameState.state.rolledDice = this.gameState.state.rolledDice.filter((d) => !destroyedSet.has(d.id));
-      this.gameState.state.selectedForScore = this.gameState.state.selectedForScore.filter(
-        (d) => !destroyedSet.has(d.id),
-      );
+      this.patchRound({
+        rolledDice: this.rs().rolledDice.filter((d) => !destroyedSet.has(d.id)),
+        selectedForScore: this.rs().selectedForScore.filter((d) => !destroyedSet.has(d.id)),
+      });
       this.lockedDiceIds = new Set([...this.lockedDiceIds].filter((id) => !destroyedSet.has(id)));
     }
   }
@@ -2475,11 +2447,11 @@ export class GameScene extends Scene {
   }
 
   private refillSelectHandAfterRaid(): Promise<void> {
-    if (this.gameState.state.phase !== 'SELECT') return Promise.resolve();
+    if (this.rs().phase !== 'SELECT') return Promise.resolve();
 
-    const player = getPlayerState();
-    const currentIds = new Set(this.gameState.state.hand.map((d) => d.id));
-    const needed = Math.max(0, this.gameState.config.rollSize - this.gameState.state.hand.length);
+    const run = getRunState();
+    const currentIds = new Set(this.rs().hand.map((d) => d.id));
+    const needed = Math.max(0, getActiveRoundConfig().rollSize - this.rs().hand.length);
     if (needed <= 0) {
       this.repositionPlayArea(true);
       this.updateDrawButtons();
@@ -2488,15 +2460,16 @@ export class GameScene extends Scene {
 
     const refillPool = rngShuffle(
       'dice',
-      player.availableDice.filter((d) => !currentIds.has(d.id)),
+      selectAvailableDice(run).filter((d) => !currentIds.has(d.id)),
     );
     const toAdd = refillPool.slice(0, needed);
     if (toAdd.length === 0) return Promise.resolve();
 
     const launch = this.getDicePouchLaunchPoint();
     const startingLength = this.playAreaSprites.length;
+    const nextHand = [...this.rs().hand];
     for (const die of toAdd) {
-      this.gameState.state.hand.push(die);
+      nextHand.push(die);
       this.selectedHandIds.add(die.id);
       const sprite = new DiceSprite(this, launch.x, launch.y, die);
       sprite.setDepth(20);
@@ -2506,7 +2479,7 @@ export class GameScene extends Scene {
       sprite.disableInteractive();
       this.playAreaSprites.push(sprite);
     }
-    this.gameState.state.hand = this.gameState.state.hand.slice(0, this.gameState.config.rollSize);
+    this.patchRound({ hand: nextHand.slice(0, getActiveRoundConfig().rollSize) });
 
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < startingLength; i++) {
@@ -2543,7 +2516,6 @@ export class GameScene extends Scene {
             completed++;
             if (completed >= toAdd.length) {
               this.updateDrawButtons();
-              this.dicePouch.refresh();
               this.showFloatingText('Refilled from pouch', 0xffd700);
               resolve();
             }
@@ -2563,7 +2535,7 @@ export class GameScene extends Scene {
 
     // In pre-roll SELECT phase, hand dice are normally non-interactive.
     // Consumable targeting needs temporary interaction to pick targets.
-    if (this.gameState.state.phase === 'SELECT') {
+    if (this.rs().phase === 'SELECT') {
       for (const sprite of this.playAreaSprites) {
         sprite.setInteractive({ useHandCursor: true });
       }
@@ -2615,24 +2587,24 @@ export class GameScene extends Scene {
 
   /** Get the dice sprites currently visible for targeting */
   private getTargetableDice(): { sprites: DiceSprite[]; dice: Die[] } {
-    const phase = this.gameState.state.phase;
+    const phase = this.rs().phase;
     if (phase === 'ROLL' && this.rollSprites.length > 0) {
       return {
         sprites: this.rollSprites,
-        dice: this.gameState.state.rolledDice,
+        dice: this.rs().rolledDice,
       };
     }
     if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
       return {
         sprites: this.playAreaSprites,
-        dice: this.gameState.state.hand,
+        dice: this.rs().hand,
       };
     }
     // Fallback — roll sprites if available
     if (this.rollSprites.length > 0) {
       return {
         sprites: this.rollSprites,
-        dice: this.gameState.state.rolledDice,
+        dice: this.rs().rolledDice,
       };
     }
     return { sprites: [], dice: [] };
@@ -2765,7 +2737,7 @@ export class GameScene extends Scene {
     }
 
     // Restore game buttons for current phase
-    const phase = this.gameState.state.phase;
+    const phase = this.rs().phase;
     if (phase === 'ROLL') {
       this.rerollBtn.setVisible(true);
       this.scoreBtn.setVisible(true);
@@ -2778,23 +2750,17 @@ export class GameScene extends Scene {
       this.readyBtn.setVisible(true);
       this.updateDrawButtons();
     }
-
-    // Refresh UI
-    this.sidebar.refreshMoney();
-    this.equipBar.refresh();
-    this.consumableBar.refresh();
-    this.dicePouch.refresh();
   }
 
   /** Refresh dice sprites in-place after a consumable effect changes dice data */
   private refreshDiceSpritesAfterEffect(affectedIds: Set<string>, effectType: DiceSelectionConfig['effectType']): void {
-    const player = getPlayerState();
+    const runDice = getRunState().dice;
     const shouldUpdateVisibleValue = shouldUpdateDisplayedDiceValue(effectType);
 
     // Update roll sprites if in ROLL phase — only update affected dice
     for (const sprite of this.rollSprites) {
       if (!affectedIds.has(sprite.dieData.id)) continue;
-      const updated = player.dice.find((d) => d.id === sprite.dieData.id);
+      const updated = runDice.find((d) => d.id === sprite.dieData.id);
       if (updated) {
         // Keep rolled face value stable unless the effect explicitly changes values.
         sprite.setDieData({
@@ -2805,24 +2771,25 @@ export class GameScene extends Scene {
       }
     }
 
-    // Update rolledDice in game state to match — only affected dice
-    for (let i = 0; i < this.gameState.state.rolledDice.length; i++) {
-      const rd = this.gameState.state.rolledDice[i];
+    const rolledDice = [...this.rs().rolledDice];
+    for (let i = 0; i < rolledDice.length; i++) {
+      const rd = rolledDice[i]!;
       if (!affectedIds.has(rd.id)) continue;
-      const updated = player.dice.find((d) => d.id === rd.id);
+      const updated = runDice.find((d) => d.id === rd.id);
       if (updated) {
-        this.gameState.state.rolledDice[i] = {
+        rolledDice[i] = {
           ...rd,
           ...updated,
           value: shouldUpdateVisibleValue ? updated.value : rd.value,
         };
       }
     }
+    this.patchRound({ rolledDice });
 
     // Update play area sprites if in SELECT phase
     for (const sprite of this.playAreaSprites) {
       if (!affectedIds.has(sprite.dieData.id)) continue;
-      const updated = player.dice.find((d) => d.id === sprite.dieData.id);
+      const updated = runDice.find((d) => d.id === sprite.dieData.id);
       if (updated) {
         sprite.setDieData({
           ...sprite.dieData,
@@ -2831,8 +2798,6 @@ export class GameScene extends Scene {
         });
       }
     }
-
-    this.dicePouch.refresh();
   }
 
   private showFloatingText(message: string, color: number = 0xffd700): void {

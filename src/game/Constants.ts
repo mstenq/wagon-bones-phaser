@@ -417,4 +417,3 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'COPY_LEFTMOST', // Echo Chamber (prevent self-reference)
   'TRAIL_BACKPACK', // Trail Backpack
 ]);
-

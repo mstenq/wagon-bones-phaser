@@ -5,17 +5,13 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getPlayerState } from '../../game/PlayerState';
+import { setupActions } from '../../game/store';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import professionsData, { type ProfessionDef } from '../../data/professions';
 import { ProfessionStartingDiceTooltip } from '../ui/ProfessionStartingDiceTooltip';
 import { performLoadGame } from '../SaveLoadIO';
-import {
-  getDifficultyBeatColor,
-  getDifficultyBeatStrokeColor,
-  getHighestDifficultyBeaten,
-} from '../../game/UserStats';
+import { getDifficultyBeatColor, getDifficultyBeatStrokeColor, getHighestDifficultyBeaten } from '../../game/UserStats';
 
 const CARD_W = 190;
 const CARD_H = 310;
@@ -93,9 +89,8 @@ export class ProfessionSelectScene extends Scene {
     this.confirmBtn.setDepth(100);
     this.confirmBtn.onClick(() => {
       if (!this.selectedId) return;
-      const player = getPlayerState();
-      player.applyProfession(this.selectedId);
-      player.finalizeRunSetup();
+      setupActions.applyProfession(this.selectedId);
+      setupActions.finalizeRunSetup();
       this.scene.start('DifficultySelect', {});
     });
 

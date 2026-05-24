@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
 import { diceFromValues, setupGame, resetDieIds } from './testHelpers';
-import { resetPlayerState } from '../PlayerState';
+import { resetPlayerState } from '../__tests__/testRunPlayer';
 import { D } from '../scoreMath';
 
 beforeEach(() => {

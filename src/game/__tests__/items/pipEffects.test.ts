@@ -3,15 +3,15 @@ import '../setup';
 import {
   die,
   diceWithValue,
-  diceFromValues,
   item,
   itemWithState,
   calculateTestScore,
   setupGame,
   resetDieIds,
+  pushEquipmentState,
+  syncEquipmentInstances,
 } from '../testHelpers';
 import { processEquipmentOnDiceDestroyed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
-import { HandType } from '../../types';
 import { gt } from '../../scoreMath';
 
 beforeEach(() => resetDieIds());
@@ -22,7 +22,7 @@ beforeEach(() => resetDieIds());
 
 describe('GOLD_DICE_MONEY: Gold Tooth', () => {
   test('gold dice earn $4 when scored', () => {
-    const { result, player } = calculateTestScore({
+    const { player } = calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5 })],
       equipment: [item('gold_tooth')],
       money: 10,
@@ -32,7 +32,7 @@ describe('GOLD_DICE_MONEY: Gold Tooth', () => {
   });
 
   test('multiple gold dice each earn money', () => {
-    const { result, player } = calculateTestScore({
+    const { player } = calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5, enhancement: 'gold' })],
       equipment: [item('gold_tooth')],
       money: 10,
@@ -88,6 +88,7 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     });
     game.startRound();
     luckyNum.state.pip = 5;
+    pushEquipmentState(luckyNum);
     game.state.phase = 'ROLL';
     game.state.rolledDice = scored;
     game.state.selectedForRoll = scored;
@@ -366,7 +367,7 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
 describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
   test('gains +30 miles when wooden die is scored', () => {
     const inst = item('covered_wagon');
-    const { result } = calculateTestScore({
+    calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
       equipment: [inst],
     });
@@ -376,7 +377,7 @@ describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
 
   test('accumulates across multiple wooden dice', () => {
     const inst = item('covered_wagon');
-    const { result } = calculateTestScore({
+    calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5, enhancement: 'wooden' })],
       equipment: [inst],
     });
@@ -385,7 +386,7 @@ describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
 
   test('does not gain from non-wooden dice', () => {
     const inst = item('covered_wagon');
-    const { result } = calculateTestScore({
+    calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
       equipment: [inst],
     });
@@ -449,7 +450,7 @@ describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
 
   test('gains miles when 5 pip is scored', () => {
     const inst = item('five_mile_marker');
-    const { result } = calculateTestScore({
+    calculateTestScore({
       scoredDice: diceWithValue(5, 2), // pair of 5s
       equipment: [inst],
     });
@@ -558,7 +559,9 @@ describe('STACKED_DECK: Stacked Deck', () => {
       dice: [...scored, ...diceWithValue(2, 20)],
     });
     game.startRound();
+    // Round start randomizes pip in the store; pin to 7 so only the loaded die matches (face is 3).
     lucky.state.pip = 7;
+    pushEquipmentState(lucky);
     game.state.phase = 'ROLL';
     game.state.rolledDice = scored;
     game.state.selectedForRoll = scored;
@@ -610,6 +613,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
     game.state.rerollsRemaining = 6;
     game.selectForScore([scoredDie.id]);
     game.calculateScore();
+    syncEquipmentInstances(markedInst);
     expect(markedInst.state.mult).toBe(0);
   });
 
@@ -689,7 +693,7 @@ describe('STACKED_DECK: Stacked Deck', () => {
 describe('DICE_DESTROYED_MILES_GAIN: Six Feet Under', () => {
   test('gains 66 miles per destroyed die', () => {
     const inst = item('six_feet_under');
-    const { player } = setupGame({ equipment: [inst], dice: diceWithValue(5, 3) });
+    setupGame({ equipment: [inst], dice: diceWithValue(5, 3) });
     processEquipmentOnDiceDestroyed([inst], 2);
     expect(inst.state.miles).toBe(132);
 

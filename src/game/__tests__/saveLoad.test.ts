@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import './setup';
-import { resetPlayerState, getPlayerState } from '../PlayerState';
-import { GameState } from '../GameState';
+import { resetPlayerState, getPlayerState } from './testRunPlayer';
+import { GameState } from './testGameState';
 import { acquireEquipmentInstance } from '../EquipmentModifiers';
 import { getEquipmentDefById } from '../ItemsSystem';
 import { getProfessionById } from '../../data/professions';
@@ -12,15 +12,21 @@ import {
   SAVE_VERSION,
   type GameSaveSnapshot,
 } from '../SaveLoad';
-import { D, type Decimal } from '../scoreMath';
 import { getTrailEventById, selectTrailEvent } from '../TrailEventsSystem';
 import { item } from './testHelpers';
 import { HandType } from '../types';
-import bosses from '../../data/bosses';
-import { getRunSeed, initRunRng, rngFloat } from '../RunRng';
+import { getRunSeed, initRunRng, rngFloat, type RunRngState } from '../RunRng';
+import { getRoundState } from '../store/roundStore';
+import { createInitialRunState } from '../store/runStore';
+import { createInitialSceneState } from '../store/sceneStore';
+import { D } from '../scoreMath';
+
+function emptyScene(activeScene: GameSaveSnapshot['activeScene'] = 'RoundSelect') {
+  return { ...createInitialSceneState(), activeScene };
+}
 
 describe('SaveLoad', () => {
-  test('round-trips player state for RoundSelect scene', () => {
+  test('round-trips run state for RoundSelect scene', () => {
     const player = resetPlayerState();
     initRunRng('save-seed');
     player.applyProfession('outlaw');
@@ -34,13 +40,12 @@ describe('SaveLoad', () => {
     expect(snapshot.version).toBe(SAVE_VERSION);
     expect(snapshot.runSeed).toBe('save-seed');
     expect(snapshot.rngState.idCounter).toBe(0);
-    expect(snapshot.player.professionId).toBe('outlaw');
-    expect(snapshot.player.difficulty).toBe(3);
-    expect(snapshot.player.balance).toBe(17);
+    expect(snapshot.run.professionId).toBe('outlaw');
+    expect(snapshot.run.difficulty).toBe(3);
+    expect(snapshot.run.balance).toBe(17);
 
-    const { scene, sceneData } = applySaveSnapshot(snapshot);
+    const { scene } = applySaveSnapshot(snapshot);
     expect(scene).toBe('RoundSelect');
-    expect(sceneData).toEqual({});
 
     const restored = getPlayerState();
     expect(restored.profession?.id).toBe('outlaw');
@@ -82,25 +87,12 @@ describe('SaveLoad', () => {
     game.state.totalMiles = D(42);
     game.state.day = 2;
 
-    const snapshot = buildSaveSnapshot({
-      activeScene: 'Game',
-      data: {
-        config: { ...game.config },
-        state: {
-          ...game.state,
-          spent: [...game.state.spent],
-          hand: [...game.state.hand],
-          selectedForRoll: [...game.state.selectedForRoll],
-          rolledDice: [...game.state.rolledDice],
-          selectedForScore: [...game.state.selectedForScore],
-          handHistory: [...game.state.handHistory],
-        },
-      },
-    });
+    const snapshot = buildSaveSnapshot({ activeScene: 'Game' });
+    expect(snapshot.round).not.toBeNull();
 
-    const { scene, sceneData } = applySaveSnapshot(snapshot);
+    const { scene } = applySaveSnapshot(snapshot);
     expect(scene).toBe('Game');
-    expect((sceneData as { restore: { state: { totalMiles: Decimal } } }).restore.state.totalMiles).toBeMiles(42);
+    expect(getRoundState()?.totalMiles).toBeMiles(42);
 
     const restoredPlayer = getPlayerState();
     expect(restoredPlayer.equipment[0]?.def.id).toBe('coffee');
@@ -119,103 +111,21 @@ describe('SaveLoad', () => {
   });
 
   test('rejects invalid save version', () => {
-    const bad = { version: 999, activeScene: 'RoundSelect', player: {} };
+    const bad = { version: 999, activeScene: 'RoundSelect', run: {} };
     expect(validateSaveSnapshot(bad)).toBeNull();
   });
 
   test('rejects unknown active scene', () => {
+    const run = createInitialRunState();
     const bad: GameSaveSnapshot = {
       version: SAVE_VERSION,
       exportedAt: new Date().toISOString(),
       activeScene: 'Payout' as GameSaveSnapshot['activeScene'],
-      player: {
-        balance: 4,
-        dice: [],
-        loadedDieTarget: null,
-        spentDiceIds: [],
-        equipment: [],
-        maxEquipmentSlots: 5,
-        maxConsumableSlots: 2,
-        consumables: [],
-        lastUsedConsumableId: null,
-        shopSlots: 5,
-        leg: 1,
-        round: 1,
-        interestCap: 25,
-        handStats: {},
-        professionId: null,
-        difficulty: 1,
-        handSize: 8,
-        shopRerollCount: 0,
-        purchasedPermits: [],
-        currentLegPermitId: null,
-        permitPurchasedThisLeg: false,
-        permitDayBonus: 0,
-        permitRerollBonus: 0,
-        permitDayPenalty: 0,
-        permitRerollPenalty: 0,
-        permitScoreReduction: 0,
-        trailEventModifiers: {
-          dayPenalty: 0,
-          rerollPenalty: 0,
-          handSizePenalty: 0,
-          scoreMultiplier: 1,
-          disableRerollDay1: false,
-          standardDiceDay1: false,
-          moneyPerDayLoss: 0,
-          diamondCrackDoubled: false,
-          luckyOddsHalved: false,
-          scoredDiceDestroyChance: 0,
-          bossUpgradeMultiplier: 1,
-          flatMilesPenalty: 0,
-          skipNextShop: false,
-          loseAllRerolls: false,
-        },
-        trailRoundEffects: {
-          disableRerollDay1: false,
-          standardDiceDay1: false,
-          moneyPerDayLoss: 0,
-          diamondCrackDoubled: false,
-          luckyOddsHalved: false,
-          scoredDiceDestroyChance: 0,
-        },
-        pendingTrailEventId: null,
-        seenTrailEventIds: [],
-        skipNextShop: false,
-        trailGuidesUsed: 0,
-        startingDiceCount: 25,
-        bossEffectDisabled: false,
-        bossRoundState: {
-          disabledEquipmentIndices: [],
-          lockedDiceIds: [],
-          preacherLockedHand: null,
-          handsPlayedThisRound: [],
-          equipmentDisplayOrder: null,
-          equipmentHidden: false,
-          landSlideRevealed: false,
-          diceScoringReenabledBySell: false,
-        },
-        pendingNewDiceIds: [],
-        pendingHandDiceIds: [],
-        pendingAnimatedDestructions: [],
-        pendingJunkDealerCount: 0,
-        pendingTags: [],
-        storedAuraTags: [],
-        roundsSkipped: 0,
-        daysScored: 0,
-        unusedRerollsTotal: 0,
-        twinWagonCount: 0,
-        wideSaddleBonus: 0,
-        tagFreeReroll: false,
-        bonusShopPermitId: null,
-        skippedRoundsThisLeg: [],
-        skippedRoundTags: {},
-        roundSkipPreviewTags: {},
-        bossRerollsUsedThisLeg: 0,
-        dynamiteSelfDestructed: false,
-        bossAssignmentIds: bosses.map((b) => b.id).slice(0, 8),
-        nextDieId: 0,
-      },
+      runSeed: 'seed',
+      rngState: { idCounter: 0, streamStates: {} as RunRngState['streamStates'] },
+      run,
+      round: null,
+      scene: emptyScene('Payout' as GameSaveSnapshot['activeScene']),
     };
     expect(validateSaveSnapshot(bad)).toBeNull();
   });
@@ -236,8 +146,8 @@ describe('SaveLoad', () => {
     player.seenTrailEventIds.add('bad_mosquitos');
 
     const snapshot = buildSaveSnapshot({ activeScene: 'RoundSelect' });
-    expect(snapshot.player.seenTrailEventIds).toContain('wildflowers');
-    expect(snapshot.player.seenTrailEventIds).toContain('bad_mosquitos');
+    expect(snapshot.run.seenTrailEventIds).toContain('wildflowers');
+    expect(snapshot.run.seenTrailEventIds).toContain('bad_mosquitos');
 
     applySaveSnapshot(snapshot);
     const restored = getPlayerState();
@@ -254,10 +164,12 @@ describe('SaveLoad', () => {
 
     const snapshot = buildSaveSnapshot({
       activeScene: 'TrailEvent',
-      data: { eventId: 'wildflowers', resolved: false, spyglassRevealed: false },
+      scene: {
+        trailEvent: { eventId: 'wildflowers', resolved: false, spyglassRevealed: false },
+      },
     });
 
-    expect(snapshot.player.pendingTrailEventId).toBe('wildflowers');
+    expect(snapshot.run.pendingTrailEventId).toBe('wildflowers');
 
     applySaveSnapshot(snapshot);
     const restored = getPlayerState();
@@ -265,10 +177,6 @@ describe('SaveLoad', () => {
   });
 
   test('restored TrailEvent snapshot keeps event excluded from future selection', () => {
-    // Regression: with autosave on a 10s timer, a refresh could restore a
-    // snapshot whose seenTrailEventIds didn't yet include the event the player
-    // had just been shown. After the fix, the scene marks events seen at
-    // selection time and flushes the autosave, so the saved set is correct.
     const player = resetPlayerState();
     player.applyProfession('farmer');
     player.leg = 1;
@@ -276,16 +184,17 @@ describe('SaveLoad', () => {
 
     const snapshot = buildSaveSnapshot({
       activeScene: 'TrailEvent',
-      data: { eventId: 'wildflowers', resolved: false, spyglassRevealed: false },
+      scene: {
+        trailEvent: { eventId: 'wildflowers', resolved: false, spyglassRevealed: false },
+      },
     });
 
     applySaveSnapshot(snapshot);
     const restored = getPlayerState();
     expect(restored.seenTrailEventIds.has('wildflowers')).toBe(true);
 
-    // Any subsequent selection at this leg must skip wildflowers.
     for (let i = 0; i < 200; i++) {
-      const picked = selectTrailEvent(restored, Math.random);
+      const picked = selectTrailEvent(Math.random);
       expect(picked.id).not.toBe('wildflowers');
     }
   });
@@ -302,7 +211,6 @@ describe('SaveLoad', () => {
     expect(restored.state.phase).toBe('ROLL');
     expect(restored.state.rolledDice.length).toBeGreaterThan(0);
 
-    // New blind: fresh GameState + startRound (must not reuse restored round state)
     const nextBlind = new GameState({ targetMiles: player.targetMiles });
     nextBlind.startRound();
     expect(nextBlind.state.phase).toBe('SELECT');

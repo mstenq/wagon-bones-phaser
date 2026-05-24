@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetPlayerState, getPlayerState } from '../PlayerState';
+import { resetPlayerState, getPlayerState } from '../__tests__/testRunPlayer';
+import { syncEquipmentInstances } from './testHelpers';
 import {
   rollEquipmentModifiers,
   applyModifiersToEquipment,
@@ -265,10 +266,12 @@ describe('Equipment Modifiers', () => {
       const inst = equipWithModifiers('horseshoe', ['perishable']);
       player.equipment.push(inst);
 
-      processEquipmentModifiersEndOfRound(player);
+      processEquipmentModifiersEndOfRound();
+      syncEquipmentInstances(inst);
       expect(inst.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS - 1);
 
-      processEquipmentModifiersEndOfRound(player);
+      processEquipmentModifiersEndOfRound();
+      syncEquipmentInstances(inst);
       expect(inst.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS - 2);
       expect(player.equipment).toHaveLength(1);
     });
@@ -279,7 +282,7 @@ describe('Equipment Modifiers', () => {
       inst.perishableRoundsLeft = 1;
       player.equipment.push(inst);
 
-      const result = processEquipmentModifiersEndOfRound(player);
+      const result = processEquipmentModifiersEndOfRound();
       expect(player.equipment).toHaveLength(0);
       expect(result.perished).toHaveLength(1);
       expect(result.perished[0].equipmentName).toBe(inst.def.name);
@@ -303,7 +306,7 @@ describe('Equipment Modifiers', () => {
       player.economy.setBalance(10);
       player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
 
-      const result = processEquipmentModifiersEndOfRound(player);
+      const result = processEquipmentModifiersEndOfRound();
 
       expect(player.economy.balance).toBe(10 - EQUIPMENT_MODIFIER.LEASED_UPKEEP);
       expect(result.leasePaid).toHaveLength(1);
@@ -315,7 +318,7 @@ describe('Equipment Modifiers', () => {
       player.economy.setBalance(2);
       player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
 
-      const result = processEquipmentModifiersEndOfRound(player);
+      const result = processEquipmentModifiersEndOfRound();
 
       expect(player.equipment).toHaveLength(0);
       expect(result.leaseDefaulted).toHaveLength(1);
@@ -329,7 +332,7 @@ describe('Equipment Modifiers', () => {
       player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
       player.equipment.push(equipWithModifiers(secondId, ['leased']));
 
-      processEquipmentModifiersEndOfRound(player);
+      processEquipmentModifiersEndOfRound();
 
       expect(player.economy.balance).toBe(2);
       expect(player.equipment).toHaveLength(1);
@@ -343,7 +346,7 @@ describe('Equipment Modifiers', () => {
       player.equipment.push(equipWithModifiers('horseshoe', ['leased']));
       player.equipment.push(equipWithModifiers(secondId, ['leased']));
 
-      const result = processEquipmentModifiersEndOfRound(player);
+      const result = processEquipmentModifiersEndOfRound();
 
       expect(player.economy.balance).toBe(0);
       expect(player.equipment).toHaveLength(1);
@@ -360,7 +363,7 @@ describe('Equipment Modifiers', () => {
       player.equipment.push(equipWithModifiers('horseshoe', ['cursed', 'leased']));
 
       expect(player.sellEquipment(0)).toBe(false);
-      processEquipmentModifiersEndOfRound(player);
+      processEquipmentModifiersEndOfRound();
 
       expect(player.economy.balance).toBe(10 - EQUIPMENT_MODIFIER.LEASED_UPKEEP);
       expect(player.equipment).toHaveLength(1);
@@ -372,7 +375,8 @@ describe('Equipment Modifiers', () => {
       const inst = equipWithModifiers('horseshoe', ['perishable', 'leased']);
       player.equipment.push(inst);
 
-      processEquipmentModifiersEndOfRound(player);
+      processEquipmentModifiersEndOfRound();
+      syncEquipmentInstances(inst);
 
       expect(inst.perishableRoundsLeft).toBe(EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS - 1);
       expect(player.economy.balance).toBe(20 - EQUIPMENT_MODIFIER.LEASED_UPKEEP);
@@ -386,7 +390,7 @@ describe('Equipment Modifiers', () => {
       inst.perishableRoundsLeft = 1;
       player.equipment.push(inst);
 
-      const result = processEquipmentModifiersEndOfRound(player);
+      const result = processEquipmentModifiersEndOfRound();
 
       expect(player.equipment).toHaveLength(0);
       expect(result.perished).toHaveLength(1);
@@ -420,10 +424,10 @@ describe('Equipment Modifiers', () => {
       player.equipment.push(inst);
       const balanceBefore = player.economy.balance;
 
-      const result = processEquipmentModifiersEndOfRound(player, { applyDestruction: false });
+      const result = processEquipmentModifiersEndOfRound({ applyDestruction: false });
       expect(player.equipment).toHaveLength(1);
 
-      applyEquipmentModifierDestructions(player, result);
+      applyEquipmentModifierDestructions(result);
       expect(player.equipment).toHaveLength(0);
       expect(player.economy.balance).toBe(balanceBefore);
     });
@@ -467,7 +471,7 @@ describe('Equipment Modifiers', () => {
       setTestDifficulty(8);
       const player = getPlayerState();
       const ingenuity = getSupplyDefById('ingenuity')!;
-      useConsumableDirectly(ingenuity, player);
+      useConsumableDirectly(ingenuity);
       expect(player.equipment.length).toBeGreaterThan(0);
       expect(player.equipment.every((e) => e.modifiers.length === 0)).toBe(true);
     });

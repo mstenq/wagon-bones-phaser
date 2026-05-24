@@ -4,7 +4,8 @@
 import { Die, HandType, HandResult, ScoreResult, ScoreAnimEvent } from './types';
 import { getTrailGuideDefForHand } from './ConsumablesSystem';
 import { EquipmentInstance } from './ItemsSystem';
-import { getPlayerState } from './PlayerState';
+import { getRunState } from './store/runStore';
+import { selectProfession } from './store/selectors/runSelectors';
 import { GAMEPLAY } from './Constants';
 import { resolveCopyTarget } from './equipmentUtils';
 import { effectRegistry, type ScoringPipelineContext } from './effects';
@@ -19,7 +20,6 @@ import {
 } from './effects/helpers';
 import { addScore, multiplyScore, balanceMilesAndMult, ZERO, ONE } from './scoreMath';
 import type { Decimal } from './decimal';
-import { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
 export { processEquipmentOnRoundStart, type AnimatedDestruction } from './effects/lifecycle/onRoundStart';
 
 export interface ScoringContext {
@@ -29,6 +29,7 @@ export interface ScoringContext {
   rerollsRemaining: number;
   equipmentCount: number;
   playerBalance: number; // current money
+  professionId?: string | null;
   currentDay: number; // current day in the round (1-based)
   maxDays: number; // max days this round
   allDice?: Die[]; // all dice in player's collection (for Iron Furnace, etc.)
@@ -56,6 +57,7 @@ function createEquipmentScoringContext(
     allDice: context.allDice ?? [],
     handType: context.handType,
     playerBalance: context.playerBalance,
+    professionId: context.professionId ?? null,
     totalValue: baseResult.totalValue,
     bonusMult: ZERO,
     xMult: ONE,
@@ -99,8 +101,8 @@ export function applyEquipmentEffects(
   finalMult = multiplyScore(finalMult, ctx.xMult);
 
   const milesComponent = addScore(addScore(baseMiles, totalValue), ctx.bonusMiles);
-  const player = getPlayerState();
-  const balanceProfession = !!(player.profession?.modifiers as Record<string, unknown>)?.balanceMilesAndMult;
+  const run = getRunState();
+  const balanceProfession = !!(selectProfession(run)?.modifiers as Record<string, unknown>)?.balanceMilesAndMult;
   let finalMiles = multiplyScore(milesComponent, finalMult);
 
   if (balanceProfession) {
@@ -199,6 +201,7 @@ export function processHeldInHand(
     allDice: [],
     handType: undefined,
     playerBalance: 0,
+    professionId: selectProfession(getRunState())?.id ?? null,
     totalValue: 0,
     bonusMult: ZERO,
     xMult: ONE,

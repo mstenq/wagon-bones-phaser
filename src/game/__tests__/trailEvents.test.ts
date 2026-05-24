@@ -1,7 +1,18 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, diceWithValue, die, item, equipWithModifiers, setTestDifficulty } from './testHelpers';
-import { resetPlayerState } from '../PlayerState';
+import {
+  resetDieIds,
+  setupGame,
+  diceWithValue,
+  die,
+  item,
+  equipWithModifiers,
+  setTestDifficulty,
+  syncEquipmentInstances,
+} from './testHelpers';
+import { resetPlayerState } from './testRunPlayer';
+import { getRunState } from '../store/runStore';
+import { getItemDisplayContext } from '../displayContext';
 import {
   getAllTrailEvents,
   getTrailEventById,
@@ -155,17 +166,17 @@ describe('Trail Events data integrity', () => {
 
 describe('Trail Event selection', () => {
   test('selectTrailEvent returns a valid event for non-demon-hunter', () => {
-    const player = resetPlayerState();
-    const event = selectTrailEvent(player, () => 0.5);
+    resetPlayerState();
+    const event = selectTrailEvent(() => 0.5);
     expect(event).toBeDefined();
     expect(event.demonHunterOnly).toBe(false);
   });
 
   test('selectTrailEvent never returns demon_hunter events for non-demon-hunter', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     // Run many selections
     for (let i = 0; i < 100; i++) {
-      const event = selectTrailEvent(player, Math.random);
+      const event = selectTrailEvent(Math.random);
       expect(event.demonHunterOnly).toBe(false);
     }
   });
@@ -175,7 +186,7 @@ describe('Trail Event selection', () => {
     player.applyProfession('demon_hunter');
 
     // Force rng < 0.3 to draw from demon pool
-    const event = selectTrailEvent(player, () => 0.1);
+    const event = selectTrailEvent(() => 0.1);
     expect(event.demonHunterOnly).toBe(true);
   });
 
@@ -185,7 +196,7 @@ describe('Trail Event selection', () => {
 
     // Force rng >= 0.3 for pool selection, then 0.5 for weighted pick
     let callCount = 0;
-    const event = selectTrailEvent(player, () => {
+    const event = selectTrailEvent(() => {
       callCount++;
       return callCount === 1 ? 0.5 : 0.5; // first call is pool check, second is weight pick
     });
@@ -193,9 +204,9 @@ describe('Trail Event selection', () => {
   });
 
   test('selectTrailEvent respects weights', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     // With rng = 0 (first element after weight check), should pick first available
-    const event = selectTrailEvent(player, () => 0.0001);
+    const event = selectTrailEvent(() => 0.0001);
     expect(event).toBeDefined();
   });
 
@@ -203,7 +214,7 @@ describe('Trail Event selection', () => {
     const player = resetPlayerState();
     player.leg = 1;
     for (let i = 0; i < 200; i++) {
-      const event = selectTrailEvent(player, Math.random);
+      const event = selectTrailEvent(Math.random);
       expect(getTrailEventMinimumLeg(event)).toBeLessThanOrEqual(1);
     }
   });
@@ -232,7 +243,7 @@ describe('Trail Event selection', () => {
     const player = resetPlayerState();
     player.seenTrailEventIds.add('tipped_wagon');
     for (let i = 0; i < 300; i++) {
-      const event = selectTrailEvent(player, Math.random);
+      const event = selectTrailEvent(Math.random);
       expect(event.id).not.toBe('tipped_wagon');
     }
   });
@@ -240,7 +251,7 @@ describe('Trail Event selection', () => {
   test('resolveChoice records event as seen', () => {
     const player = resetPlayerState();
     const event = getTrailEventById('bad_mosquitos')!;
-    resolveChoice(event, 'endure', player);
+    resolveChoice(event, 'endure');
     expect(player.seenTrailEventIds.has('bad_mosquitos')).toBe(true);
   });
 
@@ -250,7 +261,7 @@ describe('Trail Event selection', () => {
       .filter((e) => !e.demonHunterOnly)
       .slice(0, 5);
     player.seenTrailEventIds.add(pool[0].id);
-    const filtered = filterUnseenEvents(pool, player);
+    const filtered = filterUnseenEvents(pool, [...player.seenTrailEventIds]);
     expect(filtered.some((e) => e.id === pool[0].id)).toBe(false);
     expect(filtered.length).toBe(4);
   });
@@ -259,11 +270,11 @@ describe('Trail Event selection', () => {
     const player = resetPlayerState();
     player.round = GAMEPLAY.ROUNDS_PER_LEG;
     player.restoreBossAssignments(Array(GAMEPLAY.LEGS).fill('the_standoff'));
-    expect(isStandoffBossRound(player)).toBe(true);
+    expect(isStandoffBossRound(getRunState())).toBe(true);
     expect(eventHasEffect(getTrailEventById('heavy_fog')!, 'DISABLE_REROLL_DAY1')).toBe(true);
 
     for (let i = 0; i < 500; i++) {
-      const event = selectTrailEvent(player, Math.random);
+      const event = selectTrailEvent(Math.random);
       expect(event.id).not.toBe('heavy_fog');
     }
   });
@@ -280,66 +291,66 @@ describe('Condition checking', () => {
   test('HAS_MONEY: true when player has enough', () => {
     const player = resetPlayerState();
     player.economy.setBalance(10);
-    expect(checkCondition({ type: 'HAS_MONEY', amount: 5 }, player)).toBe(true);
+    expect(checkCondition({ type: 'HAS_MONEY', amount: 5 })).toBe(true);
   });
 
   test('HAS_MONEY: false when player is broke', () => {
     const player = resetPlayerState();
     player.economy.setBalance(2);
-    expect(checkCondition({ type: 'HAS_MONEY', amount: 5 }, player)).toBe(false);
+    expect(checkCondition({ type: 'HAS_MONEY', amount: 5 })).toBe(false);
   });
 
   test('HAS_EQUIPMENT: true when player has specific item', () => {
     const player = resetPlayerState();
     player.equipment = [item('trail_repair_kit')];
-    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'trail_repair_kit' }, player)).toBe(true);
+    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'trail_repair_kit' })).toBe(true);
   });
 
   test('HAS_EQUIPMENT: false when player lacks item', () => {
-    const player = resetPlayerState();
-    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'trail_repair_kit' }, player)).toBe(false);
+    resetPlayerState();
+    expect(checkCondition({ type: 'HAS_EQUIPMENT', id: 'trail_repair_kit' })).toBe(false);
   });
 
   test('HAS_EQUIPMENT_ANY: true when player has any equipment', () => {
     const player = resetPlayerState();
     player.equipment = [item('trail_repair_kit')];
-    expect(checkCondition({ type: 'HAS_EQUIPMENT_ANY' }, player)).toBe(true);
+    expect(checkCondition({ type: 'HAS_EQUIPMENT_ANY' })).toBe(true);
   });
 
   test('HAS_EQUIPMENT_ANY: false when player has no equipment', () => {
     const player = resetPlayerState();
     player.equipment = [];
-    expect(checkCondition({ type: 'HAS_EQUIPMENT_ANY' }, player)).toBe(false);
+    expect(checkCondition({ type: 'HAS_EQUIPMENT_ANY' })).toBe(false);
   });
 
   test('HAS_MEDICINE: true when player has supply card', () => {
     const player = resetPlayerState();
     const def = getSupplyDefById('coffee_tin')!;
     player.addConsumable(def);
-    expect(checkCondition({ type: 'HAS_MEDICINE' }, player)).toBe(true);
+    expect(checkCondition({ type: 'HAS_MEDICINE' })).toBe(true);
   });
 
   test('HAS_MEDICINE: false when player has no consumables', () => {
-    const player = resetPlayerState();
-    expect(checkCondition({ type: 'HAS_MEDICINE' }, player)).toBe(false);
+    resetPlayerState();
+    expect(checkCondition({ type: 'HAS_MEDICINE' })).toBe(false);
   });
 
   test('HAS_WEAPON: false when no weapon equipped', () => {
     const player = resetPlayerState();
     player.equipment = [item('trail_repair_kit')];
-    expect(checkCondition({ type: 'HAS_WEAPON' }, player)).toBe(false);
+    expect(checkCondition({ type: 'HAS_WEAPON' })).toBe(false);
   });
 
   test('IS_PROFESSION: true when matching', () => {
     const player = resetPlayerState();
     player.applyProfession('demon_hunter');
-    expect(checkCondition({ type: 'IS_PROFESSION', id: 'demon_hunter' }, player)).toBe(true);
+    expect(checkCondition({ type: 'IS_PROFESSION', id: 'demon_hunter' })).toBe(true);
   });
 
   test('IS_PROFESSION: false when not matching', () => {
     const player = resetPlayerState();
     player.applyProfession('farmer');
-    expect(checkCondition({ type: 'IS_PROFESSION', id: 'demon_hunter' }, player)).toBe(false);
+    expect(checkCondition({ type: 'IS_PROFESSION', id: 'demon_hunter' })).toBe(false);
   });
 });
 
@@ -347,9 +358,9 @@ describe('Condition checking', () => {
 
 describe('Choice availability', () => {
   test('unconditional choices are always available', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const event = getTrailEventById('bad_mosquitos')!;
-    const choices = getAvailableChoices(event, player);
+    const choices = getAvailableChoices(event);
     expect(choices.length).toBe(1);
     expect(choices[0].id).toBe('endure');
   });
@@ -358,7 +369,7 @@ describe('Choice availability', () => {
     const player = resetPlayerState();
     player.economy.setBalance(3);
     const event = getTrailEventById('broken_wheel')!;
-    const choices = getAvailableChoices(event, player);
+    const choices = getAvailableChoices(event);
     // Should have 'endure' but NOT 'pay' ($8 required) or 'spare_parts'
     expect(choices.some((c) => c.id === 'endure')).toBe(true);
     expect(choices.some((c) => c.id === 'pay')).toBe(false);
@@ -368,7 +379,7 @@ describe('Choice availability', () => {
     const player = resetPlayerState();
     player.economy.setBalance(100);
     const event = getTrailEventById('broken_wheel')!;
-    const choices = getAvailableChoices(event, player);
+    const choices = getAvailableChoices(event);
     expect(choices.some((c) => c.id === 'pay')).toBe(true);
   });
 
@@ -376,7 +387,7 @@ describe('Choice availability', () => {
     const player = resetPlayerState();
     player.consumables = [];
     const event = getTrailEventById('swamped_wagon')!;
-    const choices = getAvailableChoices(event, player);
+    const choices = getAvailableChoices(event);
     expect(choices.some((c) => c.id === 'lose')).toBe(false);
     expect(choices.some((c) => c.id === 'nothing')).toBe(true);
   });
@@ -386,7 +397,7 @@ describe('Choice availability', () => {
     const supply = createConsumableInstance(getSupplyDefById('rabbits_foot')!);
     player.consumables = [supply];
     const event = getTrailEventById('swamped_wagon')!;
-    const choices = getAvailableChoices(event, player);
+    const choices = getAvailableChoices(event);
     expect(choices.some((c) => c.id === 'lose')).toBe(true);
     expect(choices.some((c) => c.id === 'nothing')).toBe(false);
   });
@@ -423,7 +434,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.economy.setBalance(20);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_MONEY', amount: 8 }, player, mods);
+    applyEffect({ type: 'LOSE_MONEY', amount: 8 }, mods);
     expect(player.economy.balance).toBe(12);
   });
 
@@ -431,7 +442,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.economy.setBalance(3);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_MONEY', amount: 10 }, player, mods);
+    applyEffect({ type: 'LOSE_MONEY', amount: 10 }, mods);
     expect(player.economy.balance).toBe(0);
   });
 
@@ -439,7 +450,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.economy.setBalance(20);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_MONEY_PERCENT', percent: 50 }, player, mods);
+    applyEffect({ type: 'LOSE_MONEY_PERCENT', percent: 50 }, mods);
     expect(player.economy.balance).toBe(10);
   });
 
@@ -447,14 +458,14 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.economy.setBalance(5);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'GAIN_MONEY', amount: 10 }, player, mods);
+    applyEffect({ type: 'GAIN_MONEY', amount: 10 }, mods);
     expect(player.economy.balance).toBe(15);
   });
 
   test('LOSE_DAYS reduces maxDays in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_DAYS', amount: 2 }, player, mods);
+    applyEffect({ type: 'LOSE_DAYS', amount: 2 }, mods);
     player.trailEventModifiers = mods;
     game.startRound();
     // base 4 - 2 = 2
@@ -464,7 +475,7 @@ describe('Effect application', () => {
   test('LOSE_REROLLS reduces maxRerolls in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_REROLLS', amount: 3 }, player, mods);
+    applyEffect({ type: 'LOSE_REROLLS', amount: 3 }, mods);
     player.trailEventModifiers = mods;
     game.startRound();
     // base 6 - 3 = 3
@@ -474,7 +485,7 @@ describe('Effect application', () => {
   test('LOSE_ALL_REROLLS sets maxRerolls to 0 in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_ALL_REROLLS' }, player, mods);
+    applyEffect({ type: 'LOSE_ALL_REROLLS' }, mods);
     player.trailEventModifiers = mods;
     game.startRound();
     expect(game.config.maxRerolls).toBe(0);
@@ -483,7 +494,7 @@ describe('Effect application', () => {
   test('LOSE_HAND_SIZE reduces rollSize in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_HAND_SIZE', amount: 2 }, player, mods);
+    applyEffect({ type: 'LOSE_HAND_SIZE', amount: 2 }, mods);
     player.trailEventModifiers = mods;
     game.startRound();
     // base handSize 8 - 2 = 6
@@ -501,7 +512,7 @@ describe('Effect application', () => {
       die({}), // standard
     ];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 2 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 2 }, mods);
     // Should remove 2 enhanced dice, leaving 1 enhanced + 2 standard = 3 total
     expect(player.dice.length).toBe(3);
     // Standard dice should still be untouched
@@ -517,7 +528,7 @@ describe('Effect application', () => {
     player.dice = [die({}), die({}), die({})];
     player.economy.setBalance(25);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 2 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 2 }, mods);
     // No enhanced dice to remove — lose $3 per missing die instead
     expect(player.dice.length).toBe(3);
     expect(player.economy.balance).toBe(25 - 2 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE); // $3 per missing die penalty
@@ -528,7 +539,7 @@ describe('Effect application', () => {
     player.dice = [die({})];
     player.economy.setBalance(3);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 1 }, mods);
     expect(player.dice.length).toBe(1);
     expect(player.economy.balance).toBe(0);
   });
@@ -538,7 +549,7 @@ describe('Effect application', () => {
     player.dice = [];
     player.economy.setBalance(20);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 5 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 5 }, mods);
     expect(player.dice.length).toBe(0);
     expect(player.economy.balance).toBe(20 - 5 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE); // $3 per missing die penalty
   });
@@ -547,7 +558,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, mods);
     expect(player.equipment.length).toBe(1);
   });
 
@@ -557,7 +568,7 @@ describe('Effect application', () => {
     const normal = item('dynamite');
     player.equipment = [cursed, normal];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, mods);
     expect(player.equipment.some((e) => isEquipmentCursed(e))).toBe(true);
     expect(player.equipment.length).toBe(1);
     expect(player.equipment[0].def.id).toBe('horseshoe');
@@ -568,7 +579,7 @@ describe('Effect application', () => {
     const cursed = equipWithModifiers('horseshoe', ['cursed']);
     player.equipment = [cursed];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'horseshoe' }, player, mods);
+    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'horseshoe' }, mods);
     expect(player.equipment.length).toBe(1);
   });
 
@@ -576,7 +587,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, mods);
     // Equipment is NOT removed here — the UI handles the player's choice
     expect(player.equipment.length).toBe(2);
   });
@@ -587,7 +598,7 @@ describe('Effect application', () => {
     player.consumables.push(createConsumableInstance(def));
     player.consumables.push(createConsumableInstance(def));
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_ALL_SUPPLY_CARDS' }, player, mods);
+    applyEffect({ type: 'LOSE_ALL_SUPPLY_CARDS' }, mods);
     expect(player.consumables.filter((c) => c.def.category === 'supply').length).toBe(0);
   });
 
@@ -597,14 +608,14 @@ describe('Effect application', () => {
     player.consumables.push(createConsumableInstance(def));
     player.consumables.push(createConsumableInstance(def));
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_SUPPLY_CARD', count: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_SUPPLY_CARD', count: 1 }, mods);
     expect(player.consumables.length).toBe(1);
   });
 
   test('LOSE_MONEY_PER_DAY adds to modifier', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_MONEY_PER_DAY', amount: 3 }, player, mods);
+    applyEffect({ type: 'LOSE_MONEY_PER_DAY', amount: 3 }, mods);
     expect(mods.moneyPerDayLoss).toBe(3);
   });
 
@@ -612,7 +623,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     const initialSlots = player.maxEquipmentSlots;
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_EQUIPMENT_SLOT_PERMANENT' }, player, mods);
+    applyEffect({ type: 'LOSE_EQUIPMENT_SLOT_PERMANENT' }, mods);
     expect(player.maxEquipmentSlots).toBe(initialSlots - 1);
   });
 
@@ -620,7 +631,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.maxEquipmentSlots = 1;
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_EQUIPMENT_SLOT_PERMANENT' }, player, mods);
+    applyEffect({ type: 'LOSE_EQUIPMENT_SLOT_PERMANENT' }, mods);
     expect(player.maxEquipmentSlots).toBe(1);
   });
 
@@ -628,7 +639,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     const initialCount = player.dice.length;
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'GAIN_DICE', count: 2, enhancement: 'bone', aura: 'fire', sticker: null }, player, mods);
+    applyEffect({ type: 'GAIN_DICE', count: 2, enhancement: 'bone', aura: 'fire', sticker: null }, mods);
     expect(player.dice.length).toBe(initialCount + 2);
     // Check last 2 dice have correct enhancement/aura
     const newDice = player.dice.slice(-2);
@@ -641,7 +652,7 @@ describe('Effect application', () => {
   test('GAIN_DICE with sticker', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'GAIN_DICE', count: 1, enhancement: 'lucky', aura: null, sticker: 'red_bullet' }, player, mods);
+    applyEffect({ type: 'GAIN_DICE', count: 1, enhancement: 'lucky', aura: null, sticker: 'red_bullet' }, mods);
     const newDie = player.dice[player.dice.length - 1];
     expect(newDie.enhancement).toBe('lucky');
     expect(newDie.sticker).toBe('red_bullet');
@@ -650,7 +661,7 @@ describe('Effect application', () => {
   test('GAIN_RANDOM_SUPPLY_CARD adds to consumables', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'GAIN_RANDOM_SUPPLY_CARD', count: 1 }, player, mods);
+    applyEffect({ type: 'GAIN_RANDOM_SUPPLY_CARD', count: 1 }, mods);
     expect(player.consumables.length).toBe(1);
     expect(player.consumables[0].def.category).toBe('supply');
   });
@@ -658,7 +669,7 @@ describe('Effect application', () => {
   test('GAIN_RANDOM_EQUIPMENT adds equipment', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, player, mods);
+    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, mods);
     expect(player.equipment.length).toBe(1);
   });
 
@@ -666,7 +677,7 @@ describe('Effect application', () => {
     setTestDifficulty(8);
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, player, mods);
+    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, mods);
     expect(player.equipment.length).toBe(1);
     expect(player.equipment[0].modifiers).toEqual([]);
   });
@@ -674,7 +685,7 @@ describe('Effect application', () => {
   test('GAIN_TRAIL_GUIDES adds trail guide consumables', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'GAIN_TRAIL_GUIDES', count: 3 }, player, mods);
+    applyEffect({ type: 'GAIN_TRAIL_GUIDES', count: 3 }, mods);
     const trailGuides = player.consumables.filter((c) => c.def.category === 'trail_guide');
     expect(trailGuides.length).toBe(3);
   });
@@ -684,7 +695,7 @@ describe('Effect application', () => {
     const def = getSupplyDefById('coffee_tin')!;
     player.consumables.push(createConsumableInstance(def));
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'USE_MEDICINE' }, player, mods);
+    applyEffect({ type: 'USE_MEDICINE' }, mods);
     expect(player.consumables.length).toBe(0);
   });
 
@@ -692,7 +703,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.equipment = [item('trail_repair_kit'), item('saint_elmos_shield')];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'trail_repair_kit' }, player, mods);
+    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'trail_repair_kit' }, mods);
     expect(player.equipment.length).toBe(1);
     expect(player.equipment[0].def.id).toBe('saint_elmos_shield');
   });
@@ -701,7 +712,7 @@ describe('Effect application', () => {
     const player = resetPlayerState();
     player.dice = diceWithValue(6, 5);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'ADD_AURA_TO_RANDOM_DICE', count: 3, aura: 'fire' }, player, mods);
+    applyEffect({ type: 'ADD_AURA_TO_RANDOM_DICE', count: 3, aura: 'fire' }, mods);
     const fireDice = player.dice.filter((d) => d.aura === 'fire');
     expect(fireDice.length).toBe(3);
   });
@@ -709,7 +720,7 @@ describe('Effect application', () => {
   test('BOSS_UPGRADE increases target miles in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'BOSS_UPGRADE', multiplier: 1.5 }, player, mods);
+    applyEffect({ type: 'BOSS_UPGRADE', multiplier: 1.5 }, mods);
     player.trailEventModifiers = mods;
     game.startRound({ targetMiles: D(1000) });
     expect(game.config.targetMiles).toBeMiles(1500);
@@ -718,30 +729,30 @@ describe('Effect application', () => {
   test('SCORE_MULTIPLIER increases target miles in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'SCORE_MULTIPLIER', multiplier: 1.5 }, player, mods);
+    applyEffect({ type: 'SCORE_MULTIPLIER', multiplier: 1.5 }, mods);
     player.trailEventModifiers = mods;
     game.startRound({ targetMiles: D(1000) });
     expect(game.config.targetMiles).toBeMiles(1500);
   });
 
   test('FLAT_MILES_PENALTY still accumulates on modifiers (not wired to gameplay)', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'FLAT_MILES_PENALTY', amount: 10 }, player, mods);
+    applyEffect({ type: 'FLAT_MILES_PENALTY', amount: 10 }, mods);
     expect(mods.flatMilesPenalty).toBe(10);
   });
 
   test('SKIP_NEXT_SHOP sets flag on modifiers (consumed by UI layer)', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'SKIP_NEXT_SHOP' }, player, mods);
+    applyEffect({ type: 'SKIP_NEXT_SHOP' }, mods);
     expect(mods.skipNextShop).toBe(true);
   });
 
   test('LOSE_REROLLS_PER_DAY reduces rerolls in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_REROLLS_PER_DAY', amount: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_REROLLS_PER_DAY', amount: 1 }, mods);
     // 1 reroll/day * 4 days = 4 reroll penalty
     expect(mods.rerollPenalty).toBe(GAMEPLAY.MAX_DAYS * 1);
     player.trailEventModifiers = mods;
@@ -758,7 +769,7 @@ describe('Outcome resolution', () => {
     const player = resetPlayerState();
     player.economy.setBalance(20);
     const event = getTrailEventById('bad_mosquitos')!;
-    const result = resolveChoice(event, 'endure', player);
+    const result = resolveChoice(event, 'endure');
     expect(result.choiceId).toBe('endure');
     expect(result.outcomeIndex).toBe(0);
     expect(result.effects.length).toBeGreaterThan(0);
@@ -770,34 +781,34 @@ describe('Outcome resolution', () => {
     const event = getTrailEventById('fallen_rocks')!;
 
     // Force first outcome (30% probability — rng < 0.3)
-    const result1 = resolveChoice(event, 'risk', player, () => 0.1);
+    const result1 = resolveChoice(event, 'risk', () => 0.1);
     expect(result1.outcomeIndex).toBe(0);
 
     // Force second outcome (70% probability — rng >= 0.3)
     const player2 = resetPlayerState();
     player2.dice = diceWithValue(6, 20);
-    const result2 = resolveChoice(event, 'risk', player2, () => 0.5);
+    const result2 = resolveChoice(event, 'risk', () => 0.5);
     expect(result2.outcomeIndex).toBe(1);
   });
 
   test('resolveChoice throws for invalid choice', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const event = getTrailEventById('bad_mosquitos')!;
-    expect(() => resolveChoice(event, 'nonexistent', player)).toThrow();
+    expect(() => resolveChoice(event, 'nonexistent')).toThrow();
   });
 
   test('resolveChoice applies immediate money effects', () => {
     const player = resetPlayerState();
     player.economy.setBalance(20);
     const event = getTrailEventById('caught_fish')!;
-    resolveChoice(event, 'take', player);
+    resolveChoice(event, 'take');
     expect(player.economy.balance).toBe(24); // +$4
   });
 
   test('resolveChoice applies modifier effects', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const event = getTrailEventById('heavy_fog')!;
-    const result = resolveChoice(event, 'endure', player);
+    const result = resolveChoice(event, 'endure');
     expect(result.modifiers.disableRerollDay1).toBe(true);
   });
 });
@@ -813,7 +824,7 @@ describe('saint_elmos_shield equipment interaction', () => {
 
     const event = getTrailEventById('bandit_ambush')!;
     // Choose "pay" which would lose half money
-    resolveChoice(event, 'pay', player);
+    resolveChoice(event, 'pay');
     // saint_elmos_shield should negate the money loss
     expect(player.economy.balance).toBe(20);
   });
@@ -824,7 +835,7 @@ describe('saint_elmos_shield equipment interaction', () => {
     player.equipment = [item('saint_elmos_shield')];
 
     const event = getTrailEventById('caught_fish')!;
-    resolveChoice(event, 'take', player);
+    resolveChoice(event, 'take');
     expect(player.economy.balance).toBe(9); // +$4 still works
   });
 
@@ -833,7 +844,7 @@ describe('saint_elmos_shield equipment interaction', () => {
     player.equipment = [item('saint_elmos_shield')];
 
     const event = getTrailEventById('lose_trail')!;
-    const result = resolveChoice(event, 'wander', player);
+    const result = resolveChoice(event, 'wander');
     expect(result.modifiers.dayPenalty).toBe(0);
   });
 });
@@ -851,8 +862,9 @@ describe('Trail Repair Kit interaction', () => {
     );
 
     const event = getTrailEventById('bad_mosquitos')!;
-    const result = resolveChoice(event, 'endure', player);
+    const result = resolveChoice(event, 'endure');
     expect(result.modifiers.rerollPenalty).toBe(0);
+    syncEquipmentInstances(kit);
     expect(kit.state.xMult).toBeCloseTo(1 + gain, 5);
   });
 
@@ -862,7 +874,7 @@ describe('Trail Repair Kit interaction', () => {
     player.equipment = [kit];
 
     const event = getTrailEventById('caught_fish')!;
-    resolveChoice(event, 'take', player);
+    resolveChoice(event, 'take');
     expect(kit.state.xMult ?? 1).toBe(1);
   });
 
@@ -876,7 +888,8 @@ describe('Trail Repair Kit interaction', () => {
     );
 
     const event = getTrailEventById('lose_trail')!;
-    resolveChoice(event, 'wander', player);
+    resolveChoice(event, 'wander');
+    syncEquipmentInstances(kit);
     expect(kit.state.xMult).toBeCloseTo(1 + gain, 5);
   });
 });
@@ -891,7 +904,7 @@ describe("Scout's Spyglass", () => {
     player.equipment = [spyglass];
     player.pendingTrailEvent = getTrailEventById('bad_mosquitos')!;
 
-    applySpyglassAvoid(player);
+    applySpyglassAvoid();
     expect(spyglass.state.miles).toBe(5);
     expect(player.pendingTrailEvent).toBeNull();
   });
@@ -905,16 +918,17 @@ describe("Scout's Spyglass", () => {
       'investigateMiles',
     );
 
-    applySpyglassInvestigate(player);
-    expect(getScoutsSpyglassInvestigateMiles(player)).toBe(expected);
+    applySpyglassInvestigate();
+    expect(getScoutsSpyglassInvestigateMiles(getItemDisplayContext())).toBe(expected);
+    syncEquipmentInstances(spyglass);
     expect(spyglass.state.miles).toBe(expected);
   });
 
   test('hasScoutsSpyglass detects equipped item', () => {
     const player = resetPlayerState();
-    expect(hasScoutsSpyglass(player)).toBe(false);
+    expect(hasScoutsSpyglass()).toBe(false);
     player.equipment = [item('scouts_spyglass')];
-    expect(hasScoutsSpyglass(player)).toBe(true);
+    expect(hasScoutsSpyglass()).toBe(true);
   });
 });
 
@@ -927,7 +941,7 @@ describe('Round modifier integration', () => {
     player.trailEventModifiers.dayPenalty = 2;
     player.trailEventModifiers.rerollPenalty = 1;
     player.trailEventModifiers.scoreMultiplier = 1.5;
-    game.startRound({ targetMiles: 1000 });
+    game.startRound({ targetMiles: D(1000) });
 
     // Verify effects were applied
     expect(game.config.maxDays).toBe(2);
@@ -941,9 +955,9 @@ describe('Round modifier integration', () => {
   });
 
   test('skipNextShop flag propagated via resolveChoice', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const event = getTrailEventById('native_guide')!;
-    const result = resolveChoice(event, 'accept', player);
+    const result = resolveChoice(event, 'accept');
     expect(result.modifiers.skipNextShop).toBe(true);
   });
 
@@ -1012,7 +1026,7 @@ describe('Round modifier integration', () => {
   test('heavy_fog endure does not remove round rerolls, only blocks day 1', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
     const event = getTrailEventById('heavy_fog')!;
-    const result = resolveChoice(event, 'endure', player);
+    const result = resolveChoice(event, 'endure');
     player.trailEventModifiers = result.modifiers;
     game.startRound({ targetMiles: D(999_999) });
 
@@ -1100,7 +1114,7 @@ describe('Round modifier integration', () => {
     const player = resetPlayerState();
     player.trailEventModifiers.diamondCrackDoubled = true;
     expect(player.trailRoundEffects.diamondCrackDoubled).toBe(false);
-    const lines = getPlayerTrailDebuffLines(player);
+    const lines = getPlayerTrailDebuffLines();
     expect(lines).toContain('Diamond crack chance doubled');
   });
 
@@ -1108,7 +1122,7 @@ describe('Round modifier integration', () => {
     const player = resetPlayerState();
     player.trailEventModifiers.luckyOddsHalved = true;
     player.trailRoundEffects.diamondCrackDoubled = true;
-    const lines = getPlayerTrailDebuffLines(player);
+    const lines = getPlayerTrailDebuffLines();
     expect(lines).toContain('Diamond crack chance doubled');
     expect(lines).not.toContain('Lucky odds halved');
   });
@@ -1130,11 +1144,11 @@ describe('Every trail event resolves without error', () => {
       const supplyDef = getSupplyDefById('coffee_tin')!;
       player.consumables.push(createConsumableInstance(supplyDef));
 
-      const choices = getAvailableChoices(event, player);
+      const choices = getAvailableChoices(event);
       expect(choices.length).toBeGreaterThanOrEqual(1);
 
       // Resolve the first available choice
-      const result = resolveChoice(event, choices[0].id, player, () => 0.5);
+      const result = resolveChoice(event, choices[0].id, () => 0.5);
       expect(result).toBeDefined();
       expect(result.event.id).toBe(event.id);
       expect(result.choiceId).toBe(choices[0].id);
@@ -1161,11 +1175,11 @@ describe('Every trail event choice resolves without error', () => {
 
         // Check if condition is met; skip if not meetable
         if (choice.condition) {
-          const met = checkCondition(choice.condition, player);
+          const met = checkCondition(choice.condition);
           if (!met) return; // Can't test this choice in this setup
         }
 
-        const result = resolveChoice(event, choice.id, player, () => 0.5);
+        const result = resolveChoice(event, choice.id, () => 0.5);
         expect(result).toBeDefined();
         expect(result.choiceId).toBe(choice.id);
 
@@ -1185,7 +1199,7 @@ describe('Edge cases', () => {
     const player = resetPlayerState();
     player.economy.setBalance(0);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_MONEY', amount: 10 }, player, mods);
+    applyEffect({ type: 'LOSE_MONEY', amount: 10 }, mods);
     expect(player.economy.balance).toBe(0);
   });
 
@@ -1193,7 +1207,7 @@ describe('Edge cases', () => {
     const player = resetPlayerState();
     player.dice = [];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 5 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 5 }, mods);
     expect(player.dice.length).toBe(0);
   });
 
@@ -1203,7 +1217,7 @@ describe('Edge cases', () => {
     const initialCount = player.dice.length;
     player.economy.setBalance(50);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 3 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_DICE', count: 3 }, mods);
     expect(player.dice.length).toBe(initialCount);
     expect(player.economy.balance).toBe(50 - 3 * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE);
   });
@@ -1213,7 +1227,7 @@ describe('Edge cases', () => {
     player.equipment = [];
     player.economy.setBalance(15);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 3 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 3 }, mods);
     expect(player.equipment.length).toBe(0);
     expect(player.economy.balance).toBe(15 - 3 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP);
   });
@@ -1223,7 +1237,7 @@ describe('Edge cases', () => {
     player.equipment = [];
     player.economy.setBalance(2);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_RANDOM_EQUIPMENT', count: 1 }, mods);
     expect(player.economy.balance).toBe(2 - 1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP);
   });
 
@@ -1232,21 +1246,21 @@ describe('Edge cases', () => {
     player.equipment = [];
     player.economy.setBalance(30);
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, player, mods);
+    applyEffect({ type: 'LOSE_EQUIPMENT_CHOICE', count: 1 }, mods);
     expect(player.economy.balance).toBe(30 - 1 * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP);
   });
 
   test('player with no consumables handles LOSE_ALL_SUPPLY_CARDS gracefully', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_ALL_SUPPLY_CARDS' }, player, mods);
+    applyEffect({ type: 'LOSE_ALL_SUPPLY_CARDS' }, mods);
     expect(player.consumables.length).toBe(0);
   });
 
   test('player with no consumables handles USE_MEDICINE gracefully', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'USE_MEDICINE' }, player, mods);
+    applyEffect({ type: 'USE_MEDICINE' }, mods);
     expect(player.consumables.length).toBe(0);
   });
 
@@ -1254,7 +1268,7 @@ describe('Edge cases', () => {
     const player = resetPlayerState();
     player.equipment = [item('trail_repair_kit')];
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'nonexistent' }, player, mods);
+    applyEffect({ type: 'DESTROY_EQUIPMENT', id: 'nonexistent' }, mods);
     expect(player.equipment.length).toBe(1);
   });
 
@@ -1277,18 +1291,18 @@ describe('Edge cases', () => {
   });
 
   test('multiple LOSE_DAYS effects accumulate', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_DAYS', amount: 1 }, player, mods);
-    applyEffect({ type: 'LOSE_DAYS', amount: 2 }, player, mods);
+    applyEffect({ type: 'LOSE_DAYS', amount: 1 }, mods);
+    applyEffect({ type: 'LOSE_DAYS', amount: 2 }, mods);
     expect(mods.dayPenalty).toBe(3);
   });
 
   test('multiple BOSS_UPGRADE effects multiply', () => {
-    const player = resetPlayerState();
+    resetPlayerState();
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'BOSS_UPGRADE', multiplier: 1.5 }, player, mods);
-    applyEffect({ type: 'BOSS_UPGRADE', multiplier: 2.0 }, player, mods);
+    applyEffect({ type: 'BOSS_UPGRADE', multiplier: 1.5 }, mods);
+    applyEffect({ type: 'BOSS_UPGRADE', multiplier: 2.0 }, mods);
     expect(mods.bossUpgradeMultiplier).toBe(3.0);
   });
 });

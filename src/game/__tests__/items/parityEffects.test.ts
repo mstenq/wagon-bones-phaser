@@ -1,7 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, diceFromValues, item, calculateTestScore, resetDieIds } from '../testHelpers';
-import { HandType } from '../../types';
+import { diceWithValue, item, calculateTestScore, resetDieIds } from '../testHelpers';
 
 beforeEach(() => resetDieIds());
 

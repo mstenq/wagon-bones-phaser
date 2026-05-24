@@ -2,6 +2,9 @@
 // Typed tag data following the items.ts pattern.
 // Each tag defines its pool weight, unlock leg, and category for dispatch.
 
+import type { HandType } from '../game/types';
+import { getHandByType } from './hands';
+
 // ─── Types ───
 
 export type TagCategory =
@@ -15,10 +18,18 @@ export type TagCategory =
   | 'next_round' // applies to the next round played
   | 'meta'; // modifies the next tag (Twin Wagon)
 
+/** Context for dynamic tag descriptions (skip preview, pending tags, tooltips). */
+export interface TagDescriptionContext {
+  /** Pre-rolled hand for Surveyor's Mark (skip preview or pending tag). */
+  surveyorHand?: HandType;
+}
+
+export type TagDescription = string | ((ctx: TagDescriptionContext) => string);
+
 export interface TrailTagDef {
   id: string;
   name: string;
-  description: string;
+  description: TagDescription;
   category: TagCategory;
   minLeg: number; // earliest leg this tag can appear
   weight: number; // selection weight in the pool
@@ -28,6 +39,20 @@ export interface TrailTagInstance {
   def: TrailTagDef;
   /** Number of copies (Twin Wagon stacking) */
   copies: number;
+  /** Pre-rolled upgrade target for Surveyor's Mark. */
+  surveyorHand?: HandType;
+}
+
+/** Metadata rolled with a skip-preview tag (e.g. Surveyor's Mark hand target). */
+export interface RoundSkipPreviewMeta {
+  surveyorHand?: HandType;
+}
+
+export function resolveTagDescription(def: TrailTagDef, ctx: TagDescriptionContext = {}): string {
+  if (typeof def.description === 'function') {
+    return def.description(ctx);
+  }
+  return def.description;
 }
 
 // ─── Tag Definitions ───
@@ -217,7 +242,13 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_surveyor',
     name: "Surveyor's Mark",
-    description: 'Upgrade a random hand type by 3 trail guide levels.',
+    description: (ctx) => {
+      const handName = ctx.surveyorHand ? getHandByType(ctx.surveyorHand)?.name : undefined;
+      if (handName) {
+        return `Upgrade ${handName} by 3 trail guide levels.`;
+      }
+      return 'Upgrade a random hand type by 3 trail guide levels.';
+    },
     category: 'immediate_upgrade',
     minLeg: 2,
     weight: 1.5,
