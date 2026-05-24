@@ -128,6 +128,37 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     // heldMult = (1 + 18) * 1 = 19
     expect(result.mult).toBeMult(19);
   });
+
+  test('processes held dice left to right: bottom dollar on lowest then steel xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 4 }), die({ value: 5, enhancement: 'steel' })],
+      equipment: [item('bottom_dollar')],
+    });
+    // PAIR: baseMult=1
+    // Left-to-right: die 4 bottom dollar +8, die 5 steel x1.5
+    // heldMult = (1 + 8) * 1.5 = 13.5
+    expect(result.mult).toBeMult(13.5);
+
+    const multIdx = result.animEvents.findIndex((e) => e.popupType === 'mult');
+    const steelIdx = result.animEvents.findIndex((e) => e.popupType === 'xmult');
+    expect(multIdx).toBeGreaterThanOrEqual(0);
+    expect(steelIdx).toBeGreaterThan(multIdx);
+  });
+
+  test('reversed held order triggers steel before bottom dollar in animEvents', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 5, enhancement: 'steel' }), die({ value: 4 })],
+      equipment: [item('bottom_dollar')],
+    });
+    // Same final mult — bottom dollar still hits the sole lowest die (4)
+    expect(result.mult).toBeMult(13.5);
+
+    const multIdx = result.animEvents.findIndex((e) => e.popupType === 'mult');
+    const steelIdx = result.animEvents.findIndex((e) => e.popupType === 'xmult');
+    expect(steelIdx).toBeLessThan(multIdx);
+  });
 });
 
 // ─── HELD_PIP_XMULT: Ace in the Hole ───

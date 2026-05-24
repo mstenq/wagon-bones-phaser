@@ -859,6 +859,7 @@ export class GameScene extends Scene {
     const success = this.gameState.selectForScore(ids);
     if (!success) return;
 
+    this.syncRolledDiceFromSprites();
     const result = this.gameState.calculateScore();
     if (result) {
       this.enterScorePhase(result);
@@ -1168,6 +1169,12 @@ export class GameScene extends Scene {
         this.lockIcons[i].setVisible(this.lockedDiceIds.has(sprite.dieData.id));
       }
     }
+    this.syncRolledDiceFromSprites();
+  }
+
+  /** Keep game-state dice order aligned with on-screen roll sprite order (held-in-hand scoring). */
+  private syncRolledDiceFromSprites(): void {
+    this.gameState.state.rolledDice = this.rollSprites.map((s) => s.dieData);
   }
 
   private setSortOrder(order: 'asc' | 'desc'): void {
@@ -2360,8 +2367,7 @@ export class GameScene extends Scene {
 
       if (list === this.rollSprites) {
         this.repositionLockIcons(positions);
-        // Sync game state order to match visual drag order so held-in-hand scoring respects it
-        this.gameState.state.rolledDice = this.rollSprites.map((s) => s.dieData);
+        this.syncRolledDiceFromSprites();
       }
     });
   }
