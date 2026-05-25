@@ -12,7 +12,9 @@
 - Gambling Themed Item - One Armed Bandit? - 1 in 4 chance to get x4 mult and $10.
 - the tool tip for trail guides should show the current hand level (level 3 or whatever)
 - tool tip on second helpings should show the card that you'll get if you use it now.
-
+- new permits for luck:
+    - Good Omens - Stage 1 — Positive trail events are 2x more likely
+    - Manifest Destiny - Stage 2 — Positive trail events are 4x more likely
 
 ## Balance Notes
 bone_collector: Should increase miles amount
