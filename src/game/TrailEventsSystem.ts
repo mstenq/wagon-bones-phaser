@@ -316,7 +316,19 @@ export function checkCondition(condition: TrailEventCondition): boolean {
     case 'HAS_WEAPON':
       return equipment.some((e) => {
         const id = e.def.id;
-        return id === '22_rifle' || id === 'shotgun' || id === 'revolver' || id === 'hunting_rifle';
+        return (
+          id === 'antique_revolver' ||
+          id === 'double_barrel' ||
+          id === 'dynamite' ||
+          id === 'gold_pan' ||
+          id === 'open_palm' ||
+          id === 'quick_draw' ||
+          id === 'rail_splitter' ||
+          id === 'twin_colts' ||
+          id === 'six_shooter' ||
+          id === 'wood_axe' ||
+          id === 'nitro'
+        );
       });
 
     case 'HAS_SUPPLY_CARDS':

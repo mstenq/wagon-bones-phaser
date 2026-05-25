@@ -1677,18 +1677,19 @@ const trailEvents: TrailEventDef[] = [
       },
       {
         id: 'pay',
-        label: 'Drive through fast ($8)',
+        label: 'Drive through fast ($5)',
         condition: {
           type: 'HAS_MONEY',
-          amount: 8,
+          amount: 5,
         },
         outcomes: [
           {
             probability: 1,
+            message: 'You drive through the fire with only a little damage and gain a lucky die.',
             effects: [
               {
                 type: 'LOSE_MONEY',
-                amount: 8,
+                amount: 5,
               },
               {
                 type: 'GAIN_DICE',
@@ -1758,7 +1759,7 @@ const trailEvents: TrailEventDef[] = [
     choices: [
       {
         id: 'endure',
-        label: 'Push through',
+        label: 'Push through (x1.5 target score)',
         outcomes: [
           {
             probability: 1,
@@ -1766,6 +1767,21 @@ const trailEvents: TrailEventDef[] = [
               {
                 type: 'SCORE_MULTIPLIER',
                 multiplier: 1.5,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'other_route',
+        label: 'Look for another route (-1 day)',
+        outcomes: [
+          {
+            probability: 1,
+            effects: [
+              {
+                type: 'LOSE_DAYS',
+                amount: 1,
               },
             ],
           },
@@ -2195,6 +2211,36 @@ const trailEvents: TrailEventDef[] = [
         ],
       },
       {
+        id: 'hunter_chase',
+        label: 'Chase down the thieves',
+        condition: {
+          type: 'IS_PROFESSION',
+          id: 'hunter',
+        },
+        outcomes: [
+          {
+            probability: 0.3,
+            message: 'You are unable to catch the thieves.',
+            effects: [
+              {
+                type: 'LOSE_RANDOM_EQUIPMENT',
+                count: 1,
+              },
+            ],
+          },
+          {
+            probability: 0.7,
+            message: 'You chase down the thieves and they are caught red-handed.',
+            effects: [
+              {
+                type: 'GAIN_MONEY',
+                amount: 3,
+              },
+            ],
+          },
+        ],
+      },
+      {
         id: 'weapon',
         label: 'Scare them off with weapon',
         condition: {
@@ -2409,10 +2455,10 @@ const trailEvents: TrailEventDef[] = [
       },
       {
         id: 'pay',
-        label: 'Hire help ($15)',
+        label: 'Hire help ($5)',
         condition: {
           type: 'HAS_MONEY',
-          amount: 15,
+          amount: 5,
         },
         outcomes: [
           {
@@ -2420,7 +2466,7 @@ const trailEvents: TrailEventDef[] = [
             effects: [
               {
                 type: 'LOSE_MONEY',
-                amount: 15,
+                amount: 5,
               },
             ],
           },

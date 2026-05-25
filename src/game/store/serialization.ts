@@ -29,6 +29,7 @@ export function deserializeRunState(data: SerializedRunState): RunState {
     trailRoundEffects: data.trailRoundEffects ?? createEmptyTrailRoundEffects(),
     skippedRoundTagMeta: data.skippedRoundTagMeta ?? {},
     roundSkipPreviewMeta: data.roundSkipPreviewMeta ?? {},
+    roundBackgroundIndex: data.roundBackgroundIndex ?? null,
   };
 }
 

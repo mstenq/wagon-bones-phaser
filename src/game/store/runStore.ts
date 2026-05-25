@@ -23,6 +23,7 @@ export function createInitialRunState(): RunState {
     shopRerollCount: 0,
     leg: 1,
     round: 1,
+    roundBackgroundIndex: null,
     interestCap: GAMEPLAY.INTEREST_CAP,
     handStats: createDefaultHandStats(),
     professionId: null,

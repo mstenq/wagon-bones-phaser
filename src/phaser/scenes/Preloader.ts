@@ -39,8 +39,7 @@ export class Preloader extends Scene {
     });
     this.load.once('complete', hideLoadingOverlay);
 
-    // Load backgrounds
-    this.load.image('bg_1', 'assets/backgrounds/1.png');
+    // Shop background only; game rounds lazy-load numbered backgrounds in GameScene
     this.load.image('bg_shop', 'assets/backgrounds/shop.png');
 
     // Load sticker images

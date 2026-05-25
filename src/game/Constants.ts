@@ -18,7 +18,7 @@ export const GAMEPLAY = {
   MAX_REROLLS: 4,
   ROLL_SIZE: 8,
   SCORE_SIZE: 5,
-  STARTING_DICE: 35,
+  STARTING_DICE: 40,
   STARTING_MONEY: 10,
   MAX_EQUIPMENT_SLOTS: 5,
   MAX_CONSUMABLE_SLOTS: 2,
@@ -28,6 +28,8 @@ export const GAMEPLAY = {
   LEGS: 8, // story-complete threshold (8-leg Oregon Trail)
   MAX_LEGS: 39, // endless mode cap (see src/data/target_miles.ts)
   ROUNDS_PER_LEG: 3,
+  /** Numbered game-round backgrounds in public/assets/backgrounds/ (1.png … N.png) */
+  ROUND_BACKGROUND_COUNT: 46,
   // Round difficulty multiplier within a leg (round 1 = 1x, round 2 = 1.5x, round 3/boss = 2x)
   ROUND_MULTIPLIERS: [1, 1.5, 2],
   // Money earned for completing each round (index 0 = round 1)

@@ -449,16 +449,6 @@ export class Sidebar extends GameObjects.Container {
       .setVisible(false);
     this.mainContentContainer.add(this.handNameText);
 
-    this.handLevelText = scene.add
-      .text(cx, y + handDisplayH / 2 + 1, '', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '11px',
-        color: TEXT_COLORS.MUTED,
-        align: 'center',
-      })
-      .setOrigin(0.5, -0.5)
-      .setVisible(false);
-    this.mainContentContainer.add(this.handLevelText);
     y += handDisplayH;
 
     // ─── Miles/Mult Display (Balatro chips×mult style) ───
@@ -627,18 +617,10 @@ export class Sidebar extends GameObjects.Container {
     if (overlay.title !== undefined) this.titleText.setText(overlay.title);
     if (overlay.handName !== undefined) {
       if (overlay.handName) {
-        this.handNameText.setText(overlay.handName);
+        this.handNameText.setText(`${overlay.handName}  lvl.${overlay.handLevel}`);
         this.handNameText.setVisible(true);
       } else {
         this.handNameText.setVisible(false);
-      }
-    }
-    if (overlay.handLevel !== undefined) {
-      if (overlay.handLevel > 0) {
-        this.handLevelText.setText(`lvl.${overlay.handLevel}`);
-        this.handLevelText.setVisible(true);
-      } else {
-        this.handLevelText.setVisible(false);
       }
     }
     if (overlay.milesBaseSave !== undefined) {
@@ -704,14 +686,6 @@ export class Sidebar extends GameObjects.Container {
         this.handNameText.setVisible(true);
       } else {
         this.handNameText.setVisible(false);
-      }
-    }
-    if (data.handLevel !== undefined) {
-      if (data.handLevel > 0) {
-        this.handLevelText.setText(`lvl.${data.handLevel}`);
-        this.handLevelText.setVisible(true);
-      } else {
-        this.handLevelText.setVisible(false);
       }
     }
     if (data.daysRemaining !== undefined) {
@@ -888,7 +862,6 @@ export class Sidebar extends GameObjects.Container {
   /** Clear hand display */
   clearHandDisplay(): void {
     this.handNameText.setVisible(false);
-    this.handLevelText.setVisible(false);
   }
 
   /** Get world position of the miles (blue) pill center */

@@ -314,6 +314,7 @@ function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
     storyVictoryPending: data.storyVictoryPending ?? false,
     bossAssignmentIds: [...data.bossAssignmentIds],
     nextDieId: data.nextDieId,
+    roundBackgroundIndex: null,
   };
 }
 

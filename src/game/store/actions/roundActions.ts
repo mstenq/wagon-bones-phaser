@@ -43,6 +43,7 @@ import {
 } from '../../BossEffectsSystem';
 import { generateRandomEquipment } from '../../ItemsSystem';
 import { acquireRewardEquipmentInstance } from '../../EquipmentModifiers';
+import { pickGameRoundBackgroundIndex } from '../../roundBackgrounds';
 import { getRunState, runActions } from '../runStore';
 import { getRoundState, roundStore, createInitialRoundState, patchRoundStore } from '../roundStore';
 import type { RoundRuntimeState, RoundSidebarOverlay } from '../types';
@@ -247,6 +248,7 @@ export const roundActions = {
       trailRoundEffects: trailRoundEffectsFromModifiers(trailMods),
       trailEventModifiers: createEmptyModifiers(),
       bossEffectDisabled: false,
+      roundBackgroundIndex: pickGameRoundBackgroundIndex(),
     });
 
     applyBossOnDayStart(1);

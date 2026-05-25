@@ -59,6 +59,8 @@ import {
 } from '../../game/DiceSelectionSystem';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
+import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
+import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
 import { processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
@@ -117,6 +119,9 @@ export class GameScene extends Scene {
   // Animation lock
   private animating: boolean = false;
 
+  /** Lazy-loaded round background texture key; cleared in init for each scene visit */
+  private roundBackgroundKey: string | null = null;
+
   /** Ambient fire sounds from equipment destruction — stopped on scene shutdown */
   private activeEquipDestroySounds: Phaser.Sound.BaseSound[] = [];
 
@@ -162,6 +167,7 @@ export class GameScene extends Scene {
   init(_data: Record<string, unknown> = {}) {
     // Round state lives in roundStore (hydrated by applySaveSnapshot or cleared between rounds).
     this.roundSessionActive = false;
+    this.roundBackgroundKey = null;
   }
 
   /** Legacy die-object snapshot of active round (use patchRound for writes). */
@@ -239,9 +245,6 @@ export class GameScene extends Scene {
     this.buildLayout(false);
 
     sceneActions.enterScene('Game');
-    this.consumeRoundStartUiEffects();
-
-    this.flashLeasedBadgeReminders();
   }
 
   /** Subtle leased-badge pulse at round start as an upkeep reminder. */
@@ -255,9 +258,24 @@ export class GameScene extends Scene {
   }
 
   private buildLayout(isRelayout: boolean = false): void {
+    if (isRelayout && this.roundBackgroundKey !== null) {
+      this.finishBuildLayout(isRelayout, this.roundBackgroundKey);
+      return;
+    }
+
+    const index = getRunRoundBackgroundIndex(getRunState());
+
+    ensureGameRoundBackgroundLoaded(this, index, (textureKey) => {
+      const bgKey = this.textures.exists(textureKey) ? textureKey : null;
+      this.roundBackgroundKey = bgKey;
+      this.finishBuildLayout(isRelayout, bgKey);
+    });
+  }
+
+  private finishBuildLayout(isRelayout: boolean, bgKey: string | null): void {
     const { height } = this.scale;
 
-    const layout = createLayout(this, { bgKey: 'bg_1' });
+    const layout = createLayout(this, { bgKey });
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
@@ -344,6 +362,11 @@ export class GameScene extends Scene {
 
     // Re-enter current phase
     this.enterCurrentPhase(isRelayout);
+
+    if (!isRelayout) {
+      this.consumeRoundStartUiEffects();
+      this.flashLeasedBadgeReminders();
+    }
 
     EventBus.emit(Events.SCENE_READY, this);
   }

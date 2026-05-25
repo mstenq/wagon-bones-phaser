@@ -3,8 +3,11 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { resetPlayerState } from '../../__tests__/testRunPlayer';
 import { setupGame, diceWithValue } from '../testHelpers';
 import { D } from '../../scoreMath';
-import { roundActions, roundStore, selectHandDice, selectRolledDice, selectRoundPhase } from '../../store';
+import { getRunRoundBackgroundIndex } from '../../roundBackgrounds';
+import { roundActions, roundStore, getRunState, selectHandDice, selectRolledDice, selectRoundPhase } from '../../store';
+import { deserializeRunState, serializeRunState } from '../../store/serialization';
 import { setupActions } from '../../store/actions';
+import { GAMEPLAY } from '../../Constants';
 
 describe('round store actions', () => {
   afterEach(() => {
@@ -103,5 +106,19 @@ describe('round store actions', () => {
     const result = roundActions.endDay();
     expect(result.outcome).toBe('won');
     expect(selectRoundPhase()).toBe('ROUND_END');
+  });
+
+  test('startRound assigns round background index persisted across save round-trip', () => {
+    setupGame({ dice: diceWithValue(6, 8) });
+    roundActions.startRound();
+
+    const index = getRunState().roundBackgroundIndex;
+    expect(index).not.toBeNull();
+    expect(index).toBeGreaterThanOrEqual(1);
+    expect(index).toBeLessThanOrEqual(GAMEPLAY.ROUND_BACKGROUND_COUNT);
+    expect(getRunRoundBackgroundIndex(getRunState())).toBe(index);
+
+    const restored = deserializeRunState(serializeRunState(getRunState()));
+    expect(getRunRoundBackgroundIndex(restored)).toBe(index);
   });
 });

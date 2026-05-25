@@ -101,6 +101,8 @@ export interface RunState {
   shopRerollCount: number;
   leg: number;
   round: number;
+  /** Numbered background (1..ROUND_BACKGROUND_COUNT) for the current round; set at round start */
+  roundBackgroundIndex: number | null;
   interestCap: number;
   handStats: Record<HandType, HandStats>;
   professionId: string | null;
