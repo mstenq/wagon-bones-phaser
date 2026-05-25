@@ -146,10 +146,14 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'ADD_MULT',
     effectParams: { value: 4, professionOverrides: { developer: { value: 200 } } },
-    display: (_game, _player) => ({
-      hint: [[mult('+4')]],
-      tooltip: [[mult('+4'), text('mult')]],
-    }),
+    display: (_game, player) => {
+      const equip = findOwnedEquip(player, 'horseshoe');
+      const value = resolveEffectParam<number>(equip?.def?.effectParams ?? { value: 4 }, 'value', player.professionId);
+      return {
+        hint: [[mult(`+${value}`)]],
+        tooltip: [[mult(`+${value}`), text('mult')]],
+      };
+    },
   },
   {
     id: 'wedding_ring',
@@ -1409,14 +1413,8 @@ const items: ItemDef[] = [
       return {
         hint,
         tooltip: [
-          [
-            text('Gain '),
-            mult('x0.1'),
-            text('mult for every trail guide used.')],[
-            text('Caleb Winters (Scout) gains '),
-            mult('x0.2'),
-            text('mult for every trail guide used.'),
-          ],
+          [text('Gain '), mult('x0.1'), text('mult for every trail guide used.')],
+          [text('Caleb Winters (Scout) gains '), mult('x0.2'), text('mult for every trail guide used.')],
         ],
       };
     },

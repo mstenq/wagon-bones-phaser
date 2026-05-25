@@ -227,7 +227,7 @@ const professions: ProfessionDef[] = [
     specialEquipment: {
       id: 'emergency_supplies',
       name: 'Emergency Supplies',
-      effect: 'Free supply card when playing a hand at $8 or less',
+      effect: 'Free supply card when playing a hand at $8 or less (normally $4 or less)',
     },
   },
   {
@@ -240,7 +240,7 @@ const professions: ProfessionDef[] = [
     specialEquipment: {
       id: 'card_counter',
       name: 'Card Counter',
-      effect: '+4 mult when hand contains two pair',
+      effect: '+4 mult when hand contains two pair (normally +2 mult)',
     },
   },
   {

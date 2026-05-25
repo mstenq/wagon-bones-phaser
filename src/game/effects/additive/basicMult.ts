@@ -3,9 +3,14 @@
 import { effectRegistry } from '../registry';
 import { rngInt } from '../../RunRng';
 import { addScore } from '../../scoreMath';
+import { resolveEffectParam } from '../helpers';
 
 effectRegistry.registerAdditive('ADD_MULT', (ctx, equip, index) => {
-  const value = (equip.def.effectParams as Record<string, unknown>).value as number;
+  const value = resolveEffectParam<number>(
+    equip.def.effectParams as Record<string, unknown>,
+    'value',
+    ctx.professionId,
+  );
   ctx.bonusMult = addScore(ctx.bonusMult, value);
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value });
   console.log(`  [equip] ${equip.def.name}: ADD_MULT +${value} (bonusMult: ${ctx.bonusMult})`);
