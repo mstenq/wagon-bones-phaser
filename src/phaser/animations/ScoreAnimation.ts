@@ -28,6 +28,7 @@ const POPUP_SUPPLY_COLOR = '#9c27b0';
 const POPUP_ENHANCE_COLOR = '#55ddff';
 const POPUP_CRACK_COLOR = '#cfe4ff';
 const POPUP_BALANCE_COLOR = '#e8c547';
+const POPUP_AGAIN_COLOR = '#ffffff';
 
 const ENHANCEMENT_NAMES = new Map(diceEnhancements.map((e) => [e.id, e.name]));
 
@@ -180,6 +181,8 @@ function popupForEquip(
     floatingText(scene, wx, wy, `+$${value}`, POPUP_MONEY_COLOR, 'down');
   } else if (type === 'supply') {
     floatingText(scene, wx, wy, `+Supply Card`, POPUP_SUPPLY_COLOR, 'down');
+  } else if (type === 'again') {
+    floatingText(scene, wx, wy, 'Again!', POPUP_AGAIN_COLOR, 'down');
   }
 }
 
@@ -208,6 +211,59 @@ function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, equipIndex: numbe
     onComplete: () => {
       card.x = origX;
     },
+  });
+}
+
+/** Aggressive shake for retrigger "Again!" — position, rotation, and scale punch. */
+function shakeEquipCardAgain(scene: Scene, equipBar: EquipmentBar, equipIndex: number): void {
+  const card = equipBar.getCardByEquipIndex(equipIndex);
+  if (!card) return;
+
+  scene.tweens.killTweensOf(card);
+
+  const origX = card.x;
+  const origY = card.y;
+  const origAngle = card.angle;
+  const origScaleX = card.scaleX;
+  const origScaleY = card.scaleY;
+
+  const stepMs = 36;
+  const jitterSteps = 4;
+  const posIntensity = 2;
+  const rotIntensity = 10;
+
+  let step = 0;
+  scene.time.addEvent({
+    delay: stepMs,
+    repeat: jitterSteps - 1,
+    callback: () => {
+      step++;
+      if (step % 2 === 1) {
+        card.x = origX + (Math.random() > 0.5 ? posIntensity : -posIntensity);
+        card.y = origY + (Math.random() > 0.5 ? 6 : -6);
+        card.angle = origAngle + (Math.random() * rotIntensity * 2 - rotIntensity);
+      } else {
+        card.x = origX;
+        card.y = origY;
+        card.angle = origAngle;
+      }
+    },
+  });
+
+  scene.time.delayedCall(stepMs * jitterSteps, () => {
+    card.setPosition(origX, origY);
+    card.angle = origAngle;
+    scene.tweens.add({
+      targets: card,
+      scaleX: origScaleX * 1.14,
+      scaleY: origScaleY * 1.14,
+      duration: 100,
+      yoyo: true,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        card.setScale(origScaleX, origScaleY);
+      },
+    });
   });
 }
 
@@ -267,6 +323,8 @@ function getSoundForType(type: string, stepIdx: number): { key: string; config: 
       return { key: 'sfx_glass1', config: { volume: 0.6, detune: stepIdx * 20 } };
     case 'balance':
       return { key: 'sfx_multhit1', config: { volume: 0.45, detune: -50 } };
+    case 'again':
+      return { key: 'sfx_multhit2', config: { volume: 0.35, detune: 120 } };
     default: // miles
       return { key: 'sfx_chips2', config: { volume: 0.3, detune: stepIdx * 80 } };
   }
@@ -466,6 +524,18 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         } else {
           done();
         }
+        return;
+      }
+
+      // Retrigger equipment: "Again!" on the causing card (no sidebar update)
+      if (popupType === 'again') {
+        if (target.kind === 'equip') {
+          shakeEquipCardAgain(scene, equipBar, target.equipIndex);
+          popupForEquip(scene, equipBar, target.equipIndex, 'again', value);
+        }
+        const sfx = getSoundForType('again', stepIdx);
+        scene.sound.play(sfx.key, sfx.config);
+        scene.time.delayedCall(450, done);
         return;
       }
 

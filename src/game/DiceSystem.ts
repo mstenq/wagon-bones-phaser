@@ -17,6 +17,7 @@ import { GAMEPLAY } from './Constants';
 import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './equipmentUtils';
 import { getEnhancementScoreDestroyChance } from '../data/dice_enhancements';
 import { dieMatchesPip, hasStackedDeck } from './effects/helpers';
+import { buildScoredRetriggerSources, pushRetriggerAgainEvent } from './effects/retriggerAnim';
 import { multiplyScore, addScore, D, ZERO, ONE } from './scoreMath';
 import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { createEmptyScoringMutations, applyDiceEnhancementMutations } from './effects/applyMutations';
@@ -491,7 +492,17 @@ export function scoreHand(
       }
       triggers += globalRetriggerCount;
     }
+    const retriggerSources = bossDisabled
+      ? []
+      : buildScoredRetriggerSources(die, equipment, {
+          firstDieId,
+          lastDieId,
+          scoreContext,
+          stackedDeck,
+          isEnhanced: scoringEnhancement(die) !== null,
+        });
     for (let t = 0; t < triggers; t++) {
+      pushRetriggerAgainEvent(animEvents, die, t, retriggerSources);
       const triggerLabel = t > 0 ? ' (retrigger)' : '';
 
       // Save ctx values before this trigger (for delta calculation)

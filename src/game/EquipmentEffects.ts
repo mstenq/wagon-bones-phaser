@@ -8,6 +8,11 @@ import { getRunState } from './store/runStore';
 import { selectProfession } from './store/selectors/runSelectors';
 import { GAMEPLAY } from './Constants';
 import { resolveCopyTarget } from './equipmentUtils';
+import {
+  buildHeldRetriggerSources,
+  heldDieHasRetriggerableEffects,
+  pushRetriggerAgainEvent,
+} from './effects/retriggerAnim';
 import { effectRegistry, type ScoringPipelineContext } from './effects';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import type { ScoringMutations } from './effects/types';
@@ -181,6 +186,7 @@ export function processHeldInHand(
   const animEvents: ScoreAnimEvent[] = [];
 
   const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
+  const heldRetriggerSources = buildHeldRetriggerSources(equipment);
 
   const heldCtx: ScoringPipelineContext = {
     handResult: {
@@ -219,6 +225,9 @@ export function processHeldInHand(
     const triggers = getHeldDieTriggerCount(die, doubleDownCount);
 
     for (let t = 0; t < triggers; t++) {
+      if (t > 0 && heldDieHasRetriggerableEffects(die, heldDice, equipment, scoredHandType)) {
+        pushRetriggerAgainEvent(animEvents, die, t, heldRetriggerSources);
+      }
       const triggerLabel = t === 0 ? '' : ` (retrigger ${t})`;
 
       // Steel enhancement: x1.5 mult per trigger
@@ -282,6 +291,7 @@ export function processGoldHeldAtRoundEnd(
   equipment: EquipmentInstance[],
 ): { moneyEarned: number; animEvents: ScoreAnimEvent[] } {
   const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
+  const heldRetriggerSources = buildHeldRetriggerSources(equipment);
   const animEvents: ScoreAnimEvent[] = [];
   let moneyEarned = 0;
   const perTrigger = GAMEPLAY.GOLD_DICE_HELD_MONEY;
@@ -290,6 +300,7 @@ export function processGoldHeldAtRoundEnd(
     if (die.enhancement !== 'gold') continue;
     const triggers = getHeldDieTriggerCount(die, doubleDownCount);
     for (let t = 0; t < triggers; t++) {
+      pushRetriggerAgainEvent(animEvents, die, t, heldRetriggerSources);
       moneyEarned += perTrigger;
       animEvents.push({
         target: { kind: 'die', dieId: die.id },

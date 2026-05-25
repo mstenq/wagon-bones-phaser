@@ -70,7 +70,8 @@ export type ScoreAnimPopupType =
   | 'strip'
   | 'enhance'
   | 'crack'
-  | 'balance';
+  | 'balance'
+  | 'again';
 
 export interface ScoreAnimEvent {
   /** Target to animate (die, equip card, or both) */

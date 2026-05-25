@@ -1,7 +1,20 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { die, diceFromValues, item, itemWithState, calculateTestScore, resetDieIds } from './testHelpers';
+import {
+  die,
+  diceFromValues,
+  diceWithValue,
+  item,
+  itemWithState,
+  calculateTestScore,
+  resetDieIds,
+} from './testHelpers';
 import type { ScoreAnimEvent } from '../types';
+
+/** Per-die miles popup sequence (excludes again/equip-only events). */
+function milesDieIds(events: ScoreAnimEvent[]): string[] {
+  return events.filter((e) => e.popupType === 'miles' && e.dieId).map((e) => e.dieId!);
+}
 
 function findLastAnimIndex(events: ScoreAnimEvent[], pred: (event: ScoreAnimEvent) => boolean): number {
   for (let i = events.length - 1; i >= 0; i--) {
@@ -54,7 +67,7 @@ describe('animEvents order: retriggers (red_bullet)', () => {
     const dice = [die({ value: 6 }), die({ value: 6, sticker: 'red_bullet' })];
     const { result } = calculateTestScore({ scoredDice: dice });
 
-    const dieIds = result.animEvents.map((e) => e.dieId);
+    const dieIds = milesDieIds(result.animEvents);
     // die0 once, die1 twice (retrigger)
     expect(dieIds).toEqual([dice[0].id, dice[1].id, dice[1].id]);
   });
@@ -74,6 +87,72 @@ describe('animEvents order: retriggers (red_bullet)', () => {
   });
 });
 
+describe('animEvents: again popup on retrigger equipment', () => {
+  test('War Drums emits again on war_drums slot before second trigger', () => {
+    const dice = [die({ value: 5 }), die({ value: 5 })];
+    const warDrums = item('war_drums');
+    const { result } = calculateTestScore({ scoredDice: dice, equipment: [warDrums] });
+
+    const againEvents = result.animEvents.filter((e) => e.popupType === 'again');
+    expect(againEvents).toHaveLength(2);
+    expect(againEvents[0]).toEqual(
+      expect.objectContaining({
+        popupType: 'again',
+        target: { kind: 'equip', equipIndex: 0 },
+        dieId: dice[0].id,
+      }),
+    );
+    expect(againEvents[1].dieId).toBe(dice[1].id);
+
+    const firstAgainIdx = result.animEvents.findIndex((e) => e.popupType === 'again');
+    const secondMilesForDie0 = result.animEvents.findIndex(
+      (e, i) => i > firstAgainIdx && e.dieId === dice[0].id && e.popupType === 'miles',
+    );
+    expect(secondMilesForDie0).toBeGreaterThan(firstAgainIdx);
+  });
+
+  test('One-Eyed Jack emits again only on matching pip dice', () => {
+    const dice = diceWithValue(1, 2);
+    const jack = item('one_eyed_jack');
+    const { result } = calculateTestScore({ scoredDice: dice, equipment: [jack] });
+
+    const againEvents = result.animEvents.filter((e) => e.popupType === 'again');
+    expect(againEvents).toHaveLength(2);
+    expect(againEvents.every((e) => e.dieId === dice[0].id || e.dieId === dice[1].id)).toBe(true);
+  });
+
+  test('Silver Bullets held retrigger emits again on equipment', () => {
+    const scoredDice = [die({ value: 6 })];
+    const heldDice = [die({ value: 4, enhancement: 'steel' })];
+    const { result } = calculateTestScore({
+      scoredDice,
+      heldDice,
+      equipment: [item('silver_bullets')],
+    });
+
+    const againEvents = result.animEvents.filter((e) => e.popupType === 'again');
+    expect(againEvents.length).toBeGreaterThanOrEqual(1);
+    expect(againEvents[0]).toEqual(
+      expect.objectContaining({
+        popupType: 'again',
+        target: { kind: 'equip', equipIndex: 0 },
+      }),
+    );
+  });
+
+  test('Silver Bullets does not emit again for held dice with no held effects', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const heldDice = [die({ value: 3 }), die({ value: 7 })];
+    const { result } = calculateTestScore({
+      scoredDice,
+      heldDice,
+      equipment: [item('silver_bullets')],
+    });
+
+    expect(result.animEvents.filter((e) => e.popupType === 'again')).toHaveLength(0);
+  });
+});
+
 describe('animEvents order: War Drums retrigger', () => {
   test('War Drums retriggers each die consecutively (1,1,2,2 not 1,2,1,2)', () => {
     // Five straight so all 5 dice score
@@ -85,7 +164,7 @@ describe('animEvents order: War Drums retrigger', () => {
       equipment: [warDrums],
     });
 
-    const dieIds = result.animEvents.map((e) => e.dieId);
+    const dieIds = milesDieIds(result.animEvents);
     // Each die triggers twice consecutively
     expect(dieIds).toEqual([
       dice[0].id,
@@ -111,7 +190,7 @@ describe('animEvents order: War Drums retrigger', () => {
       equipment: [warDrums],
     });
 
-    const dieIds = result.animEvents.map((e) => e.dieId);
+    const dieIds = milesDieIds(result.animEvents);
     // die0: 3 triggers (base + red_bullet + war_drums), die1: 2 triggers (base + war_drums)
     expect(dieIds).toEqual([dice[0].id, dice[0].id, dice[0].id, dice[1].id, dice[1].id]);
   });
@@ -125,7 +204,7 @@ describe('animEvents order: War Drums retrigger', () => {
       equipment: [warDrums],
     });
 
-    const dieIds = result.animEvents.map((e) => e.dieId);
+    const dieIds = milesDieIds(result.animEvents);
     // No retrigger — each die fires once
     expect(dieIds).toEqual([dice[0].id, dice[1].id]);
   });
@@ -142,7 +221,7 @@ describe('animEvents order: PIP_RETRIGGER (One-Eyed Jack)', () => {
       equipment: [jack],
     });
 
-    const dieIds = result.animEvents.map((e) => e.dieId);
+    const dieIds = milesDieIds(result.animEvents);
     // die0 (value 1): 2 triggers, die1 (value 5): 1 trigger, die2 (value 1): 2 triggers, die3 (value 5): 1 trigger
     expect(dieIds[0]).toBe(dice[0].id);
     expect(dieIds[1]).toBe(dice[0].id); // retrigger

@@ -347,7 +347,10 @@ describe('gold dice held at round end', () => {
   test('silver bullets retriggers gold payout', () => {
     const result = processGoldHeldAtRoundEnd([die({ value: 4, enhancement: 'gold' })], [item('silver_bullets')]);
     expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 2);
-    expect(result.animEvents).toHaveLength(2);
+    expect(result.animEvents.filter((e) => e.popupType === 'money')).toHaveLength(2);
+    expect(result.animEvents).toContainEqual(
+      expect.objectContaining({ popupType: 'again', target: { kind: 'equip', equipIndex: 0 } }),
+    );
   });
 
   test('stacks red_bullet and silver bullets on one gold die', () => {
@@ -356,6 +359,7 @@ describe('gold dice held at round end', () => {
       [item('silver_bullets')],
     );
     expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 3);
-    expect(result.animEvents).toHaveLength(3);
+    expect(result.animEvents.filter((e) => e.popupType === 'money')).toHaveLength(3);
+    expect(result.animEvents.filter((e) => e.popupType === 'again')).toHaveLength(1);
   });
 });
