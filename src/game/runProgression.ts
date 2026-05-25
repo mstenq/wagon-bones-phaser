@@ -10,7 +10,7 @@ import type { RunState } from './store/types';
 import { resolveEquipmentList } from './store/resolve';
 import { selectProfession, selectRoundReward } from './store/selectors/runSelectors';
 import { forEachEquipmentResolved } from './effects/helpers';
-import { resolveEffectParam } from './effectParams';
+import { resolveEffectParam, savingsAccountEligibleBalance } from './effectParams';
 
 /** Target miles for a leg/round (difficulty scaling, permit shortcuts, round multiplier). */
 export function computeTargetMiles(
@@ -53,6 +53,9 @@ export function computePayoutBreakdown(
   const perRemaining = ((profession?.modifiers as Record<string, unknown>)?.endOfRoundBonusPerRemaining as number) ?? 0;
 
   let interest = 0;
+  let savingsAccountInterest = 0;
+  let savingsAccountRate = 0;
+  let savingsAccountChunk = GAMEPLAY.INTEREST_PER;
   if (!noInterest) {
     const cappedMoney = Math.min(state.balance, state.interestCap);
     interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
@@ -64,8 +67,10 @@ export function computePayoutBreakdown(
         const p = equip.def.effectParams as Record<string, unknown>;
         const chunk = (p.perChunk as number) ?? 5;
         const perChunk = (p.value as number) ?? 1;
-        const accountantBonus = profession?.id === 'accountant' ? ((p.accountantBonus as number) ?? 1) : 0;
-        interest += Math.floor(cappedMoney / chunk) * (perChunk + accountantBonus);
+        const eligible = savingsAccountEligibleBalance(state.balance, state.interestCap, p, profession?.id);
+        savingsAccountInterest += Math.floor(eligible / chunk) * perChunk;
+        savingsAccountRate = perChunk;
+        savingsAccountChunk = chunk;
       },
       'skip',
     );
@@ -101,8 +106,11 @@ export function computePayoutBreakdown(
     roundReward,
     dayBonus,
     interest,
+    savingsAccountInterest,
+    savingsAccountRate,
+    savingsAccountChunk,
     equipmentMoney,
     rerollBonus,
-    total: roundReward + dayBonus + interest + equipmentMoney + rerollBonus,
+    total: roundReward + dayBonus + interest + savingsAccountInterest + equipmentMoney + rerollBonus,
   };
 }

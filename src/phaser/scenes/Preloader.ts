@@ -112,6 +112,7 @@ export class Preloader extends Scene {
     for (const modifier of ['cursed', 'perishable', 'leased'] as const) {
       this.load.image(`modifier_${modifier}`, `assets/equipment-modifiers/${modifier}.png`);
     }
+    this.load.image('modifier_special', 'assets/equipment-modifiers/special.png');
 
     // Load sound effects
     this.load.audio('sfx_button', 'assets/sounds/button.ogg');

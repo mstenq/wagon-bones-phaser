@@ -1106,16 +1106,22 @@ describe('SAVINGS_ACCOUNT_INTEREST: Savings Account', () => {
   test('adds extra interest per $5 held', () => {
     const { player } = setupGame({ equipment: [item('savings_account')], money: 25 });
     const payout = player.calculatePayout(0, 0);
-    // base interest $5 + savings $5 = $10
-    expect(payout.interest).toBe(10);
+    expect(payout.interest).toBe(5);
+    expect(payout.savingsAccountInterest).toBe(5);
+    expect(payout.total).toBeGreaterThanOrEqual(10);
   });
 
-  test('accountant earns double savings bonus', () => {
-    const { player } = setupGame({ equipment: [item('savings_account')], money: 25 });
+  test('accountant savings bonus ignores interest cap', () => {
+    const { player } = setupGame({ equipment: [item('savings_account')], money: 50 });
+    const capped = player.calculatePayout(0, 0);
+    expect(capped.interest).toBe(5);
+    expect(capped.savingsAccountInterest).toBe(5);
+
     player.applyProfession('accountant');
-    const payout = player.calculatePayout(0, 0);
-    // base $5 + savings ($5 + $5 accountant) = $15
-    expect(payout.interest).toBe(15);
+    const accountant = player.calculatePayout(0, 0);
+    expect(accountant.interest).toBe(5);
+    expect(accountant.savingsAccountInterest).toBe(10);
+    expect(accountant.savingsAccountRate).toBe(1);
   });
 });
 

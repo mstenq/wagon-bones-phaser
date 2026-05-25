@@ -50,7 +50,7 @@ export interface ItemDisplayResult {
 import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
 import { HandType, type EquipmentModifier } from '../game/types';
 import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/equipmentUtils';
-import { resolveEffectParam, resolveChance } from '../game/effectParams';
+import { resolveEffectParam, resolveChance, savingsAccountEligibleBalance } from '../game/effectParams';
 import {
   unlockAnyEnhanced,
   unlockByEnhancement,
@@ -145,7 +145,7 @@ const items: ItemDef[] = [
     cost: 2,
     rarity: 'common',
     effectType: 'ADD_MULT',
-    effectParams: { value: 4 },
+    effectParams: { value: 4, professionOverrides: { developer: { value: 200 } } },
     display: (_game, _player) => ({
       hint: [[mult('+4')]],
       tooltip: [[mult('+4'), text('mult')]],
@@ -1313,12 +1313,8 @@ const items: ItemDef[] = [
       return {
         hint,
         tooltip: [
-          [
-            odds('1 in 2'),
-            text(' chance to give '),
-            money('$2'),
-            text(' when an enhanced die scores. Davis Holler (Prospector) has a guaranteed chance.'),
-          ],
+          [odds('1 in 2'), text('chance to give'), money('$2'), text('when an enhanced die scores.')],
+          [text('Davis Holler (Prospector) has a guaranteed chance.')],
         ],
       };
     },
@@ -1416,9 +1412,10 @@ const items: ItemDef[] = [
           [
             text('Gain '),
             mult('x0.1'),
-            text(' mult for every trail guide used. Caleb Winters (Scout) gains '),
+            text('mult for every trail guide used.')],[
+            text('Caleb Winters (Scout) gains '),
             mult('x0.2'),
-            text(' mult for every trail guide used.'),
+            text('mult for every trail guide used.'),
           ],
         ],
       };
@@ -2691,15 +2688,17 @@ const items: ItemDef[] = [
     cost: 5,
     rarity: 'uncommon',
     effectType: 'SAVINGS_ACCOUNT_INTEREST',
-    effectParams: { perChunk: 5, value: 1, accountantBonus: 1 },
+    effectParams: { perChunk: 5, value: 1, professionOverrides: { accountant: { ignoreInterestCap: true } } },
     display: (_game, player) => {
-      const perChunk = Math.floor(Math.min(player.balance, player.interestCap) / 5);
-      const isAccountant = player.professionId === 'accountant';
-      const perDollar = isAccountant ? 2 : 1;
+      const p = { perChunk: 5, value: 1, professionOverrides: { accountant: { ignoreInterestCap: true } } };
+      const chunkSize = (p.perChunk as number) ?? 5;
+      const perDollar = (p.value as number) ?? 1;
+      const eligible = savingsAccountEligibleBalance(player.balance, player.interestCap, p, player.professionId);
+      const chunks = Math.floor(eligible / chunkSize);
       const hint =
-        perChunk > 0
-          ? [[money(`+$${perChunk * perDollar}`), condition('extra interest')]]
-          : [[money('+$1'), condition('per $5 held')]];
+        chunks > 0
+          ? [[money(`+$${chunks * perDollar}`), condition('extra interest')]]
+          : [[money(`+$${perDollar}`), condition(`per $${chunkSize} held`)]];
       return {
         hint,
         tooltip: [
@@ -2708,11 +2707,9 @@ const items: ItemDef[] = [
             money('$1'),
             text(' of interest for every '),
             money('$5'),
-            text(' you have at end of round. Henry Pritchard (Accountant) earns an additional '),
-            money('$1'),
-            text(' for every '),
-            money('$5'),
-            text('.'),
+            text(
+              ' you have at end of round. Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped).',
+            ),
           ],
         ],
       };
@@ -2746,14 +2743,17 @@ const items: ItemDef[] = [
     effectType: 'CONSECUTIVE_PIP_XMULT',
     effectParams: { pip: 8, increment: 0.5 },
     display: (_game, _player) => ({
-      hint: [[mult('x1→x3+'), condition('consecutive 8s')]],
+      hint: [[mult('x1→x3+')], [condition('consecutive 8s', 'sm')]],
       tooltip: [
         [
           text('Each consecutive scored '),
           condition('8'),
           text(' gains '),
           mult('+0.5'),
-          text(' xMult over the previous ('),
+          text(' xMult over the previous'),
+        ],
+        [
+          text('('),
           mult('x1'),
           text(', '),
           mult('x1.5'),

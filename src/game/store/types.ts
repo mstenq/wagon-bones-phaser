@@ -29,7 +29,14 @@ export type ActiveSceneKey = 'none' | 'Game' | 'Shop' | 'BoosterPack' | 'TrailEv
 export interface PayoutBreakdown {
   roundReward: number;
   dayBonus: number;
+  /** Base interest ($1 per $5 held, capped by interestCap). */
   interest: number;
+  /** Extra interest from Savings Account (and profession override rate). */
+  savingsAccountInterest: number;
+  /** Dollars earned per chunk when savingsAccountInterest > 0 (for payout UI label). */
+  savingsAccountRate: number;
+  /** Chunk size in dollars when savingsAccountInterest > 0 (for payout UI label). */
+  savingsAccountChunk: number;
   equipmentMoney: number;
   rerollBonus: number;
   total: number;

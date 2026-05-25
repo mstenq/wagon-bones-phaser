@@ -389,7 +389,7 @@ export class ProfessionSelectScene extends Scene {
 
     if (prof.specialEquipment) {
       const equipName = this.add
-        .text(centerX, y, `Special Equipment: ${prof.specialEquipment.name}`, {
+        .text(centerX, y, `Equipment Synergy: ${prof.specialEquipment.name}`, {
           fontFamily: FONTS.HEADING,
           fontSize: '14px',
           color: TEXT_COLORS.GOLD,

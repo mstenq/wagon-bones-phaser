@@ -202,13 +202,19 @@ export class PayoutScene extends Scene {
     if (!noInterest) {
       if (payout.interest > 0) {
         rows.push({
-          label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${run.interestCap / 5} max)`,
+          label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER}, $${run.interestCap / GAMEPLAY.INTEREST_PER} max)`,
           amount: `$${payout.interest}`,
         });
-      } else {
+      } else if (payout.savingsAccountInterest === 0) {
         rows.push({
           label: `Interest ($1 per $${GAMEPLAY.INTEREST_PER})`,
           amount: '$0',
+        });
+      }
+      if (payout.savingsAccountInterest > 0) {
+        rows.push({
+          label: `Savings Account ($${payout.savingsAccountRate} per $${payout.savingsAccountChunk})`,
+          amount: `$${payout.savingsAccountInterest}`,
         });
       }
     }

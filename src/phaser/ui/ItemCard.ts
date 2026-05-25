@@ -10,7 +10,9 @@ import type { ItemAura, EquipmentInstance } from '../../game/ItemsSystem';
 import type { HintSegment, HintSize, ItemDisplayResult } from '../../game/ItemsSystem';
 import { isEquipmentCursed, isEquipmentLeased, isEquipmentPerishable } from '../../game/ItemsSystem';
 import { getModifierTooltipLines } from '../../game/EquipmentModifierDisplay';
-import { addModifierBadgeImage } from './ModifierAssets';
+import { addModifierBadgeImage, addProfessionSpecialBadgeImage } from './ModifierAssets';
+import { getRunState } from '../../game/store/runStore';
+import { selectIsProfessionSpecialEquipment } from '../../game/store/selectors/runSelectors';
 import type { EquipmentModifier } from '../../game/types';
 import type { CardTemplate } from '../../data/items';
 import { getItemDisplayContext, type ItemDisplayContext, type RoundHintContext } from '../../game/displayContext';
@@ -121,6 +123,7 @@ export class ItemCard extends GameObjects.Container {
   private _tabLiftAmount: number = 0;
   private _equipment: EquipmentInstance | null = null;
   private modifierBadgeContainers: GameObjects.Container[] = [];
+  private professionSpecialBadgeContainer: GameObjects.Container | null = null;
   private perishableBadgeContainer: GameObjects.Container | null = null;
   private leasedBadgeContainer: GameObjects.Container | null = null;
   private tooltipRound: RoundHintContext | null = null;
@@ -141,7 +144,7 @@ export class ItemCard extends GameObjects.Container {
 
     this.drawCard();
     this.addContent(scale);
-    this.renderModifierBadges();
+    this.renderEquipmentBadges();
     this.setupAuraVFX();
 
     // Sold overlay (hidden initially)
@@ -172,10 +175,10 @@ export class ItemCard extends GameObjects.Container {
     return this._equipment;
   }
 
-  /** Refresh modifier badges (e.g. after perishable countdown). */
+  /** Refresh modifier and profession-special badges (e.g. after perishable countdown). */
   updateModifierBadges(equipment?: EquipmentInstance): void {
     if (equipment) this._equipment = equipment;
-    this.renderModifierBadges();
+    this.renderEquipmentBadges();
   }
 
   /** Pulse the perishable badge red when one round remains. */
@@ -546,15 +549,22 @@ export class ItemCard extends GameObjects.Container {
 
   // ─── Modifier Badges ───
 
-  private clearModifierBadges(): void {
+  private clearEquipmentBadges(): void {
     for (const c of this.modifierBadgeContainers) c.destroy();
     this.modifierBadgeContainers = [];
+    this.professionSpecialBadgeContainer?.destroy();
+    this.professionSpecialBadgeContainer = null;
     this.perishableBadgeContainer = null;
     this.leasedBadgeContainer = null;
   }
 
+  private renderEquipmentBadges(): void {
+    this.clearEquipmentBadges();
+    this.renderModifierBadges();
+    this.renderProfessionSpecialBadge();
+  }
+
   private renderModifierBadges(): void {
-    this.clearModifierBadges();
     if (!this._equipment || this._equipment.modifiers.length === 0) return;
 
     const scale = this._options.cardScale ?? 1;
@@ -585,6 +595,25 @@ export class ItemCard extends GameObjects.Container {
       if (kind === 'perishable') this.perishableBadgeContainer = container;
       if (kind === 'leased') this.leasedBadgeContainer = container;
     }
+  }
+
+  private renderProfessionSpecialBadge(): void {
+    if (!selectIsProfessionSpecialEquipment(getRunState(), this._def.id)) return;
+
+    const scale = this._options.cardScale ?? 1;
+    const size = UI.MODIFIER_BADGE_SIZE * scale;
+    const offset = UI.MODIFIER_BADGE_OFFSET * scale;
+    const hw = this._cardW / 2;
+    const hh = this._cardH / 2;
+    const x = -hw + offset + size / 2;
+    const y = hh - offset - size / 2;
+
+    const container = this.scene.add.container(x, y);
+    addProfessionSpecialBadgeImage(this.scene, container, size);
+    container.setDepth(25);
+    this.add(container);
+    this.bringToTop(container);
+    this.professionSpecialBadgeContainer = container;
   }
 
   // ─── Hint Display ───
@@ -1181,7 +1210,7 @@ export class ItemCard extends GameObjects.Container {
   destroy(fromScene?: boolean): void {
     this.hideTooltip();
     this.hideActionTabs();
-    this.clearModifierBadges();
+    this.clearEquipmentBadges();
     for (const tw of this.auraTweens) tw.destroy();
     this.auraTweens = [];
     for (const em of this.auraEmitters) em.destroy();

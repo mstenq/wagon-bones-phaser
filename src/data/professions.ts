@@ -10,6 +10,7 @@ import type { DiceEnhancement } from '../game/types';
 export type ProfessionStartingEnhancement = Exclude<DiceEnhancement, null>;
 
 export interface ProfessionSpecialEquipment {
+  id: string;
   name: string;
   effect: string;
 }
@@ -56,8 +57,9 @@ const professions: ProfessionDef[] = [
     modifiers: { rerolls: 1 },
     startingDice: ['wooden', 'wooden', 'wooden', 'steel', 'steel'],
     specialEquipment: {
+      id: 'flour_sack',
       name: 'Flour Sack',
-      effect: 'Keeps +5 hand size with no decay each round',
+      effect: 'Keeps +5 hand size with no decay each round (normally decays by 1 each round)',
     },
   },
   {
@@ -68,8 +70,9 @@ const professions: ProfessionDef[] = [
     modifiers: { days: 1 },
     startingDice: ['wooden', 'wooden', 'steel', 'steel', 'stone'],
     specialEquipment: {
+      id: 'surveyors_transit',
       name: "Surveyor's Transit",
-      effect: '1 in 2 chance to upgrade trail knowledge of hand type played',
+      effect: '1 in 2 chance to upgrade trail knowledge of hand type played (normally 1 in 4 chance)',
     },
   },
   {
@@ -80,6 +83,7 @@ const professions: ProfessionDef[] = [
     modifiers: { startingMoney: 20 },
     startingDice: ['gold', 'gold', 'gold', 'diamond', 'diamond'],
     specialEquipment: {
+      id: 'bank_note',
       name: 'Bank Note',
       effect: 'Selling Bank Note wipes your debt clean',
     },
@@ -92,8 +96,9 @@ const professions: ProfessionDef[] = [
     modifiers: { noInterest: true, endOfRoundBonusPerRemaining: 1 },
     startingDice: ['loaded', 'loaded', 'steel', 'steel', 'bone'],
     specialEquipment: {
+      id: 'payday',
       name: 'Payday',
-      effect: 'Earn $12 at end of round',
+      effect: 'Earn $12 at end of round (normally $4)',
     },
   },
   {
@@ -104,8 +109,9 @@ const professions: ProfessionDef[] = [
     modifiers: { equipmentSlots: 1, days: -1 },
     startingDice: ['gold', 'diamond', 'lucky', 'steel', 'wooden'],
     specialEquipment: {
+      id: 'snake_eyes',
       name: 'Snake Eyes',
-      effect: '1 in 2 chance for a supply card when a 1 is scored',
+      effect: '1 in 2 chance for a supply card when a 1 is scored (normally 1 in 4 chance)',
     },
   },
   {
@@ -119,8 +125,9 @@ const professions: ProfessionDef[] = [
     },
     startingDice: ['bone', 'bone', 'wooden', 'wooden', 'stone'],
     specialEquipment: {
+      id: 'leftovers',
       name: 'Leftovers',
-      effect: 'Guaranteed supply card when opening a booster pack',
+      effect: 'Guaranteed supply card when opening a booster pack (normally 1 in 2 chance)',
     },
   },
   {
@@ -131,8 +138,9 @@ const professions: ProfessionDef[] = [
     modifiers: { startingVouchers: ['binoculars'], supplySlots: -1 },
     startingDice: ['wooden', 'steel', 'lucky', 'stone', 'bone'],
     specialEquipment: {
+      id: 'guide_lantern',
       name: 'Guide Lantern',
-      effect: 'Gain x0.2 mult for every trail guide used',
+      effect: 'Gain x0.2 mult for every trail guide used (normally x0.1 mult)',
     },
   },
   {
@@ -143,8 +151,9 @@ const professions: ProfessionDef[] = [
     modifiers: { frontierInShop: true, startingSupplyCards: ['priests_blessings'] },
     startingDice: ['steel', 'steel', 'steel', 'bone', 'bone'],
     specialEquipment: {
+      id: 'marked',
       name: 'Marked',
-      effect: '+2 mult per hand played without scoring a 6',
+      effect: '+2 mult per hand played without scoring a 6 (normally +1 mult)',
     },
   },
   {
@@ -157,8 +166,9 @@ const professions: ProfessionDef[] = [
     },
     startingDice: ['gold', 'gold', 'diamond', 'diamond', 'lucky'],
     specialEquipment: {
+      id: 'gold_pan',
       name: 'Gold Pan',
-      effect: 'Guaranteed $2 when an enhanced die scores',
+      effect: 'Guaranteed $2 when an enhanced die scores (normally 1 in 2 chance)',
     },
   },
   {
@@ -169,8 +179,9 @@ const professions: ProfessionDef[] = [
     modifiers: { handSize: 2, equipmentSlots: -1 },
     startingDice: ['lucky', 'lucky', 'lucky', 'loaded', 'loaded'],
     specialEquipment: {
+      id: 'lucky_number',
       name: 'Lucky Number',
-      effect: 'x2 mult when your lucky number scores',
+      effect: 'x2 mult when your lucky number scores (normally x1.5 mult)',
     },
   },
   {
@@ -181,8 +192,9 @@ const professions: ProfessionDef[] = [
     modifiers: { doubleTagOnBoss: true },
     startingDice: ['bone', 'bone', 'bone', 'steel', 'stone'],
     specialEquipment: {
+      id: 'wanted_poster',
       name: 'Wanted Poster',
-      effect: 'Earn $8 when the wanted hand is played',
+      effect: 'Earn $8 when the wanted hand is played (normally $4)',
     },
   },
   {
@@ -193,8 +205,9 @@ const professions: ProfessionDef[] = [
     modifiers: { balanceMilesAndMult: true, blindSizeMultiplier: 2 },
     startingDice: ['stone', 'stone', 'wooden', 'wooden', 'gold'],
     specialEquipment: {
+      id: 'savings_account',
       name: 'Savings Account',
-      effect: 'Earn an extra $1 of interest per $5 held',
+      effect: 'Savings Account bonus ignores the interest cap ($1 per $5 on full balance)',
     },
   },
   {
@@ -212,6 +225,7 @@ const professions: ProfessionDef[] = [
     },
     startingDice: ['steel', 'steel', 'stone', 'stone', 'bone'],
     specialEquipment: {
+      id: 'emergency_supplies',
       name: 'Emergency Supplies',
       effect: 'Free supply card when playing a hand at $8 or less',
     },
@@ -224,6 +238,7 @@ const professions: ProfessionDef[] = [
     modifiers: { rerolls: 2, handSize: -1 },
     startingDice: ['loaded', 'loaded', 'loaded', 'gold', 'diamond'],
     specialEquipment: {
+      id: 'card_counter',
       name: 'Card Counter',
       effect: '+4 mult when hand contains two pair',
     },
@@ -235,6 +250,11 @@ const professions: ProfessionDef[] = [
     description: 'Starts with $999. For testing purposes.',
     modifiers: { startingMoney: 99900 },
     startingDice: ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond', 'stone'],
+    specialEquipment: {
+      id: 'horseshoe',
+      name: 'Horseshoe',
+      effect: '+200 mult instead of +4 mult',
+    },
   },
 ];
 

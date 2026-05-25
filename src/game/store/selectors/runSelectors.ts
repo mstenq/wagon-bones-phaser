@@ -21,6 +21,12 @@ export function selectProfession(state: RunState) {
   return state.professionId ? getProfessionById(state.professionId) : null;
 }
 
+/** True when the item id is the active profession's signature special equipment. */
+export function selectIsProfessionSpecialEquipment(state: RunState, itemId: string): boolean {
+  const specialId = selectProfession(state)?.specialEquipment?.id;
+  return specialId !== undefined && specialId === itemId;
+}
+
 export function selectAvailableDice(state: RunState): Die[] {
   const spent = new Set(state.spentDiceIds);
   return state.dice.filter((d) => !spent.has(d.id));
