@@ -47,13 +47,18 @@ describe('GameplayPreferences', () => {
   });
 
   test('persists and restores preferences', () => {
-    setGameplayPreferences({ autoRollFirstHand: true });
+    setGameplayPreferences({ autoRollFirstHand: true, stationaryStickers: true });
 
     initGameplayPreferences();
-    expect(getGameplayPreferences()).toEqual({ autoRollFirstHand: true });
+    expect(getGameplayPreferences()).toEqual({ autoRollFirstHand: true, stationaryStickers: true });
 
     const raw = localStorage.getItem(GAMEPLAY.PREFERENCES_STORAGE_KEY);
     expect(raw).toContain('"autoRollFirstHand":true');
+    expect(raw).toContain('"stationaryStickers":true');
+  });
+
+  test('defaults stationaryStickers to orbiting (false)', () => {
+    expect(getGameplayPreferences().stationaryStickers).toBe(false);
   });
 
   test('audio and gameplay preferences coexist in storage', () => {

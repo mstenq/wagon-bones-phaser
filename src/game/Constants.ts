@@ -339,6 +339,10 @@ export const DICE = {
   FONT_SIZE_TWO_DIGIT: 26,
   STICKER_OFFSET: 12,
   STICKER_SIZE: 22,
+  /** Orbit radius for sticker “moon” around the die (px from center) */
+  STICKER_ORBIT_RADIUS: 45,
+  /** Full orbit period in ms */
+  STICKER_ORBIT_DURATION_MS: 9800,
   PIP_COLOR: 0x222222,
   SELECTED_STROKE: 0xffcc00,
   FORCED_STROKE: 0xff4444,

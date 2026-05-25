@@ -10,6 +10,7 @@ import {
   type GameplayPreferences,
 } from '../../game/GameplayPreferences';
 import { Button } from './Button';
+import { DiceSprite } from './DiceSprite';
 import { OptionsModal } from './OptionsModal';
 
 const CHECK_HIT = 32;
@@ -79,7 +80,7 @@ export class PreferencesSettingsModal extends GameObjects.Container {
     super(scene, 0, 0);
 
     const panelW = Math.min(width - 40, 420);
-    const panelH = 280;
+    const panelH = 360;
     const panelX = contentX + (width - panelW) / 2;
     const panelY = (height - panelH) / 2;
     const labelX = panelX + 32;
@@ -127,9 +128,35 @@ export class PreferencesSettingsModal extends GameObjects.Container {
     autoRollHint.setOrigin(0, 0);
     this.add(autoRollHint);
 
-    const checkbox = new ToggleCheckbox(scene, controlRight - CHECK_HIT / 2, rowY).setChecked(prefs.autoRollFirstHand);
-    checkbox.onChange((checked) => this.updatePref({ autoRollFirstHand: checked }));
-    this.add(checkbox);
+    const autoRollCheckbox = new ToggleCheckbox(scene, controlRight - CHECK_HIT / 2, rowY).setChecked(
+      prefs.autoRollFirstHand,
+    );
+    autoRollCheckbox.onChange((checked) => this.updatePref({ autoRollFirstHand: checked }));
+    this.add(autoRollCheckbox);
+
+    const stickerRowY = rowY + 72;
+    const stickerLabel = scene.add.text(labelX, stickerRowY, 'Stationary Dice Stickers', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '16px',
+      color: TEXT_COLORS.PRIMARY,
+    });
+    stickerLabel.setOrigin(0, 0.5);
+    this.add(stickerLabel);
+
+    const stickerHint = scene.add.text(labelX, stickerRowY + 22, 'Keep sticker icons fixed on the die instead of orbiting', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '13px',
+      color: TEXT_COLORS.MUTED,
+      wordWrap: { width: panelW - 100 },
+    });
+    stickerHint.setOrigin(0, 0);
+    this.add(stickerHint);
+
+    const stickerCheckbox = new ToggleCheckbox(scene, controlRight - CHECK_HIT / 2, stickerRowY).setChecked(
+      prefs.stationaryStickers,
+    );
+    stickerCheckbox.onChange((checked) => this.updatePref({ stationaryStickers: checked }));
+    this.add(stickerCheckbox);
 
     const backBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 36, 'Back', 120, 34);
     backBtn.onClick(() => {
@@ -155,5 +182,8 @@ export class PreferencesSettingsModal extends GameObjects.Container {
   private updatePref(change: Partial<GameplayPreferences>): void {
     const next: GameplayPreferences = { ...getGameplayPreferences(), ...change };
     setGameplayPreferences(next);
+    if (change.stationaryStickers !== undefined) {
+      DiceSprite.applyStickerPreferenceToAll();
+    }
   }
 }

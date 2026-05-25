@@ -6,6 +6,7 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { Die } from '../../game/types';
 import { DICE, COLORS, UI } from '../../game/Constants';
+import { getGameplayPreferences } from '../../game/GameplayPreferences';
 import { applyAuraGlow, createAuraParticles, getAuraPrimary } from './AuraFX';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
@@ -28,14 +29,32 @@ function getDiceTextureKey(die: Die): string {
   return die.enhancement ? `dice_${die.enhancement}` : 'dice_standard';
 }
 
+function setStickerOrbitPosition(image: GameObjects.Image, angleRad: number): void {
+  const r = DICE.STICKER_ORBIT_RADIUS;
+  image.setPosition(Math.cos(angleRad) * r, Math.sin(angleRad) * r);
+}
+
 export type DiceScorePresentation = 'none' | 'filler';
 
 export class DiceSprite extends GameObjects.Container {
   static suppressTooltips = false;
+  private static readonly instances = new Set<DiceSprite>();
+
+  /** Re-apply sticker layout after the stationary/orbit preference changes */
+  static applyStickerPreferenceToAll(): void {
+    for (const sprite of DiceSprite.instances) {
+      if (sprite.active && sprite.scene) sprite.redraw();
+    }
+  }
   private dieImage: GameObjects.Image;
   private selectionGfx: GameObjects.Graphics;
   private valueText: GameObjects.Text;
   private stickerImage: GameObjects.Image | null = null;
+  private stickerOrbitAngle = { rad: 0 };
+  private stickerOrbitTween: Phaser.Tweens.Tween | null = null;
+  /** Per-sprite orbit params so redraw does not re-sync every die */
+  private stickerOrbitPhaseRad: number | null = null;
+  private stickerOrbitDurationMs: number | null = null;
   private auraLabel: GameObjects.Text | null = null;
   private tooltip: GameObjects.Container | null = null;
   private auraTweens: Phaser.Tweens.Tween[] = [];
@@ -77,6 +96,7 @@ export class DiceSprite extends GameObjects.Container {
     this.on('pointerout', this.hideTooltip, this);
 
     scene.add.existing(this);
+    DiceSprite.instances.add(this);
   }
 
   get dieData(): Die {
@@ -162,23 +182,63 @@ export class DiceSprite extends GameObjects.Container {
       this.valueText.setVisible(false);
     }
 
-    // Sticker icon (small colored symbol in bottom-right of front face)
+    this.drawSticker();
+  }
+
+  private drawSticker(): void {
+    this.clearStickerOrbit();
+    if (!this._dieData.sticker) return;
+
+    const textureKey = `sticker_${this._dieData.sticker}`;
+    if (!this.scene.textures.exists(textureKey)) return;
+
+    this.stickerImage = this.scene.add.image(0, 0, textureKey).setOrigin(0.5, 0.5);
+    const maxDim = Math.max(this.stickerImage.width, this.stickerImage.height);
+    this.stickerImage.setScale(DICE.STICKER_SIZE / maxDim);
+    this.stickerImage.setDepth(8);
+    this.add(this.stickerImage);
+    this.bringToTop(this.stickerImage);
+
+    if (getGameplayPreferences().stationaryStickers) {
+      this.stickerImage.setPosition(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET);
+      return;
+    }
+
+    if (this.stickerOrbitPhaseRad === null) {
+      this.stickerOrbitPhaseRad = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      this.stickerOrbitDurationMs = DICE.STICKER_ORBIT_DURATION_MS * Phaser.Math.FloatBetween(0.88, 1.14);
+    }
+    const phase = this.stickerOrbitPhaseRad;
+    this.stickerOrbitAngle.rad = phase;
+    setStickerOrbitPosition(this.stickerImage, phase);
+
+    const endRad = phase + Math.PI * 2;
+    this.stickerOrbitTween = this.scene.tweens.add({
+      targets: this.stickerOrbitAngle,
+      rad: endRad,
+      duration: this.stickerOrbitDurationMs!,
+      repeat: -1,
+      ease: 'Linear',
+      onUpdate: () => {
+        if (this.stickerImage) {
+          setStickerOrbitPosition(this.stickerImage, this.stickerOrbitAngle.rad);
+        }
+      },
+    });
+  }
+
+  private clearStickerOrbit(): void {
+    if (this.stickerOrbitTween) {
+      this.stickerOrbitTween.destroy();
+      this.stickerOrbitTween = null;
+    }
     if (this.stickerImage) {
       this.stickerImage.destroy();
       this.stickerImage = null;
     }
-    if (this._dieData.sticker) {
-      const textureKey = `sticker_${this._dieData.sticker}`;
-      if (this.scene.textures.exists(textureKey)) {
-        this.stickerImage = this.scene.add
-          .image(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET, textureKey)
-          .setOrigin(0.5, 0.5);
-        // Scale down to fit on the die face
-        const maxDim = Math.max(this.stickerImage.width, this.stickerImage.height);
-        const targetSize = DICE.STICKER_SIZE;
-        this.stickerImage.setScale(targetSize / maxDim);
-        this.add(this.stickerImage);
-      }
+    if (!this._dieData.sticker) {
+      this.stickerOrbitPhaseRad = null;
+      this.stickerOrbitDurationMs = null;
     }
   }
 
@@ -333,7 +393,9 @@ export class DiceSprite extends GameObjects.Container {
   }
 
   destroy(fromScene?: boolean): void {
+    DiceSprite.instances.delete(this);
     this.hideTooltip();
+    this.clearStickerOrbit();
     for (const tw of this.auraTweens) tw.destroy();
     this.auraTweens = [];
     for (const em of this.auraEmitters) em.destroy();

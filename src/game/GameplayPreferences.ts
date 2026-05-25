@@ -5,10 +5,13 @@ import { patchStoredUserPreferences, readStoredUserPreferences } from './Prefere
 
 export interface GameplayPreferences {
   autoRollFirstHand: boolean;
+  /** When true, sticker icons stay fixed on the die face instead of orbiting */
+  stationaryStickers: boolean;
 }
 
 export const DEFAULT_GAMEPLAY_PREFERENCES: GameplayPreferences = {
   autoRollFirstHand: false,
+  stationaryStickers: false,
 };
 
 let cached: GameplayPreferences | null = null;
@@ -18,6 +21,8 @@ function normalizeGameplay(partial?: Partial<GameplayPreferences>): GameplayPref
   return {
     autoRollFirstHand:
       typeof partial?.autoRollFirstHand === 'boolean' ? partial.autoRollFirstHand : base.autoRollFirstHand,
+    stationaryStickers:
+      typeof partial?.stationaryStickers === 'boolean' ? partial.stationaryStickers : base.stationaryStickers,
   };
 }
 
