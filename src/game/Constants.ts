@@ -295,10 +295,12 @@ export const UI = {
 
   // Game scene (main content area — right of sidebar)
   HAND_Y_RATIO: 0.72,
-  ROLL_Y_RATIO: 0.5,
-  DICE_SPACING: 96,
+  ROLL_Y_RATIO: 0.8, // dice row y position from top of play area
+  DICE_SPACING: 85,
   DICE_ARC_HEIGHT: 12, // max Y lift at center of arc (px)
   DICE_ARC_ROTATION: 0.04, // max rotation at edges (radians, ~2.3°)
+  /** How far locked roll-phase dice rise above the row (Balatro-style hold) */
+  DICE_LOCKED_LIFT_Y: 50,
   FELT_PADDING: 12,
   FELT_ALPHA: 0.4,
   FELT_RADIUS: 16,

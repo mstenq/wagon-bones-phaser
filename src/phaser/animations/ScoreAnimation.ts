@@ -190,8 +190,6 @@ export interface ScoreAnimationConfig {
   sidebar: Sidebar;
   equipBar: EquipmentBar;
   consumableBar: ConsumableBar;
-  lockedDiceIds: Set<string>;
-  contentCX: number;
   onComplete: () => void;
 }
 
@@ -331,59 +329,13 @@ function animateDieCrack(scene: Scene, sprite: DiceSprite, onComplete: () => voi
 }
 
 export function playScoreAnimation(config: ScoreAnimationConfig): void {
-  const { scene, diceSprites, result, sidebar, equipBar, consumableBar, lockedDiceIds, contentCX, onComplete } = config;
-  const scoringIds = new Set(result.handResult.scoringDice.map((d) => d.id));
-  const playedNonScoringSprites = diceSprites.filter(
-    (s) => lockedDiceIds.has(s.dieData.id) && !scoringIds.has(s.dieData.id),
-  );
-  const heldSprites = diceSprites.filter((s) => !lockedDiceIds.has(s.dieData.id));
+  const { scene, diceSprites, result, sidebar, equipBar, consumableBar, onComplete } = config;
 
   // Build sprite lookup maps
   const dieSpriteMap = new Map<string, DiceSprite>();
   for (const s of diceSprites) dieSpriteMap.set(s.dieData.id, s);
 
-  // ─── Step 0: Separate played vs held dice ───
-  const HELD_DROP_Y = 80;
-  const SEPARATION_DURATION = 350;
-  const SPACING = 70;
-
-  if (heldSprites.length > 0) {
-    const totalW = (heldSprites.length - 1) * SPACING;
-    const startX = contentCX - totalW / 2;
-    const rollY = scene.scale.height * 0.5;
-
-    for (let i = 0; i < heldSprites.length; i++) {
-      const s = heldSprites[i];
-      const count = heldSprites.length;
-      let arcY = 0;
-      let arcRot = 0;
-      if (count > 1) {
-        const t = i / (count - 1) - 0.5;
-        arcY = -12 * (1 - 4 * t * t);
-        arcRot = t * 0.08;
-      }
-      scene.tweens.add({
-        targets: s,
-        x: startX + i * SPACING,
-        y: rollY + HELD_DROP_Y + arcY,
-        rotation: arcRot,
-        alpha: 0.5,
-        duration: SEPARATION_DURATION,
-        ease: 'Back.easeOut',
-      });
-    }
-  }
-
-  for (const s of playedNonScoringSprites) {
-    scene.tweens.add({
-      targets: s,
-      alpha: 0.5,
-      duration: SEPARATION_DURATION,
-      ease: 'Sine.easeOut',
-    });
-  }
-
-  scene.time.delayedCall(SEPARATION_DURATION + 150, beginScoring);
+  beginScoring();
 
   function beginScoring(): void {
     const handBaseMiles = result.handResult.baseMiles;

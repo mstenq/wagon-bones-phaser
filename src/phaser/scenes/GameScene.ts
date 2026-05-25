@@ -77,15 +77,6 @@ import { getGameplayPreferences } from '../../game/GameplayPreferences';
 
 const DICE_SPACING = UI.DICE_SPACING;
 
-interface DiceStackData {
-  key: string;
-  dice: Die[];
-  sprites: DiceSprite[];
-  countText: Phaser.GameObjects.Text;
-  addBtn: Button | null;
-  targetX: number;
-}
-
 export class GameScene extends Scene {
   private roundSessionActive = false;
   private sidebar: Sidebar;
@@ -93,24 +84,16 @@ export class GameScene extends Scene {
   private consumableBar: ConsumableBar;
   private dicePouch: DicePouch;
 
-  /** Dynamic roll size that respects permits and trail event penalties */
-  private get maxSelectForRoll(): number {
-    return getActiveRoundConfig().rollSize;
-  }
-
   // Layout helpers
   private contentCX: number = 0;
   private sidebarW: number = 0;
 
   // Dice sprites
-  private handSprites: DiceSprite[] = [];
   private rollSprites: DiceSprite[] = [];
 
-  // Dice stacking (SELECT phase)
-  private availableStacks: DiceStackData[] = [];
+  // Pre-roll hand row (SELECT phase)
   private playAreaSprites: DiceSprite[] = [];
   private playAreaY: number = 0;
-  private availableY: number = 0;
 
   // Buttons
   private readyBtn: Button;
@@ -124,11 +107,7 @@ export class GameScene extends Scene {
   private instructionText: Phaser.GameObjects.Text;
 
   // Track selections
-  private selectedHandIds: Set<string> = new Set();
   private lockedDiceIds: Set<string> = new Set();
-
-  // Lock icons
-  private lockIcons: Phaser.GameObjects.Text[] = [];
 
   // Sort controls
   private sortOrder: 'asc' | 'desc' = 'asc';
@@ -244,8 +223,7 @@ export class GameScene extends Scene {
         // Pick up any dice added during leg transition or round start
         this.pendingNewDiceIds = this.takeDiceAddedUiEffects();
       }
-      // Clear selection state from previous round (scene instance is reused)
-      this.selectedHandIds = new Set();
+      // Clear lock state from previous round (scene instance is reused)
       this.lockedDiceIds = new Set();
     }
 
@@ -390,9 +368,7 @@ export class GameScene extends Scene {
 
   private onResize(): void {
     // Preserve game state, destroy all display objects, rebuild layout
-    this.handSprites = [];
     this.rollSprites = [];
-    this.availableStacks = [];
     this.playAreaSprites = [];
     this.children.removeAll(true);
     this.buildLayout(true);
@@ -406,7 +382,6 @@ export class GameScene extends Scene {
     options: { autoRoll?: boolean } = {},
   ): void {
     this.clearSprites();
-    this.selectedHandIds = new Set(this.rs().hand.map((die) => die.id));
     this.hideAllButtons();
     roundActions.setSidebarOverlay({
       handName: '',
@@ -425,11 +400,9 @@ export class GameScene extends Scene {
   ): void {
     const { height } = this.scale;
     this.playAreaY = height * UI.ROLL_Y_RATIO;
-    this.availableY = height * UI.HAND_Y_RATIO;
 
     const hand = this.rs().hand;
-    this.handSprites = this.createDiceRow(hand, this.playAreaY);
-    this.playAreaSprites = [...this.handSprites];
+    this.playAreaSprites = this.createDiceRow(hand, this.playAreaY);
     for (const sprite of this.playAreaSprites) {
       this.setupPlayAreaSprite(sprite);
       sprite.disableInteractive();
@@ -524,7 +497,6 @@ export class GameScene extends Scene {
     // Create sprites for rolled dice
     const rolled = this.rs().rolledDice;
     this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
-    this.createLockIcons();
 
     // Play roll animation
     this.animating = true;
@@ -553,14 +525,10 @@ export class GameScene extends Scene {
       sprite.setDisabled(isDiceScoringDisabledByBoss(sprite.dieData));
       if (isDiceLockedByBoss(id)) {
         this.lockedDiceIds.add(id);
-        sprite.setForced(true);
-        const lockIdx = this.rollSprites.indexOf(sprite);
-        if (this.lockIcons[lockIdx]) this.lockIcons[lockIdx].setVisible(true);
       }
     }
-    this.patchRound({
-      selectedForScore: this.rs().rolledDice.filter((d) => this.lockedDiceIds.has(d.id)),
-    });
+    this.syncSelectedForScore();
+    this.repositionRollDice(true);
     this.updateRollButtons();
   }
 
@@ -570,19 +538,15 @@ export class GameScene extends Scene {
     const id = sprite.dieData.id;
     if (isDiceLockedByBoss(id)) return;
 
-    const lockIdx = this.rollSprites.indexOf(sprite);
-    const lockIcon = this.lockIcons[lockIdx];
     if (this.lockedDiceIds.has(id)) {
       this.lockedDiceIds.delete(id);
-      sprite.setSelected(false);
-      if (lockIcon) lockIcon.setVisible(false);
       if (playSound) this.sound.play('sfx_card_slide2', { volume: 0.25 });
     } else {
       this.lockedDiceIds.add(id);
-      sprite.setSelected(true);
-      if (lockIcon) lockIcon.setVisible(true);
       if (playSound) this.sound.play('sfx_highlight1', { volume: 0.3 });
     }
+    const lockIdx = this.rollSprites.indexOf(sprite);
+    if (lockIdx >= 0) this.animateRollDieLockLift(sprite, lockIdx);
     this.syncSelectedForScore();
     if (updateButtons) this.updateRollButtons();
   }
@@ -729,27 +693,6 @@ export class GameScene extends Scene {
     this.rollMarqueeZone = null;
   }
 
-  /** Create lock icons below each roll sprite (hidden initially) */
-  private createLockIcons(): void {
-    this.clearLockIcons();
-    for (const sprite of this.rollSprites) {
-      const lockIcon = this.add
-        .text(sprite.x, sprite.y + 46, '🔒', {
-          fontSize: '14px',
-        })
-        .setOrigin(0.5)
-        .setDepth(11)
-        .setVisible(false);
-      this.lockIcons.push(lockIcon);
-    }
-  }
-
-  /** Destroy all lock icons */
-  private clearLockIcons(): void {
-    for (const icon of this.lockIcons) icon.destroy();
-    this.lockIcons = [];
-  }
-
   /** Layout-only version for resize: shows rolled dice without replaying animation */
   private enterRollPhaseLayout(): void {
     this.clearSprites();
@@ -758,7 +701,6 @@ export class GameScene extends Scene {
 
     const rolled = this.rs().rolledDice;
     this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
-    this.createLockIcons();
     this.setupRollSpriteInteraction();
     this.setupRollMarqueeZone();
 
@@ -775,7 +717,6 @@ export class GameScene extends Scene {
 
   private enterScorePhase(result: ScoreResult): void {
     this.hideAllButtons();
-    this.clearLockIcons();
 
     // Show hand name and level in sidebar
     const handType = result.handResult.type as HandType;
@@ -799,8 +740,6 @@ export class GameScene extends Scene {
       sidebar: this.sidebar,
       equipBar: this.equipBar,
       consumableBar: this.consumableBar,
-      lockedDiceIds: new Set(this.lockedDiceIds),
-      contentCX: this.contentCX,
       onComplete: () => {
         revealLandSlideHints();
         this.equipBar.setHintRound(getRoundHintContext());
@@ -1105,19 +1044,10 @@ export class GameScene extends Scene {
   }
 
   private clearSprites(): void {
-    for (const s of this.handSprites) s.destroy();
     for (const s of this.rollSprites) s.destroy();
-    for (const stack of this.availableStacks) {
-      for (const s of stack.sprites) s.destroy();
-      stack.countText.destroy();
-      if (stack.addBtn) stack.addBtn.destroy();
-    }
     for (const s of this.playAreaSprites) s.destroy();
-    this.clearLockIcons();
     this.destroyRollMarqueeZone();
-    this.handSprites = [];
     this.rollSprites = [];
-    this.availableStacks = [];
     this.playAreaSprites = [];
   }
 
@@ -1185,7 +1115,7 @@ export class GameScene extends Scene {
     this.equipBar?.setHintRound(getRoundHintContext());
   }
 
-  /** Sort roll sprites by die value and reposition them with lock icons */
+  /** Sort roll sprites by die value and reposition them (locked dice stay raised) */
   private sortAndRepositionDice(): void {
     // Stone dice sort as highest (above 12s)
     const sortValue = (d: Die) => (d.enhancement === 'stone' ? 13 : d.value);
@@ -1194,38 +1124,65 @@ export class GameScene extends Scene {
         ? (a: DiceSprite, b: DiceSprite) => sortValue(a.dieData) - sortValue(b.dieData)
         : (a: DiceSprite, b: DiceSprite) => sortValue(b.dieData) - sortValue(a.dieData);
     this.rollSprites.sort(cmp);
+    this.repositionRollDice(true);
+  }
 
+  private isRollDieLocked(sprite: DiceSprite): boolean {
+    return this.lockedDiceIds.has(sprite.dieData.id);
+  }
+
+  /** Y for a roll-row die: arc baseline minus Balatro-style lift when locked */
+  private getRollDieY(index: number, locked: boolean): number {
     const rollY = this.scale.height * UI.ROLL_Y_RATIO;
+    const arc = this.getArcOffset(index, this.rollSprites.length);
+    const lift = locked ? UI.DICE_LOCKED_LIFT_Y : 0;
+    return rollY + arc.y - lift;
+  }
+
+  private applyRollDieDepth(sprite: DiceSprite, locked: boolean): void {
+    sprite.setDepth(locked ? 15 : 10);
+  }
+
+  /** Reposition all roll sprites (row layout + locked lift + depth) */
+  private repositionRollDice(animated: boolean, duration = 250): void {
+    if (this.rollSprites.length === 0) return;
+
     const totalWidth = (this.rollSprites.length - 1) * DICE_SPACING;
     const startX = this.contentCX - totalWidth / 2;
     for (let i = 0; i < this.rollSprites.length; i++) {
       const sprite = this.rollSprites[i];
+      const locked = this.isRollDieLocked(sprite);
       const arc = this.getArcOffset(i, this.rollSprites.length);
       const targetX = startX + i * DICE_SPACING;
-      const targetY = rollY + arc.y;
+      const targetY = this.getRollDieY(i, locked);
+      this.applyRollDieDepth(sprite, locked);
 
-      this.tweens.add({
-        targets: sprite,
-        x: targetX,
-        y: targetY,
-        rotation: arc.rotation,
-        duration: 250,
-        ease: 'Power2',
-      });
-
-      // Animate lock icon position
-      if (this.lockIcons[i]) {
+      if (animated) {
         this.tweens.add({
-          targets: this.lockIcons[i],
+          targets: sprite,
           x: targetX,
-          y: targetY + 46,
-          duration: 250,
+          y: targetY,
+          rotation: arc.rotation,
+          duration,
           ease: 'Power2',
         });
-        this.lockIcons[i].setVisible(this.lockedDiceIds.has(sprite.dieData.id));
+      } else {
+        sprite.setPosition(targetX, targetY);
+        sprite.rotation = arc.rotation;
       }
     }
     this.syncRolledDiceFromSprites();
+  }
+
+  private animateRollDieLockLift(sprite: DiceSprite, index: number): void {
+    const locked = this.isRollDieLocked(sprite);
+    this.applyRollDieDepth(sprite, locked);
+    this.tweens.add({
+      targets: sprite,
+      y: this.getRollDieY(index, locked),
+      duration: 200,
+      ease: 'Power2',
+    });
   }
 
   /** Keep game-state dice order aligned with on-screen roll sprite order (held-in-hand scoring). */
@@ -1522,168 +1479,33 @@ export class GameScene extends Scene {
     return 'Selected face rolls at 1 in 6.';
   }
 
-  // ─── Dice Stacking & Play Area ───
+  // ─── Pre-roll hand (SELECT phase) ───
 
-  /** Generate a grouping key for dice with the same properties (ignoring current face value) */
-  private getDiceGroupKey(die: Die): string {
-    return `${die.enhancement || ''}|${die.aura || ''}|${die.sticker || ''}`;
-  }
-
-  /** Calculate target X positions for all non-empty stacks */
-  private layoutStacks(): void {
-    const visibleStacks = this.availableStacks.filter((s) => s.dice.length > 0);
-    const spacing = DICE_SPACING + 16;
-    const totalWidth = Math.max(0, visibleStacks.length - 1) * spacing;
-    const startX = this.contentCX - totalWidth / 2;
-
-    for (let i = 0; i < visibleStacks.length; i++) {
-      visibleStacks[i].targetX = startX + i * spacing;
-    }
-  }
-
-  /** Render a single stack's sprites at its targetX */
-  private renderStack(stack: DiceStackData): void {
-    // Destroy old sprites
-    for (const s of stack.sprites) s.destroy();
-    stack.sprites = [];
-
-    if (stack.dice.length === 0) {
-      stack.countText.setVisible(false);
-      return;
-    }
-
-    const maxVisible = Math.min(stack.dice.length, 3);
-    const representativeDie = stack.dice[0]; // All visually identical
-
-    // Stacking offsets for depth effect
-    const rotations = maxVisible === 1 ? [0] : maxVisible === 2 ? [-0.07, 0.03] : [-0.07, 0.04, -0.01];
-    const yOffsets = maxVisible === 1 ? [0] : maxVisible === 2 ? [5, 0] : [8, 4, 0];
-    const xOffsets = maxVisible === 1 ? [0] : maxVisible === 2 ? [-2, 0] : [-3, 1, 0];
-
-    for (let i = 0; i < maxVisible; i++) {
-      const sprite = new DiceSprite(
-        this,
-        stack.targetX + xOffsets[i],
-        this.availableY + yOffsets[i],
-        representativeDie,
-      );
-      sprite.setRotation(rotations[i]);
-      sprite.setDepth(10 + i);
-
-      if (i < maxVisible - 1) {
-        sprite.disableInteractive();
-        sprite.setAlpha(0.55 + i * 0.15);
-      }
-
-      stack.sprites.push(sprite);
-    }
-
-    // Wire click on top sprite
-    const topSprite = stack.sprites[stack.sprites.length - 1];
-    topSprite.on('pointerdown', () => this.onStackDiceClick(stack));
-
-    // Update count text
-    stack.countText.setText(`\u00d7${stack.dice.length}`);
-    stack.countText.setX(stack.targetX);
-    stack.countText.setY(this.availableY + 44);
-    stack.countText.setVisible(stack.dice.length > 1);
-
-    // Add "Add X" button below the stack
-    if (stack.addBtn) {
-      stack.addBtn.destroy();
-      stack.addBtn = null;
-    }
-    const remaining = this.maxSelectForRoll - this.selectedHandIds.size;
-    if (remaining > 0 && stack.dice.length > 0) {
-      const addCount = Math.min(remaining, stack.dice.length);
-      stack.addBtn = new Button(
-        this,
-        stack.targetX,
-        this.availableY + (stack.dice.length > 1 ? 72 : 56),
-        `Add ${addCount}`,
-        72,
-        28,
-      );
-      stack.addBtn.setDepth(15);
-      // Smaller font for this button
-      (stack.addBtn as any).label?.setFontSize?.(13);
-      stack.addBtn.onClick(() => this.onAddAllClick(stack));
-    }
-  }
-
-  /** Animate all stacks' existing sprites to their targetX positions */
-  private animateStacksToTargets(): void {
-    for (const stack of this.availableStacks) {
-      if (stack.dice.length === 0 || stack.sprites.length === 0) continue;
-      const topSprite = stack.sprites[stack.sprites.length - 1];
-      const deltaX = stack.targetX - topSprite.x;
-      for (const sprite of stack.sprites) {
-        this.tweens.add({
-          targets: sprite,
-          x: sprite.x + deltaX,
-          duration: 200,
-          ease: 'Power2',
-        });
-      }
-      this.tweens.add({
-        targets: stack.countText,
-        x: stack.targetX,
-        duration: 200,
-        ease: 'Power2',
-      });
-      if (stack.addBtn) {
-        this.tweens.add({
-          targets: stack.addBtn,
-          x: stack.targetX,
-          duration: 200,
-          ease: 'Power2',
-        });
-      }
-    }
-  }
-
-  /** Animate new dice popping into existence (Mystery Crate, Quarry Stone, etc.) */
+  /** Pop-in + toast when round-start effects add dice to the pouch/hand */
   private animateNewDiceAppearing(): void {
     const newIds = new Set(this.pendingNewDiceIds);
 
-    // Find stacks containing the new dice and animate their sprites
-    for (const stack of this.availableStacks) {
-      const hasNewDie = stack.dice.some((d) => newIds.has(d.id));
-      if (!hasNewDie) continue;
-
-      // Animate all sprites in this stack with a pop-in
-      for (const sprite of stack.sprites) {
-        const origScale = sprite.scaleX;
-        sprite.setScale(0);
-        sprite.setAlpha(0);
-        this.tweens.add({
-          targets: sprite,
-          scaleX: origScale * 1.3,
-          scaleY: origScale * 1.3,
-          alpha: 1,
-          duration: 300,
-          ease: 'Back.easeOut',
-          onComplete: () => {
-            this.tweens.add({
-              targets: sprite,
-              scaleX: origScale,
-              scaleY: origScale,
-              duration: 150,
-              ease: 'Sine.easeOut',
-            });
-          },
-        });
-      }
-
-      // Also pop the count text
-      stack.countText.setScale(0);
+    for (const sprite of this.playAreaSprites) {
+      if (!newIds.has(sprite.dieData.id)) continue;
+      const origScale = sprite.scaleX;
+      sprite.setScale(0);
+      sprite.setAlpha(0);
       this.tweens.add({
-        targets: stack.countText,
-        scaleX: 1,
-        scaleY: 1,
+        targets: sprite,
+        scaleX: origScale * 1.3,
+        scaleY: origScale * 1.3,
+        alpha: 1,
         duration: 300,
-        delay: 150,
         ease: 'Back.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: sprite,
+            scaleX: origScale,
+            scaleY: origScale,
+            duration: 150,
+            ease: 'Sine.easeOut',
+          });
+        },
       });
     }
 
@@ -1709,7 +1531,7 @@ export class GameScene extends Scene {
 
     // Show floating text
     const text = this.add
-      .text(this.contentCX, this.availableY - 50, '✨ New Die Added!', {
+      .text(this.contentCX, this.playAreaY - 50, '✨ New Die Added!', {
         fontFamily: FONTS.HEADING,
         fontSize: '20px',
         color: '#ffd700',
@@ -1813,233 +1635,9 @@ export class GameScene extends Scene {
     }
   }
 
-  /** Handle clicking a stack to send a die to the play area */
-  private onStackDiceClick(stack: DiceStackData): void {
-    console.log(
-      '[DEBUG] onStackDiceClick: animating:',
-      this.animating,
-      'selectedCount:',
-      this.selectedHandIds.size,
-      'stackKey:',
-      stack.key,
-      'stackDice:',
-      stack.dice.length,
-    );
-    if (this.animating) {
-      console.log('[DEBUG] BLOCKED by animating flag');
-      return;
-    }
-    if (this.selectedHandIds.size >= this.maxSelectForRoll) {
-      console.log('[DEBUG] BLOCKED: max selected');
-      return;
-    }
-    // Sound
-    this.sound.play('sfx_card_slide1', { volume: 0.4 });
+  // ─── Drag-to-Reorder (ROLL phase) ───
 
-    // Pop a die from the stack
-    const die = stack.dice.pop()!;
-    this.selectedHandIds.add(die.id);
-
-    // Get position of top sprite before refresh
-    const topSprite = stack.sprites[stack.sprites.length - 1];
-    const fromX = topSprite.x;
-    const fromY = topSprite.y;
-
-    // Refresh stack visuals at current position
-    this.renderStack(stack);
-
-    // If stack is now empty, recalculate and animate remaining stacks
-    if (stack.dice.length === 0) {
-      this.layoutStacks();
-      this.animateStacksToTargets();
-    }
-
-    // Create play area sprite at stack position
-    const newSprite = new DiceSprite(this, fromX, fromY, die);
-    newSprite.setDepth(20);
-    this.playAreaSprites.push(newSprite);
-    this.setupPlayAreaSprite(newSprite);
-
-    // Calculate target positions
-    const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
-    const targetIdx = this.playAreaSprites.length - 1;
-
-    // Animate new sprite to play area
-    this.animating = true;
-    const newArc = this.getArcOffset(targetIdx, this.playAreaSprites.length);
-    this.tweens.add({
-      targets: newSprite,
-      x: positions[targetIdx],
-      y: this.playAreaY + newArc.y,
-      rotation: newArc.rotation,
-      duration: 300,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        this.animating = false;
-      },
-    });
-
-    // Reposition existing play area sprites to accommodate
-    for (let i = 0; i < this.playAreaSprites.length - 1; i++) {
-      const arc = this.getArcOffset(i, this.playAreaSprites.length);
-      this.tweens.add({
-        targets: this.playAreaSprites[i],
-        x: positions[i],
-        y: this.playAreaY + arc.y,
-        rotation: arc.rotation,
-        duration: 200,
-        ease: 'Power2',
-      });
-    }
-
-    this.updateDrawButtons();
-  }
-
-  /** Handle clicking "Add X" to send multiple dice from a stack to the play area */
-  private onAddAllClick(stack: DiceStackData): void {
-    if (this.animating) return;
-    const remaining = this.maxSelectForRoll - this.selectedHandIds.size;
-    if (remaining <= 0) return;
-
-    const addCount = Math.min(remaining, stack.dice.length);
-    if (addCount === 0) return;
-
-    // Pop dice from stack
-    const diceToAdd = stack.dice.splice(stack.dice.length - addCount, addCount);
-    for (const die of diceToAdd) {
-      this.selectedHandIds.add(die.id);
-    }
-
-    // Get position of top sprite before refresh
-    const fromX = stack.targetX;
-    const fromY = this.availableY;
-
-    // Refresh stack visuals
-    this.renderStack(stack);
-    if (stack.dice.length === 0) {
-      this.layoutStacks();
-      this.animateStacksToTargets();
-    }
-
-    // Create play area sprites and animate them
-    this.animating = true;
-    let completed = 0;
-    const total = diceToAdd.length;
-
-    for (let i = 0; i < diceToAdd.length; i++) {
-      const die = diceToAdd[i];
-      const newSprite = new DiceSprite(this, fromX, fromY, die);
-      newSprite.setDepth(20);
-      this.playAreaSprites.push(newSprite);
-      this.setupPlayAreaSprite(newSprite);
-    }
-
-    // Animate all to final positions
-    const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
-    for (let i = 0; i < this.playAreaSprites.length; i++) {
-      const sprite = this.playAreaSprites[i];
-      const arc = this.getArcOffset(i, this.playAreaSprites.length);
-      this.tweens.add({
-        targets: sprite,
-        x: positions[i],
-        y: this.playAreaY + arc.y,
-        rotation: arc.rotation,
-        duration: 300,
-        ease: 'Back.easeOut',
-        delay: i >= this.playAreaSprites.length - total ? (i - (this.playAreaSprites.length - total)) * 40 : 0,
-        onComplete: () => {
-          completed++;
-          if (completed >= this.playAreaSprites.length) {
-            this.animating = false;
-          }
-        },
-      });
-    }
-
-    this.updateDrawButtons();
-  }
-
-  /** Handle clicking a die in the play area to send it back to a stack */
-  private onPlayAreaDiceClick(sprite: DiceSprite): void {
-    console.log('[DEBUG] onPlayAreaDiceClick: animating:', this.animating, 'dieId:', sprite.dieData.id);
-    if (this.animating) {
-      console.log('[DEBUG] BLOCKED by animating flag');
-      return;
-    }
-    const die = sprite.dieData;
-
-    // Sound
-    this.sound.play('sfx_card_slide2', { volume: 0.35 });
-
-    // Remove from play area
-    const idx = this.playAreaSprites.indexOf(sprite);
-    if (idx === -1) return;
-    this.playAreaSprites.splice(idx, 1);
-    this.selectedHandIds.delete(die.id);
-
-    // Find or create the matching stack
-    const key = this.getDiceGroupKey(die);
-    let stack = this.availableStacks.find((s) => s.key === key);
-
-    if (!stack) {
-      const countText = this.add
-        .text(0, this.availableY + 44, '', {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '14px',
-          color: TEXT_COLORS.SECONDARY,
-        })
-        .setOrigin(0.5)
-        .setDepth(15);
-      stack = { key, dice: [], sprites: [], countText, addBtn: null, targetX: 0 };
-      this.availableStacks.push(stack);
-    }
-
-    // Push die back to stack
-    stack.dice.push(die);
-
-    // Recalculate stack positions
-    this.layoutStacks();
-
-    // Animate sprite to stack target
-    this.animating = true;
-    const targetStack = stack;
-    this.tweens.add({
-      targets: sprite,
-      x: targetStack.targetX,
-      y: this.availableY,
-      rotation: 0,
-      duration: 300,
-      ease: 'Power2',
-      onComplete: () => {
-        sprite.destroy();
-        this.renderStack(targetStack);
-        this.animating = false;
-      },
-    });
-
-    // Animate other stacks to new positions
-    this.animateStacksToTargets();
-
-    // Reposition play area
-    const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
-    for (let i = 0; i < this.playAreaSprites.length; i++) {
-      const arc = this.getArcOffset(i, this.playAreaSprites.length);
-      this.tweens.add({
-        targets: this.playAreaSprites[i],
-        x: positions[i],
-        y: this.playAreaY + arc.y,
-        rotation: arc.rotation,
-        duration: 200,
-        ease: 'Power2',
-      });
-    }
-
-    this.updateDrawButtons();
-  }
-
-  // ─── Drag-to-Reorder (Play Area) ───
-
-  /** Get the active draggable sprite list (play area in SELECT, roll sprites in ROLL) */
+  /** Get the active draggable sprite list (roll sprites during ROLL) */
   private getDraggableList(): DiceSprite[] | null {
     if (this.rollSprites.length > 0) return this.rollSprites;
     return null;
@@ -2138,19 +1736,15 @@ export class GameScene extends Scene {
         for (let i = 0; i < list.length; i++) {
           if (list[i] === this.draggingSprite) continue;
           const arc = this.getArcOffset(i, list.length);
+          const targetY = list === this.rollSprites ? this.getRollDieY(i, this.isRollDieLocked(list[i])) : rowY + arc.y;
           this.tweens.add({
             targets: list[i],
             x: positions[i],
-            y: rowY + arc.y,
+            y: targetY,
             rotation: arc.rotation,
             duration: 150,
             ease: 'Power2',
           });
-        }
-
-        // Move lock icons with roll sprites
-        if (list === this.rollSprites) {
-          this.repositionLockIcons(positions);
         }
       }
     });
@@ -2162,7 +1756,8 @@ export class GameScene extends Scene {
 
       const sprite = this.draggingSprite;
       const finalVelocity = this.dragVelocityX;
-      sprite.setDepth(list === this.rollSprites ? 10 : 20);
+      const locked = list === this.rollSprites && this.isRollDieLocked(sprite);
+      sprite.setDepth(list === this.rollSprites ? (locked ? 15 : 10) : 20);
       this.draggingSprite = null;
       this.dragVelocityX = 0;
       DiceSprite.suppressTooltips = false;
@@ -2172,6 +1767,7 @@ export class GameScene extends Scene {
       const idx = list.indexOf(sprite);
       const rowY = this.getDraggableRowY();
       const arc = this.getArcOffset(idx, list.length);
+      const settleY = list === this.rollSprites ? this.getRollDieY(idx, locked) : rowY + arc.y;
 
       const overshoot = Phaser.Math.Clamp(
         finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
@@ -2185,7 +1781,7 @@ export class GameScene extends Scene {
         tweens: [
           {
             x: positions[idx],
-            y: rowY + arc.y,
+            y: settleY,
             rotation: overshoot + arc.rotation,
             scaleX: 1,
             scaleY: 1,
@@ -2211,51 +1807,17 @@ export class GameScene extends Scene {
       });
 
       if (list === this.rollSprites) {
-        this.repositionLockIcons(positions);
         this.syncRolledDiceFromSprites();
       }
     });
   }
 
-  /** Reposition lock icons to match current rollSprites order */
-  private repositionLockIcons(positions: number[]): void {
-    // Rebuild lock icons to match the new sprite order
-    const lockStates = this.rollSprites.map((s) => this.lockedDiceIds.has(s.dieData.id));
-    const rollY = this.scale.height * UI.ROLL_Y_RATIO;
-    for (let i = 0; i < this.lockIcons.length; i++) {
-      const icon = this.lockIcons[i];
-      if (i < positions.length) {
-        const arc = this.getArcOffset(i, this.rollSprites.length);
-        this.tweens.add({
-          targets: icon,
-          x: positions[i],
-          y: rollY + arc.y + 46,
-          duration: 150,
-          ease: 'Power2',
-        });
-        icon.setVisible(lockStates[i]);
-      }
-    }
-  }
-
-  /** Wire up a play area sprite for drag-to-reorder and click-to-remove */
+  /** Wire consumable targeting clicks on pre-roll hand dice */
   private setupPlayAreaSprite(sprite: DiceSprite): void {
-    this.input.setDraggable(sprite);
-
-    sprite.on('pointerdown', () => {
-      this.wasDragging = false;
-    });
-
     sprite.on('pointerup', () => {
-      if (this.wasDragging) return;
-
-      // Consumable targeting mode takes over click behavior
       if (this.consumableTargeting) {
         this.onConsumableTargetClick(sprite);
-        return;
       }
-
-      this.onPlayAreaDiceClick(sprite);
     });
   }
 
@@ -2426,7 +1988,6 @@ export class GameScene extends Scene {
     const phase = this.rs().phase;
     if (phase === 'SELECT') {
       this.patchRound({ hand: this.rs().hand.filter((d) => !destroyedSet.has(d.id)) });
-      this.selectedHandIds = new Set([...this.selectedHandIds].filter((id) => !destroyedSet.has(id)));
       return;
     }
     if (phase === 'ROLL') {
@@ -2470,7 +2031,6 @@ export class GameScene extends Scene {
     const nextHand = [...this.rs().hand];
     for (const die of toAdd) {
       nextHand.push(die);
-      this.selectedHandIds.add(die.id);
       const sprite = new DiceSprite(this, launch.x, launch.y, die);
       sprite.setDepth(20);
       sprite.setAlpha(0);
@@ -2547,10 +2107,7 @@ export class GameScene extends Scene {
 
     // Clear existing lock selections — we repurpose selection for targeting
     this.lockedDiceIds.clear();
-    for (let i = 0; i < this.rollSprites.length; i++) {
-      this.rollSprites[i].setSelected(false);
-      if (this.lockIcons[i]) this.lockIcons[i].setVisible(false);
-    }
+    this.repositionRollDice(true, 150);
 
     // Hide normal game buttons
     this.hideAllButtons();
@@ -2728,12 +2285,9 @@ export class GameScene extends Scene {
     this.lockedDiceIds = new Set(this.savedLockedDiceIds);
     this.instructionText.setText(this.savedInstructionText);
 
-    // Restore lock icon visuals and selected state
-    for (let i = 0; i < this.rollSprites.length; i++) {
-      const id = this.rollSprites[i].dieData.id;
-      const isLocked = this.lockedDiceIds.has(id);
-      this.rollSprites[i].setSelected(isLocked);
-      if (this.lockIcons[i]) this.lockIcons[i].setVisible(isLocked);
+    // Restore locked-die lift positions
+    if (this.rollSprites.length > 0) {
+      this.repositionRollDice(true, 150);
     }
 
     // Restore game buttons for current phase
