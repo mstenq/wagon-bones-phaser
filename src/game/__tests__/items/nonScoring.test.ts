@@ -712,6 +712,17 @@ describe('FIRST_DICE_RETRIGGER: Quick Draw', () => {
     expect(result.mult).toBeMult(13);
   });
 
+  test('retriggers leftmost played die when stone is first in play order', () => {
+    const stone = die({ enhancement: 'stone', value: 0 });
+    const { result } = calculateTestScore({
+      scoredDice: [stone, die({ value: 2 }), die({ value: 2 })],
+      equipment: [item('quick_draw')],
+    });
+    // PAIR: stone leftmost → 3×50 + 2 + 2 = 154 (not 3×2 + 2 + 50 = 58)
+    expect(result.totalValue).toBe(154);
+    expect(result.handResult.scoringDice[0].enhancement).toBe('stone');
+  });
+
   test('purple_flower on quick_draw retrigger respects consumable slot cap', () => {
     const { player } = calculateTestScore({
       scoredDice: [die({ value: 5, sticker: 'purple_flower' }), die({ value: 5 })],

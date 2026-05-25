@@ -200,9 +200,10 @@ export function detectBestHand(dice: Die[]): HandResult {
   }
 
   const result = detectBestHandFromDice(normalDice);
-  // Append stone dice to scoring — they're always scored
+  // Include stone dice in scoring, preserving the player's play order (left to right)
   if (stoneDice.length > 0) {
-    result.scoringDice = [...result.scoringDice, ...stoneDice];
+    const scoringIds = new Set([...result.scoringDice, ...stoneDice].map((d) => d.id));
+    result.scoringDice = dice.filter((d) => scoringIds.has(d.id));
   }
   return result;
 }

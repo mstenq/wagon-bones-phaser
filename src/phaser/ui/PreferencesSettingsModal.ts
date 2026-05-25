@@ -143,12 +143,17 @@ export class PreferencesSettingsModal extends GameObjects.Container {
     stickerLabel.setOrigin(0, 0.5);
     this.add(stickerLabel);
 
-    const stickerHint = scene.add.text(labelX, stickerRowY + 22, 'Keep sticker icons fixed on the die instead of orbiting', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '13px',
-      color: TEXT_COLORS.MUTED,
-      wordWrap: { width: panelW - 100 },
-    });
+    const stickerHint = scene.add.text(
+      labelX,
+      stickerRowY + 22,
+      'Keep sticker icons fixed on the die instead of orbiting',
+      {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '13px',
+        color: TEXT_COLORS.MUTED,
+        wordWrap: { width: panelW - 100 },
+      },
+    );
     stickerHint.setOrigin(0, 0);
     this.add(stickerHint);
 
