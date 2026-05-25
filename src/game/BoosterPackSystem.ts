@@ -29,7 +29,7 @@ const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
 const ALL_STICKERS: DiceSticker[] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
 
 /** Randomly apply a sticker to a die (small chance) */
-function applyRandomSticker(die: Die): void {
+export function applyRandomSticker(die: Die): void {
   if (die.sticker) return; // already has one
   if (rngFloat('sticker') >= CHANCES.STICKER_EFFECT) return;
   die.sticker = rngPick('sticker', ALL_STICKERS);

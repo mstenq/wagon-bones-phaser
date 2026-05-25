@@ -6,11 +6,13 @@ import { economyActions } from '../../store/actions/economyActions';
 import { generateNewShopState, generateShopStockRows, shopRowsToStored } from '../../store/shopStock';
 import { shopSceneActions } from '../../store/actions/shopSceneActions';
 import { selectShopStockRevision } from '../../store/selectors/sceneSelectors';
+import { initRunRng } from '../../RunRng';
 
 describe('shopStock', () => {
   beforeEach(() => {
     runActions.reset();
     sceneActions.reset();
+    initRunRng('shop-stock-test');
     setupActions.applyProfession('outlaw');
   });
 
@@ -58,5 +60,96 @@ describe('shopStock', () => {
     expect(shopSceneActions.rerollShop()).toBe(false);
     expect(getRunState().balance).toBe(100);
     expect(getRunState().shopRerollCount).toBe(0);
+  });
+
+  test('dice permit rolls dice into non-first slots (not hard-injected)', () => {
+    runActions.patch({ purchasedPermits: ['dice_carver'] });
+
+    let firstSlotDice = 0;
+    let laterSlotDice = 0;
+
+    for (let i = 0; i < 250; i++) {
+      const rows = generateShopStockRows();
+      if (rows[0]?.type === 'dice') firstSlotDice++;
+      if (rows.slice(1).some((row) => row.type === 'dice')) laterSlotDice++;
+    }
+
+    expect(firstSlotDice).toBeGreaterThan(0);
+    expect(laterSlotDice).toBeGreaterThan(0);
+  });
+
+  test('master_engraver shop dice can include stickers with booster odds', () => {
+    runActions.patch({
+      purchasedPermits: ['dice_carver', 'master_engraver'],
+      shopSlots: 8,
+    });
+
+    let diceSeen = 0;
+    let stickeredDiceSeen = 0;
+    let unstickeredDiceSeen = 0;
+
+    for (let i = 0; i < 200; i++) {
+      const rows = generateShopStockRows();
+      for (const row of rows) {
+        if (row.type !== 'dice' || !row.die) continue;
+        diceSeen++;
+        if (row.die.sticker) stickeredDiceSeen++;
+        else unstickeredDiceSeen++;
+      }
+    }
+
+    expect(diceSeen).toBeGreaterThan(0);
+    expect(stickeredDiceSeen).toBeGreaterThan(0);
+    expect(unstickeredDiceSeen).toBeGreaterThan(0);
+  });
+
+  test('dice_carver shop dice can include auras using booster aura rates', () => {
+    runActions.patch({
+      purchasedPermits: ['dice_carver'],
+      shopSlots: 8,
+    });
+
+    let diceSeen = 0;
+    let auraDiceSeen = 0;
+    let nonAuraDiceSeen = 0;
+
+    for (let i = 0; i < 250; i++) {
+      const rows = generateShopStockRows();
+      for (const row of rows) {
+        if (row.type !== 'dice' || !row.die) continue;
+        diceSeen++;
+        if (row.die.aura) auraDiceSeen++;
+        else nonAuraDiceSeen++;
+      }
+    }
+
+    expect(diceSeen).toBeGreaterThan(0);
+    expect(auraDiceSeen).toBeGreaterThan(0);
+    expect(nonAuraDiceSeen).toBeGreaterThan(0);
+  });
+
+  test('master_engraver shop dice can include auras using booster aura rates', () => {
+    runActions.patch({
+      purchasedPermits: ['dice_carver', 'master_engraver'],
+      shopSlots: 8,
+    });
+
+    let diceSeen = 0;
+    let auraDiceSeen = 0;
+    let nonAuraDiceSeen = 0;
+
+    for (let i = 0; i < 250; i++) {
+      const rows = generateShopStockRows();
+      for (const row of rows) {
+        if (row.type !== 'dice' || !row.die) continue;
+        diceSeen++;
+        if (row.die.aura) auraDiceSeen++;
+        else nonAuraDiceSeen++;
+      }
+    }
+
+    expect(diceSeen).toBeGreaterThan(0);
+    expect(auraDiceSeen).toBeGreaterThan(0);
+    expect(nonAuraDiceSeen).toBeGreaterThan(0);
   });
 });

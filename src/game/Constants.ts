@@ -163,6 +163,7 @@ export const SHOP_WEIGHTS = {
   equipment: 20, // ~71%
   supply: 4, // ~14%
   trail_guide: 4, // ~14%
+  dice: 4, // unlocked by dice permits
   frontier: 2, // added when Demon Hunter profession is active
 };
 

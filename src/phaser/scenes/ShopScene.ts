@@ -33,6 +33,7 @@ import {
   isSecondHelpingsCloneTarget,
 } from '../../game/ConsumablesSystem';
 import { ItemCard, CardActionTabConfig, type CardData } from '../ui/ItemCard';
+import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
@@ -41,7 +42,13 @@ import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
-import { PermitDef, generateShopPermit, getPermitShopDiscount, getDiscountedShopPrice } from '../../game/PermitsSystem';
+import {
+  PermitDef,
+  generateShopPermit,
+  getPermitShopDiscount,
+  getDiscountedShopPrice,
+  hasPermitDiceInShop,
+} from '../../game/PermitsSystem';
 import { getEquipmentPurchasePrice, rollShopEquipmentPreview } from '../../game/EquipmentModifiers';
 import { Die } from '../../game/types';
 import diceEnhancements from '../../data/dice_enhancements';
@@ -61,6 +68,7 @@ import { getPackDefById } from '../../game/BoosterPackSystem';
 import { getConsumableDefById } from '../../game/ConsumablesSystem';
 import { getEquipmentDefById } from '../../game/ItemsSystem';
 import { rngFloat } from '../../game/RunRng';
+import { generateShopDie } from '../../game/store/shopStock';
 
 const CARD_SPACING = 185;
 
@@ -879,6 +887,16 @@ export class ShopScene extends Scene {
         ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
         ...(texturePrefix != null ? { texturePrefix } : {}),
       });
+      if (shopItem.type === 'dice') {
+        addDiceCardVisual(this, card, shopItem.die, {
+          cardWidth: card.cardWidth,
+          cardHeight: card.cardHeight,
+          cornerRadius: UI.CARD_RADIUS,
+          showAuraLabel: true,
+          showStickerLabel: true,
+          interactive: false,
+        });
+      }
       card.setTooltipContext(null, getItemDisplayContext(run));
       card.setDepth(10);
       this.trackShopStockObject(card);
@@ -1070,11 +1088,15 @@ export class ShopScene extends Scene {
       else if (item.type === 'consumable') excludeIds.push(item.def.id);
     }
 
-    const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier'; weight: number }[] = [
+    const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier' | 'dice'; weight: number }[] = [
       { type: 'equipment', weight: SHOP_WEIGHTS.equipment },
       { type: 'supply', weight: SHOP_WEIGHTS.supply },
       { type: 'trail_guide', weight: SHOP_WEIGHTS.trail_guide },
     ];
+    const diceMode = hasPermitDiceInShop(run.purchasedPermits);
+    if (diceMode !== 'none') {
+      categories.push({ type: 'dice', weight: SHOP_WEIGHTS.dice });
+    }
     if (selectProfession(run)?.modifiers?.frontierInShop) {
       categories.push({ type: 'frontier', weight: SHOP_WEIGHTS.frontier });
     }
@@ -1087,6 +1109,10 @@ export class ShopScene extends Scene {
         picked = cat.type;
         break;
       }
+    }
+    if (picked === 'dice' && diceMode !== 'none') {
+      const die = generateShopDie(diceMode);
+      return { type: 'dice', die, displayDef: buildShopDieDisplayDef(die) };
     }
     if (picked === 'equipment') {
       const [def] = generateShopStock(1, excludeIds);

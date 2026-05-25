@@ -31,6 +31,7 @@ import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
+import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
@@ -42,21 +43,16 @@ import { enqueueConsumablePlayback } from '../../game/store/uiEffectHelpers';
 import { runActions } from '../../game/store/runStore';
 import { bindConsumableUiEffects } from '../store/consumableUiEffects';
 import type { BoosterPackSceneState } from '../../game/store/types';
-import diceEnhancements from '../../data/dice_enhancements';
-import pipEnhancements from '../../data/pip_enhancements';
 import { rngShuffle } from '../../game/RunRng';
 
 import trailGuidesData from '../../data/trail_guides';
 import supplyCardsData from '../../data/supply_cards';
 import frontierEncountersData from '../../data/frontier_encounters';
 
-const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
-const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
-
-const CARD_W = 130;
-const CARD_H = 180;
+const CARD_W = UI.CARD_W;
+const CARD_H = UI.CARD_H;
 const CARD_SPACING = 185;
-const CARD_RADIUS = 8;
+const CARD_RADIUS = UI.CARD_RADIUS;
 const DICE_SPACING = UI.DICE_SPACING;
 
 const CATEGORY_COLORS: Record<string, number> = {
@@ -94,6 +90,7 @@ export class BoosterPackScene extends Scene {
   // Layout helpers
   private contentCX: number = 0;
   private cardY: number = 0;
+  private hasDiceSelectionLineup: boolean = false;
 
   // Dice lineup (displayed above cards)
   private lineupDice: Die[] = [];
@@ -240,6 +237,7 @@ export class BoosterPackScene extends Scene {
 
     // ─── Dice lineup (above cards) — only for packs with dice-selection cards ───
     const showLineup = this.contents.some((item) => !!item.diceSelection);
+    this.hasDiceSelectionLineup = showLineup;
     if (showLineup) {
       this.lineupY = titleY + 80 + 40;
       this.buildDiceLineup();
@@ -345,6 +343,8 @@ export class BoosterPackScene extends Scene {
   }
 
   private refreshDiceLineup(): void {
+    if (!this.hasDiceSelectionLineup) return;
+
     // Re-draw dice from current player pool
     const oldSelected = new Set(this.selectedDiceIds);
     this.clearDiceLineup();
@@ -455,40 +455,20 @@ export class BoosterPackScene extends Scene {
     if (item.category === 'dice' && item.die) {
       // ─── Dice card layout ───
       const diceBg = this.add.graphics();
-      diceBg.fillStyle(0xf0ece3, 1);
+      diceBg.fillStyle(0x2a2a3a, 1);
       diceBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
-      diceBg.lineStyle(2, 0xc0b8a0, 0.9);
+      diceBg.lineStyle(2, 0x555577, 0.9);
       diceBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
       container.add(diceBg);
-
-      const enhInfo = item.die.enhancement ? ENHANCEMENT_INFO.get(item.die.enhancement) : null;
-      const enhName = enhInfo ? enhInfo.name : 'Standard';
-      const titleText = this.add
-        .text(0, -CARD_H / 2 + 16, enhName, {
-          fontFamily: FONTS.HEADING,
-          fontSize: '15px',
-          color: '#3a3020',
-          align: 'center',
-        })
-        .setOrigin(0.5, 0);
-      container.add(titleText);
-
-      diceSprite = new DiceSprite(this, 0, -8, item.die, { showAuraLabel: true });
-      container.add(diceSprite);
-
-      if (item.die.sticker) {
-        const sInfo = STICKER_INFO.get(item.die.sticker);
-        const stickerLabel = sInfo ? sInfo.name : item.die.sticker.replace(/_/g, ' ');
-        const descText = this.add
-          .text(0, CARD_H / 2 - 12, stickerLabel, {
-            fontFamily: FONTS.PRIMARY,
-            fontSize: '11px',
-            color: '#5a4a2a',
-            align: 'center',
-          })
-          .setOrigin(0.5, 1);
-        container.add(descText);
-      }
+      const visual = addDiceCardVisual(this, container, item.die, {
+        cardWidth: CARD_W,
+        cardHeight: CARD_H,
+        cornerRadius: CARD_RADIUS,
+        showAuraLabel: true,
+        showStickerLabel: true,
+        interactive: true,
+      });
+      diceSprite = visual.diceSprite;
     } else if (item.category === 'equipment' && item.equipmentDef) {
       itemCard = new ItemCard(this, 0, 0, item.equipmentDef, {
         mode: 'inventory',
@@ -1082,7 +1062,9 @@ export class BoosterPackScene extends Scene {
         this.scene.start(this.returnScene, {});
       });
     } else {
-      this.refreshDiceLineup();
+      if (this.hasDiceSelectionLineup) {
+        this.refreshDiceLineup();
+      }
     }
   }
 

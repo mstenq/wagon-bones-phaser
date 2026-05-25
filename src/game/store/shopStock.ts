@@ -1,7 +1,7 @@
 // ─── Shop stock generation (No Phaser imports) ───
 // Builds scene-store shop slices and applies tag modifiers to stock rows.
 
-import { SHOP_WEIGHTS } from '../Constants';
+import { CHANCES, SHOP_WEIGHTS } from '../Constants';
 import { createDie } from '../DiceSystem';
 import type { Die } from '../types';
 import { generateShopStock, type EquipmentDef } from '../ItemsSystem';
@@ -11,9 +11,10 @@ import {
   getShopRandomFrontierDef,
   type ConsumableDef,
 } from '../ConsumablesSystem';
-import { generateShopPacks } from '../BoosterPackSystem';
+import { applyRandomSticker, generateShopPacks } from '../BoosterPackSystem';
 import { hasPermitDiceInShop } from '../PermitsSystem';
 import { rollShopEquipmentPreview } from '../EquipmentModifiers';
+import { pickRandomAura } from '../DiceSelectionSystem';
 import { getProfessionById } from '../../data/professions';
 import {
   applyAuraTagsToShopStock,
@@ -28,8 +29,6 @@ import type { RunState, ShopSceneState, StoredShopItem } from './types';
 import { selectIsFirstShopVisit } from './selectors/runSelectors';
 
 const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded'];
-const ALL_STICKERS: Die['sticker'][] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
-
 /** Mutable row used while generating / tagging shop stock (equipment tag helpers need defs). */
 export interface ShopStockGenRow {
   type: 'equipment' | 'consumable' | 'dice';
@@ -40,11 +39,14 @@ export interface ShopStockGenRow {
   sold?: boolean;
 }
 
-function generateShopDie(mode: 'enhanced' | 'stickered'): Die {
+export function generateShopDie(mode: 'enhanced' | 'stickered'): Die {
   const enhancement = rngPick('shop', SHOP_ENHANCEMENTS);
   const die = createDie({ enhancement });
+  if (rngFloat('shop') < CHANCES.DICE_AURA) {
+    die.aura = pickRandomAura();
+  }
   if (mode === 'stickered') {
-    die.sticker = rngPick('sticker', ALL_STICKERS);
+    applyRandomSticker(die);
   }
   return die;
 }
@@ -61,23 +63,21 @@ export function generateShopStockRows(run: RunState = getRunState()): ShopStockG
   const profession = run.professionId ? getProfessionById(run.professionId) : null;
 
   const diceMode = hasPermitDiceInShop(run.purchasedPermits);
-  if (diceMode !== 'none') {
-    items.push({ type: 'dice', die: generateShopDie(diceMode) });
-  }
-
-  const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier'; weight: number }[] = [
+  const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier' | 'dice'; weight: number }[] = [
     { type: 'equipment', weight: SHOP_WEIGHTS.equipment },
     { type: 'supply', weight: SHOP_WEIGHTS.supply },
     { type: 'trail_guide', weight: SHOP_WEIGHTS.trail_guide },
   ];
+  if (diceMode !== 'none') {
+    categories.push({ type: 'dice', weight: SHOP_WEIGHTS.dice });
+  }
   if (profession?.modifiers?.frontierInShop) {
     categories.push({ type: 'frontier', weight: SHOP_WEIGHTS.frontier });
   }
 
   const totalWeight = categories.reduce((sum, c) => sum + c.weight, 0);
-  const remainingSlots = slotCount - items.length;
 
-  for (let i = 0; i < remainingSlots; i++) {
+  for (let i = 0; i < slotCount; i++) {
     let roll = rngFloat('shop') * totalWeight;
     let picked = categories[0]!.type;
     for (const cat of categories) {
@@ -86,6 +86,11 @@ export function generateShopStockRows(run: RunState = getRunState()): ShopStockG
         picked = cat.type;
         break;
       }
+    }
+
+    if (picked === 'dice' && diceMode !== 'none') {
+      items.push({ type: 'dice', die: generateShopDie(diceMode) });
+      continue;
     }
 
     if (picked === 'equipment') {
