@@ -149,6 +149,7 @@ export class Preloader extends Scene {
     this.load.audio('sfx_polychrome1', 'assets/sounds/polychrome1.ogg');
     this.load.audio('sfx_ambient_fire', 'assets/sounds/ambientFire1.ogg');
     this.load.audio('sfx_slice1', 'assets/sounds/slice1.ogg');
+    this.load.audio('sfx_other1', 'assets/sounds/other1.ogg');
 
     // Background music
     this.load.audio('bg_music_1', 'assets/sounds/bg_music_1.mp3');

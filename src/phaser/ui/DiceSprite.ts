@@ -5,7 +5,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { Die } from '../../game/types';
-import { DICE, COLORS } from '../../game/Constants';
+import { DICE, COLORS, UI } from '../../game/Constants';
 import { applyAuraGlow, createAuraParticles, getAuraPrimary } from './AuraFX';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
@@ -27,6 +27,8 @@ const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
 function getDiceTextureKey(die: Die): string {
   return die.enhancement ? `dice_${die.enhancement}` : 'dice_standard';
 }
+
+export type DiceScorePresentation = 'none' | 'filler';
 
 export class DiceSprite extends GameObjects.Container {
   static suppressTooltips = false;
@@ -100,6 +102,11 @@ export class DiceSprite extends GameObjects.Container {
     this._forced = forced;
     this._selected = forced;
     this.redraw();
+  }
+
+  /** Score line: full opacity for hand dice, dimmed for non-scoring kickers */
+  setScorePresentation(presentation: DiceScorePresentation): void {
+    this.setAlpha(presentation === 'filler' ? UI.DICE_SCORE_FILLER_ALPHA : 1);
   }
 
   get forced(): boolean {

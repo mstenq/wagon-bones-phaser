@@ -295,12 +295,17 @@ export const UI = {
 
   // Game scene (main content area — right of sidebar)
   HAND_Y_RATIO: 0.72,
-  ROLL_Y_RATIO: 0.8, // dice row y position from top of play area
+  ROLL_Y_RATIO: 0.75, // dice row y position from top of play area
   DICE_SPACING: 85,
   DICE_ARC_HEIGHT: 12, // max Y lift at center of arc (px)
   DICE_ARC_ROTATION: 0.04, // max rotation at edges (radians, ~2.3°)
   /** How far locked roll-phase dice rise above the row (Balatro-style hold) */
   DICE_LOCKED_LIFT_Y: 50,
+  /** Y ratio for the horizontal score line (center of play area) */
+  SCORE_Y_RATIO: 0.52,
+  /** Non-scoring kickers sit this many px below the scoring line (Balatro play line) */
+  DICE_SCORE_FILLER_DROP_Y: 50,
+  DICE_SCORE_FILLER_ALPHA: 0.72,
   FELT_PADDING: 12,
   FELT_ALPHA: 0.4,
   FELT_RADIUS: 16,
@@ -351,6 +356,8 @@ export const ANIM = {
   ROLL_INTERVAL: 60,
   ROLL_BOUNCE_DURATION: 80,
   SCORE_HIGHLIGHT_DURATION: 150,
+  /** Tween duration when moving locked dice into the score line */
+  DICE_SCORE_LAYOUT_DURATION: 400,
   SCORE_STEP_DELAY: 200, // ms between each scoring step (dice, equip, held)
   SCORE_SUBSTEP_DELAY: 200, // ms between sub-events on the same die (miles → mult → etc)
   SCORE_FINAL_FLASH_DELAY: 300,

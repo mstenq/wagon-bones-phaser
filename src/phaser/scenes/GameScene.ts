@@ -731,44 +731,105 @@ export class GameScene extends Scene {
     const roundScoreBefore = this.rs().totalMiles.minus(result.miles);
     result.roundScoreBefore = roundScoreBefore;
 
-    // Play sequential scoring animation
     this.animating = true;
-    playScoreAnimation({
-      scene: this,
-      diceSprites: this.rollSprites,
-      result,
-      sidebar: this.sidebar,
-      equipBar: this.equipBar,
-      consumableBar: this.consumableBar,
-      onComplete: () => {
-        revealLandSlideHints();
-        this.equipBar.setHintRound(getRoundHintContext());
+    this.layoutDiceForScoring(result, () => {
+      playScoreAnimation({
+        scene: this,
+        diceSprites: this.rollSprites,
+        result,
+        sidebar: this.sidebar,
+        equipBar: this.equipBar,
+        consumableBar: this.consumableBar,
+        onComplete: () => {
+          revealLandSlideHints();
+          this.equipBar.setHintRound(getRoundHintContext());
 
-        // If hand upgrades occurred during scoring (e.g. Surveyor's Transit), animate them
-        if (result.handUpgrades && result.handUpgrades.length > 0) {
-          playHandUpgradeAnimation({
-            scene: this,
-            sidebar: this.sidebar,
-            upgrades: result.handUpgrades,
-            onComplete: () => {
-              this.animating = false;
-              this.instructionText.setText('');
-              this.sidebar.clearHandDisplay();
-              this.time.delayedCall(600, () => {
-                this.onContinue();
-              });
-            },
-          });
-        } else {
-          this.animating = false;
-          this.instructionText.setText('');
-          this.sidebar.clearHandDisplay();
-          this.time.delayedCall(600, () => {
-            this.onContinue();
-          });
-        }
-      },
+          // If hand upgrades occurred during scoring (e.g. Surveyor's Transit), animate them
+          if (result.handUpgrades && result.handUpgrades.length > 0) {
+            playHandUpgradeAnimation({
+              scene: this,
+              sidebar: this.sidebar,
+              upgrades: result.handUpgrades,
+              onComplete: () => {
+                this.animating = false;
+                this.instructionText.setText('');
+                this.sidebar.clearHandDisplay();
+                this.time.delayedCall(600, () => {
+                  this.onContinue();
+                });
+              },
+            });
+          } else {
+            this.animating = false;
+            this.instructionText.setText('');
+            this.sidebar.clearHandDisplay();
+            this.time.delayedCall(600, () => {
+              this.onContinue();
+            });
+          }
+        },
+      });
     });
+  }
+
+  /** Move locked dice to a centered score line; held dice stay in the roll row below */
+  private layoutDiceForScoring(result: ScoreResult, onComplete: () => void): void {
+    const scoringIds = new Set(result.handResult.scoringDice.map((d) => d.id));
+    const selectedSprites = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id));
+    const heldSprites = this.rollSprites.filter((s) => !this.lockedDiceIds.has(s.dieData.id));
+    const tweenCount = selectedSprites.length + heldSprites.length;
+
+    if (tweenCount === 0) {
+      onComplete();
+      return;
+    }
+
+    const scorePositions = this.getRowXPositions(selectedSprites.length);
+    const scoreY = this.scale.height * UI.SCORE_Y_RATIO;
+    const rollY = this.scale.height * UI.ROLL_Y_RATIO;
+    let finished = 0;
+
+    const onSpriteDone = () => {
+      finished++;
+      if (finished >= tweenCount) onComplete();
+    };
+
+    for (let i = 0; i < selectedSprites.length; i++) {
+      const sprite = selectedSprites[i];
+      const isScoring = scoringIds.has(sprite.dieData.id);
+      sprite.setSelected(false);
+      sprite.setScorePresentation(isScoring ? 'none' : 'filler');
+      sprite.setDepth(isScoring ? 22 : 18);
+
+      this.tweens.add({
+        targets: sprite,
+        x: scorePositions[i],
+        y: isScoring ? scoreY : scoreY + UI.DICE_SCORE_FILLER_DROP_Y,
+        rotation: 0,
+        duration: ANIM.DICE_SCORE_LAYOUT_DURATION,
+        ease: 'Power2',
+        onComplete: onSpriteDone,
+      });
+    }
+
+    const heldPositions = this.getRowXPositions(heldSprites.length);
+    for (let i = 0; i < heldSprites.length; i++) {
+      const sprite = heldSprites[i];
+      const arc = this.getArcOffset(i, heldSprites.length);
+      sprite.setSelected(false);
+      sprite.setScorePresentation('none');
+      sprite.setDepth(10);
+
+      this.tweens.add({
+        targets: sprite,
+        x: heldPositions[i],
+        y: rollY + arc.y,
+        rotation: arc.rotation,
+        duration: ANIM.DICE_SCORE_LAYOUT_DURATION,
+        ease: 'Power2',
+        onComplete: onSpriteDone,
+      });
+    }
   }
 
   // ─── Player Actions ───
@@ -1758,6 +1819,8 @@ export class GameScene extends Scene {
       const finalVelocity = this.dragVelocityX;
       const locked = list === this.rollSprites && this.isRollDieLocked(sprite);
       sprite.setDepth(list === this.rollSprites ? (locked ? 15 : 10) : 20);
+      this.sound.play('sfx_dice_land', { volume: 0.2 });
+
       this.draggingSprite = null;
       this.dragVelocityX = 0;
       DiceSprite.suppressTooltips = false;
