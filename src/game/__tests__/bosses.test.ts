@@ -5,7 +5,7 @@ import { GAMEPLAY } from '../Constants';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
 import { isFinisherLeg } from '../../data/bosses';
 import { setupGame, calculateTestScore, die, diceFromValues, item, setTestDifficulty } from './testHelpers';
-import { createConsumableInstance, getSupplyDefById } from '../ConsumablesSystem';
+import { getSupplyDefById } from '../ConsumablesSystem';
 import { multiplyScore, eq, gt, lt } from '../scoreMath';
 import {
   getBossRoundConfigMods,
@@ -26,30 +26,36 @@ import {
   remapEquipmentDisplayOrderAfterRemove,
 } from '../BossEffectsSystem';
 import { detectBestHand } from '../DiceSystem';
+import { bossActions, consumableActions, equipmentActions, progressionActions } from '../store/actions';
+import { runActions } from '../store';
+import { getRunState } from '../store/runStore';
+import { selectAvailableDice, selectBossForLeg, selectHandStats, selectTargetMiles } from '../store/selectors/runSelectors';
 
 describe('Boss round config', () => {
   test('Marathon: 4x leg base (replaces round 3 2×, not stacked)', () => {
-    const { game, player } = setupGame({ bossId: 'the_marathon', leg: 2 });
+    const { game } = setupGame({ bossId: 'the_marathon', leg: 2 });
     setTestDifficulty(3);
     const legBase = getBaseTargetMilesForLeg(2, 3);
-    expect(eq(player.targetMiles, multiplyScore(legBase, 4))).toBe(true);
-    game.startRound({ targetMiles: player.targetMiles });
+    const targetMiles = selectTargetMiles(getRunState());
+    expect(eq(targetMiles, multiplyScore(legBase, 4))).toBe(true);
+    game.startRound({ targetMiles });
     expect(eq(game.config.targetMiles, multiplyScore(legBase, 4))).toBe(true);
   });
 
   test('Finish Line: 6x leg base on final leg', () => {
-    const { game, player } = setupGame({ bossId: 'the_finish_line', leg: 8 });
+    const { game } = setupGame({ bossId: 'the_finish_line', leg: 8 });
     const legBase = getBaseTargetMilesForLeg(8, 1);
-    expect(eq(player.targetMiles, multiplyScore(legBase, 6))).toBe(true);
-    game.startRound({ targetMiles: player.targetMiles });
+    const targetMiles = selectTargetMiles(getRunState());
+    expect(eq(targetMiles, multiplyScore(legBase, 6))).toBe(true);
+    game.startRound({ targetMiles });
     expect(eq(game.config.targetMiles, multiplyScore(legBase, 6))).toBe(true);
   });
 
   test('Standoff: 1x leg base on showdown (not 2×)', () => {
-    const { player } = setupGame({ bossId: 'the_standoff', leg: 2 });
+    setupGame({ bossId: 'the_standoff', leg: 2 });
     setTestDifficulty(3);
     const legBase = getBaseTargetMilesForLeg(2, 3);
-    expect(eq(player.targetMiles, legBase)).toBe(true);
+    expect(eq(selectTargetMiles(getRunState()), legBase)).toBe(true);
   });
 
   test('Chain Gang: 0 rerolls', () => {
@@ -176,45 +182,45 @@ describe('STRAIGHTS_ONLY: The River', () => {
 
 describe('Trail knowledge bosses', () => {
   test('Trickster reduces effective hand level', () => {
-    const { player } = setupGame({ bossId: 'the_trickster' });
-    player.upgradeHandLevel(HandType.PAIR, 2); // level 3
-    const stats = getBossAdjustedHandStats(HandType.PAIR, player.getHandStats(HandType.PAIR));
+    setupGame({ bossId: 'the_trickster' });
+    progressionActions.upgradeHandLevel(HandType.PAIR, 2); // level 3
+    const stats = getBossAdjustedHandStats(HandType.PAIR, selectHandStats(getRunState(), HandType.PAIR));
     expect(stats.level).toBe(2);
   });
 
   test('Bottle halves hand level', () => {
-    const { player } = setupGame({ bossId: 'the_bottle' });
-    player.upgradeHandLevel(HandType.PAIR, 4); // level 5
-    const stats = getBossAdjustedHandStats(HandType.PAIR, player.getHandStats(HandType.PAIR));
+    setupGame({ bossId: 'the_bottle' });
+    progressionActions.upgradeHandLevel(HandType.PAIR, 4); // level 5
+    const stats = getBossAdjustedHandStats(HandType.PAIR, selectHandStats(getRunState(), HandType.PAIR));
     expect(stats.level).toBe(2);
   });
 
   test('Trickster caps at level 1', () => {
-    const { player } = setupGame({ bossId: 'the_trickster' });
-    const stats = getBossAdjustedHandStats(HandType.PAIR, player.getHandStats(HandType.PAIR));
+    setupGame({ bossId: 'the_trickster' });
+    const stats = getBossAdjustedHandStats(HandType.PAIR, selectHandStats(getRunState(), HandType.PAIR));
     expect(stats.level).toBe(1);
   });
 });
 
 describe('ZERO_MONEY_ON_MOST_PLAYED: Tax Man', () => {
   test('zeros money when playing most-played hand', () => {
-    const { game, player } = setupGame({ bossId: 'the_tax_man', money: 50 });
-    player.recordHandPlayed(HandType.PAIR);
-    player.recordHandPlayed(HandType.PAIR);
-    player.recordHandPlayed(HandType.THREE_OF_A_KIND);
+    const { game } = setupGame({ bossId: 'the_tax_man', money: 50 });
+    progressionActions.recordHandPlayed(HandType.PAIR);
+    progressionActions.recordHandPlayed(HandType.PAIR);
+    progressionActions.recordHandPlayed(HandType.THREE_OF_A_KIND);
     game.startRound();
     const rolled = diceFromValues([6, 6]);
     game.state.phase = 'ROLL';
     game.state.rolledDice = rolled;
     game.selectForScore(rolled.map((d) => d.id));
     game.calculateScore();
-    expect(player.economy.balance).toBe(0);
+    expect(getRunState().balance).toBe(0);
   });
 });
 
 describe('LOSE_MONEY_PER_PLAYED: Banker', () => {
   test('loses $1 per played die (all selected, not just hand dice)', () => {
-    const { game, player } = setupGame({ bossId: 'the_banker', money: 10 });
+    const { game } = setupGame({ bossId: 'the_banker', money: 10 });
     game.startRound();
     // Pair of 6s plus two extra dice played for scoring
     const rolled = diceFromValues([6, 6, 4, 3]);
@@ -222,21 +228,21 @@ describe('LOSE_MONEY_PER_PLAYED: Banker', () => {
     game.state.rolledDice = rolled;
     game.selectForScore(rolled.map((d) => d.id));
     game.calculateScore();
-    expect(player.economy.balance).toBe(6);
+    expect(getRunState().balance).toBe(6);
   });
 });
 
 describe('SPEND_RANDOM_AFTER_SCORE: Inspector', () => {
   test('spends dice from available pool after score', () => {
-    const { game, player } = setupGame({
+    const { game } = setupGame({
       bossId: 'the_inspector',
       dice: diceFromValues([1, 2, 3, 4, 5, 6, 7, 8]),
     });
     game.startRound();
-    const before = player.availableDice.length;
+    const before = selectAvailableDice(getRunState()).length;
     applyBossAfterScore();
-    expect(player.spentDiceIds.size).toBeGreaterThan(0);
-    expect(player.availableDice.length).toBeLessThan(before);
+    expect(getRunState().spentDiceIds.length).toBeGreaterThan(0);
+    expect(selectAvailableDice(getRunState()).length).toBeLessThan(before);
   });
 });
 
@@ -255,15 +261,15 @@ describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
   });
 
   test('disabled equipment re-enabled when boss round is not active', () => {
-    const { player } = setupGame({ bossId: 'the_jinx', equipment: [item('horseshoe')] });
+    setupGame({ bossId: 'the_jinx', equipment: [item('horseshoe')] });
     getBossRoundState().disabledEquipmentIndices = [0];
-    player.round = 1;
+    runActions.patch({ round: 1 });
     expect(isEquipmentDisabledByBoss(0)).toBe(false);
   });
 
   test('disabled equipment skipped in scoring', () => {
     const horseshoe = item('horseshoe');
-    const { game, player } = setupGame({
+    const { game } = setupGame({
       bossId: 'the_jinx',
       equipment: [horseshoe],
     });
@@ -281,7 +287,6 @@ describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
       equipment: [horseshoe],
     });
     expect(lt(disabledResult.mult, normal.mult)).toBe(true);
-    void player;
   });
 });
 
@@ -304,7 +309,7 @@ describe('DISABLE_ALL_DICE: Bank Lien', () => {
   });
 
   test('selling equipment re-enables dice scoring for the rest of the round', () => {
-    const { game, player } = setupGame({
+    const { game } = setupGame({
       bossId: 'the_bank_lien',
       equipment: [item('horseshoe'), item('dynamite')],
     });
@@ -312,7 +317,7 @@ describe('DISABLE_ALL_DICE: Bank Lien', () => {
     expect(getBossRoundState().diceScoringReenabledBySell).toBe(false);
     expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(true);
 
-    expect(player.sellEquipment(0)).toBe(true);
+    expect(equipmentActions.sellEquipment(0)).toBe(true);
     expect(getBossRoundState().diceScoringReenabledBySell).toBe(true);
     expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(false);
 
@@ -328,22 +333,24 @@ describe('DISABLE_ALL_DICE: Bank Lien', () => {
   });
 
   test('selling a consumable does not lift the Bank Lien', () => {
-    const { player } = setupGame({
+    setupGame({
       bossId: 'the_bank_lien',
       equipment: [item('horseshoe')],
     });
-    player.consumables.push(createConsumableInstance(getSupplyDefById('bless')!));
-    expect(player.sellConsumable(0)).toBe(true);
+    const bless = getSupplyDefById('bless');
+    expect(bless).toBeDefined();
+    expect(consumableActions.addConsumable(bless!)).toBe(true);
+    expect(consumableActions.sellConsumable(0)).toBe(true);
     expect(getBossRoundState().diceScoringReenabledBySell).toBe(false);
     expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(true);
   });
 
   test('destroying equipment does not lift the Bank Lien', () => {
-    const { player } = setupGame({
+    setupGame({
       bossId: 'the_bank_lien',
       equipment: [item('horseshoe')],
     });
-    expect(player.destroyEquipment(0)).toBe(true);
+    expect(equipmentActions.destroyEquipment(0)).toBe(true);
     expect(getBossRoundState().diceScoringReenabledBySell).toBe(false);
     expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(true);
   });
@@ -376,25 +383,27 @@ describe('UNIQUE_HANDS_ONLY: Call Girl score rejection', () => {
 
 describe('Boss assignment uniqueness', () => {
   test('legs 1-8 have no duplicate bosses', () => {
-    const player = setupGame().player;
-    const ids = Array.from({ length: 8 }, (_, i) => player.getBossForLeg(i + 1)?.id).filter(Boolean);
+    setupGame();
+    const run = getRunState();
+    const ids = Array.from({ length: 8 }, (_, i) => selectBossForLeg(run, i + 1)?.id).filter(Boolean);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   test('finisher legs only assign finisher bosses', () => {
-    const player = setupGame().player;
-    player.assignBosses();
+    setupGame();
+    bossActions.assignBosses();
+    const run = getRunState();
     for (const leg of [8, 16, 24, 32]) {
       expect(isFinisherLeg(leg)).toBe(true);
-      const boss = player.getBossForLeg(leg);
+      const boss = selectBossForLeg(run, leg);
       expect(boss?.minimumLeg ?? 1).toBeGreaterThanOrEqual(8);
     }
   });
 
   test('assignBosses covers all endless legs', () => {
-    const player = setupGame().player;
-    player.assignBosses();
-    expect(player.getBossAssignmentIds().length).toBe(GAMEPLAY.MAX_LEGS);
+    setupGame();
+    bossActions.assignBosses();
+    expect(getRunState().bossAssignmentIds.length).toBe(GAMEPLAY.MAX_LEGS);
   });
 });
 
@@ -436,8 +445,9 @@ describe('HIDE_EQUIPMENT: Land Slide', () => {
 
 describe('Boss assignment minimumLeg', () => {
   test('leg 1 boss pool excludes high minimumLeg bosses', () => {
-    const { player } = setupGame({ leg: 1 });
-    const boss = player.getBossForLeg(1);
+    setupGame({ leg: 1 });
+    bossActions.ensureBossAssignments();
+    const boss = selectBossForLeg(getRunState(), 1);
     expect(boss).not.toBeNull();
     expect(boss!.minimumLeg ?? 1).toBeLessThanOrEqual(1);
   });
@@ -445,8 +455,8 @@ describe('Boss assignment minimumLeg', () => {
 
 describe('getBossRoundConfigMods without boss', () => {
   test('returns defaults on non-boss round', () => {
-    const { player } = setupGame();
-    player.round = 1;
+    setupGame();
+    runActions.patch({ round: 1 });
     expect(getBossRoundConfigMods().targetMilesMultiplier).toBe(1);
     expect(getBossRoundConfigMods().setMaxRerolls).toBeNull();
   });

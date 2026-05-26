@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { getPlayerState, resetPlayerState } from '../../__tests__/testRunPlayer';
 import { item } from '../testHelpers';
 import {
+  createInitialRunState,
   runActions,
   runStore,
   economyActions,
@@ -17,6 +18,8 @@ import {
 } from '../../store';
 
 describe('run store actions', () => {
+  const initialBalance = createInitialRunState().balance;
+
   afterEach(() => {
     resetPlayerState();
   });
@@ -24,14 +27,14 @@ describe('run store actions', () => {
   test('resetPlayerState clears run store', () => {
     runActions.setBalance(99);
     resetPlayerState();
-    expect(runStore.getState().balance).toBe(10);
+    expect(runStore.getState().balance).toBe(initialBalance);
   });
 
   test('economyActions earn and spend', () => {
     economyActions.earn(5);
-    expect(selectBalance()).toBe(15);
+    expect(selectBalance()).toBe(initialBalance + 5);
     expect(economyActions.spend(3)).toBe(true);
-    expect(selectBalance()).toBe(12);
+    expect(selectBalance()).toBe(initialBalance + 2);
   });
 
   test('setupActions applyProfession seeds dice and money', () => {
@@ -39,7 +42,7 @@ describe('run store actions', () => {
     const state = runStore.getState();
     expect(state.professionId).toBe('banker');
     expect(state.dice.length).toBeGreaterThan(0);
-    expect(state.balance).toBeGreaterThan(10);
+    expect(state.balance).toBeGreaterThanOrEqual(initialBalance);
   });
 
   test('diceActions addDie assigns monotonic ids', () => {

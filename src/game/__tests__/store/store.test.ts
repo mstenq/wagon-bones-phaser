@@ -34,7 +34,7 @@ describe('game stores', () => {
 
   test('run store initializes with plain data', () => {
     const state = runStore.getState();
-    expect(state.balance).toBe(10);
+    expect(state.balance).toBe(createInitialRunState().balance);
     expect(state.dice).toEqual([]);
     expect(state.equipment).toEqual([]);
     expect(state.handStats).toBeTruthy();
@@ -104,6 +104,7 @@ describe('game stores', () => {
 
   test('selector subscription fires on action updates', () => {
     const values: number[] = [];
+    const initialBalance = createInitialRunState().balance;
     const unsub = subscribeRunSelector(selectBalance, (balance) => {
       values.push(balance);
     });
@@ -112,7 +113,7 @@ describe('game stores', () => {
     runActions.setBalance(20);
     unsub();
 
-    expect(values).toEqual([10, 15, 20]);
+    expect(values).toEqual([initialBalance, 15, 20]);
   });
 
   test('state contains no PlayerState or GameState instances', () => {
