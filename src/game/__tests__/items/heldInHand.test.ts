@@ -246,6 +246,29 @@ describe('HELD_PIP_MULT: The Eleventh Crossing (pip 11, +11 mult)', () => {
     });
     expect(result.mult).toBeMult(1);
   });
+
+  test('applies +11 mult before steel xMult on the same held die', () => {
+    const held = die({ value: 11, enhancement: 'steel' });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [held],
+      equipment: [item('eleventh_crossing')],
+    });
+    // heldMult = (1 + 11) * 1.5 = 18
+    expect(result.mult).toBeMult(18);
+
+    const heldDieId = (e: (typeof result.animEvents)[number]) =>
+      e.target.kind === 'die'
+        ? e.target.dieId
+        : e.target.kind === 'both'
+          ? e.target.dieId
+          : undefined;
+    const heldEvents = result.animEvents.filter((e) => heldDieId(e) === held.id);
+    const multIdx = heldEvents.findIndex((e) => e.popupType === 'mult');
+    const steelIdx = heldEvents.findIndex((e) => e.popupType === 'xmult');
+    expect(multIdx).toBeGreaterThanOrEqual(0);
+    expect(steelIdx).toBeGreaterThan(multIdx);
+  });
 });
 
 // ─── HELD_ENHANCED_MONEY: Prospector's Pouch ───

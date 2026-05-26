@@ -86,8 +86,8 @@ Instead of decks, we instead choose a character, and the character affects how t
    - 'On scored' Items: Items that activate on a played and scored dice will activate their effects. When multiple Items are triggered by the same card, they activate from left to right. Examples include Mile Marker's scaling, Lucky Number, and The Devil’s Hand.
    - Retriggers: Each retrigger repeats the previous activation sequence (from base effects to scored card dependent Jokers) one more time. Multiple retriggers stack additively. Red bullet pips would go first, followed by retriggering Jokers like "Last Stand" from left to right.
 4. Held in hand abilities: Dice in hand are checked from left to right if they can activate in-hand abilities. The sequence for each card is similar to scored cards.
+   - 'On held' Equipment: Equipment that activate on dice still held in hand will activate their effects. When multiple Items are triggered by a single dice, they activate from left to right. Examples include "Bottom Dollar", "The Eleventh Crossing", and "Ace in the Hole".
    - Enhancement (Steel dice): Currently Steel is the only dice modifier to activate in-hand for each hand.
-   - 'On held' Equipment: Equipment that activate on dice still held in hand will activate their effects. When multiple Items are triggered by a single dice, they activate from left to right. Examples include "Bottom Dollar", "The Thirteenth Crossing", and "Ace in the Hole".
    -  Retriggers: Same as those of scored dice, retriggers of dice in hand stack additively. Red bullet stickers will activate first, then "Double Down" and any other item copying its effect from left to right. 
 5. Item Editions and 'Independent' Items: Items are checked from left to right to score any Aura (foil, holographic and polychrome) and activate Independent abilities:
    - Fire or Ice aura bonus.

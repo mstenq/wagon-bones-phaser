@@ -175,7 +175,7 @@ interface HeldInHandResult {
 
 /**
  * Process held-in-hand abilities for dice that were rolled but not scored.
- * Sequence per die (left to right): steel enhancement → equipment triggers → retriggers.
+ * Sequence per die (left to right): equipment triggers → steel enhancement → retriggers.
  * Retriggers: red_bullet sticker first, then Double Down equipment.
  */
 export function processHeldInHand(
@@ -230,14 +230,7 @@ export function processHeldInHand(
       }
       const triggerLabel = t === 0 ? '' : ` (retrigger ${t})`;
 
-      // Steel enhancement: x1.5 mult per trigger
-      if (die.enhancement === 'steel') {
-        multiplyCtxXMult(heldCtx, 1.5);
-        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5 });
-        console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${heldCtx.xMult})`);
-      }
-
-      // Equipment triggers on held dice
+      // Equipment triggers on held dice (additive / conditional before steel xMult)
       for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
         const originalEquip = equipment[eIdx];
         let equip = originalEquip;
@@ -255,6 +248,13 @@ export function processHeldInHand(
         if (handler) {
           handler(heldCtx, equip, eIdx, die, t);
         }
+      }
+
+      // Steel enhancement: x1.5 mult per trigger
+      if (die.enhancement === 'steel') {
+        multiplyCtxXMult(heldCtx, 1.5);
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5 });
+        console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${heldCtx.xMult})`);
       }
     }
   }
