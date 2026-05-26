@@ -2,7 +2,8 @@ import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
 import { die, diceWithValue, item, calculateTestScore, resetDieIds } from '../testHelpers';
 import { GAMEPLAY } from '../../Constants';
-import { processGoldHeldAtRoundEnd } from '../../EquipmentEffects';
+import { processBlueMoonHeldAtRoundEnd, processGoldHeldAtRoundEnd } from '../../EquipmentEffects';
+import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
 
@@ -361,5 +362,42 @@ describe('gold dice held at round end', () => {
     expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 3);
     expect(result.animEvents.filter((e) => e.popupType === 'money')).toHaveLength(3);
     expect(result.animEvents.filter((e) => e.popupType === 'again')).toHaveLength(1);
+  });
+});
+
+// ─── Blue moon held at round end ───
+
+describe('blue moon held at round end', () => {
+  test('grants a trail guide for the last scored hand', () => {
+    const result = processBlueMoonHeldAtRoundEnd([die({ value: 3, sticker: 'blue_moon' })], [], HandType.PAIR);
+    expect(result.consumablesGranted).toHaveLength(1);
+    expect(result.animEvents).toHaveLength(1);
+    expect(result.animEvents[0].popupType).toBe('trail_guide');
+    expect(result.animEvents[0].consumableId).toBe(result.consumablesGranted[0]);
+  });
+
+  test('does nothing without a scored hand type', () => {
+    const result = processBlueMoonHeldAtRoundEnd([die({ value: 3, sticker: 'blue_moon' })], [], null);
+    expect(result.consumablesGranted).toHaveLength(0);
+    expect(result.animEvents).toHaveLength(0);
+  });
+
+  test('ignores dice without blue moon sticker', () => {
+    const result = processBlueMoonHeldAtRoundEnd([die({ value: 3 })], [], HandType.PAIR);
+    expect(result.consumablesGranted).toHaveLength(0);
+    expect(result.animEvents).toHaveLength(0);
+  });
+
+  test('silver bullets retriggers blue moon trail guide grant', () => {
+    const result = processBlueMoonHeldAtRoundEnd(
+      [die({ value: 3, sticker: 'blue_moon' })],
+      [item('silver_bullets')],
+      HandType.PAIR,
+    );
+    expect(result.consumablesGranted).toHaveLength(2);
+    expect(result.animEvents.filter((e) => e.popupType === 'trail_guide')).toHaveLength(2);
+    expect(result.animEvents).toContainEqual(
+      expect.objectContaining({ popupType: 'again', target: { kind: 'equip', equipIndex: 0 } }),
+    );
   });
 });

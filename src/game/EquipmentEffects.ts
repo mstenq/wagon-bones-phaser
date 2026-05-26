@@ -237,22 +237,6 @@ export function processHeldInHand(
         console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${heldCtx.xMult})`);
       }
 
-      // Sticker effects on held dice
-      if (die.sticker === 'blue_moon' && scoredHandType) {
-        const tgDef = getTrailGuideDefForHand(scoredHandType);
-        heldCtx.mutations.consumablesGranted.push(tgDef.id);
-        animEvents.push({
-          target: { kind: 'die', dieId: die.id },
-          popupType: 'trail_guide',
-          value: 0,
-          dieId: die.id,
-          consumableId: tgDef.id,
-        });
-        console.log(
-          `  [held] Die ${die.id}${triggerLabel}: BLUE_MOON trail guide '${tgDef.name}' for ${scoredHandType}`,
-        );
-      }
-
       // Equipment triggers on held dice
       for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
         const originalEquip = equipment[eIdx];
@@ -312,6 +296,39 @@ export function processGoldHeldAtRoundEnd(
   }
 
   return { moneyEarned, animEvents };
+}
+
+/** Blue moon sticker held (not scored) when the round is won — trail guide for the last scored hand. */
+export function processBlueMoonHeldAtRoundEnd(
+  heldDice: Die[],
+  equipment: EquipmentInstance[],
+  scoredHandType: HandType | null,
+): { consumablesGranted: string[]; animEvents: ScoreAnimEvent[] } {
+  if (!scoredHandType) return { consumablesGranted: [], animEvents: [] };
+
+  const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
+  const heldRetriggerSources = buildHeldRetriggerSources(equipment);
+  const animEvents: ScoreAnimEvent[] = [];
+  const consumablesGranted: string[] = [];
+  const tgDef = getTrailGuideDefForHand(scoredHandType);
+
+  for (const die of heldDice) {
+    if (die.sticker !== 'blue_moon') continue;
+    const triggers = getHeldDieTriggerCount(die, doubleDownCount);
+    for (let t = 0; t < triggers; t++) {
+      pushRetriggerAgainEvent(animEvents, die, t, heldRetriggerSources);
+      consumablesGranted.push(tgDef.id);
+      animEvents.push({
+        target: { kind: 'die', dieId: die.id },
+        popupType: 'trail_guide',
+        value: 0,
+        dieId: die.id,
+        consumableId: tgDef.id,
+      });
+    }
+  }
+
+  return { consumablesGranted, animEvents };
 }
 
 // ─── Helpers ───

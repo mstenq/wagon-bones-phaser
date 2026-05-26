@@ -79,8 +79,8 @@ const professions: ProfessionDef[] = [
     id: 'banker',
     title: 'Banker',
     name: 'Charles Whitlock',
-    description: 'Starts with $20',
-    modifiers: { startingMoney: 20 },
+    description: 'Starts with $10',
+    modifiers: { startingMoney: 10 },
     startingDice: ['gold', 'gold', 'gold', 'diamond', 'diamond'],
     specialEquipment: {
       id: 'bank_note',

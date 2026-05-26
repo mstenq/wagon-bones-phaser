@@ -616,12 +616,14 @@ export interface DieAnimEventsConfig {
   scene: Scene;
   diceSprites: DiceSprite[];
   events: ScoreAnimEvent[];
+  consumableBar?: ConsumableBar;
+  equipBar?: EquipmentBar;
   onComplete: () => void;
 }
 
-/** Play money (and other die-target) popups on dice sprites — e.g. gold held at round end. */
+/** Play die-target popups (money, trail guide fly-in, retrigger "Again!", …) — e.g. round-end held rewards. */
 export function playDieAnimEvents(config: DieAnimEventsConfig): void {
-  const { scene, diceSprites, events, onComplete } = config;
+  const { scene, diceSprites, events, consumableBar, equipBar, onComplete } = config;
   if (events.length === 0) {
     onComplete();
     return;
@@ -632,6 +634,53 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
 
   let eventIdx = 0;
   let lastDieId: string | null = null;
+
+  const finishEvent = () => {
+    eventIdx++;
+    scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
+  };
+
+  const animateEvent = (evt: ScoreAnimEvent, stepIdx: number, done: () => void): void => {
+    const { target, popupType, value } = evt;
+
+    if (popupType === 'trail_guide') {
+      const sprite = target.kind === 'die' || target.kind === 'both' ? dieSpriteMap.get(target.dieId) : undefined;
+      const def = evt.consumableId ? getConsumableDefById(evt.consumableId) : null;
+      if (sprite) {
+        popupForDie(scene, sprite, 'trail_guide', value);
+      }
+      const sfx = getSoundForType('trail_guide', stepIdx);
+      scene.sound.play(sfx.key, sfx.config);
+      if (sprite && def && consumableBar) {
+        animateGrantToConsumableBar(scene, sprite.x, sprite.y, def, consumableBar, done);
+      } else {
+        scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, done);
+      }
+      return;
+    }
+
+    if (popupType === 'again') {
+      if (equipBar && target.kind === 'equip') {
+        shakeEquipCardAgain(scene, equipBar, target.equipIndex);
+        popupForEquip(scene, equipBar, target.equipIndex, 'again', value);
+      }
+      const sfx = getSoundForType('again', stepIdx);
+      scene.sound.play(sfx.key, sfx.config);
+      scene.time.delayedCall(450, done);
+      return;
+    }
+
+    const dieId = evt.dieId ?? (target.kind === 'die' ? target.dieId : target.kind === 'both' ? target.dieId : null);
+    if (dieId) {
+      const sprite = dieSpriteMap.get(dieId);
+      if (sprite) {
+        popupForDie(scene, sprite, popupType, value);
+      }
+    }
+    const sfx = getSoundForType(popupType, stepIdx);
+    scene.sound.play(sfx.key, sfx.config);
+    done();
+  };
 
   const processNextEvent = () => {
     if (eventIdx >= events.length) {
@@ -644,18 +693,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
       evt.dieId ??
       (evt.target.kind === 'die' ? evt.target.dieId : evt.target.kind === 'both' ? evt.target.dieId : null);
 
-    const runEvent = () => {
-      if (dieId) {
-        const sprite = dieSpriteMap.get(dieId);
-        if (sprite) {
-          popupForDie(scene, sprite, evt.popupType, evt.value);
-        }
-      }
-      const sfx = getSoundForType(evt.popupType, eventIdx);
-      scene.sound.play(sfx.key, sfx.config);
-      eventIdx++;
-      scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
-    };
+    const runEvent = () => animateEvent(evt, eventIdx, finishEvent);
 
     if (dieId && dieId !== lastDieId) {
       lastDieId = dieId;

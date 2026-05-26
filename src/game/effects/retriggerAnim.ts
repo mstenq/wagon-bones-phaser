@@ -92,17 +92,16 @@ export function buildHeldRetriggerSources(equipment: EquipmentInstance[]): Retri
 }
 
 /**
- * True when a held die has something to retrigger during scoring (steel, blue moon, or held equipment).
+ * True when a held die has something to retrigger during scoring (steel or held equipment).
  * Silver Bullets still adds trigger iterations for all held dice; "Again!" only shows when this is true.
  */
 export function heldDieHasRetriggerableEffects(
   die: Die,
   heldDice: Die[],
   equipment: EquipmentInstance[],
-  scoredHandType?: HandType,
+  _scoredHandType?: HandType,
 ): boolean {
   if (die.enhancement === 'steel') return true;
-  if (die.sticker === 'blue_moon' && scoredHandType) return true;
 
   const stackedDeck = hasStackedDeck(equipment);
   const maxCopyDepth = equipment.length;

@@ -14,6 +14,7 @@ import { Button } from '../ui/Button';
 import { buildVictoryGameOverData } from './GameOver';
 import { recordStoryVictory } from '../../game/UserStats';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
+import { createLayout, type LayoutResult } from '../ui/SceneLayout';
 import type { DecimalSource } from '../../game/decimal';
 import type { PayoutBreakdown, PayoutPresentationState } from '../../game/store/types';
 
@@ -57,17 +58,27 @@ export class PayoutScene extends Scene {
     const payout = payoutState.breakdown;
     const investmentBonus = payoutState.presentation.investmentBonus;
 
-    const { width, height } = this.scale;
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
 
-    const bg = this.add.graphics();
-    bg.fillStyle(COLORS.BG_WIN, 1);
-    bg.fillRect(0, 0, width, height);
+    const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'PAYOUT' });
+    this.buildPayoutPanel(layout, payout, data, investmentBonus);
+
+    EventBus.emit(Events.SCENE_READY, this);
+  }
+
+  private buildPayoutPanel(
+    layout: LayoutResult,
+    payout: PayoutBreakdown,
+    data: PayoutData,
+    investmentBonus: number,
+  ): void {
+    const { contentCX, contentTop, contentBottom, contentW } = layout;
+    const contentMidY = (contentTop + contentBottom) / 2;
 
     const roundLabel = data.round === GAMEPLAY.ROUNDS_PER_LEG ? 'Boss Defeated!' : 'Round Complete!';
     this.add
-      .text(width / 2, height * 0.12, roundLabel, {
+      .text(contentCX, contentTop + 36, roundLabel, {
         fontFamily: FONTS.HEADING,
         fontSize: '42px',
         color: TEXT_COLORS.WIN,
@@ -75,47 +86,51 @@ export class PayoutScene extends Scene {
         strokeThickness: 5,
         align: 'center',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(20);
 
     this.add
-      .text(width / 2, height * 0.19, `Leg ${data.leg} — Round ${data.round}/${GAMEPLAY.ROUNDS_PER_LEG}`, {
+      .text(contentCX, contentTop + 88, `Leg ${data.leg} — Round ${data.round}/${GAMEPLAY.ROUNDS_PER_LEG}`, {
         fontFamily: FONTS.PRIMARY,
         fontSize: '18px',
         color: TEXT_COLORS.SECONDARY,
         align: 'center',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(20);
 
     this.add
-      .text(width / 2, height * 0.25, `${formatScore(data.totalMiles)} / ${formatScore(data.targetMiles)} miles`, {
+      .text(contentCX, contentTop + 118, `${formatScore(data.totalMiles)} / ${formatScore(data.targetMiles)} miles`, {
         fontFamily: FONTS.PRIMARY,
         fontSize: '22px',
         color: TEXT_COLORS.SCORE_GREEN,
         align: 'center',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(20);
 
-    const panelW = 420;
+    const panelW = Math.min(420, contentW - 48);
     const rowH = 40;
     const rows = this.buildPayoutRows(payout, data, investmentBonus);
     const panelH = rows.length * rowH + 60;
-    const panelX = width / 2 - panelW / 2;
-    const panelY = height * 0.32;
+    const panelX = contentCX - panelW / 2;
+    const panelY = contentMidY - panelH / 2 + 20;
 
-    const panel = this.add.graphics();
+    const panel = this.add.graphics().setDepth(10);
     panel.fillStyle(COLORS.BG_PANEL, 0.95);
     panel.fillRoundedRect(panelX, panelY, panelW, panelH, 12);
     panel.lineStyle(2, COLORS.PANEL_BORDER, 0.8);
     panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 12);
 
     this.add
-      .text(width / 2, panelY + 22, `Collect Earnings: $${payout.total + investmentBonus}`, {
+      .text(contentCX, panelY + 22, `Collect Earnings: $${payout.total + investmentBonus}`, {
         fontFamily: FONTS.HEADING,
         fontSize: '22px',
         color: TEXT_COLORS.GOLD,
         align: 'center',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(20);
 
     const divY = panelY + 42;
     panel.lineStyle(1, COLORS.PANEL_BORDER, 0.5);
@@ -129,11 +144,13 @@ export class PayoutScene extends Scene {
       const row = rows[i];
       const y = rowStartY + i * rowH;
 
-      this.add.text(leftX, y, row.label, {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '16px',
-        color: row.highlight ? TEXT_COLORS.GOLD : TEXT_COLORS.PRIMARY,
-      });
+      this.add
+        .text(leftX, y, row.label, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '16px',
+          color: row.highlight ? TEXT_COLORS.GOLD : TEXT_COLORS.PRIMARY,
+        })
+        .setDepth(20);
 
       this.add
         .text(rightX, y, row.amount, {
@@ -141,11 +158,12 @@ export class PayoutScene extends Scene {
           fontSize: '18px',
           color: row.amountColor ?? TEXT_COLORS.MONEY,
         })
-        .setOrigin(1, 0);
+        .setOrigin(1, 0)
+        .setDepth(20);
     }
 
-    const btnY = panelY + panelH + 30;
-    new Button(this, width / 2, btnY, 'Collect & Continue', 260, 50).onClick(() => {
+    const btnY = Math.min(panelY + panelH + 30, contentBottom - 36);
+    new Button(this, contentCX, btnY, 'Collect & Continue', 260, 50).onClick(() => {
       economyActions.earn(payout.total + investmentBonus);
       const journeyDone = progressionActions.advanceRound();
 
@@ -161,8 +179,6 @@ export class PayoutScene extends Scene {
         this.scene.start('TrailEvent', {});
       }
     });
-
-    EventBus.emit(Events.SCENE_READY, this);
   }
 
   private buildPayoutRows(

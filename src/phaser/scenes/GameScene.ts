@@ -63,7 +63,8 @@ import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
-import { processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
+import { processBlueMoonHeldAtRoundEnd, processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
+import { applyScoringMutations, createEmptyScoringMutations } from '../../game/effects/applyMutations';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import {
@@ -953,15 +954,21 @@ export class GameScene extends Scene {
 
     const scoredIds = new Set(this.rs().selectedForScore.map((d) => d.id));
     const heldDice = this.rs().rolledDice.filter((d) => !scoredIds.has(d.id));
+    const lastHandType = this.rs().currentHandType;
     const goldHeld = processGoldHeldAtRoundEnd(heldDice, resolveEquipmentList());
 
     const { outcome, destroyedEquipment, deferredDestroyIndices } = roundActions.endDay({
       deferEquipmentDestructionAnimation: true,
     });
 
+    const blueMoonHeld =
+      outcome === 'won'
+        ? processBlueMoonHeldAtRoundEnd(heldDice, resolveEquipmentList(), lastHandType)
+        : { consumablesGranted: [], animEvents: [] };
+
     const afterDestroyedEquipmentFeedback = () => {
       if (outcome === 'won' || outcome === 'lost') {
-        this.finishDayEndAfterEquipmentDestroyed(outcome, goldHeld);
+        this.finishDayEndAfterEquipmentDestroyed(outcome, goldHeld, blueMoonHeld);
         return;
       }
 
@@ -1004,28 +1011,43 @@ export class GameScene extends Scene {
   private finishDayEndAfterEquipmentDestroyed(
     outcome: 'won' | 'lost',
     goldHeld: ReturnType<typeof processGoldHeldAtRoundEnd>,
+    blueMoonHeld: ReturnType<typeof processBlueMoonHeldAtRoundEnd>,
   ): void {
-    const playGoldThenFinish = () => {
+    const roundEndHeldEvents = [...goldHeld.animEvents, ...blueMoonHeld.animEvents];
+
+    const applyRoundEndHeldRewards = () => {
       if (goldHeld.moneyEarned > 0) {
         economyActions.earn(goldHeld.moneyEarned);
       }
       this.runRoundEndModifierFeedback(() => this.transitionAfterRoundEnd(outcome));
     };
 
-    if (goldHeld.animEvents.length > 0) {
+    const playRoundEndHeldAnimations = () => {
+      if (roundEndHeldEvents.length === 0) {
+        applyRoundEndHeldRewards();
+        return;
+      }
       this.animating = true;
       playDieAnimEvents({
         scene: this,
         diceSprites: this.rollSprites,
-        events: goldHeld.animEvents,
+        events: roundEndHeldEvents,
+        consumableBar: this.consumableBar,
+        equipBar: this.equipBar,
         onComplete: () => {
           this.animating = false;
-          playGoldThenFinish();
+          applyRoundEndHeldRewards();
         },
       });
-    } else {
-      playGoldThenFinish();
+    };
+
+    if (blueMoonHeld.consumablesGranted.length > 0) {
+      const mutations = createEmptyScoringMutations();
+      mutations.consumablesGranted.push(...blueMoonHeld.consumablesGranted);
+      applyScoringMutations(mutations);
     }
+
+    playRoundEndHeldAnimations();
   }
 
   private runRoundEndModifierFeedback(onComplete: () => void): void {
