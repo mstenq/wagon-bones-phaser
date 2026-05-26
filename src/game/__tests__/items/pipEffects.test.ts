@@ -365,14 +365,14 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
 // ─── ENHANCEMENT_SCORED_MILES: Covered Wagon ───
 
 describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
-  test('gains +30 miles when wooden die is scored', () => {
+  test('gains +12 miles when wooden die is scored', () => {
     const inst = item('covered_wagon');
     calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
       equipment: [inst],
     });
-    // Miles gained: +30 from wooden scored (stored in state)
-    expect(inst.state.miles).toBe(30);
+    // Miles gained: +12 from wooden scored (stored in state)
+    expect(inst.state.miles).toBe(12);
   });
 
   test('accumulates across multiple wooden dice', () => {
@@ -381,7 +381,7 @@ describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
       scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5, enhancement: 'wooden' })],
       equipment: [inst],
     });
-    expect(inst.state.miles).toBe(60);
+    expect(inst.state.miles).toBe(24);
   });
 
   test('does not gain from non-wooden dice', () => {
@@ -400,7 +400,7 @@ describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
       equipment: [inst],
     });
     // base trigger + red_bullet retrigger = 2 wooden triggers
-    expect(inst.state.miles).toBe(60);
+    expect(inst.state.miles).toBe(24);
   });
 
   test('gains miles for each quick_draw retrigger on the first wooden die', () => {
@@ -409,8 +409,8 @@ describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
       scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
       equipment: [item('quick_draw'), inst],
     });
-    // first wooden die triggers 3 times total, adding +30 each time
-    expect(inst.state.miles).toBe(90);
+    // first wooden die triggers 3 times total, adding +12 each time
+    expect(inst.state.miles).toBe(36);
   });
 });
 

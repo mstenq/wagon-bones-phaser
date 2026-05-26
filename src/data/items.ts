@@ -1917,16 +1917,16 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     modifierImmunity: ['perishable'],
     effectType: 'ENHANCEMENT_SCORED_MILES',
-    effectParams: { enhancement: 'wooden', value: 15 },
+    effectParams: { enhancement: 'wooden', value: 12 },
     initialState: { miles: 0 },
     display: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'covered_wagon');
       const m = equip?.state.miles ?? 0;
       const hint =
-        m > 0 ? [[miles(`+${m}`)],[condition('wood', "sm")]] : [[miles('+15')],[condition('per wooden scored', "xs")]];
+        m > 0 ? [[miles(`+${m}`)],[condition('wood', "sm")]] : [[miles('+12')],[condition('per wooden scored', "xs")]];
       return {
         hint,
-        tooltip: [[text('Gains '), miles('+15'), text('miles for every Wood die scored')]],
+        tooltip: [[text('Gains '), miles('+12'), text('miles for every Wood die scored')]],
       };
     },
     unlockCondition: unlockByEnhancement('wooden'),

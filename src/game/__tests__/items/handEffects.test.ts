@@ -428,6 +428,7 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
     game.startRound();
     // Set target AFTER startRound (which randomizes it)
     inst.state.targetHand = threeIdx;
+    pushEquipmentState(inst);
 
     game.state.phase = 'ROLL';
     game.state.rolledDice = diceWithValue(5, 2);
