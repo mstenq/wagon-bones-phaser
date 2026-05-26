@@ -9,7 +9,9 @@ import {
   setupGame,
   resetDieIds,
   pushEquipmentState,
+  seedTestRoll,
 } from '../testHelpers';
+import { D } from '../../decimal';
 import { processEquipmentOnHandPlayed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 
@@ -249,6 +251,31 @@ describe('HAND_MULT_GAIN: Card Counter', () => {
     player.applyProfession('con_artist');
     processEquipmentOnHandPlayed([inst], HandType.TWO_PAIR);
     expect(inst.state.mult).toBe(4);
+  });
+
+  test('accumulates mult via calculateScore and persists to store', () => {
+    const twoPair = [...diceWithValue(3, 2), ...diceWithValue(8, 2)];
+    const { game, player } = setupGame({
+      equipment: [item('card_counter')],
+      dice: [...twoPair, ...diceWithValue(1, 20)],
+    });
+
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    seedTestRoll(twoPair);
+    game.selectForScore(twoPair.map((d) => d.id));
+    game.calculateScore();
+    player.syncFromStore();
+    expect(player.equipment[0]?.state.mult).toBe(2);
+
+    game.endDay();
+    player.syncFromStore();
+    game.selectForRoll(game.state.hand.slice(0, 5).map((d) => d.id));
+    seedTestRoll(twoPair);
+    game.selectForScore(twoPair.map((d) => d.id));
+    game.calculateScore();
+    player.syncFromStore();
+    expect(player.equipment[0]?.state.mult).toBe(4);
   });
 });
 

@@ -217,9 +217,51 @@ Colors, fonts, sizing, gameplay values — **`Constants.ts` only**. Import from 
 ## Testing
 
 - Framework: **bun:test** (Jest-compatible API)
-- Helpers: `src/game/__tests__/testHelpers.ts` — `setupGame()`, `calculateTestScore()`, `item()`, `die()`, …
+- Helpers: `src/game/__tests__/testHelpers.ts` — `setupGame()`, `calculateTestScore()`, `playScoredDayAndEnd()`, `item()`, `die()`, …
 - Setup: `src/game/__tests__/setup.ts` (suppresses `console.log`)
 - **Test game logic only** — not Phaser rendering
+
+Tests run against **real** game modules (`roundActions`, effect registry, stores). There is no parallel mock scoring stack. Failures usually mean either the handler is wrong or **store wiring** did not persist mutations.
+
+### Two layers: handler vs integration
+
+| Layer | When to use | Example | Catches |
+|-------|-------------|---------|---------|
+| **Handler (unit)** | Rule logic on an in-memory `EquipmentInstance[]` | `processEndOfRound([inst])`, `processEquipmentOnHandPlayed([inst], hand)` | Effect math, branches |
+| **Store (integration)** | Anything that must survive an action boundary | `playScoredDayAndEnd(game)` then read `player.equipment` / `getRunState()` | Missing `replaceEquipmentList`, wrong resolve path |
+
+Use **both** for stateful equipment (`equip.state`, `sellValue`, `perishableRoundsLeft`):
+
+1. One fast handler test for the rule.
+2. One integration test through the real action that runs in gameplay.
+
+### Integration helpers (`testHelpers.ts`)
+
+| Helper | Flow | Use when |
+|--------|------|----------|
+| `calculateTestScore({ scoredDice, equipment })` | `startRound` → patch ROLL → `selectForScore` → `calculateScore` | Scoring pipeline; persists via `calculateScore` |
+| `playScoredDayAndEnd(game, options?)` | roll → score → `endDay`; syncs `player` from store | Day/round-end lifecycle (`processEndOfRound`, `processEquipmentOnDayEnd`) |
+| `seedTestRoll(dice)` | Patch round store to ROLL with fixed dice | Deterministic hands inside a started round |
+| `syncEquipmentInstances(...inst)` | Copy store → instances tests still hold | After store actions when keeping local `item()` refs |
+| `pushEquipmentState(...inst)` | Copy instances → store | Before store-driven actions when seeding custom `state` |
+
+`playScoredDayAndEnd` options:
+
+- `avoidWin: true` — high `targetMiles` so one hand does not end the leg.
+- `endDay: { deferEquipmentDestructionAnimation: true }` — matches `GameScene` (`roundActions.endDay` production path).
+
+### Lifecycle → action map (what to integration-test)
+
+| Mutation timing | Production entry | Prefer integration test via |
+|-----------------|------------------|-----------------------------|
+| On score | `roundActions.calculateScore` | `calculateTestScore` or `game.calculateScore` + `player.syncFromStore()` |
+| End of scored day | `roundActions.endDay` → `processEndOfRound` + `processEquipmentOnDayEnd` | `playScoredDayAndEnd` |
+| Start of leg round | `roundActions.startRound` → `processEquipmentOnRoundStart` | `game.startRound()` (+ `roundActions.clearRound()` for a second round in tests) |
+| Leg payout money | `computePayoutBreakdown` in `runProgression.ts` | `computePayoutBreakdown(getRunState(), …)` — **not** `processEndOfRound().moneyEarned` alone for `END_ROUND_MONEY` |
+
+**Do not assume** `processEndOfRound().moneyEarned` is applied during `endDay`; payday-style money is summed again at payout. Handler tests on `moneyEarned` are still useful but must be paired with `computePayoutBreakdown` for payout items.
+
+**Destruction-only** checks (e.g. Dynamite `destroyedIndices`) can stay on `processEndOfRound` direct calls; removal often persisted even when `state` did not (historical Fading Memory bug).
 
 ### Test File Organization (CRITICAL)
 

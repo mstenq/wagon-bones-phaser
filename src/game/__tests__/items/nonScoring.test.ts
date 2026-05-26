@@ -10,8 +10,12 @@ import {
   setupGame,
   calculateTestScore,
   resetDieIds,
+  playScoredDayAndEnd,
 } from '../testHelpers';
 import { getBossRoundConfigMods } from '../../BossEffectsSystem';
+import { computePayoutBreakdown } from '../../runProgression';
+import { getRunState } from '../../store/runStore';
+import { roundActions } from '../../store';
 import { gte, D } from '../../scoreMath';
 import {
   processEndOfRound,
@@ -86,6 +90,25 @@ describe('END_ROUND_MONEY: Payday ($4 at end of round)', () => {
     player.applyProfession('outlaw');
     const result = processEndOfRound(player.equipment);
     expect(result.moneyEarned).toBe(12);
+  });
+
+  test('computePayoutBreakdown includes payday at leg payout (live path)', () => {
+    setupGame({ equipment: [item('payday')], money: 10 });
+    const payout = computePayoutBreakdown(getRunState(), 0, 0);
+    expect(payout.equipmentMoney).toBe(4);
+  });
+
+  test('computePayoutBreakdown uses outlaw payday amount', () => {
+    const { player } = setupGame({ equipment: [item('payday')] });
+    player.applyProfession('outlaw');
+    const payout = computePayoutBreakdown(getRunState(), 0, 0);
+    expect(payout.equipmentMoney).toBe(12);
+  });
+
+  test('computePayoutBreakdown stacks multiple paydays', () => {
+    setupGame({ equipment: [item('payday'), item('payday')] });
+    const payout = computePayoutBreakdown(getRunState(), 0, 0);
+    expect(payout.equipmentMoney).toBe(8);
   });
 });
 
@@ -165,6 +188,16 @@ describe('SCORED_RETRIGGER_TIMED: War Drums', () => {
     expect(inst.state.daysRemaining).toBe(0);
     processEquipmentOnDayEnd([inst]);
     expect(inst.state.daysRemaining).toBe(0);
+  });
+
+  test('days decrement after endDay in live round flow', () => {
+    const { game, player } = setupGame({
+      equipment: [item('war_drums')],
+      dice: diceWithValue(5, 50),
+    });
+    game.startRound();
+    playScoredDayAndEnd(game, { avoidWin: true });
+    expect(player.equipment[0]?.state.daysRemaining).toBe(9);
   });
 });
 
@@ -508,6 +541,16 @@ describe('TRAIL_TAX: Trail Tax', () => {
     });
     // PAIR: baseMult=1, +8 from trail tax = 9
     expect(result.mult).toBeMult(9);
+  });
+
+  test('gains +2 mult after endDay in live round flow', () => {
+    const { game, player } = setupGame({
+      equipment: [item('trail_tax')],
+      dice: diceWithValue(5, 50),
+    });
+    game.startRound();
+    playScoredDayAndEnd(game, { avoidWin: true });
+    expect(player.equipment[0]?.state.mult).toBe(2);
   });
 });
 
@@ -1067,6 +1110,16 @@ describe('FLOUR_SACK: Flour Sack', () => {
     expect(game.config.rollSize).toBe(GAMEPLAY.ROLL_SIZE + 5);
   });
 
+  test('handSizeBonus decays and persists across consecutive startRound calls', () => {
+    const { game, player } = setupGame({ equipment: [item('flour_sack')] });
+    game.startRound();
+    expect(player.equipment[0]?.state.handSizeBonus).toBe(4);
+
+    roundActions.clearRound();
+    game.startRound();
+    expect(player.equipment[0]?.state.handSizeBonus).toBe(3);
+  });
+
   test('is copy-incompatible', () => {
     const { COPY_INCOMPATIBLE_EFFECTS } = require('../../Constants');
     expect(COPY_INCOMPATIBLE_EFFECTS.has('FLOUR_SACK')).toBe(true);
@@ -1108,6 +1161,25 @@ describe('END_ROUND_SELL_VALUE_ALL: Raffle Ticket', () => {
     processEndOfRound([raffle, horseshoe]);
     expect(raffle.sellValue).toBe(beforeRaffle + 1);
     expect(horseshoe.sellValue).toBe(beforeHorse + 1);
+  });
+
+  test('sell value persists after endDay in live round flow', () => {
+    const raffle = item('raffle_ticket');
+    const horseshoe = item('horseshoe');
+    const beforeRaffle = raffle.sellValue;
+    const beforeHorse = horseshoe.sellValue;
+
+    const { game, player } = setupGame({
+      equipment: [raffle, horseshoe],
+      dice: diceWithValue(5, 50),
+    });
+    game.startRound();
+    playScoredDayAndEnd(game, { avoidWin: true });
+
+    const storedRaffle = player.equipment.find((e) => e.def.id === 'raffle_ticket');
+    const storedHorse = player.equipment.find((e) => e.def.id === 'horseshoe');
+    expect(storedRaffle?.sellValue).toBe(beforeRaffle + 1);
+    expect(storedHorse?.sellValue).toBe(beforeHorse + 1);
   });
 });
 

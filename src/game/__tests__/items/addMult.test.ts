@@ -6,6 +6,7 @@ import {
   calculateTestScore,
   setupGame,
   resetDieIds,
+  playScoredDayAndEnd,
   syncEquipmentInstances,
 } from '../testHelpers';
 import { processEndOfRound } from '../../EquipmentEffects';
@@ -217,6 +218,35 @@ describe('DECAYING_MULT: Fading Memory', () => {
       equipment: [inst],
     });
     expect(result.mult).toBeMult(9); // baseMult=1 + 8
+  });
+
+  test('decays after endDay in live round flow', () => {
+    const { game, player } = setupGame({
+      equipment: [item('fading_memory')],
+      dice: diceWithValue(5, 50),
+    });
+
+    game.startRound();
+    playScoredDayAndEnd(game, { avoidWin: true });
+
+    expect(player.equipment[0]?.state.mult).toBe(16);
+    expect(player.equipment[0]?.state.roundsPlayed).toBe(1);
+  });
+
+  test('decays after endDay with deferred destruction (GameScene path)', () => {
+    const { game, player } = setupGame({
+      equipment: [item('fading_memory')],
+      dice: diceWithValue(5, 50),
+    });
+
+    game.startRound();
+    playScoredDayAndEnd(game, {
+      avoidWin: true,
+      endDay: { deferEquipmentDestructionAnimation: true },
+    });
+
+    expect(player.equipment[0]?.state.mult).toBe(16);
+    expect(player.equipment[0]?.state.roundsPlayed).toBe(1);
   });
 });
 

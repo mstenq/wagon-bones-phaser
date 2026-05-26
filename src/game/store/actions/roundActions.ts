@@ -549,8 +549,15 @@ export const roundActions = {
           runActions.patch({ dynamiteSelfDestructed: true });
         }
       }
+      replaceEquipmentList(equipment);
     } else {
-      roundActions.applyEndOfRoundDestructions(endEffects.destroyedIndices);
+      for (const idx of [...endEffects.destroyedIndices].sort((a, b) => b - a)) {
+        if (equipment[idx]?.def.id === 'dynamite') {
+          runActions.patch({ dynamiteSelfDestructed: true });
+        }
+        equipment.splice(idx, 1);
+      }
+      replaceEquipmentList(equipment);
     }
 
     const rolledIds = round.rolledDice.map((d) => d.id);

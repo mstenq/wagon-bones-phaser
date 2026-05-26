@@ -22,6 +22,7 @@ import { EquipmentDef, EquipmentInstance, getAllEquipment, createEquipmentInstan
 import { EQUIPMENT_MODIFIER } from '../Constants';
 import { createPouch } from '../DiceSystem';
 import { GAMEPLAY } from '../Constants';
+import { D } from '../decimal';
 import type { RunState } from '../store/types';
 
 // ─── Item Lookup ───
@@ -188,6 +189,42 @@ export function pushEquipmentState(...instances: EquipmentInstance[]): void {
     live.modifiers = [...orig.modifiers];
   }
   player.persistEquipment();
+}
+
+export type PlayScoredDayAndEndOptions = {
+  /** Dice scored this day (default 2). */
+  scoredCount?: number;
+  /** Dice rolled this day (default min(5, hand size)). */
+  rollCount?: number;
+  /** Options for roundActions.endDay (GameScene uses deferEquipmentDestructionAnimation: true). */
+  endDay?: { deferEquipmentDestructionAnimation?: boolean };
+  /** Set a very high target so scoring one hand does not win the leg. */
+  avoidWin?: boolean;
+};
+
+/**
+ * SELECT → ROLL → SCORE → endDay through store actions.
+ * Call after setupGame + game.startRound(). Syncs player equipment from the store on return.
+ */
+export function playScoredDayAndEnd(game: GameState, options: PlayScoredDayAndEndOptions = {}) {
+  if (options.avoidWin) {
+    game.config.targetMiles = D(999_999);
+  }
+
+  const hand = game.state.hand;
+  const rollCount = options.rollCount ?? Math.min(5, hand.length);
+  const rollIds = hand.slice(0, rollCount).map((d) => d.id);
+  game.selectForRoll(rollIds);
+
+  const scoredCount = options.scoredCount ?? 2;
+  const scoredIds = game.state.rolledDice.slice(0, scoredCount).map((d) => d.id);
+  game.selectForScore(scoredIds);
+  const score = game.calculateScore();
+  if (!score) throw new Error('playScoredDayAndEnd: calculateScore returned null');
+
+  const result = game.endDay(options.endDay);
+  getPlayerState().syncFromStore();
+  return result;
 }
 
 /** Reset run + round stores for isolated tests. */
