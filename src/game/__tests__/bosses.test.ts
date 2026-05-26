@@ -288,6 +288,45 @@ describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
     });
     expect(lt(disabledResult.mult, normal.mult)).toBe(true);
   });
+
+  test('disabled mirror lake does not copy quick draw retriggers', () => {
+    const { game } = setupGame({
+      bossId: 'the_jinx',
+      equipment: [item('mirror_lake'), item('quick_draw')],
+    });
+    game.startRound();
+    getBossRoundState().disabledEquipmentIndices = [0];
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = diceFromValues([5, 5]);
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    const disabledResult = game.calculateScore()!;
+
+    const { result: quickDrawOnly } = calculateTestScore({
+      scoredDice: diceFromValues([5, 5]),
+      equipment: [item('quick_draw')],
+    });
+    const { result: bothEnabled } = calculateTestScore({
+      scoredDice: diceFromValues([5, 5]),
+      equipment: [item('mirror_lake'), item('quick_draw')],
+    });
+
+    // Quick Draw only: first die ×3, second die ×1 → 20. With Mirror Lake copy: 30.
+    expect(disabledResult.totalValue).toBe(20);
+    expect(quickDrawOnly.totalValue).toBe(20);
+    expect(bothEnabled.totalValue).toBe(30);
+  });
+
+  test('remaps disabled indices when equipment is reordered', () => {
+    setupGame({
+      bossId: 'the_jinx',
+      equipment: [item('mirror_lake'), item('quick_draw'), item('horseshoe')],
+    });
+    getBossRoundState().disabledEquipmentIndices = [0];
+    equipmentActions.reorderEquipment(0, 2);
+    expect(isEquipmentDisabledByBoss(2)).toBe(true);
+    expect(isEquipmentDisabledByBoss(0)).toBe(false);
+  });
 });
 
 describe('DISABLE_ALL_DICE: Bank Lien', () => {

@@ -775,7 +775,7 @@ const items: ItemDef[] = [
       const hint =
         round && round.day >= round.maxDays
           ? [[mult('x3')], [active('Active!')]]
-          : [[mult('x3'), condition('final day')], [inactive('Inactive')]];
+          : [[mult('x3'), condition('final day', "xs")], [inactive('Inactive', "sm")]];
       return {
         hint,
         tooltip: [[mult('x3'), text(' mult on '), condition('final day'), text(' of round')]],
@@ -1747,15 +1747,15 @@ const items: ItemDef[] = [
     display: (_game, player) => {
       const p = { chance: [1, 2], professionOverrides: { cook: { chance: [1, 1] } } };
       const chance = resolveChance(p, player.professionId);
-      const hint = [[oddsDisplay(chance, player), text('supply'), condition('on pack open')]];
+      const hint = [[oddsDisplay(chance, player)], [condition('supply on pack open', "xs")]];
       return {
         hint,
         tooltip: [
           [
             odds('1 in 2'),
-            text(' chance to gain a supply card when opening a booster pack. Martha Delaney (Cook) has a '),
+            text('chance to gain a supply card when opening a booster pack. Martha Delaney (Cook) has a'),
             odds('1 in 1'),
-            text(' chance.'),
+            text('chance.'),
           ],
         ],
       };
@@ -1810,7 +1810,7 @@ const items: ItemDef[] = [
     display: (_game, player) => {
       const equip = findOwnedEquip(player, 'antique_revolver');
       const sv = equip?.sellValue ?? 2;
-      const hint = [[money(`$${sv}`), text('sell value')]];
+      const hint = [[money(`$${sv}`)],[ condition('sell value', "xs")]];
       return {
         hint,
         tooltip: [[text('When round starts, gain '), money('$3'), text(' of sell value to current card')]],
@@ -1917,16 +1917,16 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     modifierImmunity: ['perishable'],
     effectType: 'ENHANCEMENT_SCORED_MILES',
-    effectParams: { enhancement: 'wooden', value: 30 },
+    effectParams: { enhancement: 'wooden', value: 15 },
     initialState: { miles: 0 },
     display: (_game, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'covered_wagon');
       const m = equip?.state.miles ?? 0;
       const hint =
-        m > 0 ? [[miles(`+${m}`), condition('wooden scored')]] : [[miles('+30'), condition('per wooden scored')]];
+        m > 0 ? [[miles(`+${m}`)],[condition('wood', "sm")]] : [[miles('+15')],[condition('per wooden scored', "xs")]];
       return {
         hint,
-        tooltip: [[text('Gains '), miles('+30'), text(' miles for every Wood die scored')]],
+        tooltip: [[text('Gains '), miles('+15'), text('miles for every Wood die scored')]],
       };
     },
     unlockCondition: unlockByEnhancement('wooden'),
@@ -2416,7 +2416,7 @@ const items: ItemDef[] = [
       const enhCount = player.dice.filter((d) => d.enhancement !== null).length;
       const hint =
         enhCount >= 16
-          ? [[mult('x3')], [active(`${enhCount} enhanced`)]]
+          ? [[mult('x3')], [active(`${enhCount} enhanced`, "xs")]]
           : [[mult('x3'), condition(`${enhCount}/16 enhanced`)]];
       return {
         hint,

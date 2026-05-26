@@ -350,6 +350,33 @@ export function remapEquipmentDisplayOrderAfterRemove(removedIndex: number): voi
   });
 }
 
+/** Keep Jinx-disabled slot aligned with the equipment instance after drag reorder */
+export function remapDisabledEquipmentIndicesAfterReorder(fromIndex: number, toIndex: number): void {
+  const disabled = getBossRoundState().disabledEquipmentIndices;
+  if (disabled.length === 0) return;
+
+  patchBossRoundState({
+    disabledEquipmentIndices: disabled.map((idx) => {
+      if (idx === fromIndex) return toIndex;
+      if (fromIndex < toIndex && idx > fromIndex && idx <= toIndex) return idx - 1;
+      if (fromIndex > toIndex && idx >= toIndex && idx < fromIndex) return idx + 1;
+      return idx;
+    }),
+  });
+}
+
+/** Keep Jinx-disabled slot aligned after equipment is sold or destroyed */
+export function remapDisabledEquipmentIndicesAfterRemove(removedIndex: number): void {
+  const disabled = getBossRoundState().disabledEquipmentIndices;
+  if (disabled.length === 0) return;
+
+  patchBossRoundState({
+    disabledEquipmentIndices: disabled
+      .filter((idx) => idx !== removedIndex)
+      .map((idx) => (idx > removedIndex ? idx - 1 : idx)),
+  });
+}
+
 export function isBossEquipmentHidden(): boolean {
   const state = getBossRoundState();
   return state.equipmentHidden && !state.landSlideRevealed;

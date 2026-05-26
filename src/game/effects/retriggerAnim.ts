@@ -1,6 +1,7 @@
 import type { Die, HandType, ScoreAnimEvent } from '../types';
 import type { EquipmentInstance } from '../ItemsSystem';
 import { resolveCopyTarget } from '../equipmentUtils';
+import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 import { dieMatchesPip, hasStackedDeck } from './helpers';
 
 export type RetriggerEquipSource = { equipIndex: number };
@@ -22,6 +23,7 @@ export function buildScoredRetriggerSources(
   const maxCopyDepth = equipment.length;
 
   for (let ei = 0; ei < equipment.length; ei++) {
+    if (isEquipmentDisabledByBoss(ei)) continue;
     let equip = equipment[ei];
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
       const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
@@ -49,6 +51,7 @@ export function buildScoredRetriggerSources(
 
   const ctx = options.scoreContext;
   for (let ei = 0; ei < equipment.length; ei++) {
+    if (isEquipmentDisabledByBoss(ei)) continue;
     let equip = equipment[ei];
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
       const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
@@ -76,6 +79,7 @@ export function buildHeldRetriggerSources(equipment: EquipmentInstance[]): Retri
   const maxCopyDepth = equipment.length;
 
   for (let ei = 0; ei < equipment.length; ei++) {
+    if (isEquipmentDisabledByBoss(ei)) continue;
     let equip = equipment[ei];
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
       const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
@@ -107,6 +111,7 @@ export function heldDieHasRetriggerableEffects(
   const maxCopyDepth = equipment.length;
 
   for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+    if (isEquipmentDisabledByBoss(eIdx)) continue;
     let equip = equipment[eIdx];
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
       const resolved = resolveCopyTarget(equipment, eIdx, maxCopyDepth);

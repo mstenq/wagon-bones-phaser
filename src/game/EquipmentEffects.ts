@@ -7,6 +7,7 @@ import { EquipmentInstance } from './ItemsSystem';
 import { getRunState } from './store/runStore';
 import { selectProfession } from './store/selectors/runSelectors';
 import { GAMEPLAY } from './Constants';
+import { isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { resolveCopyTarget } from './equipmentUtils';
 import {
   buildHeldRetriggerSources,
@@ -148,6 +149,7 @@ function countHeldDoubleDownRetriggers(equipment: EquipmentInstance[]): number {
   const maxCopyDepthHeld = equipment.length;
   let doubleDownCount = 0;
   for (let i = 0; i < equipment.length; i++) {
+    if (isEquipmentDisabledByBoss(i)) continue;
     let equip = equipment[i];
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
       const resolved = resolveCopyTarget(equipment, i, maxCopyDepthHeld);
@@ -232,6 +234,7 @@ export function processHeldInHand(
 
       // Equipment triggers on held dice (additive / conditional before steel xMult)
       for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+        if (isEquipmentDisabledByBoss(eIdx)) continue;
         const originalEquip = equipment[eIdx];
         let equip = originalEquip;
 

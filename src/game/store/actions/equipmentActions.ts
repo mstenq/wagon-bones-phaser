@@ -8,7 +8,11 @@ import {
   processEquipmentOnShopReroll,
   processEquipmentOnDiceAdded,
 } from '../../EquipmentEffects';
-import { onBossRoundEquipmentSold } from '../../BossEffectsSystem';
+import {
+  onBossRoundEquipmentSold,
+  remapDisabledEquipmentIndicesAfterRemove,
+  remapDisabledEquipmentIndicesAfterReorder,
+} from '../../BossEffectsSystem';
 import { getTrailTagById } from '../../../data/trail_tags';
 import { rngPick } from '../../RunRng';
 import { GAMEPLAY } from '../../Constants';
@@ -48,6 +52,7 @@ export const equipmentActions = {
   destroyEquipment(index: number): boolean {
     const list = equipment();
     if (index < 0 || index >= list.length) return false;
+    remapDisabledEquipmentIndicesAfterRemove(index);
     writeEquipment(list.filter((_, i) => i !== index));
     return true;
   },
@@ -90,6 +95,7 @@ export const equipmentActions = {
             modifiers: [...source.modifiers],
             perishableRoundsLeft: source.perishableRoundsLeft,
           };
+          remapDisabledEquipmentIndicesAfterRemove(index);
           const remaining = list.filter((_, i) => i !== index);
           const usedAfterRemove = remaining.filter((inst) => inst.def.aura?.id !== 'ghost').length;
           const nextEquipment = [...remaining];
@@ -105,6 +111,7 @@ export const equipmentActions = {
       }
     }
 
+    remapDisabledEquipmentIndicesAfterRemove(index);
     const nextEquipment = list.filter((_, i) => i !== index);
     processEquipmentOnSell(nextEquipment);
     onBossRoundEquipmentSold();
@@ -119,6 +126,7 @@ export const equipmentActions = {
     if (toIndex < 0 || toIndex >= list.length) return;
     const [item] = list.splice(fromIndex, 1);
     list.splice(toIndex, 0, item!);
+    remapDisabledEquipmentIndicesAfterReorder(fromIndex, toIndex);
     writeEquipment(list);
   },
 

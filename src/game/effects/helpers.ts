@@ -46,6 +46,7 @@ export function forEachEquipmentResolved(
 /** Apply fire/icy equipment auras (always from the original slot, not copy target). */
 export function applyEquipmentAuras(equipment: EquipmentInstance[], ctx: ScoringPipelineContext): void {
   for (let i = 0; i < equipment.length; i++) {
+    if (isEquipmentDisabledByBoss(i)) continue;
     const originalEquip = equipment[i];
     if (!originalEquip.def.aura) continue;
 
@@ -72,6 +73,7 @@ export function applyHolyAuraXMult(
 ): Decimal {
   let finalMult = D(baseMult);
   for (let i = 0; i < equipment.length; i++) {
+    if (isEquipmentDisabledByBoss(i)) continue;
     const equip = equipment[i];
     if (equip.def.aura?.id === 'holy') {
       finalMult = multiplyScore(finalMult, 1.5);
@@ -94,7 +96,9 @@ export function getConfigModifiers(equipment: EquipmentInstance[]): {
   let freeShopRerolls = 0;
   let daysPenalty = 0;
 
-  for (const equip of equipment) {
+  for (let i = 0; i < equipment.length; i++) {
+    if (isEquipmentDisabledByBoss(i)) continue;
+    const equip = equipment[i];
     const { effectType, effectParams } = equip.def;
     const p = effectParams as Record<string, unknown>;
 
@@ -150,6 +154,7 @@ export function getScoredRetriggerCount(
   let count = 0;
   const maxCopyDepth = equipment.length;
   for (let i = 0; i < equipment.length; i++) {
+    if (isEquipmentDisabledByBoss(i)) continue;
     let equip = equipment[i];
     // Resolve copy items
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {

@@ -346,6 +346,7 @@ export function scoreHand(
   const maxCopyDepthGrave = equipment.length;
   const graverobberStrippedDieIds = new Set<string>();
   for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
+    if (isEquipmentDisabledByBoss(eIdx)) continue;
     let equip = equipment[eIdx];
     if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
       const resolved = resolveCopyTarget(equipment, eIdx, maxCopyDepthGrave);
@@ -469,6 +470,7 @@ export function scoreHand(
       triggers = die.sticker === 'red_bullet' ? 2 : 1;
       const maxCopyDepth = equipment.length;
       for (let ei = 0; ei < equipment.length; ei++) {
+        if (isEquipmentDisabledByBoss(ei)) continue;
         let equip = equipment[ei];
         if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
           const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
@@ -659,6 +661,7 @@ export function scoreHand(
   if (scoreContext && scoreContext.currentDay === 1 && handResult.scoringDice.length === 1) {
     const maxCopyDepthSolo = equipment.length;
     for (let ei = 0; ei < equipment.length; ei++) {
+      if (isEquipmentDisabledByBoss(ei)) continue;
       let equip = equipment[ei];
       // Resolve copy items
       if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
