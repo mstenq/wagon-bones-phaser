@@ -41,6 +41,7 @@ describe('game stores', () => {
     expect(Array.isArray(state.spentDiceIds)).toBe(true);
     expect(Array.isArray(state.seenTrailEventIds)).toBe(true);
     expect(state.uiEffects).toEqual([]);
+    expect(state.playbackQueue).toEqual([]);
   });
 
   test('round store starts null until a round begins', () => {

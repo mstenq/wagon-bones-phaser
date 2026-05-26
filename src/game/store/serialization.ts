@@ -5,7 +5,7 @@ import { milesToSave, milesFromSave } from '../scoreMath';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import type { RunState, RoundRuntimeState, SceneRuntimeState } from './types';
 
-export type SerializedRunState = Omit<RunState, 'uiEffects'>;
+export type SerializedRunState = Omit<RunState, 'uiEffects' | 'playbackQueue'>;
 
 export type SerializedRoundRuntimeState = Omit<RoundRuntimeState, 'totalMiles' | 'lastScoreResult'> & {
   totalMiles: string;
@@ -18,7 +18,7 @@ function cloneJson<T>(value: T): T {
 }
 
 export function serializeRunState(state: RunState): SerializedRunState {
-  const { uiEffects: _, ...rest } = state;
+  const { uiEffects: _, playbackQueue: __, ...rest } = state;
   return cloneJson(rest);
 }
 
@@ -26,6 +26,7 @@ export function deserializeRunState(data: SerializedRunState): RunState {
   return {
     ...data,
     uiEffects: [],
+    playbackQueue: [],
     trailRoundEffects: data.trailRoundEffects ?? createEmptyTrailRoundEffects(),
     skippedRoundTagMeta: data.skippedRoundTagMeta ?? {},
     roundSkipPreviewMeta: data.roundSkipPreviewMeta ?? {},

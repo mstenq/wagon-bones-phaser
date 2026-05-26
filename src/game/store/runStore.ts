@@ -71,6 +71,7 @@ export function createInitialRunState(): RunState {
     bossAssignmentIds: [],
     nextDieId: 0,
     uiEffects: [],
+    playbackQueue: [],
   };
 }
 

@@ -17,6 +17,7 @@ import {
   type ScoreResult,
 } from '../types';
 import type { Decimal } from '../decimal';
+import type { PlaybackCommand } from '../playback';
 import type { RoundSkipPreviewMeta } from '../../data/trail_tags';
 import trailGuidesData from '../../data/trail_guides';
 
@@ -156,7 +157,10 @@ export interface RunState {
   storyVictoryPending: boolean;
   bossAssignmentIds: string[];
   nextDieId: number;
+  /** @deprecated Use playbackQueue — removed in REFACTOR_2 */
   uiEffects: UiEffect[];
+  /** Authoritative animation queue for UI (transient; not saved). */
+  playbackQueue: PlaybackCommand[];
 }
 
 // ─── Round runtime state (replaces GameState) ───
@@ -272,6 +276,10 @@ export interface SceneRuntimeState {
 
 // ─── One-shot UI effects (not authoritative state) ───
 
+/**
+ * @deprecated Use {@link PlaybackCommand} on `RunState.playbackQueue` — removed in REFACTOR_2/3.
+ * Legacy queue still consumed by Phaser until playback runner lands (REFACTOR_4).
+ */
 export type UiEffect =
   | { kind: 'dice-added'; dieIds: string[] }
   | { kind: 'equipment-destroyed'; sourceIdx: number; victimIdx: number }
