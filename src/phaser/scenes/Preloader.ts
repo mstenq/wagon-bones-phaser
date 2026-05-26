@@ -7,7 +7,7 @@ import packsData from '../../data/packs';
 import permitsData from '../../data/permits';
 import professionsData from '../../data/professions';
 import bosses from '../../data/bosses';
-import { getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
+import { getConsumableTexturePrefix } from '../../game/facade/consumable';
 import pipEnhancements from '../../data/pip_enhancements';
 import diceEnhancements from '../../data/dice_enhancements';
 import * as Phaser from 'phaser';

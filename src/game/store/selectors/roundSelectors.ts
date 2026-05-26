@@ -1,7 +1,8 @@
 // ─── Round store selectors (No Phaser imports) ───
 // Render-focused slices for Phaser migration (step 5).
 
-import type { Die, PhaseState } from '../../types';
+import type { Die, GameConfig, HandType, PhaseState } from '../../types';
+import { DEFAULT_CONFIG } from '../../types';
 import { getRoundState } from '../roundStore';
 import type { RoundRuntimeState } from '../types';
 import { resolveDiceByIds, rolledRefsToDice } from '../roundResolve';
@@ -20,8 +21,8 @@ export function selectRoundTotalMiles(state: RoundRuntimeState | null = getRound
   return state?.totalMiles ?? null;
 }
 
-export function selectRoundConfig(state: RoundRuntimeState | null = getRoundState()) {
-  return state?.config ?? null;
+export function selectRoundConfig(state: RoundRuntimeState | null = getRoundState()): GameConfig {
+  return state?.config ?? DEFAULT_CONFIG;
 }
 
 export function selectHandDice(state: RoundRuntimeState | null = getRoundState()): Die[] {
@@ -37,6 +38,23 @@ export function selectRolledDice(state: RoundRuntimeState | null = getRoundState
 export function selectSelectedForScore(state: RoundRuntimeState | null = getRoundState()): Die[] {
   if (!state) return [];
   return resolveDiceByIds(state.selectedForScoreIds, state);
+}
+
+export function selectSelectedForRoll(state: RoundRuntimeState | null = getRoundState()): Die[] {
+  if (!state) return [];
+  return resolveDiceByIds(state.selectedForRollIds, state);
+}
+
+export function selectCurrentHandType(state: RoundRuntimeState | null = getRoundState()): HandType | null {
+  return state?.currentHandType ?? null;
+}
+
+export function selectRerollsRemaining(state: RoundRuntimeState | null = getRoundState()): number {
+  return state?.rerollsRemaining ?? 0;
+}
+
+export function selectRoundDay(state: RoundRuntimeState | null = getRoundState()): number {
+  return state?.day ?? 1;
 }
 
 export function selectRoundSidebarModel(state: RoundRuntimeState | null = getRoundState()) {

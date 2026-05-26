@@ -10,8 +10,8 @@ export function enqueueConsumablePlayback(
   const events = result.consumableAnimEvents ?? [];
   const equipmentCreatedCount = result.equipmentCreatedCount ?? 0;
   if (events.length === 0 && equipmentCreatedCount <= 0) return;
-  runActions.enqueueUiEffect({
-    kind: 'consumable-anim',
+  runActions.enqueuePlayback({
+    kind: 'consumable-playback',
     events,
     equipmentCreatedCount: equipmentCreatedCount > 0 ? equipmentCreatedCount : undefined,
   });

@@ -61,7 +61,8 @@ Everything else under `src/game/` should remain Phaser-free.
 |-------------|---------|
 | `store/runStore.ts` + `store/actions/*` | Run state (money, dice, equipment, consumables, trail modifiers, …) |
 | `store/roundStore.ts` + `roundActions` | Round FSM: **SELECT → ROLL → SCORE → DAY_END** → **ROUND_END** |
-| `store/roundView.ts` | `readRoundState()` / `patchLegacyRoundState()` for die-object round reads/writes (GameScene) |
+| `facade/` | Blessed UI orchestration (`gameFacade.*`); Phaser scenes call facade instead of `*System.ts` |
+| `playback/` | `PlaybackCommand` queue (`enqueuePlayback`, `takePlayback`) — logic → animation channel |
 | `store/sceneStore.ts` | Shop, booster pack, trail event, payout, round-select slices |
 | `DiceSystem.ts` | Dice creation, rolling, pouch/spent cycling, hand detection, per-die scoring |
 | `EquipmentEffects.ts` | Scoring pipeline + round/day lifecycle orchestration (some hooks still live here) |
@@ -195,7 +196,13 @@ Equipment cards show dynamic colored hints via `display(game, player)`. Segment 
 
 - **Run / round / scene** — `getRunState()`, `getRoundState()`, `getSceneState()` and `*Actions` in `src/game/store/`
 - **Tests** — `resetTestRun()` / `resetAllGameStores()`; optional `testRunPlayer.ts` / `testGameState.ts` shims
-- `EventBus` — global cross-layer events (scene readiness, SFX bridges — not authoritative game state)
+- `EventBus` — host-only (`Events.SCENE_READY`); gameplay uses stores, facade, and `playbackQueue`
+
+### UI integration (post-refactor)
+
+- Phaser scenes call **`gameFacade`** for orchestration (`import { gameFacade } from '../game/facade'`).
+- **Animations:** logic enqueues `PlaybackCommand` via `enqueuePlayback` / `runActions.enqueuePlayback`; `PlaybackRunner` in `src/phaser/playback/` plays them.
+- **Round state:** reads via `selectHandDice`, `selectRolledDice`, etc.; writes via `roundActions`, `roundWrites`, or `gameFacade.round`.
 
 ### Scene Lifecycle
 

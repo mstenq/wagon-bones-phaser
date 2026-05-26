@@ -225,6 +225,11 @@ export function selectTagsByCategory(state: RunState, category: TagCategory): Tr
   return selectPendingTags(state).filter((t) => t.def.category === category);
 }
 
+/** Revision token for purchased permit ids (store subscribers). */
+export function selectPurchasedPermitsRevision(state: RunState): string {
+  return state.purchasedPermits.join('|');
+}
+
 export function selectBossPermitRerollLimit(state: RunState): number {
   return getPermitBossRerollLimit(state.purchasedPermits);
 }

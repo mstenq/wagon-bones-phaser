@@ -103,24 +103,40 @@ Each `REFACTOR_N.md` includes:
 **Prompt template:**
 
 ```text
-Implement REFACTOR_N for Wagon Bones. Read REFACTOR.md and REFACTOR_N.md fully.
+Implement REFACTOR_11 for Wagon Bones. Read REFACTOR.md and REFACTOR_11.md fully.
 Follow AGENTS.md. Do not skip steps. Run bun run typecheck and bun run check before finishing.
-Do not change unrelated files. One PR scope only.
+Do not change unrelated files. One PR scope only. If you have notes for later steps, add handoff notes to the step that will need the info.
 ```
 
 ---
 
 ## Definition of done (whole refactor)
 
-- [ ] `UiEffect` renamed/replaced by `PlaybackCommand`; `uiEffects` → `playbackQueue` on `RunState`
-- [ ] Zero `takeUiEffects` / `enqueueUiEffect` in `src/phaser/` (only playback runner)
-- [ ] `bindConsumableUiEffects.ts` deleted or folded into playback runner
-- [ ] `GameScene` does not import `readRoundState`, `patchLegacyRoundState`, or game `*System.ts` files (except via facade)
-- [ ] `roundView.ts` not imported from `src/phaser/`
-- [ ] `gameFacade` used by all scenes that previously imported 3+ game systems
-- [ ] Gameplay `Events.*` removed or documented as host-only; `SCENE_READY` remains
-- [ ] [PUBLIC_API_SPEC.md](./PUBLIC_API_SPEC.md) updated to describe facade + playback
-- [ ] `bun run ci` passes
+- [x] `UiEffect` renamed/replaced by `PlaybackCommand`; `uiEffects` → `playbackQueue` on `RunState`
+- [x] Zero `takeUiEffects` / `enqueueUiEffect` in `src/phaser/` (only playback runner)
+- [x] `bindConsumableUiEffects.ts` deleted or folded into playback runner
+- [x] `GameScene` does not import `readRoundState`, `patchLegacyRoundState`, or game `*System.ts` files (except via facade)
+- [x] `roundView.ts` not imported from `src/phaser/` (file removed in step 11)
+- [x] `gameFacade` used by all scenes that previously imported 3+ game systems
+- [x] Gameplay `Events.*` removed or documented as host-only; `SCENE_READY` remains
+- [x] [PUBLIC_API_SPEC.md](./PUBLIC_API_SPEC.md) updated to describe facade + playback
+- [x] `bun run ci` passes
+
+---
+
+## Completion notes (REFACTOR 11)
+
+Refactor complete. Legacy `roundView.ts` (`readRoundState`, `patchLegacyRoundState`) removed; round session bootstrap lives in `src/game/facade/round.ts`. `legacyRoundStateToRuntime` / `runtimeToLegacyRoundState` remain for v3 save migration and `testGameState.ts` legacy die-object proxy.
+
+**UI boundary enforcement** (run locally or add `scripts/check-ui-boundary.sh` later):
+
+```bash
+rg 'patchLegacyRoundState|readRoundState' src/phaser && exit 1
+rg 'enqueueUiEffect|takeUiEffects' src/ && exit 1
+rg 'from .*/(TagSystem|EquipmentEffects|ConsumablesSystem)' src/phaser/scenes && exit 1
+```
+
+Expected: all three commands produce no matches (exit 0).
 
 ---
 

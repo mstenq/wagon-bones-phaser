@@ -5,33 +5,16 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { equipmentActions } from '../../game/store';
+import { gameFacade } from '../../game/facade';
+import type { TrailEventChoice, TrailEventDef, TrailEventEffect, TrailEventResult } from '../../game/facade/trail';
 import { resolveEquipmentList } from '../../game/store/resolve';
 import { selectEffectiveDays, selectEffectiveRerolls } from '../../game/store/selectors/runSelectors';
-import { markTrailEventSeen } from '../../game/TrailEventsSystem';
-import { isEquipmentCursed } from '../../game/ItemsSystem';
 import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constants';
 import { trailEventImageKey, trailEventImagePath } from '../../game/trailEventAssets';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
 import { createLayout, type LayoutResult } from '../ui/SceneLayout';
 import { Sidebar } from '../ui/Sidebar';
-import {
-  selectTrailEvent,
-  getAvailableChoices,
-  resolveChoice,
-  isNegativeEffect,
-  hasScoutsSpyglass,
-  applySpyglassAvoid,
-  applySpyglassInvestigate,
-  getTrailEventById,
-  findTrailRepairKit,
-  isTrailNegativeNegated,
-  TrailEventDef,
-  TrailEventChoice,
-  TrailEventResult,
-  TrailEventEffect,
-} from '../../game/TrailEventsSystem';
 import { rngFloat } from '../../game/RunRng';
 import type { TrailEventSaveData } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
@@ -83,7 +66,7 @@ export class TrailEventScene extends Scene {
     }
 
     if (data.eventId) {
-      const event = getTrailEventById(data.eventId);
+      const event = gameFacade.trail.getEventById(data.eventId);
       if (event) {
         this.currentEvent = event;
         this.spyglassRevealed = data.spyglassRevealed ?? false;
@@ -106,7 +89,7 @@ export class TrailEventScene extends Scene {
       sceneActions.enterTrailEvent(slice);
     }
     sceneActions.enterScene('TrailEvent');
-    if (hasScoutsSpyglass() && !this.spyglassRevealed) {
+    if (gameFacade.trail.hasScoutsSpyglass() && !this.spyglassRevealed) {
       runActions.patch({ pendingTrailEventId: eventId });
     } else {
       runActions.patch({ pendingTrailEventId: null });
@@ -116,7 +99,7 @@ export class TrailEventScene extends Scene {
   private hydrateTrailFromStore(): void {
     const trail = getSceneState().trailEvent;
     if (!trail) return;
-    const event = getTrailEventById(trail.eventId);
+    const event = gameFacade.trail.getEventById(trail.eventId);
     if (!event) throw new Error(`Unknown trail event: ${trail.eventId}`);
     this.currentEvent = event;
     this.resolved = trail.resolved;
@@ -126,7 +109,7 @@ export class TrailEventScene extends Scene {
   create() {
     if (getSceneState().trailEvent) {
       this.hydrateTrailFromStore();
-      if (this.currentEvent) markTrailEventSeen(this.currentEvent.id);
+      if (this.currentEvent) gameFacade.trail.markSeen(this.currentEvent.id);
     }
 
     this.scale.on('resize', this.onResize, this);
@@ -138,14 +121,14 @@ export class TrailEventScene extends Scene {
 
     // Select / preview trail event (persist across resize restarts)
     if (!this.currentEvent) {
-      if (hasScoutsSpyglass()) {
+      if (gameFacade.trail.hasScoutsSpyglass()) {
         const pendingId = getSceneState().trailEvent?.eventId ?? getRunState().pendingTrailEventId;
         if (!pendingId) {
-          this.currentEvent = selectTrailEvent();
-          markTrailEventSeen(this.currentEvent.id);
+          this.currentEvent = gameFacade.trail.selectEvent();
+          gameFacade.trail.markSeen(this.currentEvent.id);
           this.syncTrailToStore();
         } else {
-          const event = getTrailEventById(pendingId);
+          const event = gameFacade.trail.getEventById(pendingId);
           if (!event) throw new Error(`Unknown trail event: ${pendingId}`);
           this.currentEvent = event;
         }
@@ -158,8 +141,8 @@ export class TrailEventScene extends Scene {
         }
         runActions.patch({ pendingTrailEventId: null });
       } else {
-        this.currentEvent = selectTrailEvent();
-        markTrailEventSeen(this.currentEvent.id);
+        this.currentEvent = gameFacade.trail.selectEvent();
+        gameFacade.trail.markSeen(this.currentEvent.id);
         this.syncTrailToStore();
       }
       // Persist the seen-set update immediately so a refresh within the
@@ -167,7 +150,7 @@ export class TrailEventScene extends Scene {
       flushAutoSave();
     }
 
-    if (hasScoutsSpyglass() && !this.spyglassRevealed) {
+    if (gameFacade.trail.hasScoutsSpyglass() && !this.spyglassRevealed) {
       this.syncTrailToStore();
       this.buildSpyglassPreview(layout);
       EventBus.emit(Events.SCENE_READY, this);
@@ -199,7 +182,7 @@ export class TrailEventScene extends Scene {
 
   private resolveSpyglassPreviewEvent(): TrailEventDef {
     const eventId = getSceneState().trailEvent?.eventId ?? this.currentEvent?.id;
-    const event = eventId ? getTrailEventById(eventId) : this.currentEvent;
+    const event = eventId ? gameFacade.trail.getEventById(eventId) : this.currentEvent;
     if (!event) {
       throw new Error('Spyglass preview missing trail event');
     }
@@ -213,12 +196,12 @@ export class TrailEventScene extends Scene {
     const event = this.resolveSpyglassPreviewEvent();
     SpyglassTrailPreview.show(this, layout, event.id, {
       onAvoid: () => {
-        applySpyglassAvoid();
+        gameFacade.trail.applySpyglassAvoid();
         this.proceedToNextScene();
       },
       onInvestigate: () => {
         const committed = this.resolveSpyglassPreviewEvent();
-        applySpyglassInvestigate();
+        gameFacade.trail.applySpyglassInvestigate();
         this.currentEvent = committed;
         this.spyglassRevealed = true;
         runActions.patch({ pendingTrailEventId: null });
@@ -301,7 +284,7 @@ export class TrailEventScene extends Scene {
 
     // ─── Choice buttons ───
     const choicesY = descY + descText.height + 28;
-    const availableChoices = getAvailableChoices(event);
+    const availableChoices = gameFacade.trail.getAvailableChoices(event);
 
     this.choiceButtons = [];
     for (let i = 0; i < availableChoices.length; i++) {
@@ -339,7 +322,7 @@ export class TrailEventScene extends Scene {
     }
 
     // Resolve the choice
-    const result = resolveChoice(this.currentEvent, choice.id, () => rngFloat('trail'));
+    const result = gameFacade.trail.resolveChoice(this.currentEvent, choice.id, () => rngFloat('trail'));
 
     runActions.patch({
       trailEventModifiers: result.modifiers,
@@ -347,7 +330,7 @@ export class TrailEventScene extends Scene {
     });
 
     // Persist the resolved state immediately. Without this flush, a refresh
-    // between resolveChoice and the next 10s autosave tick would restore the
+    // between gameFacade.trail.resolveChoice and the next 10s autosave tick would restore the
     // pre-resolution snapshot and the same event could appear again.
     flushAutoSave();
 
@@ -368,13 +351,13 @@ export class TrailEventScene extends Scene {
 
     const equipment = resolveEquipmentList();
     const shieldEquip = equipment.find((e) => e.def.id === 'saint_elmos_shield');
-    const repairKitEquip = findTrailRepairKit();
-    const negatesNegatives = isTrailNegativeNegated();
+    const repairKitEquip = gameFacade.trail.findTrailRepairKit();
+    const negatesNegatives = gameFacade.trail.isTrailNegativeNegated();
 
     // Build effect summary lines
     const effectLines: { text: string; color: string; negative: boolean }[] = [];
     for (const effect of result.effects) {
-      const negated = isNegativeEffect(effect) && negatesNegatives;
+      const negated = gameFacade.trail.isNegativeEffect(effect) && negatesNegatives;
       const line = this.formatEffect(effect, negated, enhancedDiceBeforeCount, equipmentBeforeCount);
       if (line) effectLines.push(line);
     }
@@ -444,15 +427,15 @@ export class TrailEventScene extends Scene {
     });
 
     // Play appropriate sound
-    const hasNegative = result.effects.some((e) => isNegativeEffect(e));
-    const hasPositive = result.effects.some((e) => !isNegativeEffect(e));
+    const hasNegative = result.effects.some((e) => gameFacade.trail.isNegativeEffect(e));
+    const hasPositive = result.effects.some((e) => !gameFacade.trail.isNegativeEffect(e));
     if (hasNegative && !negatesNegatives) {
       this.safePlaySound('sfx_negative');
     } else if (hasPositive) {
       this.safePlaySound('sfx_coin');
     }
 
-    const hadNegatedNegative = result.effects.some((e) => isNegativeEffect(e) && negatesNegatives);
+    const hadNegatedNegative = result.effects.some((e) => gameFacade.trail.isNegativeEffect(e) && negatesNegatives);
     if (shieldEquip && hadNegatedNegative) {
       const provText = this.add
         .text(contentCX, resultY - 28, `✨ ${shieldEquip.def.name} protects you! ✨`, {
@@ -478,9 +461,9 @@ export class TrailEventScene extends Scene {
 
     // Check if player must choose equipment to lose
     const loseEquipEffect = result.effects.find(
-      (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(isNegativeEffect(e) && negatesNegatives),
+      (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(gameFacade.trail.isNegativeEffect(e) && negatesNegatives),
     );
-    const sacrificableCount = equipment.filter((e) => !isEquipmentCursed(e)).length;
+    const sacrificableCount = equipment.filter((e) => !gameFacade.trail.isEquipmentCursed(e)).length;
     const needsEquipChoice = loseEquipEffect && sacrificableCount > 0;
 
     // Continue button (after a short delay)
@@ -518,7 +501,7 @@ export class TrailEventScene extends Scene {
 
   private showEquipmentPicker(count: number, cx: number, y: number, onComplete: () => void): void {
     let remaining = count;
-    const initialSacrificable = resolveEquipmentList().filter((e) => !isEquipmentCursed(e)).length;
+    const initialSacrificable = resolveEquipmentList().filter((e) => !gameFacade.trail.isEquipmentCursed(e)).length;
     remaining = Math.min(count, initialSacrificable);
 
     if (remaining === 0) {
@@ -545,7 +528,7 @@ export class TrailEventScene extends Scene {
       cardContainer.removeAll(true);
       const equipment = resolveEquipmentList();
       const sacrificableIndices = equipment
-        .map((e, idx) => (!isEquipmentCursed(e) ? idx : -1))
+        .map((e, idx) => (!gameFacade.trail.isEquipmentCursed(e) ? idx : -1))
         .filter((idx) => idx >= 0);
 
       if (sacrificableIndices.length === 0 || remaining === 0) {
@@ -581,7 +564,7 @@ export class TrailEventScene extends Scene {
 
         card.on('pointerdown', () => {
           if (equipIndex >= 0) {
-            equipmentActions.destroyEquipment(equipIndex);
+            gameFacade.trail.destroyEquipment(equipIndex);
           }
           remaining--;
 
@@ -737,7 +720,7 @@ export class TrailEventScene extends Scene {
     enhancedDiceBeforeCount?: number,
     equipmentBeforeCount?: number,
   ): { text: string; color: string; negative: boolean } | null {
-    const negative = isNegativeEffect(effect);
+    const negative = gameFacade.trail.isNegativeEffect(effect);
     let color = negative ? TEXT_COLORS.ERROR_RED : TEXT_COLORS.SCORE_GREEN;
     if (negated) color = TEXT_COLORS.MUTED;
 

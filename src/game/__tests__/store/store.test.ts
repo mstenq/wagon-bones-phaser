@@ -40,7 +40,6 @@ describe('game stores', () => {
     expect(state.handStats).toBeTruthy();
     expect(Array.isArray(state.spentDiceIds)).toBe(true);
     expect(Array.isArray(state.seenTrailEventIds)).toBe(true);
-    expect(state.uiEffects).toEqual([]);
     expect(state.playbackQueue).toEqual([]);
   });
 
@@ -141,15 +140,30 @@ describe('game stores', () => {
     expect(new GameState()).toBeInstanceOf(GameState);
   });
 
-  test('ui effect queue appends plain effect records', () => {
-    runActions.enqueueUiEffect({ kind: 'dice-added', dieIds: ['die_1'] });
-    runActions.enqueueUiEffect({ kind: 'tag-earned', tagId: 'tag_uncommon' });
-    expect(runStore.getState().uiEffects).toEqual([
+  test('playback queue enqueue preserves order', () => {
+    runActions.enqueuePlayback({ kind: 'dice-added', dieIds: ['die_1'] });
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    expect(runStore.getState().playbackQueue).toEqual([
       { kind: 'dice-added', dieIds: ['die_1'] },
       { kind: 'tag-earned', tagId: 'tag_uncommon' },
     ]);
-    runActions.clearUiEffects();
-    expect(runStore.getState().uiEffects).toEqual([]);
+    runActions.clearPlayback();
+    expect(runStore.getState().playbackQueue).toEqual([]);
+  });
+
+  test('takePlayback removes only matching commands', () => {
+    runActions.enqueuePlayback({ kind: 'dice-added', dieIds: ['die_1'] });
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    const taken = runActions.takePlayback((cmd) => cmd.kind === 'dice-added');
+    expect(taken).toEqual([{ kind: 'dice-added', dieIds: ['die_1'] }]);
+    expect(runStore.getState().playbackQueue).toEqual([{ kind: 'tag-earned', tagId: 'tag_uncommon' }]);
+  });
+
+  test('takePlayback is atomic when nothing matches', () => {
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    const taken = runActions.takePlayback((cmd) => cmd.kind === 'dice-added');
+    expect(taken).toEqual([]);
+    expect(runStore.getState().playbackQueue).toEqual([{ kind: 'tag-earned', tagId: 'tag_uncommon' }]);
   });
 
   test('shopBuyActions.buyConsumable does not spend when consumable slots are full', () => {

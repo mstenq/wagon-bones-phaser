@@ -5,6 +5,15 @@
 
 ---
 
+## REFACTOR 9 handoff
+
+- **`PlaybackRunner` `handlers.ts`** already uses `gameFacade.boss.revealLandSlideHints` (done in REFACTOR 9).
+- **Non–Game scenes** now use `gameFacade.shop` / `pack` / `trail` / `meta`; pouch consumables in shop/pack go through `gameFacade.consumable.use` or `gameFacade.pack.useFromPouch` (playback enqueued in facade).
+- **`Preloader.ts`** still imports `getConsumableTexturePrefix` from `ConsumablesSystem` (asset preload only).
+- **`DiceSelectionScene`** still imports `DiceSelectionSystem` (not in REFACTOR 9 scope).
+
+---
+
 ## Goal
 
 **One blessed cross-host signal:** `Events.SCENE_READY` for Solid ↔ Phaser. Remove or replace gameplay EventBus emissions/listeners with store/facade/playback.
@@ -49,20 +58,28 @@ Remove unused gameplay constants after grep confirms zero references:
 
 ## Tasks
 
-- [ ] Remove dead emits (`TAG_EARNED`, etc.) or wire to playback
-- [ ] Migrate `PERMITS_CHANGED` listener: RoundSelect subscribes to `runStore` selector `selectPurchasedPermits` revision string instead
-- [ ] Remove lease/perished EventBus emits from GameScene/runner
-- [ ] Trim `Events` to `SCENE_READY` + any you intentionally keep
-- [ ] Update `PUBLIC_API_SPEC.md` EventBus section (or defer to REFACTOR_11)
-- [ ] `bun run check`
+- [x] Remove dead emits (`TAG_EARNED`, etc.) or wire to playback
+- [x] Migrate `PERMITS_CHANGED` listener: RoundSelect subscribes to `runStore` selector `selectPurchasedPermitsRevision` instead
+- [x] Remove lease/perished EventBus emits from GameScene/runner
+- [x] Trim `Events` to `SCENE_READY` + any you intentionally keep
+- [x] Update `PUBLIC_API_SPEC.md` EventBus section (or defer to REFACTOR_11)
+- [x] `bun run check`
 
 ---
 
 ## Acceptance criteria
 
-- [ ] `rg 'Events\.(TAG_|ROUND_|LEASE_|PHASE_|HAND_|DICE_|SCORE_|DAY_|REROLL|SPENT|EQUIPMENT_DESTROYED)' src/` → empty
+- [x] `rg 'Events\.(TAG_|ROUND_|LEASE_|PHASE_|HAND_|DICE_|SCORE_|DAY_|REROLL|SPENT|EQUIPMENT_DESTROYED)' src/` → empty
 - [ ] `SCENE_READY` still works (menu → game)
 - [ ] Dev permit grant in Journey modal still refreshes round select UI
+
+---
+
+## REFACTOR 11 handoff
+
+- `EventBus.ts` exports only `SCENE_READY`; gameplay events removed.
+- `selectPurchasedPermitsRevision` in `runSelectors.ts` drives `RoundSelectScene` refresh via `bindStore`.
+- Remaining `PUBLIC_API_SPEC.md` facade/playback sections still need the full REFACTOR_11 pass.
 
 ---
 

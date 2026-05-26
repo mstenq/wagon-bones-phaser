@@ -5,27 +5,20 @@
 
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
-import { PackDefinition, PackItem, generatePackContents, getPackDefById } from '../../game/BoosterPackSystem';
-import { acquireEquipmentInstance } from '../../game/EquipmentModifiers';
+import { gameFacade } from '../../game/facade';
+import type { ConsumableInstance, PackDefinition, PackItem, UseConsumableResult } from '../../game/facade/pack';
+import { isSecondHelpingsCloneTarget } from '../../game/facade/consumable';
 import {
+  createFrontierConsumableDef,
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
-  createFrontierConsumableDef,
-  ConsumableInstance,
-  executeConsumableEffect,
-  useConsumableDirectly,
-  applyRunInstantEffect,
   getConsumableTexturePrefix,
-  isSecondHelpingsCloneTarget,
-  getRandomSupplyDef,
-  type UseConsumableResult,
-} from '../../game/ConsumablesSystem';
-import { consumableActions, diceActions, getRunState } from '../../game/store';
-import { replaceEquipmentList, resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
+  getPackDefById,
+} from '../../game/facade/pack';
+import { getRunState } from '../../game/store';
+import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
 import { selectEquipmentSlotsFree } from '../../game/store/selectors/runSelectors';
 import { applyConsumableAnimEvents } from '../animations/ConsumableAnimPlayback';
-import { applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
-import { processEquipmentOnPackSkipped, processEquipmentOnPackOpened } from '../../game/EquipmentEffects';
 import { Die } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { Button } from '../ui/Button';
@@ -39,9 +32,7 @@ import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
-import { enqueueConsumablePlayback } from '../../game/store/uiEffectHelpers';
-import { runActions } from '../../game/store/runStore';
-import { bindConsumableUiEffects } from '../store/consumableUiEffects';
+import { bindPlaybackRunner } from '../playback/PlaybackRunner';
 import type { BoosterPackSceneState } from '../../game/store/types';
 import { rngShuffle } from '../../game/RunRng';
 
@@ -164,16 +155,9 @@ export class BoosterPackScene extends Scene {
       this.syncPackToStore();
       sceneActions.enterScene('BoosterPack');
     } else {
-      this.contents = generatePackContents(this.packDef);
-      this.picksRemaining = this.packDef.pickCount;
-
-      // Process pack-opened equipment effects (Leftovers: chance to grant supply card)
-      const equipment = resolveEquipmentList();
-      const grantSupply = processEquipmentOnPackOpened(equipment);
-      replaceEquipmentList(equipment);
-      if (grantSupply) {
-        consumableActions.addConsumable(getRandomSupplyDef());
-      }
+      const opened = gameFacade.pack.openPack(this.packDef);
+      this.contents = opened.contents;
+      this.picksRemaining = opened.picksRemaining;
       this.syncPackToStore();
       sceneActions.enterScene('BoosterPack');
     }
@@ -201,8 +185,17 @@ export class BoosterPackScene extends Scene {
     this.equipBar.on('equipment-changed', () => this.updateEquipHints());
     this.consumableBar.on('consumable-changed', () => this.updateEquipHints());
 
-    bindConsumableUiEffects(this, this.equipBar, {
+    bindPlaybackRunner(this, {
+      scene: this,
+      equipBar: this.equipBar,
+      consumableBar: this.consumableBar,
+      sidebar: this.sidebar,
+      getDiceSprites: () => [],
       destroyDice: async () => {},
+      scoreLayoutGate: null,
+      setAnimating: () => {},
+      onDiceAdded: () => {},
+      onScoreComplete: () => {},
     });
 
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
@@ -964,22 +957,21 @@ export class BoosterPackScene extends Scene {
 
       // Apply the dice selection effect
       const config = item.diceSelection!;
-      const result = applyDiceSelectionEffect(config, selectedDice);
+      const result = gameFacade.pack.applyDiceSelection(config, selectedDice);
       this.showFloatingText(result);
     } else if (item.category === 'equipment' && item.equipmentDef) {
       if (item.equipmentDef.aura?.id === 'ghost' || selectEquipmentSlotsFree(run) > 0) {
-        const list = resolveEquipmentList();
-        list.push(acquireEquipmentInstance(item.equipmentDef, run.purchasedPermits, item.equipmentPreview?.modifiers));
-        replaceEquipmentList(list);
+        const instance = gameFacade.pack.acquireEquipment(item.equipmentDef, item.equipmentPreview?.modifiers);
+        gameFacade.pack.addEquipmentInstance(instance);
         equipmentPopInCount = 1;
       }
     } else if (item.category === 'dice' && item.die) {
-      diceActions.addDie(item.die);
+      gameFacade.pack.addDie(item.die);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
       const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
       if (tg) {
         const def = createTrailGuideConsumableDef(tg);
-        const result = useConsumableDirectly(def);
+        const result = gameFacade.pack.useConsumableDirectly(def);
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
@@ -997,7 +989,7 @@ export class BoosterPackScene extends Scene {
       const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
       if (cardData) {
         const def = createSupplyConsumableDef(cardData);
-        const result = useConsumableDirectly(def);
+        const result = gameFacade.pack.useConsumableDirectly(def);
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
@@ -1006,13 +998,13 @@ export class BoosterPackScene extends Scene {
       const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
       if (fe) {
         const def = createFrontierConsumableDef(fe);
-        consumableResult = useConsumableDirectly(def);
+        consumableResult = gameFacade.pack.useConsumableDirectly(def);
         if (!consumableResult.success && consumableResult.failReason) {
           this.showFloatingText(consumableResult.failReason);
         }
       }
     } else if (item.instantEffect) {
-      const instantResult = applyRunInstantEffect(item.instantEffect);
+      const instantResult = gameFacade.pack.applyInstantEffect(item.instantEffect);
       if (instantResult.handUpgrades?.length) {
         playHandUpgradeAnimation({
           scene: this,
@@ -1050,9 +1042,7 @@ export class BoosterPackScene extends Scene {
     this.syncPackToStore();
     this.updatePicksText();
 
-    if (equipmentPopInCount > 0) {
-      runActions.enqueueUiEffect({ kind: 'equipment-created-count', count: equipmentPopInCount });
-    }
+    gameFacade.pack.enqueueEquipmentPopIn(equipmentPopInCount);
     this.updateEquipHints();
 
     if (this.picksRemaining <= 0) {
@@ -1142,9 +1132,7 @@ export class BoosterPackScene extends Scene {
   }
 
   private onSkip(): void {
-    const equipment = resolveEquipmentList();
-    processEquipmentOnPackSkipped(equipment);
-    replaceEquipmentList(equipment);
+    gameFacade.pack.skipPack();
     sceneActions.clearBoosterPack();
     this.scene.start(this.returnScene, {});
   }
@@ -1179,8 +1167,7 @@ export class BoosterPackScene extends Scene {
   }
 
   private async handleConsumableUsedAsync(consumed: ConsumableInstance): Promise<void> {
-    const result = executeConsumableEffect(consumed);
-    enqueueConsumablePlayback(result);
+    const result = gameFacade.pack.useFromPouch(consumed);
     this.refreshDiceLineup();
 
     if (!result.success && result.failReason) {

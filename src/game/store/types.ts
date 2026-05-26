@@ -1,7 +1,6 @@
 // ─── Zustand store types (No Phaser imports) ───
 // Plain data shapes that will replace PlayerState, GameState, and scene-local buffers.
 
-import type { ConsumableAnimEvent } from '../ConsumablesSystem';
 import type { DiceSelectionConfig } from '../DiceSelectionSystem';
 import type { InstantEffect } from '../BoosterPackSystem';
 import type { TrailEventModifiers, TrailRoundEffects } from '../trailEventDefaults';
@@ -13,7 +12,6 @@ import {
   type GameConfig,
   type HandStats,
   type PhaseState,
-  type ScoreAnimEvent,
   type ScoreResult,
 } from '../types';
 import type { Decimal } from '../decimal';
@@ -157,8 +155,6 @@ export interface RunState {
   storyVictoryPending: boolean;
   bossAssignmentIds: string[];
   nextDieId: number;
-  /** @deprecated Use playbackQueue — removed in REFACTOR_2 */
-  uiEffects: UiEffect[];
   /** Authoritative animation queue for UI (transient; not saved). */
   playbackQueue: PlaybackCommand[];
 }
@@ -273,28 +269,6 @@ export interface SceneRuntimeState {
   payout: PayoutSceneState | null;
   roundSelect: RoundSelectSceneState | null;
 }
-
-// ─── One-shot UI effects (not authoritative state) ───
-
-/**
- * @deprecated Use {@link PlaybackCommand} on `RunState.playbackQueue` — removed in REFACTOR_2/3.
- * Legacy queue still consumed by Phaser until playback runner lands (REFACTOR_4).
- */
-export type UiEffect =
-  | { kind: 'dice-added'; dieIds: string[] }
-  | { kind: 'equipment-destroyed'; sourceIdx: number; victimIdx: number }
-  | { kind: 'round-start-destructions'; entries: { sourceIdx: number; victimIdx: number }[] }
-  | { kind: 'round-start-equipment-created'; count: number }
-  | { kind: 'equipment-created'; equipmentIndices: number[] }
-  | { kind: 'equipment-created-count'; count: number }
-  | { kind: 'consumable-used'; consumableId: string }
-  | {
-      kind: 'consumable-anim';
-      events: ConsumableAnimEvent[];
-      equipmentCreatedCount?: number;
-    }
-  | { kind: 'score-anim'; events: ScoreAnimEvent[] }
-  | { kind: 'tag-earned'; tagId: string };
 
 // ─── Initial state helpers ───
 

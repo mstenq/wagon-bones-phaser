@@ -29,7 +29,12 @@ import { detectBestHand } from '../DiceSystem';
 import { bossActions, consumableActions, equipmentActions, progressionActions } from '../store/actions';
 import { runActions } from '../store';
 import { getRunState } from '../store/runStore';
-import { selectAvailableDice, selectBossForLeg, selectHandStats, selectTargetMiles } from '../store/selectors/runSelectors';
+import {
+  selectAvailableDice,
+  selectBossForLeg,
+  selectHandStats,
+  selectTargetMiles,
+} from '../store/selectors/runSelectors';
 
 describe('Boss round config', () => {
   test('Marathon: 4x leg base (replaces round 3 2×, not stacked)', () => {

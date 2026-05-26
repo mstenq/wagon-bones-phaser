@@ -5,6 +5,15 @@
 
 ---
 
+## REFACTOR 8 handoff
+
+- **GameScene** uses `gameFacade` only (no `*System.ts` imports). Facade modules: `round`, `run`, `consumable`, `boss`, `diceSelection`, `equipment`, `dice`.
+- **Round-end modifier feedback** (`processModifiersEndOfRound` / `applyModifierDestructions`) still runs in `GameScene.runRoundEndModifierFeedback` after playback — not folded into `endDay` or `PlaybackRunner` yet.
+- **`handlers.ts`** still imports `revealLandSlideHints` from `BossEffectsSystem` — switch to `gameFacade.boss.revealLandSlideHints` in REFACTOR_10 or here.
+- **Types:** import `ConsumableDef` / `DiceSelectionConfig` from `game/facade/*` subpaths or re-export from `facade/index.ts` if you want a single import.
+
+---
+
 ## Goal
 
 Extend facade so **non-Game** Phaser scenes stop importing game systems directly. Target scenes: `ShopScene`, `BoosterPackScene`, `TrailEventScene`, `RoundSelectScene`, `PayoutScene`, `ProfessionSelectScene`, `DifficultySelectScene`.
@@ -65,18 +74,18 @@ Add `src/game/__tests__/facade/shop.test.ts` — open shop, buy item, stock mark
 
 ## Tasks
 
-- [ ] Implement facade modules
-- [ ] Migrate each scene (one commit per scene ok)
-- [ ] `rg "from '../../game/[A-Z]" src/phaser/scenes` — only facade, store, Constants, formatScore, displayContext, SaveLoad, RunRng if needed for display-only
-- [ ] `bun run check`
+- [x] Implement facade modules
+- [x] Migrate each scene (one commit per scene ok)
+- [x] `rg "from '../../game/[A-Z]" src/phaser/scenes` — only facade, store, Constants, formatScore, displayContext, SaveLoad, RunRng if needed for display-only
+- [x] `bun run check`
 
 ---
 
 ## Acceptance criteria
 
-- [ ] No scene imports `EquipmentEffects`, `ItemsSystem`, `ConsumablesSystem`, `TagSystem`, `TrailEventsSystem`, `BoosterPackSystem` except via facade
-- [ ] `SaveLoadIO` unchanged (still uses `applySaveSnapshot`)
-- [ ] `bun run check` passes
+- [x] No scene imports `EquipmentEffects`, `ItemsSystem`, `ConsumablesSystem`, `TagSystem`, `TrailEventsSystem`, `BoosterPackSystem` except via facade
+- [x] `SaveLoadIO` unchanged (still uses `applySaveSnapshot`)
+- [x] `bun run check` passes
 
 ---
 

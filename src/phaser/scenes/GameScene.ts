@@ -6,75 +6,42 @@
 import { Scene } from 'phaser';
 import * as Phaser from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import {
-  getActiveRoundConfig,
-  initRoundSession,
-  patchLegacyRoundState,
-  readRoundState,
-  startRoundSession,
-} from '../../game/store/roundView';
+import { gameFacade } from '../../game/facade';
+import type { ConsumableDef, ConsumableInstance } from '../../game/facade/consumable';
+import type { DiceSelectionConfig } from '../../game/facade/diceSelection';
+import { shouldUpdateDisplayedDiceValue } from '../../game/facade/diceSelection';
 import { getRoundHintContext } from '../../game/displayContext';
-import { getRunState, runActions } from '../../game/store/runStore';
+import { getRunState } from '../../game/store/runStore';
 import { getRoundState } from '../../game/store/roundStore';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
-import { enqueueConsumablePlayback } from '../../game/store/uiEffectHelpers';
-import { roundActions } from '../../game/store/actions/roundActions';
-import { milesToSave } from '../../game/scoreMath';
-import { processBossPayoutTags, grantTag } from '../../game/TagSystem';
-import { getTrailTagById } from '../../data/trail_tags';
-import { grantGhostMedicine } from '../../game/ConsumablesSystem';
-import { bindConsumableUiEffects } from '../store/consumableUiEffects';
-import { Die, ScoreResult, HandType } from '../../game/types';
-import { detectBestHand } from '../../game/DiceSystem';
-
-import { diceActions } from '../../game/store/actions/diceActions';
-import { economyActions } from '../../game/store/actions/economyActions';
-import { resolveEquipmentList } from '../../game/store/resolve';
-import { runHasLuckyNumberEquipment, getResolvedLoadedDieTarget, getRunHandStats } from '../../game/store/runReads';
-import { selectAvailableDice } from '../../game/store/selectors/runSelectors';
+import { bindPlaybackRunner, type PlaybackRunnerHandle } from '../playback/PlaybackRunner';
+import { prepareScoreSidebar } from '../playback/handlers';
+import { Die, ScoreResult } from '../../game/types';
 import {
-  selectHandStats,
-  selectCurrentBoss,
-  selectIsBossRound,
-  selectProfession,
-} from '../../game/store/selectors/runSelectors';
-import { selectTargetMiles } from '../../game/store/selectors/runSelectors';
-import { computePayoutBreakdown } from '../../game/runProgression';
-import { addScore, D } from '../../game/scoreMath';
-import { hasActiveTrailRoundEffects, trailRoundEffectsFromModifiers } from '../../game/TrailEventsSystem';
-import { applyEquipmentModifierDestructions, processEquipmentModifiersEndOfRound } from '../../game/EquipmentModifiers';
-import { isEquipmentLeased } from '../../game/ItemsSystem';
-import { consumeNextRoundTags } from '../../game/TagSystem';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, ANIM, DICE, MARQUEE } from '../../game/Constants';
+  selectHandDice,
+  selectRolledDice,
+  selectRoundConfig,
+  selectRoundPhase,
+  selectRoundTotalMiles,
+  selectRerollsRemaining,
+} from '../../game/store/selectors/roundSelectors';
+import { selectAvailableDice, selectCurrentBoss, selectSpentDice } from '../../game/store/selectors/runSelectors';
+import { D } from '../../game/scoreMath';
+import { COLORS, TEXT_COLORS, FONTS, UI, ANIM, DICE, MARQUEE } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import { ConsumableDef, ConsumableInstance, executeConsumableEffect } from '../../game/ConsumablesSystem';
-import {
-  DiceSelectionConfig,
-  applyDiceSelectionEffect,
-  shouldUpdateDisplayedDiceValue,
-} from '../../game/DiceSelectionSystem';
 import { DicePouch } from '../ui/DicePouch';
 import { createLayout } from '../ui/SceneLayout';
 import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
-import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
-import { processBlueMoonHeldAtRoundEnd, processGoldHeldAtRoundEnd } from '../../game/EquipmentEffects';
-import { applyScoringMutations, createEmptyScoringMutations } from '../../game/effects/applyMutations';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
-import {
-  animateEquipmentFireDestruction,
-  animateEquipmentFireDestructionSequence,
-} from '../animations/EquipmentFireDestroyAnimation';
-import { animateEquipmentPopIn } from '../animations/EquipmentPopInAnimation';
+import { animateEquipmentFireDestruction } from '../animations/EquipmentFireDestroyAnimation';
 import { rngShuffle } from '../../game/RunRng';
-import { getLoadedDiceMultiplier } from '../../game/equipmentUtils';
-import { isDiceScoringDisabledByBoss, isDiceLockedByBoss, revealLandSlideHints } from '../../game/BossEffectsSystem';
 import { isDevMode } from '../../game/DevMode';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
 
@@ -119,6 +86,9 @@ export class GameScene extends Scene {
 
   // Animation lock
   private animating: boolean = false;
+
+  private playbackRunner: PlaybackRunnerHandle | null = null;
+  private scoreLayoutGate: { promise: Promise<void>; release: () => void } | null = null;
 
   /** Lazy-loaded round background texture key; cleared in init for each scene visit */
   private roundBackgroundKey: string | null = null;
@@ -171,65 +141,23 @@ export class GameScene extends Scene {
     this.roundBackgroundKey = null;
   }
 
-  /** Legacy die-object snapshot of active round (use patchRound for writes). */
-  private rs() {
-    return readRoundState();
-  }
-
-  private patchRound(
-    partial: Parameters<typeof patchLegacyRoundState>[0],
-    config?: Parameters<typeof patchLegacyRoundState>[1],
-  ): void {
-    patchLegacyRoundState(partial, config);
-  }
-
-  private takeDiceAddedUiEffects(): string[] {
-    const effects = runActions.takeUiEffects((e) => e.kind === 'dice-added');
-    return effects.flatMap((e) => (e.kind === 'dice-added' ? e.dieIds : []));
-  }
-
-  /** Consume one-shot round-start animations queued in the run store (with legacy save fallback). */
-  private consumeRoundStartUiEffects(): void {
-    const destructionEffects = runActions.takeUiEffects((e) => e.kind === 'round-start-destructions');
-    for (const effect of destructionEffects) {
-      if (effect.kind === 'round-start-destructions') {
-        this.animateRoundStartDestructions(effect.entries);
-      }
-    }
-
-    const createEffects = runActions.takeUiEffects((e) => e.kind === 'round-start-equipment-created');
-    for (const effect of createEffects) {
-      if (effect.kind === 'round-start-equipment-created') {
-        this.animateJunkDealerCreation(effect.count);
-      }
-    }
+  private createScoreLayoutGate(): { promise: Promise<void>; release: () => void } {
+    let release!: () => void;
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { promise, release };
   }
 
   create() {
     // Initialize game state only on first create (not on relayout)
     if (!this.roundSessionActive) {
-      const run = getRunState();
       const restoredRound = getRoundState();
-      if (restoredRound && getSceneState().activeScene === 'Game') {
-        initRoundSession();
-        this.roundSessionActive = true;
-        this.pendingNewDiceIds = [];
-        if (
-          !hasActiveTrailRoundEffects(run.trailRoundEffects) &&
-          hasActiveTrailRoundEffects(trailRoundEffectsFromModifiers(run.trailEventModifiers))
-        ) {
-          runActions.patch({
-            trailRoundEffects: trailRoundEffectsFromModifiers(run.trailEventModifiers),
-          });
-        }
-      } else {
-        consumeNextRoundTags();
-        initRoundSession({ targetMiles: selectTargetMiles(run) });
-        startRoundSession({ targetMiles: selectTargetMiles(run) });
-        this.roundSessionActive = true;
-        // Pick up any dice added during leg transition or round start
-        this.pendingNewDiceIds = this.takeDiceAddedUiEffects();
-      }
+      gameFacade.round.beginRoundSession({
+        restored: restoredRound !== null && getSceneState().activeScene === 'Game',
+      });
+      this.roundSessionActive = true;
+      this.pendingNewDiceIds = [];
       // Clear lock state from previous round (scene instance is reused)
       this.lockedDiceIds = new Set();
     }
@@ -252,7 +180,7 @@ export class GameScene extends Scene {
   private flashLeasedBadgeReminders(): void {
     for (const card of this.equipBar.getCards()) {
       const equip = card.equipment;
-      if (equip && isEquipmentLeased(equip)) {
+      if (equip && gameFacade.equipment.isLeased(equip)) {
         card.flashLeasedPaid();
       }
     }
@@ -290,12 +218,29 @@ export class GameScene extends Scene {
       this.applyBossRollDiceState();
     });
 
-    bindConsumableUiEffects(this, this.equipBar, {
+    this.playbackRunner = bindPlaybackRunner(this, {
+      scene: this,
+      equipBar: this.equipBar,
+      consumableBar: this.consumableBar,
+      sidebar: this.sidebar,
+      getDiceSprites: () => this.rollSprites,
       destroyDice: (diceIds) =>
         this.animateConsumableDiceDestruction(diceIds, {
           refillSelectHand: true,
           floatingText: `Raid destroyed ${diceIds.length} dice`,
         }),
+      scoreLayoutGate: null,
+      setAnimating: (value) => {
+        this.animating = value;
+      },
+      onDiceAdded: (dieIds) => {
+        this.pendingNewDiceIds.push(...dieIds);
+      },
+      onScoreComplete: () => {
+        this.instructionText.setText('');
+        this.sidebar.clearHandDisplay();
+        this.time.delayedCall(600, () => this.onContinue());
+      },
     });
 
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
@@ -361,11 +306,14 @@ export class GameScene extends Scene {
 
     this.hideAllButtons();
 
+    if (!isRelayout) {
+      this.playbackRunner.drainInitialSync();
+    }
+
     // Re-enter current phase
     this.enterCurrentPhase(isRelayout);
 
     if (!isRelayout) {
-      this.consumeRoundStartUiEffects();
       this.flashLeasedBadgeReminders();
     }
 
@@ -373,7 +321,7 @@ export class GameScene extends Scene {
   }
 
   private enterCurrentPhase(isRelayout: boolean = false): void {
-    const phase = this.rs().phase;
+    const phase = selectRoundPhase();
     if (phase === 'SELECT') {
       this.enterDrawPhase(false, null, { autoRoll: !isRelayout });
     } else if (phase === 'ROLL') {
@@ -407,12 +355,7 @@ export class GameScene extends Scene {
   ): void {
     this.clearSprites();
     this.hideAllButtons();
-    roundActions.setSidebarOverlay({
-      handName: '',
-      handLevel: 0,
-      milesBaseSave: milesToSave(0),
-      multSave: milesToSave(0),
-    });
+    gameFacade.round.clearHandPreviewOverlay();
     this.enterDrawPhaseLayout(animateFromPouch, carryoverPositions, options);
   }
 
@@ -425,7 +368,7 @@ export class GameScene extends Scene {
     const { height } = this.scale;
     this.playAreaY = height * UI.ROLL_Y_RATIO;
 
-    const hand = this.rs().hand;
+    const hand = selectHandDice();
     this.playAreaSprites = this.createDiceRow(hand, this.playAreaY);
     for (const sprite of this.playAreaSprites) {
       this.setupPlayAreaSprite(sprite);
@@ -494,7 +437,7 @@ export class GameScene extends Scene {
     this.readyBtn.setVisible(true);
     this.updateDrawButtons();
 
-    const spent = this.rs().spent.length;
+    const spent = selectSpentDice(getRunState()).length;
     this.instructionText.setText(`Roll ${hand.length} drawn dice (${spent} spent)`);
 
     this.updateHUD();
@@ -508,8 +451,8 @@ export class GameScene extends Scene {
   private maybeAutoRollFirstHand(): void {
     if (!getGameplayPreferences().autoRollFirstHand) return;
     if (this.animating) return;
-    if (this.rs().phase !== 'SELECT') return;
-    if (this.rs().hand.length === 0) return;
+    if (selectRoundPhase() !== 'SELECT') return;
+    if (selectHandDice().length === 0) return;
     this.onReadyToRoll();
   }
 
@@ -519,7 +462,7 @@ export class GameScene extends Scene {
     this.hideAllButtons();
 
     // Create sprites for rolled dice
-    const rolled = this.rs().rolledDice;
+    const rolled = selectRolledDice();
     this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
 
     // Play roll animation
@@ -544,10 +487,11 @@ export class GameScene extends Scene {
 
   /** Bounty lock + boss-disabled visuals on rolled dice */
   private applyBossRollDiceState(): void {
+    const bossState = gameFacade.boss.getRollUiState(selectRolledDice());
     for (const sprite of this.rollSprites) {
       const id = sprite.dieData.id;
-      sprite.setDisabled(isDiceScoringDisabledByBoss(sprite.dieData));
-      if (isDiceLockedByBoss(id)) {
+      sprite.setDisabled(gameFacade.boss.isDiceScoringDisabled(sprite.dieData));
+      if (bossState.lockedDieIds.includes(id)) {
         this.lockedDiceIds.add(id);
       }
     }
@@ -560,7 +504,7 @@ export class GameScene extends Scene {
   private toggleDiceLock(sprite: DiceSprite, playSound = true, updateButtons = true): void {
     if (this.consumableTargeting) return;
     const id = sprite.dieData.id;
-    if (isDiceLockedByBoss(id)) return;
+    if (gameFacade.boss.isDiceLocked(id)) return;
 
     if (this.lockedDiceIds.has(id)) {
       this.lockedDiceIds.delete(id);
@@ -576,9 +520,7 @@ export class GameScene extends Scene {
   }
 
   private syncSelectedForScore(): void {
-    this.patchRound({
-      selectedForScore: this.rs().rolledDice.filter((d) => this.lockedDiceIds.has(d.id)),
-    });
+    gameFacade.round.setSelectedForScoreDice(selectRolledDice().filter((d) => this.lockedDiceIds.has(d.id)));
   }
 
   /** Shared: wire up click handlers on roll sprites (click to lock/unlock, drag to reorder) */
@@ -606,7 +548,7 @@ export class GameScene extends Scene {
   }
 
   private canUseMarquee(): boolean {
-    return !this.animating && !this.consumableTargeting && this.rollSprites.length > 0 && this.rs().phase === 'ROLL';
+    return !this.animating && !this.consumableTargeting && this.rollSprites.length > 0 && selectRoundPhase() === 'ROLL';
   }
 
   private getRollMarqueeZoneBounds(): { width: number; height: number; cx: number; cy: number } {
@@ -723,7 +665,7 @@ export class GameScene extends Scene {
     this.lockedDiceIds.clear();
     this.hideAllButtons();
 
-    const rolled = this.rs().rolledDice;
+    const rolled = selectRolledDice();
     this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
     this.setupRollSpriteInteraction();
     this.setupRollMarqueeZone();
@@ -742,57 +684,13 @@ export class GameScene extends Scene {
   private enterScorePhase(result: ScoreResult): void {
     this.hideAllButtons();
 
-    // Show hand name and level in sidebar
-    const handType = result.handResult.type as HandType;
-    const stats = selectHandStats(getRunState(), handType);
-    roundActions.setSidebarOverlay({
-      title: 'SCORING',
-      handName: result.handResult.name,
-      handLevel: stats.level,
-    });
-
-    // Store round score before this hand for the animation
-    const roundScoreBefore = this.rs().totalMiles.minus(result.miles);
-    result.roundScoreBefore = roundScoreBefore;
+    const totalMiles = selectRoundTotalMiles();
+    const roundScoreBefore = totalMiles ? totalMiles.minus(result.miles) : D(0);
+    prepareScoreSidebar(result, roundScoreBefore);
 
     this.animating = true;
     this.layoutDiceForScoring(result, () => {
-      playScoreAnimation({
-        scene: this,
-        diceSprites: this.rollSprites,
-        result,
-        sidebar: this.sidebar,
-        equipBar: this.equipBar,
-        consumableBar: this.consumableBar,
-        onComplete: () => {
-          revealLandSlideHints();
-          this.equipBar.setHintRound(getRoundHintContext());
-
-          // If hand upgrades occurred during scoring (e.g. Surveyor's Transit), animate them
-          if (result.handUpgrades && result.handUpgrades.length > 0) {
-            playHandUpgradeAnimation({
-              scene: this,
-              sidebar: this.sidebar,
-              upgrades: result.handUpgrades,
-              onComplete: () => {
-                this.animating = false;
-                this.instructionText.setText('');
-                this.sidebar.clearHandDisplay();
-                this.time.delayedCall(600, () => {
-                  this.onContinue();
-                });
-              },
-            });
-          } else {
-            this.animating = false;
-            this.instructionText.setText('');
-            this.sidebar.clearHandDisplay();
-            this.time.delayedCall(600, () => {
-              this.onContinue();
-            });
-          }
-        },
-      });
+      this.scoreLayoutGate?.release();
     });
   }
 
@@ -860,8 +758,8 @@ export class GameScene extends Scene {
 
   private onReadyToRoll(): void {
     if (this.animating) return;
-    const ids = this.rs().hand.map((die) => die.id);
-    const success = roundActions.selectForRoll(ids);
+    const ids = selectHandDice().map((die) => die.id);
+    const success = gameFacade.round.selectDiceForRoll(ids);
     if (success) {
       this.enterRollPhase();
     }
@@ -875,19 +773,19 @@ export class GameScene extends Scene {
     if (this.animating) return;
 
     // Re-roll all dice that are NOT locked
-    const allIds = this.rs().rolledDice.map((d) => d.id);
+    const allIds = selectRolledDice().map((d) => d.id);
     const idsToReroll = allIds.filter((id) => !this.lockedDiceIds.has(id));
     if (idsToReroll.length === 0) return;
 
-    const success = roundActions.reroll(idsToReroll);
-    if (!success && this.rs().rerollsRemaining > 0 && !roundActions.canUseReroll()) {
+    const success = gameFacade.round.rerollUnlockedDice(idsToReroll);
+    if (!success && selectRerollsRemaining() > 0 && !gameFacade.round.canUseReroll()) {
       this.showFloatingText('No re-rolls on Day 1', 0xffaa44);
       return;
     }
     if (success) {
       this.animating = true;
       const rerolledSprites = this.rollSprites.filter((s) => idsToReroll.includes(s.dieData.id));
-      const rolled = this.rs().rolledDice;
+      const rolled = selectRolledDice();
 
       playRollAnimation(
         this,
@@ -917,21 +815,23 @@ export class GameScene extends Scene {
     const ids = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     if (ids.length === 0) return;
 
-    const validation = roundActions.validateScoreSelection(ids);
+    const validation = gameFacade.round.validateScoreSelection(ids);
     if (!validation.allowed) {
       this.showFloatingText(validation.reason ?? 'Cannot play this hand', 0xff6644);
       return;
     }
 
-    const success = roundActions.selectForScore(ids);
+    const success = gameFacade.round.selectForScore(ids);
     if (!success) return;
 
     this.syncRolledDiceFromSprites();
-    const result = roundActions.calculateScore();
+    this.scoreLayoutGate = this.createScoreLayoutGate();
+    this.playbackRunner?.setScoreLayoutGate(this.scoreLayoutGate);
+    const result = gameFacade.round.calculateScore();
     if (result) {
       this.enterScorePhase(result);
     } else {
-      roundActions.cancelScore();
+      gameFacade.round.cancelScore();
       this.showFloatingText('Cannot play this hand', 0xff6644);
       this.updateRollButtons();
     }
@@ -943,7 +843,7 @@ export class GameScene extends Scene {
 
     this.hideAllButtons();
     this.clearSprites();
-    this.patchRound({ totalMiles: D(1_000_000), phase: 'DAY_END' });
+    gameFacade.round.forceWinRound();
     this.sidebar.syncRoundScoreFromStore();
     this.updateHUD();
     this.onContinue();
@@ -952,23 +852,13 @@ export class GameScene extends Scene {
   private onContinue(): void {
     if (this.animating) return;
 
-    const scoredIds = new Set(this.rs().selectedForScore.map((d) => d.id));
-    const heldDice = this.rs().rolledDice.filter((d) => !scoredIds.has(d.id));
-    const lastHandType = this.rs().currentHandType;
-    const goldHeld = processGoldHeldAtRoundEnd(heldDice, resolveEquipmentList());
-
-    const { outcome, destroyedEquipment, deferredDestroyIndices } = roundActions.endDay({
+    const { outcome, destroyedEquipment, deferredDestroyIndices } = gameFacade.round.endDay({
       deferEquipmentDestructionAnimation: true,
     });
 
-    const blueMoonHeld =
-      outcome === 'won'
-        ? processBlueMoonHeldAtRoundEnd(heldDice, resolveEquipmentList(), lastHandType)
-        : { consumablesGranted: [], animEvents: [] };
-
     const afterDestroyedEquipmentFeedback = () => {
       if (outcome === 'won' || outcome === 'lost') {
-        this.finishDayEndAfterEquipmentDestroyed(outcome, goldHeld, blueMoonHeld);
+        this.finishDayEndAfterEquipmentDestroyed(outcome);
         return;
       }
 
@@ -1008,68 +898,24 @@ export class GameScene extends Scene {
     afterDestroyedEquipmentFeedback();
   }
 
-  private finishDayEndAfterEquipmentDestroyed(
-    outcome: 'won' | 'lost',
-    goldHeld: ReturnType<typeof processGoldHeldAtRoundEnd>,
-    blueMoonHeld: ReturnType<typeof processBlueMoonHeldAtRoundEnd>,
-  ): void {
-    const roundEndHeldEvents = [...goldHeld.animEvents, ...blueMoonHeld.animEvents];
-
-    const applyRoundEndHeldRewards = () => {
-      if (goldHeld.moneyEarned > 0) {
-        economyActions.earn(goldHeld.moneyEarned);
-      }
+  private finishDayEndAfterEquipmentDestroyed(outcome: 'won' | 'lost'): void {
+    void this.playbackRunner?.drainRoundEndHeld().then(() => {
       this.runRoundEndModifierFeedback(() => this.transitionAfterRoundEnd(outcome));
-    };
-
-    const playRoundEndHeldAnimations = () => {
-      if (roundEndHeldEvents.length === 0) {
-        applyRoundEndHeldRewards();
-        return;
-      }
-      this.animating = true;
-      playDieAnimEvents({
-        scene: this,
-        diceSprites: this.rollSprites,
-        events: roundEndHeldEvents,
-        consumableBar: this.consumableBar,
-        equipBar: this.equipBar,
-        onComplete: () => {
-          this.animating = false;
-          applyRoundEndHeldRewards();
-        },
-      });
-    };
-
-    if (blueMoonHeld.consumablesGranted.length > 0) {
-      const mutations = createEmptyScoringMutations();
-      mutations.consumablesGranted.push(...blueMoonHeld.consumablesGranted);
-      applyScoringMutations(mutations);
-    }
-
-    playRoundEndHeldAnimations();
+    });
   }
 
   private runRoundEndModifierFeedback(onComplete: () => void): void {
-    const modifierResult = processEquipmentModifiersEndOfRound({ applyDestruction: false });
+    const modifierResult = gameFacade.equipment.processModifiersEndOfRound({ applyDestruction: false });
     const hasDestroy = modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
 
     const showModifierFeedback = () => {
-      for (const { index, equipmentName, cost } of modifierResult.leasePaid) {
-        EventBus.emit(Events.LEASE_PAID, { equipmentName, index, cost });
+      for (const { equipmentName, cost } of modifierResult.leasePaid) {
         this.showFloatingText(`-$${cost} lease: ${equipmentName}`, COLORS.GOLD);
       }
       this.equipBar.flashLeasedUpkeepPaid(modifierResult.leasePaid.map((p) => p.index));
 
-      for (const { index, equipmentName } of modifierResult.perished) {
-        EventBus.emit(Events.EQUIPMENT_PERISHED, { equipmentName, index });
-      }
-      for (const { index, equipmentName } of modifierResult.leaseDefaulted) {
-        EventBus.emit(Events.LEASE_DEFAULTED, { equipmentName, index });
-      }
-
       if (!hasDestroy) {
-        applyEquipmentModifierDestructions(modifierResult);
+        gameFacade.equipment.applyModifierDestructions(modifierResult);
       }
       this.equipBar.setHintRound(getRoundHintContext());
       this.equipBar.flashPerishableWarnings();
@@ -1086,37 +932,7 @@ export class GameScene extends Scene {
   private transitionAfterRoundEnd(outcome: 'won' | 'lost'): void {
     if (outcome === 'won') {
       this.sound.play('sfx_win', { volume: 0.6 });
-      const run = getRunState();
-      const daysRemaining = getActiveRoundConfig().maxDays - this.rs().day;
-      const rerollsRemaining = this.rs().rerollsRemaining;
-      const totalMiles = this.rs().totalMiles;
-      const targetMiles = getActiveRoundConfig().targetMiles;
-      const payout = computePayoutBreakdown(run, daysRemaining, rerollsRemaining);
-      let investmentBonus = 0;
-      if (run.round === GAMEPLAY.ROUNDS_PER_LEG) {
-        investmentBonus = processBossPayoutTags();
-        const profMods = selectProfession(run)?.modifiers as Record<string, unknown> | undefined;
-        if (profMods?.doubleTagOnBoss) {
-          const twinWagonDef = getTrailTagById('tag_twin_wagon');
-          if (twinWagonDef) grantTag(twinWagonDef);
-        }
-        if (profMods?.ghostMedicineOnBoss) {
-          grantGhostMedicine();
-        }
-      }
-      sceneActions.enterPayout({
-        breakdown: payout,
-        presentation: {
-          totalMilesSave: milesToSave(totalMiles),
-          targetMilesSave: milesToSave(targetMiles),
-          daysRemaining,
-          rerollsRemaining,
-          leg: run.leg,
-          round: run.round,
-          isVictory: selectIsBossRound(run) && run.leg === GAMEPLAY.LEGS && !run.endlessMode,
-          investmentBonus,
-        },
-      });
+      gameFacade.run.preparePayoutPresentation();
       this.scene.start('Payout', {});
     } else {
       this.sound.play('sfx_negative', { volume: 0.5 });
@@ -1124,8 +940,8 @@ export class GameScene extends Scene {
       this.scene.start('GameOver', {
         won: false,
         victory: false,
-        totalMiles: this.rs().totalMiles,
-        targetMiles: getActiveRoundConfig().targetMiles,
+        totalMiles: selectRoundTotalMiles() ?? D(0),
+        targetMiles: selectRoundConfig().targetMiles,
         leg: run.leg,
         round: run.round,
       });
@@ -1168,18 +984,18 @@ export class GameScene extends Scene {
   }
 
   private updateDrawButtons(): void {
-    const drawCount = this.rs().hand.length;
+    const drawCount = selectHandDice().length;
     this.readyBtn.setText(drawCount > 0 ? `Roll ${drawCount} Dice` : 'No Dice To Roll');
     this.readyBtn.setEnabled(drawCount > 0);
   }
 
   private updateRollButtons(): void {
     const lockedCount = this.lockedDiceIds.size;
-    const totalCount = this.rs().rolledDice.length;
+    const totalCount = selectRolledDice().length;
     const rerollCount = totalCount - lockedCount;
-    const remaining = this.rs().rerollsRemaining;
+    const remaining = selectRerollsRemaining();
     const hasRerolls = remaining > 0;
-    const canUseReroll = roundActions.canUseReroll();
+    const canUseReroll = gameFacade.round.canUseReroll();
 
     this.rerollBtn.setEnabled(rerollCount > 0 && canUseReroll);
     this.rerollBtn.setText(
@@ -1195,28 +1011,8 @@ export class GameScene extends Scene {
     this.scoreBtn.setEnabled(lockedCount > 0);
     this.scoreBtn.setText(lockedCount > 0 ? `Score ${lockedCount} Dice` : 'Lock Dice to Score');
 
-    // Preview hand type when dice are locked
-    if (lockedCount > 0) {
-      const lockedDice = this.rs().rolledDice.filter((d) => this.lockedDiceIds.has(d.id));
-      const handResult = detectBestHand(lockedDice);
-      const stats = getRunHandStats(handResult.type);
-      const levelBonus = stats.level - 1;
-      const baseMiles = addScore(handResult.baseMiles, stats.milesPerLevel * levelBonus);
-      const baseMult = addScore(handResult.baseMult, stats.multPerLevel * levelBonus);
-      roundActions.setSidebarOverlay({
-        handName: handResult.name,
-        handLevel: stats.level,
-        milesBaseSave: milesToSave(baseMiles),
-        multSave: milesToSave(baseMult),
-      });
-    } else {
-      roundActions.setSidebarOverlay({
-        handName: '',
-        handLevel: 0,
-        milesBaseSave: milesToSave(0),
-        multSave: milesToSave(0),
-      });
-    }
+    const lockedDice = selectRolledDice().filter((d) => this.lockedDiceIds.has(d.id));
+    gameFacade.round.updateHandPreviewOverlay(lockedDice);
 
     this.equipBar?.setHintRound(getRoundHintContext());
   }
@@ -1293,7 +1089,7 @@ export class GameScene extends Scene {
 
   /** Keep game-state dice order aligned with on-screen roll sprite order (held-in-hand scoring). */
   private syncRolledDiceFromSprites(): void {
-    this.patchRound({ rolledDice: this.rollSprites.map((s) => s.dieData) });
+    gameFacade.round.syncRolledDiceFromFaces(this.rollSprites.map((s) => s.dieData));
   }
 
   private setSortOrder(order: 'asc' | 'desc'): void {
@@ -1314,22 +1110,20 @@ export class GameScene extends Scene {
   }
 
   private updateHUD(): void {
-    const s = this.rs();
+    const phase = selectRoundPhase();
     const boss = selectCurrentBoss(getRunState());
-    roundActions.setSidebarOverlay({
+    gameFacade.round.setSidebarOverlay({
       title: boss
         ? boss.name
-        : s.phase === 'SELECT'
+        : phase === 'SELECT'
           ? 'READY TO ROLL'
-          : s.phase === 'ROLL'
+          : phase === 'ROLL'
             ? 'ROLL PHASE'
-            : s.phase === 'SCORE'
+            : phase === 'SCORE'
               ? 'SCORING'
-              : s.phase === 'DAY_END'
+              : phase === 'DAY_END'
                 ? 'DAY COMPLETE'
                 : 'GAME',
-      milesBaseSave: milesToSave(0),
-      multSave: milesToSave(0),
     });
     this.equipBar.setHintRound(getRoundHintContext());
     this.updateLoadedDiceControl();
@@ -1397,10 +1191,8 @@ export class GameScene extends Scene {
   }
 
   private adjustLoadedDieTarget(delta: number): void {
-    const run = getRunState();
-    if (run.loadedDieSyncLucky) return;
-
-    const current = run.loadedDieTarget;
+    const { syncLucky, rawTarget: current } = gameFacade.dice.getLoadedDieDisplay();
+    if (syncLucky) return;
 
     let nextValue: number | null;
     if (delta > 0) {
@@ -1409,7 +1201,7 @@ export class GameScene extends Scene {
       nextValue = current === null ? null : current === 1 ? null : current - 1;
     }
 
-    diceActions.setLoadedDieTarget(nextValue);
+    gameFacade.dice.setLoadedDieTarget(nextValue);
     this.updateLoadedDiceControl();
     this.destroyLoadedDicePicker();
   }
@@ -1418,9 +1210,7 @@ export class GameScene extends Scene {
     if (!this.loadedDiceValueText || !this.loadedDiceDecBtn || !this.loadedDiceIncBtn || !this.loadedDiceValueBg)
       return;
 
-    const run = getRunState();
-    const syncLucky = run.loadedDieSyncLucky && runHasLuckyNumberEquipment(run);
-    const target = getResolvedLoadedDieTarget(run);
+    const { syncLucky, target } = gameFacade.dice.getLoadedDieDisplay();
 
     if (syncLucky) {
       this.loadedDiceValueText.setText('🍀');
@@ -1472,8 +1262,8 @@ export class GameScene extends Scene {
   private buildLoadedDicePicker(): Phaser.GameObjects.Container {
     const controlX = this.loadedDiceValueHitArea.x;
     const controlY = this.loadedDiceValueHitArea.y;
+    const { hasLuckyNumberGear: showLuckySync, rawTarget } = gameFacade.dice.getLoadedDieDisplay();
     const run = getRunState();
-    const showLuckySync = runHasLuckyNumberEquipment(run);
     const panelWidth = 208;
     const panelHeight = showLuckySync ? 248 : 214;
     const panelX = Phaser.Math.Clamp(controlX - panelWidth / 2, this.sidebarW + 12, this.scale.width - panelWidth - 12);
@@ -1516,7 +1306,7 @@ export class GameScene extends Scene {
     const gridStartX = panelX + (panelWidth - gridWidth) / 2 + cellWidth / 2;
     const gridStartY = panelY + 72 + cellHeight / 2;
     const syncLucky = run.loadedDieSyncLucky && showLuckySync;
-    const selected = syncLucky ? null : run.loadedDieTarget;
+    const selected = syncLucky ? null : rawTarget;
 
     for (let value = 1; value <= 12; value++) {
       const col = (value - 1) % cols;
@@ -1529,7 +1319,7 @@ export class GameScene extends Scene {
         cellWidth,
         cellHeight,
       ).onClick(() => {
-        diceActions.setLoadedDieTarget(value);
+        gameFacade.dice.setLoadedDieTarget(value);
         this.destroyLoadedDicePicker();
       });
       button.setDepth(501);
@@ -1552,7 +1342,7 @@ export class GameScene extends Scene {
         panelWidth - 28,
         26,
       ).onClick(() => {
-        diceActions.setLoadedDieSyncLucky(true);
+        gameFacade.dice.setLoadedDieSyncLucky(true);
         this.destroyLoadedDicePicker();
       });
       syncBtn.setDepth(501);
@@ -1566,7 +1356,7 @@ export class GameScene extends Scene {
     }
 
     const clearBtn = new Button(this, panelCenterX, clearBtnY, 'Clear', 86, 26).onClick(() => {
-      diceActions.setLoadedDieTarget(null);
+      gameFacade.dice.setLoadedDieTarget(null);
       this.destroyLoadedDicePicker();
     });
     clearBtn.setDepth(501);
@@ -1578,11 +1368,7 @@ export class GameScene extends Scene {
   }
 
   private getLoadedDiceOddsNote(): string {
-    const chance = Math.min(1, getLoadedDiceMultiplier(resolveEquipmentList()) / 6);
-    if (chance >= 1) return 'Selected face is guaranteed to roll.';
-    if (chance === 2 / 3) return 'Selected face rolls at 2 in 3.';
-    if (chance === 1 / 3) return 'Selected face rolls at 1 in 3.';
-    return 'Selected face rolls at 1 in 6.';
+    return gameFacade.dice.getLoadedDieOddsNote();
   }
 
   // ─── Pre-roll hand (SELECT phase) ───
@@ -1616,7 +1402,7 @@ export class GameScene extends Scene {
     }
 
     // Wiggle the Mystery Crate equipment card
-    const crateIndex = resolveEquipmentList().findIndex((e) => e.def.effectType === 'ROUND_START_ADD_DICE');
+    const crateIndex = gameFacade.equipment.findEffectIndex('ROUND_START_ADD_DICE');
     if (crateIndex >= 0) {
       const card = this.equipBar.getCardByEquipIndex(crateIndex);
       if (card) {
@@ -1684,11 +1470,6 @@ export class GameScene extends Scene {
     animateEquipmentFireDestruction(this, this.equipBar, sourceIndex, victimIndex, onComplete);
   }
 
-  /** Animate a sequence of round-start equipment destructions in order, adjusting indices after each splice */
-  private animateRoundStartDestructions(destructions: { sourceIdx: number; victimIdx: number }[]): void {
-    animateEquipmentFireDestructionSequence(this, this.equipBar, destructions);
-  }
-
   /** Animate end-of-round self-destructs (Dynamite, Nitro) using the same fire burst as Haunted Totem. */
   private animateEndOfRoundSelfDestructs(indices: number[], onComplete: () => void): void {
     const sorted = [...indices].sort((a, b) => a - b);
@@ -1705,11 +1486,6 @@ export class GameScene extends Scene {
         this.animateEndOfRoundSelfDestructs(remaining, onComplete);
       });
     });
-  }
-
-  /** Animate Junk Dealer equipment cards popping into the equipment bar */
-  private animateJunkDealerCreation(count: number): void {
-    void animateEquipmentPopIn(this, this.equipBar, count);
   }
 
   /** Calculate X positions for dice in the play area */
@@ -1751,7 +1527,7 @@ export class GameScene extends Scene {
 
   /** Get the row Y and position calculator for the active draggable list */
   private getDraggableRowY(): number {
-    const phase = this.rs().phase;
+    const phase = selectRoundPhase();
     if (phase === 'SELECT') return this.playAreaY;
     return this.scale.height * UI.ROLL_Y_RATIO;
   }
@@ -1930,11 +1706,9 @@ export class GameScene extends Scene {
   }
 
   private async handleConsumableUsed(consumed: ConsumableInstance): Promise<void> {
-    const result = executeConsumableEffect(consumed, {
+    const result = gameFacade.consumable.use(consumed, {
       visibleDiceIds: this.getVisibleConsumableDiceIds(),
     });
-
-    enqueueConsumablePlayback(result);
 
     if (!result.success && result.failReason) {
       const text = this.add
@@ -1992,7 +1766,7 @@ export class GameScene extends Scene {
     options: { refillSelectHand?: boolean; floatingText?: string } = {},
   ): Promise<void> {
     const destroyedSet = new Set(destroyedIds);
-    const phase = this.rs().phase;
+    const phase = selectRoundPhase();
 
     this.removeDestroyedDiceFromRoundState(destroyedSet);
 
@@ -2093,16 +1867,8 @@ export class GameScene extends Scene {
   }
 
   private removeDestroyedDiceFromRoundState(destroyedSet: Set<string>): void {
-    const phase = this.rs().phase;
-    if (phase === 'SELECT') {
-      this.patchRound({ hand: this.rs().hand.filter((d) => !destroyedSet.has(d.id)) });
-      return;
-    }
-    if (phase === 'ROLL') {
-      this.patchRound({
-        rolledDice: this.rs().rolledDice.filter((d) => !destroyedSet.has(d.id)),
-        selectedForScore: this.rs().selectedForScore.filter((d) => !destroyedSet.has(d.id)),
-      });
+    gameFacade.round.removeDestroyedDiceFromRound(destroyedSet);
+    if (selectRoundPhase() === 'ROLL') {
       this.lockedDiceIds = new Set([...this.lockedDiceIds].filter((id) => !destroyedSet.has(id)));
     }
   }
@@ -2116,11 +1882,11 @@ export class GameScene extends Scene {
   }
 
   private refillSelectHandAfterRaid(): Promise<void> {
-    if (this.rs().phase !== 'SELECT') return Promise.resolve();
+    if (selectRoundPhase() !== 'SELECT') return Promise.resolve();
 
     const run = getRunState();
-    const currentIds = new Set(this.rs().hand.map((d) => d.id));
-    const needed = Math.max(0, getActiveRoundConfig().rollSize - this.rs().hand.length);
+    const currentIds = new Set(selectHandDice().map((d) => d.id));
+    const needed = Math.max(0, selectRoundConfig().rollSize - selectHandDice().length);
     if (needed <= 0) {
       this.repositionPlayArea(true);
       this.updateDrawButtons();
@@ -2136,7 +1902,7 @@ export class GameScene extends Scene {
 
     const launch = this.getDicePouchLaunchPoint();
     const startingLength = this.playAreaSprites.length;
-    const nextHand = [...this.rs().hand];
+    const nextHand = [...selectHandDice()];
     for (const die of toAdd) {
       nextHand.push(die);
       const sprite = new DiceSprite(this, launch.x, launch.y, die);
@@ -2147,7 +1913,7 @@ export class GameScene extends Scene {
       sprite.disableInteractive();
       this.playAreaSprites.push(sprite);
     }
-    this.patchRound({ hand: nextHand.slice(0, getActiveRoundConfig().rollSize) });
+    gameFacade.round.setHandDice(nextHand.slice(0, selectRoundConfig().rollSize));
 
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < startingLength; i++) {
@@ -2203,7 +1969,7 @@ export class GameScene extends Scene {
 
     // In pre-roll SELECT phase, hand dice are normally non-interactive.
     // Consumable targeting needs temporary interaction to pick targets.
-    if (this.rs().phase === 'SELECT') {
+    if (selectRoundPhase() === 'SELECT') {
       for (const sprite of this.playAreaSprites) {
         sprite.setInteractive({ useHandCursor: true });
       }
@@ -2252,24 +2018,24 @@ export class GameScene extends Scene {
 
   /** Get the dice sprites currently visible for targeting */
   private getTargetableDice(): { sprites: DiceSprite[]; dice: Die[] } {
-    const phase = this.rs().phase;
+    const phase = selectRoundPhase();
     if (phase === 'ROLL' && this.rollSprites.length > 0) {
       return {
         sprites: this.rollSprites,
-        dice: this.rs().rolledDice,
+        dice: selectRolledDice(),
       };
     }
     if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
       return {
         sprites: this.playAreaSprites,
-        dice: this.rs().hand,
+        dice: selectHandDice(),
       };
     }
     // Fallback — roll sprites if available
     if (this.rollSprites.length > 0) {
       return {
         sprites: this.rollSprites,
-        dice: this.rs().rolledDice,
+        dice: selectRolledDice(),
       };
     }
     return { sprites: [], dice: [] };
@@ -2326,7 +2092,7 @@ export class GameScene extends Scene {
     const selectedDice = dice.filter((d) => this.consumableTargetIds.has(d.id));
 
     // Apply the effect
-    const resultMsg = applyDiceSelectionEffect(this.consumableTargeting, selectedDice);
+    const resultMsg = gameFacade.diceSelection.applyEffect(this.consumableTargeting, selectedDice);
 
     // Save affected IDs before exit clears them
     const affectedIds = new Set(this.consumableTargetIds);
@@ -2399,7 +2165,7 @@ export class GameScene extends Scene {
     }
 
     // Restore game buttons for current phase
-    const phase = this.rs().phase;
+    const phase = selectRoundPhase();
     if (phase === 'ROLL') {
       this.rerollBtn.setVisible(true);
       this.scoreBtn.setVisible(true);
@@ -2433,7 +2199,7 @@ export class GameScene extends Scene {
       }
     }
 
-    const rolledDice = [...this.rs().rolledDice];
+    const rolledDice = [...selectRolledDice()];
     for (let i = 0; i < rolledDice.length; i++) {
       const rd = rolledDice[i]!;
       if (!affectedIds.has(rd.id)) continue;
@@ -2446,7 +2212,7 @@ export class GameScene extends Scene {
         };
       }
     }
-    this.patchRound({ rolledDice });
+    gameFacade.round.syncRolledDiceFromFaces(rolledDice);
 
     // Update play area sprites if in SELECT phase
     for (const sprite of this.playAreaSprites) {

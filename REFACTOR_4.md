@@ -11,6 +11,42 @@ One module in Phaser subscribes to `playbackQueue` and plays all commands. Delet
 
 ---
 
+## REFACTOR 3 handoff
+
+What landed in step 3 — read this before wiring the runner.
+
+### State is applied in logic; runner is visuals only
+
+| Command | Logic already done before enqueue | Runner must NOT |
+|---------|-----------------------------------|-----------------|
+| `score` | `applyScoringMutations` in `roundActions.calculateScore` | Re-apply mutations or miles |
+| `score-events` with `label: 'round-end-held'` | `roundActions.processRoundEndHeldDice` (from `endDay` on `won` / `lost`): blue-moon `applyScoringMutations`, gold `economyActions.earn` | Re-apply consumables or money |
+
+Handlers call `playScoreAnimation` / `playDieAnimEvents` only.
+
+### Round-end held sequencing (required)
+
+After REFACTOR 3, `endDay` enqueues `score-events` / `round-end-held` during `GameScene.onContinue`, but `finishDayEndAfterEquipmentDestroyed` goes straight to `runRoundEndModifierFeedback` — it does **not** wait for that queue.
+
+**Blessed order on leg end (`won` / `lost`):**
+
+1. Deferred equipment destruction anims (existing `animateEndOfRoundSelfDestructs` path)
+2. **Drain** `score-events` where `label === 'round-end-held'` (`playDieAnimEvents`)
+3. `runRoundEndModifierFeedback` → `transitionAfterRoundEnd`
+
+Implement via runner `onComplete` for that command, or an explicit `await drainPlaybackForLabel('round-end-held')` before modifier feedback. Do not start modifier feedback while round-end held is still queued.
+
+### Interim behavior until this step ships
+
+- **Score:** `enterScorePhase` still calls `playScoreAnimation` directly; `calculateScore` also enqueues `kind: 'score'`. Remove the scene call when the runner handles score or you get double playback.
+- **Round-end held:** Commands are enqueued but not consumed on the leg-end path — manual smoke #5 (gold held anim) will fail until the runner drains with the sequencing above.
+
+### Timing note (gold held)
+
+Gold money is earned in logic **before** the held anim is enqueued (old `GameScene` paid after anim). Do not move `economyActions.earn` into the Phaser handler unless you intentionally want the old feel back.
+
+---
+
 ## Scope
 
 ### Create
@@ -80,7 +116,7 @@ Use a re-entrancy lock (`draining`) so nested enqueues during play schedule anot
 | `equipment-created-count` | `playEquipmentCreatedPopIn` |
 | `consumable-playback` | `applyConsumableAnimEvents` |
 | `score` | `playScoreAnimation` + hand upgrades |
-| `score-events` | `playDieAnimEvents` |
+| `score-events` | `playDieAnimEvents` — if `label === 'round-end-held'`, visuals only (rewards already in `processRoundEndHeldDice`) |
 | `modifier-feedback` | `equipBar.animateModifierDestructions` + floating text (replace EventBus emits — REFACTOR_10) |
 
 ---
@@ -138,6 +174,8 @@ After runner works:
 ## Pitfalls
 
 - **Double score anim** if both `enterScorePhase` and runner play — grep `playScoreAnimation`.
+- **Round-end held skipped or racing modifier feedback** — see [REFACTOR 3 handoff](#refactor-3-handoff) sequencing; `finishDayEndAfterEquipmentDestroyed` does not await the queue today.
+- **Re-applying gold / blue-moon rewards in handlers** — mutations and earn already ran in `processRoundEndHeldDice`.
 - Sequential drain must not starve if `animating` flag blocks GameScene — runner owns `animating` or calls `ctx.setAnimating`.
 
 ---

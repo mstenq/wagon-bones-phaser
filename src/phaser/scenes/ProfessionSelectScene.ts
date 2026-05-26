@@ -4,13 +4,12 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { setupActions } from '../../game/store';
+import { gameFacade } from '../../game/facade';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY, DIFFICULTIES } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import professionsData, { type ProfessionDef, getProfessionById } from '../../data/professions';
 import { performLoadGame } from '../SaveLoadIO';
 import { getDifficultyBeatColor, getDifficultyBeatStrokeColor, getHighestDifficultyBeaten } from '../../game/UserStats';
-import { createDie } from '../../game/DiceSystem';
 import { DiceSprite } from '../ui/DiceSprite';
 import { getDiceGroupDisplayLabel, groupDiceByVisualIdentity } from '../ui/diceGrouping';
 
@@ -107,8 +106,8 @@ export class ProfessionSelectScene extends Scene {
     this.confirmBtn.setDepth(100);
     this.confirmBtn.onClick(() => {
       if (!this.selectedId) return;
-      setupActions.applyProfession(this.selectedId);
-      setupActions.finalizeRunSetup();
+      gameFacade.meta.applyProfession(this.selectedId);
+      gameFacade.meta.finalizeRunSetup();
       this.scene.start('DifficultySelect', {});
     });
 
@@ -447,7 +446,7 @@ export class ProfessionSelectScene extends Scene {
     const standardCount = Math.max(0, GAMEPLAY.STARTING_DICE - specialtyCount);
 
     const previewDice = prof.startingDice.map((enhancement, i) =>
-      createDie({
+      gameFacade.meta.createPreviewDie({
         id: `prof_detail_${prof.id}_${i}`,
         enhancement,
         value: enhancement === 'stone' ? 0 : 6,
@@ -464,7 +463,7 @@ export class ProfessionSelectScene extends Scene {
 
     if (standardCount > 0) {
       displayGroups.push({
-        representative: createDie({
+        representative: gameFacade.meta.createPreviewDie({
           id: `prof_detail_${prof.id}_standard`,
           enhancement: null,
           value: 6,

@@ -5,6 +5,14 @@
 
 ---
 
+## REFACTOR 4 handoff
+
+- **Playback:** `bindPlaybackRunner` in `GameScene` / `ShopScene` / `BoosterPackScene` (`src/phaser/playback/`). Scoring layout stays in `enterScorePhase`; `kind: 'score'` plays via runner after `scoreLayoutGate` releases.
+- **Leg end:** `finishDayEndAfterEquipmentDestroyed` calls `playbackRunner.drainRoundEndHeld()` before `runRoundEndModifierFeedback` (held rewards already applied in `processRoundEndHeldDice`).
+- **`rs()` / `patchRound`:** Still used throughout `GameScene` for reads/writes — this step replaces reads only.
+
+---
+
 ## Goal
 
 `GameScene` must read round state via **`getRoundState()` + selectors** from `store/selectors/roundSelectors.ts` and `roundResolve.ts` — not `readRoundState()` / `rs()`.

@@ -5,33 +5,30 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
+import { gameFacade } from '../../game/facade';
+import type { ConsumableDef, ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
+import {
+  canUseConsumableInShop,
+  getConsumableTexturePrefix,
+  getRandomSupplyDef,
+  getRandomTrailGuideDef,
+  getShopRandomFrontierDef,
+  isSecondHelpingsCloneTarget,
+} from '../../game/facade/consumable';
+import type { EquipmentDef, EquipmentInstance, PackInstance } from '../../game/facade/shop';
+import { getConsumableDefById } from '../../game/facade/consumable';
+import { getEquipmentDefById, getPackDefById } from '../../game/facade/shop';
 import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
-import { shopBuyActions } from '../../game/store';
 import {
   selectProfession,
   selectShopRerollCost,
   selectTrailGuidesFree,
   selectUsedEquipmentSlots,
 } from '../../game/store/selectors/runSelectors';
-import { shopActions } from '../../game/store/actions/shopActions';
 import { resolveConsumableList } from '../../game/store/resolve';
 import { canAfford } from '../../game/store/economy';
 import { getPermitById } from '../../game/PermitsSystem';
-import { processEquipmentOnShopEnd } from '../../game/EquipmentEffects';
 import { TEXT_COLORS, FONTS, UI, SHOP_WEIGHTS } from '../../game/Constants';
-import { generateShopStock, EquipmentDef, EquipmentInstance, getEquipmentListPrice } from '../../game/ItemsSystem';
-import { PackInstance } from '../../game/BoosterPackSystem';
-import {
-  ConsumableDef,
-  ConsumableInstance,
-  executeConsumableEffect,
-  getConsumableTexturePrefix,
-  getRandomSupplyDef,
-  getRandomTrailGuideDef,
-  getShopRandomFrontierDef,
-  canUseConsumableInShop,
-  isSecondHelpingsCloneTarget,
-} from '../../game/ConsumablesSystem';
 import { ItemCard, CardActionTabConfig, type CardData } from '../ui/ItemCard';
 import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { getItemDisplayContext } from '../../game/displayContext';
@@ -49,7 +46,6 @@ import {
   getDiscountedShopPrice,
   hasPermitDiceInShop,
 } from '../../game/PermitsSystem';
-import { getEquipmentPurchasePrice, rollShopEquipmentPreview } from '../../game/EquipmentModifiers';
 import { Die } from '../../game/types';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
@@ -60,13 +56,8 @@ import { getRunState, runActions, runStore } from '../../game/store/runStore';
 import { sceneStore } from '../../game/store/sceneStore';
 import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../game/store/selectors/sceneSelectors';
 import { bindStore } from '../store/subscribe';
-import { bindConsumableUiEffects } from '../store/consumableUiEffects';
-import { enqueueConsumablePlayback } from '../../game/store/uiEffectHelpers';
-import { shopSceneActions } from '../../game/store/actions/shopSceneActions';
+import { bindPlaybackRunner } from '../playback/PlaybackRunner';
 import type { ShopSceneState } from '../../game/store/types';
-import { getPackDefById } from '../../game/BoosterPackSystem';
-import { getConsumableDefById } from '../../game/ConsumablesSystem';
-import { getEquipmentDefById } from '../../game/ItemsSystem';
 import { rngFloat } from '../../game/RunRng';
 import { generateShopDie } from '../../game/store/shopStock';
 
@@ -225,9 +216,8 @@ export class ShopScene extends Scene {
     if (sceneShop) {
       this.hydrateShopFromState(sceneShop);
     } else {
-      const shop = shopSceneActions.openShop();
+      const shop = gameFacade.shop.openShop();
       this.hydrateShopFromState(shop);
-      EventBus.emit(Events.TAG_QUEUE_CHANGED);
     }
     sceneActions.enterScene('Shop');
 
@@ -267,9 +257,17 @@ export class ShopScene extends Scene {
       this.updateEquipHints();
     });
 
-    // Execute consumable effect when used
-    bindConsumableUiEffects(this, this.equipBar, {
+    bindPlaybackRunner(this, {
+      scene: this,
+      equipBar: this.equipBar,
+      consumableBar: this.consumableBar,
+      sidebar: this.sidebar,
+      getDiceSprites: () => [],
       destroyDice: async () => {},
+      scoreLayoutGate: null,
+      setAnimating: () => {},
+      onDiceAdded: () => {},
+      onScoreComplete: () => {},
     });
 
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
@@ -360,7 +358,7 @@ export class ShopScene extends Scene {
     if (!pack) return;
     const isTrailGuidePack = pack.def.category === 'trail_guide' && selectTrailGuidesFree(getRunState());
     const cost = isTrailGuidePack ? 0 : this.getDiscountedCost(pack.def.cost);
-    if (!shopBuyActions.buyPack(cost).ok) {
+    if (!gameFacade.shop.buyPack(cost).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
@@ -395,7 +393,7 @@ export class ShopScene extends Scene {
       this.showCardPopup(card, 'No space!');
       return;
     }
-    const result = shopBuyActions.buyEquipment(def, shopItem.preview, getEquipmentListPrice(def));
+    const result = gameFacade.shop.buyEquipment(def, shopItem.preview, gameFacade.shop.getEquipmentListPrice(def));
     if (!result.ok) {
       this.showCardPopup(card, result.reason === 'no_space' ? 'No space!' : "Can't afford!");
       return;
@@ -421,7 +419,7 @@ export class ShopScene extends Scene {
   private onBuyDie(card: ItemCard, shopItem: { type: 'dice'; die: Die; displayDef: EquipmentDef }): void {
     if (card.sold) return;
     const cost = this.getDiscountedCost(shopItem.displayDef.cost);
-    if (!shopBuyActions.buyDie(shopItem.die, cost).ok) {
+    if (!gameFacade.shop.buyDie(shopItem.die, cost).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
@@ -444,8 +442,8 @@ export class ShopScene extends Scene {
 
   private onBuyConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
-    const cost = shopBuyActions.consumableCost(def, this.getDiscountedCost(def.cost));
-    const result = shopBuyActions.buyConsumable(def, cost);
+    const cost = gameFacade.shop.consumableCost(def, this.getDiscountedCost(def.cost));
+    const result = gameFacade.shop.buyConsumable(def, cost);
     if (!result.ok) {
       this.showCardPopup(card, result.reason === 'no_space' ? 'No space!' : "Can't afford!");
       return;
@@ -474,7 +472,7 @@ export class ShopScene extends Scene {
   /** Buy a consumable and immediately use it (bypasses consumable slot limit) */
   private onBuyAndUseConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
-    const cost = shopBuyActions.consumableCost(def, this.getDiscountedCost(def.cost));
+    const cost = gameFacade.shop.consumableCost(def, this.getDiscountedCost(def.cost));
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_tarot1', { volume: 0.5 });
@@ -491,7 +489,7 @@ export class ShopScene extends Scene {
       onComplete: () => card.destroy(),
     });
 
-    const result = shopBuyActions.buyAndUseConsumable(def, cost);
+    const result = gameFacade.shop.buyAndUseConsumable(def, cost);
     this.handleConsumableResult(result);
   }
 
@@ -629,17 +627,15 @@ export class ShopScene extends Scene {
   }
 
   private handleConsumableUsed(consumed: ConsumableInstance): void {
-    const result = executeConsumableEffect(consumed);
+    const result = gameFacade.consumable.use(consumed);
     this.handleConsumableResult(result);
   }
 
-  private handleConsumableResult(result: ReturnType<typeof executeConsumableEffect>): void {
+  private handleConsumableResult(result: UseConsumableResult): void {
     void this.handleConsumableResultAsync(result);
   }
 
-  private async handleConsumableResultAsync(result: ReturnType<typeof executeConsumableEffect>): Promise<void> {
-    enqueueConsumablePlayback(result);
-
+  private async handleConsumableResultAsync(result: UseConsumableResult): Promise<void> {
     if (!result.success && result.failReason) {
       // Show popup at center of consumable bar area
       const text = this.add
@@ -717,8 +713,7 @@ export class ShopScene extends Scene {
   private onRerollShop(): void {
     this.suppressStockRefresh = true;
     try {
-      if (!shopSceneActions.rerollShop()) return;
-      EventBus.emit(Events.TAG_QUEUE_CHANGED);
+      if (!gameFacade.shop.rerollShop()) return;
       this.refreshShopStockFromStore();
     } finally {
       this.suppressStockRefresh = false;
@@ -823,7 +818,7 @@ export class ShopScene extends Scene {
     const hitTrailBtn = new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
       .setColor(0x8b2020, 0xb03030)
       .onClick(() => {
-        processEquipmentOnShopEnd(resolveEquipmentList());
+        gameFacade.shop.processShopEnd(resolveEquipmentList());
         this.tearDownShopSubscriptions();
         sceneActions.clearShop();
         this.scene.start('RoundSelect', {});
@@ -839,7 +834,7 @@ export class ShopScene extends Scene {
       btnH,
     );
     this.rerollBtn.setColor(0x2d6b2d, 0x3d8b3d);
-    this.rerollBtn.setEnabled(shopActions.canRerollShop(run));
+    this.rerollBtn.setEnabled(gameFacade.shop.canRerollShop(run));
     this.rerollBtn.onClick(() => this.onRerollShop());
     this.trackShopStockObject(this.rerollBtn);
 
@@ -863,8 +858,8 @@ export class ShopScene extends Scene {
           ? { ...itemDef, cost: Math.max(1, Math.floor(itemDef.cost * (1 - shopDiscount))) }
           : itemDef;
       if (shopItem.type === 'equipment') {
-        const listPrice = getEquipmentListPrice(shopItem.def);
-        const purchaseCost = getEquipmentPurchasePrice(
+        const listPrice = gameFacade.shop.getEquipmentListPrice(shopItem.def);
+        const purchaseCost = gameFacade.shop.getEquipmentPurchasePrice(
           shopItem.def,
           shopItem.preview.modifiers,
           listPrice,
@@ -1002,8 +997,13 @@ export class ShopScene extends Scene {
         shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && shopInputs.trailGuidesFree;
       let cost = isTrailGuideFree ? 0 : this.getDiscountedCost(itemDef.cost);
       if (shopItem.type === 'equipment') {
-        const listPrice = getEquipmentListPrice(shopItem.def);
-        cost = getEquipmentPurchasePrice(shopItem.def, shopItem.preview.modifiers, listPrice, run.purchasedPermits);
+        const listPrice = gameFacade.shop.getEquipmentListPrice(shopItem.def);
+        cost = gameFacade.shop.getEquipmentPurchasePrice(
+          shopItem.def,
+          shopItem.preview.modifiers,
+          listPrice,
+          run.purchasedPermits,
+        );
         const canAffordEquip =
           canAfford(run, cost) &&
           (shopItem.def.aura?.id === 'ghost' || shopInputs.usedEquipmentSlots < shopInputs.maxEquipmentSlots);
@@ -1115,11 +1115,11 @@ export class ShopScene extends Scene {
       return { type: 'dice', die, displayDef: buildShopDieDisplayDef(die) };
     }
     if (picked === 'equipment') {
-      const [def] = generateShopStock(1, excludeIds);
+      const [def] = gameFacade.shop.generateShopStock(1, excludeIds);
       return {
         type: 'equipment',
         def,
-        preview: rollShopEquipmentPreview(def, run.purchasedPermits),
+        preview: gameFacade.shop.rollShopEquipmentPreview(def, run.purchasedPermits),
       };
     }
     let def: ConsumableDef;
@@ -1297,7 +1297,7 @@ export class ShopScene extends Scene {
   private onBuyPermit(card: ItemCard, permit: PermitDef, isPrimary: boolean): void {
     if (card.sold) return;
     const cost = this.getPermitCost(permit);
-    if (!shopBuyActions.buyPermit(permit, cost, isPrimary).ok) {
+    if (!gameFacade.shop.buyPermit(permit, cost, isPrimary).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
     }
@@ -1365,7 +1365,7 @@ export class ShopScene extends Scene {
       this.stockItems[index] = {
         type: 'equipment',
         def: result.def,
-        preview: rollShopEquipmentPreview(result.def, getRunState().purchasedPermits),
+        preview: gameFacade.shop.rollShopEquipmentPreview(result.def, getRunState().purchasedPermits),
       };
     } else {
       this.stockItems[index] = { type: 'consumable', def: result.def };

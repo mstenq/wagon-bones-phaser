@@ -258,11 +258,7 @@ describe('HELD_PIP_MULT: The Eleventh Crossing (pip 11, +11 mult)', () => {
     expect(result.mult).toBeMult(18);
 
     const heldDieId = (e: (typeof result.animEvents)[number]) =>
-      e.target.kind === 'die'
-        ? e.target.dieId
-        : e.target.kind === 'both'
-          ? e.target.dieId
-          : undefined;
+      e.target.kind === 'die' ? e.target.dieId : e.target.kind === 'both' ? e.target.dieId : undefined;
     const heldEvents = result.animEvents.filter((e) => heldDieId(e) === held.id);
     const multIdx = heldEvents.findIndex((e) => e.popupType === 'mult');
     const steelIdx = heldEvents.findIndex((e) => e.popupType === 'xmult');

@@ -4,13 +4,13 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getRunState, setupActions, bossActions } from '../../game/store';
+import { gameFacade } from '../../game/facade';
+import { getRunState } from '../../game/store';
 import { COLORS, TEXT_COLORS, FONTS, DIFFICULTIES } from '../../game/Constants';
 import { DifficultyLevel } from '../../game/types';
 import { Button } from '../ui/Button';
 import { addDifficultyImage } from '../ui/DifficultyAssets';
 import { startAutoSaveLoop } from '../AutoSaveManager';
-import { generateRunSeed, initRunRng } from '../../game/RunRng';
 import { getHighestUnlockedDifficulty, isDifficultyUnlocked } from '../../game/UserStats';
 
 const CARD_W = 230;
@@ -78,11 +78,13 @@ export class DifficultySelectScene extends Scene {
     confirmBtn.onClick(() => {
       if (!this.professionId || !isDifficultyUnlocked(this.professionId, this.selectedLevel)) return;
 
-      setupActions.setDifficulty(this.selectedLevel);
+      gameFacade.meta.setDifficulty(this.selectedLevel);
       const typedSeed = this.seedInput?.value.trim() ?? '';
-      const seed = this.seededRunEnabled ? typedSeed || generateRunSeed() : generateRunSeed();
-      initRunRng(seed);
-      bossActions.assignBosses();
+      const seed = this.seededRunEnabled
+        ? typedSeed || gameFacade.meta.generateRunSeed()
+        : gameFacade.meta.generateRunSeed();
+      gameFacade.meta.initRunRng(seed);
+      gameFacade.meta.assignBosses();
       startAutoSaveLoop();
       this.destroySeedInput();
       this.scene.start('RoundSelect', {});

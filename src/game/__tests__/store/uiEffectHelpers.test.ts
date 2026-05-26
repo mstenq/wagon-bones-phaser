@@ -7,14 +7,14 @@ describe('uiEffectHelpers', () => {
     runActions.reset();
   });
 
-  test('enqueueConsumablePlayback queues consumable-anim effect', () => {
+  test('enqueueConsumablePlayback queues consumable-playback', () => {
     enqueueConsumablePlayback({
       consumableAnimEvents: [{ type: 'destroy_dice', diceIds: ['die_1'] }],
       equipmentCreatedCount: 2,
     });
-    expect(runStore.getState().uiEffects).toEqual([
+    expect(runStore.getState().playbackQueue).toEqual([
       {
-        kind: 'consumable-anim',
+        kind: 'consumable-playback',
         events: [{ type: 'destroy_dice', diceIds: ['die_1'] }],
         equipmentCreatedCount: 2,
       },
@@ -23,6 +23,6 @@ describe('uiEffectHelpers', () => {
 
   test('enqueueConsumablePlayback skips empty playback', () => {
     enqueueConsumablePlayback({});
-    expect(runStore.getState().uiEffects).toEqual([]);
+    expect(runStore.getState().playbackQueue).toEqual([]);
   });
 });

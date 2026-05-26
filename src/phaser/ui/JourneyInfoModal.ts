@@ -5,7 +5,6 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import { EventBus, Events } from '../../game/EventBus';
 import { getRunState } from '../../game/store/runStore';
 import { selectHandStats, selectTagDescriptionContextForRound } from '../../game/store/selectors/runSelectors';
 import { resolveTagDescription } from '../../data/trail_tags';
@@ -28,7 +27,6 @@ export class JourneyInfoModal extends GameObjects.Container {
   private closeBtn: Button;
   private activeTab: string = 'knowledge';
   private tagTooltip = new TagTooltip();
-  private permitsDirty = false;
 
   /** Layout below tab row — shared by all tabs */
   private getContentArea(): { top: number; bottom: number } {
@@ -93,10 +91,7 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.closeBtn = new Button(scene, this.panelX + this.panelW / 2, this.panelY + this.panelH - 38, 'Close', 120, 34);
     this.closeBtn.onClick(() => {
       this.tagTooltip.hide();
-      const dirty = this.permitsDirty;
-      this.permitsDirty = false;
       this.destroy();
-      if (dirty) EventBus.emit(Events.PERMITS_CHANGED);
     });
     this.add(this.closeBtn);
 
@@ -371,7 +366,6 @@ export class JourneyInfoModal extends GameObjects.Container {
       return;
     }
 
-    this.permitsDirty = true;
     this.refreshActiveTab();
   }
 

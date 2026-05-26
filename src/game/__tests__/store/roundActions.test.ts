@@ -4,7 +4,17 @@ import { resetPlayerState } from '../../__tests__/testRunPlayer';
 import { setupGame, diceWithValue } from '../testHelpers';
 import { D } from '../../scoreMath';
 import { getRunRoundBackgroundIndex } from '../../roundBackgrounds';
-import { roundActions, roundStore, getRunState, selectHandDice, selectRolledDice, selectRoundPhase } from '../../store';
+import {
+  roundActions,
+  roundStore,
+  getRunState,
+  runStore,
+  runActions,
+  selectHandDice,
+  selectRolledDice,
+  selectRoundPhase,
+} from '../../store';
+import { die, seedTestRoll } from '../testHelpers';
 import { deserializeRunState, serializeRunState } from '../../store/serialization';
 import { setupActions } from '../../store/actions';
 import { GAMEPLAY } from '../../Constants';
@@ -64,6 +74,41 @@ describe('round store actions', () => {
     expect(roundStore.getState()!.totalMiles.gt(0)).toBe(true);
   });
 
+  test('calculateScore enqueues score playback command', () => {
+    const { game } = setupGame({ dice: diceWithValue(7, 8) });
+    game.startRound();
+    const handIds = game.state.hand.slice(0, 2).map((d) => d.id);
+    game.selectForRoll(handIds);
+    game.selectForScore(handIds);
+    const score = game.calculateScore();
+    expect(score).not.toBeNull();
+    expect(runStore.getState().playbackQueue).toEqual([{ kind: 'score', result: score! }]);
+  });
+
+  test('calculateScore does not enqueue when validation fails', () => {
+    setupGame({ dice: diceWithValue(7, 8) });
+    roundActions.startRound();
+    expect(roundActions.calculateScore()).toBeNull();
+    expect(runStore.getState().playbackQueue).toEqual([]);
+  });
+
+  test('endDay on win enqueues round-end-held for gold dice held', () => {
+    const goldHeld = die({ value: 4, enhancement: 'gold' });
+    const scored = die({ value: 7 });
+    const filler = die({ value: 6 });
+    setupGame({ dice: [goldHeld, scored, filler] });
+    roundActions.startRound({ targetMiles: D(1) });
+    seedTestRoll([goldHeld, scored, filler]);
+    roundActions.selectForScore([scored.id]);
+    roundActions.calculateScore();
+    runActions.clearPlayback();
+    const result = roundActions.endDay();
+    expect(result.outcome).toBe('won');
+    const heldCmd = runStore.getState().playbackQueue.find((c) => c.kind === 'score-events');
+    expect(heldCmd).toMatchObject({ kind: 'score-events', label: 'round-end-held' });
+    expect(heldCmd && heldCmd.kind === 'score-events' && heldCmd.events.length).toBeGreaterThan(0);
+  });
+
   test('endDay advances day on next-day outcome', () => {
     setupGame({ dice: diceWithValue(6, 12) });
     roundActions.startRound();
@@ -112,8 +157,7 @@ describe('round store actions', () => {
     setupGame({ dice: diceWithValue(6, 8) });
     roundActions.startRound();
 
-    const index = getRunState().roundBackgroundIndex;
-    expect(index).not.toBeNull();
+    const index = getRunState().roundBackgroundIndex!;
     expect(index).toBeGreaterThanOrEqual(1);
     expect(index).toBeLessThanOrEqual(GAMEPLAY.ROUND_BACKGROUND_COUNT);
     expect(getRunRoundBackgroundIndex(getRunState())).toBe(index);

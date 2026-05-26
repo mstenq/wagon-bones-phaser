@@ -5,7 +5,8 @@
 
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
-import { getRunState, economyActions, progressionActions } from '../../game/store';
+import { gameFacade } from '../../game/facade';
+import { getRunState } from '../../game/store';
 import { selectProfession, selectStoryVictoryOffered } from '../../game/store/selectors/runSelectors';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
@@ -164,8 +165,7 @@ export class PayoutScene extends Scene {
 
     const btnY = Math.min(panelY + panelH + 30, contentBottom - 36);
     new Button(this, contentCX, btnY, 'Collect & Continue', 260, 50).onClick(() => {
-      economyActions.earn(payout.total + investmentBonus);
-      const journeyDone = progressionActions.advanceRound();
+      const journeyDone = gameFacade.meta.collectPayout(payout.total, investmentBonus);
 
       sceneActions.clearPayout();
 

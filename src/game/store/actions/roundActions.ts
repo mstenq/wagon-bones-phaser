@@ -23,6 +23,8 @@ import {
   processEquipmentOnRoundStart,
   processEquipmentOnDayEnd,
   findDeathPrevention,
+  processGoldHeldAtRoundEnd,
+  processBlueMoonHeldAtRoundEnd,
 } from '../../EquipmentEffects';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { createEmptyScoringMutations, mergeMutations, applyScoringMutations } from '../../effects/applyMutations';
@@ -259,7 +261,7 @@ export const roundActions = {
     const splicedIndices = roundStartEffects.destroyedIndices.sort((a, b) => a - b);
     const destructionEntries = adjustDestructionIndices(roundStartEffects.animatedDestructions, splicedIndices);
     if (destructionEntries.length > 0) {
-      runActions.enqueueUiEffect({ kind: 'round-start-destructions', entries: destructionEntries });
+      runActions.enqueuePlayback({ kind: 'round-start-destructions', entries: destructionEntries });
     }
 
     let pendingJunkDealerCount = 0;
@@ -279,7 +281,7 @@ export const roundActions = {
       pendingJunkDealerCount = created;
     }
     if (pendingJunkDealerCount > 0) {
-      runActions.enqueueUiEffect({ kind: 'round-start-equipment-created', count: pendingJunkDealerCount });
+      runActions.enqueuePlayback({ kind: 'round-start-equipment-created', count: pendingJunkDealerCount });
     }
 
     const pendingNewDiceIds = [...getRunState().pendingNewDiceIds];
@@ -310,7 +312,7 @@ export const roundActions = {
 
     runActions.patch({ pendingNewDiceIds, pendingHandDiceIds });
     if (pendingNewDiceIds.length > 0) {
-      runActions.enqueueUiEffect({ kind: 'dice-added', dieIds: [...pendingNewDiceIds] });
+      runActions.enqueuePlayback({ kind: 'dice-added', dieIds: [...pendingNewDiceIds] });
     }
     runActions.patch({ pendingNewDiceIds: [], pendingAnimatedDestructions: [], pendingJunkDealerCount: 0 });
 
@@ -513,7 +515,37 @@ export const roundActions = {
       lastScoreResult: finalResult,
     });
 
+    runActions.enqueuePlayback({ kind: 'score', result: finalResult });
     return finalResult;
+  },
+
+  /** Gold / blue-moon held dice at leg end — mutations before playback enqueue. */
+  processRoundEndHeldDice(round: RoundRuntimeState, outcome: 'won' | 'lost'): void {
+    const scoredIds = new Set(round.selectedForScoreIds);
+    const heldDice = rolledRefsToDice(round.rolledDice, round).filter((d) => !scoredIds.has(d.id));
+    const equipment = resolveEquipmentList();
+    const lastHandType = round.currentHandType;
+
+    const goldHeld = processGoldHeldAtRoundEnd(heldDice, equipment);
+    const blueMoonHeld =
+      outcome === 'won'
+        ? processBlueMoonHeldAtRoundEnd(heldDice, equipment, lastHandType)
+        : { consumablesGranted: [] as string[], animEvents: [] };
+
+    if (blueMoonHeld.consumablesGranted.length > 0) {
+      const mutations = createEmptyScoringMutations();
+      mutations.consumablesGranted.push(...blueMoonHeld.consumablesGranted);
+      applyScoringMutations(mutations);
+    }
+
+    if (goldHeld.moneyEarned > 0) {
+      economyActions.earn(goldHeld.moneyEarned);
+    }
+
+    const events = [...goldHeld.animEvents, ...blueMoonHeld.animEvents];
+    if (events.length > 0) {
+      runActions.enqueuePlayback({ kind: 'score-events', events, label: 'round-end-held' });
+    }
   },
 
   applyEndOfRoundDestructions(indices: number[]): void {
@@ -575,6 +607,7 @@ export const roundActions = {
       runActions.patch({ spentDiceIds: [] });
       runActions.patch({ unusedRerollsTotal: getRunState().unusedRerollsTotal + round.rerollsRemaining });
       patchRound({ phase: 'ROUND_END' });
+      roundActions.processRoundEndHeldDice(round, 'won');
       return { outcome: 'won', destroyedEquipment, deferredDestroyIndices };
     }
 
@@ -583,6 +616,7 @@ export const roundActions = {
       if (preventIdx < 0) {
         runActions.patch({ spentDiceIds: [] });
         patchRound({ phase: 'ROUND_END' });
+        roundActions.processRoundEndHeldDice(round, 'lost');
         return { outcome: 'lost', destroyedEquipment, deferredDestroyIndices };
       }
       equipmentAfterRoundEnd.splice(preventIdx, 1);
@@ -593,6 +627,7 @@ export const roundActions = {
     if (selectAvailableDice(run).length < round.config.rollSize) {
       runActions.patch({ spentDiceIds: [] });
       patchRound({ phase: 'ROUND_END' });
+      roundActions.processRoundEndHeldDice(round, 'lost');
       return { outcome: 'lost', destroyedEquipment, deferredDestroyIndices };
     }
 

@@ -5,6 +5,15 @@
 
 ---
 
+## REFACTOR 6 handoff
+
+- **Round UI writes:** `src/game/store/roundWrites.ts` — `syncRolledDiceFromFaces`, `setHandDice`, `setSelectedForScoreDice`, `removeDestroyedDiceFromRound`. `GameScene` uses these + `roundActions.patch` (no `patchLegacyRoundState`).
+- **Config reads:** `selectRoundConfig` / `getActiveRoundConfig` alias in `roundSelectors.ts` (returns `DEFAULT_CONFIG` when no round).
+- **Session bootstrap:** `initRoundSession` / `startRoundSession` remain in `roundView.ts` — move to `facade/round.ts` in this step.
+- **Deprecated (tests / barrel only):** `readRoundState`, `patchLegacyRoundState` in `roundView.ts`; `testGameState.ts` uses `roundWrites` + `runtimeToLegacyRoundState` instead.
+
+---
+
 ## Goal
 
 Introduce `src/game/facade/` as the **only** module Phaser should import for orchestration (beyond stores, selectors, Constants, playback types). First slice: **round session** + **run** helpers.

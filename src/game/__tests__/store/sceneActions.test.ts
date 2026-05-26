@@ -47,12 +47,12 @@ describe('scene lifecycle actions', () => {
     });
   });
 
-  test('takeUiEffects removes only matching effects', () => {
-    runActions.enqueueUiEffect({ kind: 'dice-added', dieIds: ['die_1'] });
-    runActions.enqueueUiEffect({ kind: 'tag-earned', tagId: 'tag_uncommon' });
-    const taken = runActions.takeUiEffects((e) => e.kind === 'dice-added');
+  test('takePlayback removes only matching commands', () => {
+    runActions.enqueuePlayback({ kind: 'dice-added', dieIds: ['die_1'] });
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    const taken = runActions.takePlayback((cmd) => cmd.kind === 'dice-added');
     expect(taken).toEqual([{ kind: 'dice-added', dieIds: ['die_1'] }]);
-    expect(runStore.getState().uiEffects).toEqual([{ kind: 'tag-earned', tagId: 'tag_uncommon' }]);
+    expect(runStore.getState().playbackQueue).toEqual([{ kind: 'tag-earned', tagId: 'tag_uncommon' }]);
   });
 
   test('leaveScene clears slices', () => {

@@ -29,14 +29,16 @@ export {
 } from './roundStore';
 export { sceneStore, sceneActions, getSceneState, subscribeSceneState, createInitialSceneState } from './sceneStore';
 export * from './selectors/index';
+export { initRoundSession, startRoundSession } from '../facade';
 export {
-  readRoundState,
-  patchLegacyRoundState,
-  getActiveRoundConfig,
-  initRoundSession,
-  startRoundSession,
-} from './roundView';
+  syncRolledDiceFromFaces,
+  setHandDice,
+  setSelectedForScoreDice,
+  removeDestroyedDiceFromRound,
+} from './roundWrites';
 export { computeRoundReward, computeTargetMiles, computePayoutBreakdown } from '../runProgression';
 export type { ProfessionDef } from '../../data/professions';
 export type { HandResult, ScoreResult, HandType, Die } from '../types';
 export { resetAllGameStores } from './resetAll';
+export { enqueuePlayback, takePlayback, clearPlayback } from '../playback';
+export { gameFacade, gameRound, gameRun } from '../facade';

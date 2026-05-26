@@ -775,7 +775,7 @@ const items: ItemDef[] = [
       const hint =
         round && round.day >= round.maxDays
           ? [[mult('x3')], [active('Active!')]]
-          : [[mult('x3'), condition('final day', "xs")], [inactive('Inactive', "sm")]];
+          : [[mult('x3'), condition('final day', 'xs')], [inactive('Inactive', 'sm')]];
       return {
         hint,
         tooltip: [[mult('x3'), text(' mult on '), condition('final day'), text(' of round')]],
@@ -1747,7 +1747,7 @@ const items: ItemDef[] = [
     display: (_game, player) => {
       const p = { chance: [1, 2], professionOverrides: { cook: { chance: [1, 1] } } };
       const chance = resolveChance(p, player.professionId);
-      const hint = [[oddsDisplay(chance, player)], [condition('supply on pack open', "xs")]];
+      const hint = [[oddsDisplay(chance, player)], [condition('supply on pack open', 'xs')]];
       return {
         hint,
         tooltip: [
@@ -1810,7 +1810,7 @@ const items: ItemDef[] = [
     display: (_game, player) => {
       const equip = findOwnedEquip(player, 'antique_revolver');
       const sv = equip?.sellValue ?? 2;
-      const hint = [[money(`$${sv}`)],[ condition('sell value', "xs")]];
+      const hint = [[money(`$${sv}`)], [condition('sell value', 'xs')]];
       return {
         hint,
         tooltip: [[text('When round starts, gain '), money('$3'), text(' of sell value to current card')]],
@@ -1923,7 +1923,9 @@ const items: ItemDef[] = [
       const equip = player.equipment.find((e) => e.def.id === 'covered_wagon');
       const m = equip?.state.miles ?? 0;
       const hint =
-        m > 0 ? [[miles(`+${m}`)],[condition('wood', "sm")]] : [[miles('+12')],[condition('per wooden scored', "xs")]];
+        m > 0
+          ? [[miles(`+${m}`)], [condition('wood', 'sm')]]
+          : [[miles('+12')], [condition('per wooden scored', 'xs')]];
       return {
         hint,
         tooltip: [[text('Gains '), miles('+12'), text('miles for every Wood die scored')]],
@@ -2416,7 +2418,7 @@ const items: ItemDef[] = [
       const enhCount = player.dice.filter((d) => d.enhancement !== null).length;
       const hint =
         enhCount >= 16
-          ? [[mult('x3')], [active(`${enhCount} enhanced`, "xs")]]
+          ? [[mult('x3')], [active(`${enhCount} enhanced`, 'xs')]]
           : [[mult('x3'), condition(`${enhCount}/16 enhanced`)]];
       return {
         hint,

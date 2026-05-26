@@ -5,6 +5,15 @@
 
 ---
 
+## REFACTOR 5 handoff
+
+- **`GameScene` reads:** All `rs()` / `readRoundState` removed; uses `selectRoundPhase`, `selectHandDice`, `selectRolledDice`, `selectSelectedForScore`, `selectRerollsRemaining`, `selectRoundDay`, `selectRoundTotalMiles`, `selectSpentDice(getRunState())`.
+- **Writes unchanged:** `patchRound` → `patchLegacyRoundState` still used for `syncSelectedForScore`, `syncRolledDiceFromSprites`, consumable destruction, raid refill, `refreshDiceSpritesAfterEffect`, etc. Replace with `roundWrites.ts` helpers per this step.
+- **`getActiveRoundConfig()`:** Still imported from `roundView.ts` in `GameScene`; move to `selectRoundConfig` in `roundSelectors.ts` when touching config reads.
+- **Null `totalMiles`:** `enterScorePhase` / round-end transitions use `selectRoundTotalMiles() ?? D(0)` where legacy assumed a live round.
+
+---
+
 ## Goal
 
 Remove **`patchLegacyRoundState` / `readRoundState`** from production UI. All round mutations go through **`roundActions`** or **`roundActions.patch`** with **ID-based** `RoundRuntimeState` fields.

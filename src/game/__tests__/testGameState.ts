@@ -1,15 +1,54 @@
 // ─── GameState class (test-only round API) ───
-// Prefer roundActions + readRoundState() in new production code.
+// Prefer roundActions + selectors in new production code.
 
 import type { Die, GameConfig, HandResult, HandType, RoundState, ScoreResult } from '../types';
+import { DEFAULT_CONFIG } from '../types';
 import { roundActions } from '../store/actions/roundActions';
-import {
-  getActiveRoundConfig,
-  initRoundSession,
-  patchLegacyRoundState,
-  readRoundState,
-  startRoundSession,
-} from '../store/roundView';
+import { initRoundSession, startRoundSession } from '../facade';
+import { runtimeToLegacyRoundState } from '../store/roundResolve';
+import { setHandDice, setSelectedForScoreDice, syncRolledDiceFromFaces } from '../store/roundWrites';
+import { getRoundState } from '../store/roundStore';
+import { getRunState, runActions } from '../store/runStore';
+function applyTestRoundStatePatch(prop: string, value: unknown): void {
+  const round = getRoundState();
+  if (!round) throw new Error('No active round — call initRoundSession() first');
+
+  switch (prop) {
+    case 'phase':
+    case 'day':
+    case 'rerollsRemaining':
+    case 'totalMiles':
+    case 'currentHandType':
+      roundActions.patch({ [prop]: value } as Partial<typeof round>);
+      return;
+    case 'handHistory':
+      roundActions.patch({ handHistory: value as RoundState['handHistory'] });
+      return;
+    case 'hand':
+      setHandDice(value as Die[]);
+      return;
+    case 'selectedForRoll':
+      roundActions.patch({
+        selectedForRollIds: (value as Die[]).map((d) => d.id),
+        dieValuesByDieId: {
+          ...round.dieValuesByDieId,
+          ...Object.fromEntries((value as Die[]).map((d) => [d.id, d.value])),
+        },
+      });
+      return;
+    case 'rolledDice':
+      syncRolledDiceFromFaces(value as Die[]);
+      return;
+    case 'selectedForScore':
+      setSelectedForScoreDice(value as Die[]);
+      return;
+    case 'spent':
+      runActions.patch({ spentDiceIds: (value as Die[]).map((d) => d.id) });
+      return;
+    default:
+      throw new Error(`Unsupported test round state property: ${prop}`);
+  }
+}
 
 /** Test helper wrapping roundActions with legacy RoundState die-object view. */
 export class GameState {
@@ -21,19 +60,25 @@ export class GameState {
   }
 
   get config(): GameConfig {
-    return getActiveRoundConfig(this.pendingConfig);
+    const round = getRoundState();
+    if (round) return round.config;
+    return { ...DEFAULT_CONFIG, ...this.pendingConfig };
   }
 
   set config(value: GameConfig) {
-    patchLegacyRoundState({}, value);
+    roundActions.patch({ config: value });
   }
 
   get state(): RoundState {
-    const snapshot = readRoundState();
+    const round = getRoundState();
+    if (!round) {
+      throw new Error('No active round — call initRoundSession() or restoreRound() first');
+    }
+    const snapshot = runtimeToLegacyRoundState(round, getRunState());
     return new Proxy(snapshot, {
       set(_target, prop, value) {
         if (typeof prop !== 'string') return false;
-        patchLegacyRoundState({ [prop]: value } as Partial<RoundState>);
+        applyTestRoundStatePatch(prop, value);
         return true;
       },
     });

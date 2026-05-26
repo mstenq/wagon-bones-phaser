@@ -5,6 +5,11 @@ import { createStore } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { GAMEPLAY } from '../Constants';
 import { createEmptyModifiers, createEmptyTrailRoundEffects } from '../trailEventDefaults';
+import {
+  clearPlayback as clearPlaybackQueue,
+  enqueuePlayback as enqueuePlaybackCommand,
+  takePlayback as takePlaybackQueue,
+} from '../playback';
 import { createDefaultHandStats, EMPTY_BOSS_ROUND_STATE, type RunState } from './types';
 
 export function createInitialRunState(): RunState {
@@ -70,7 +75,6 @@ export function createInitialRunState(): RunState {
     storyVictoryPending: false,
     bossAssignmentIds: [],
     nextDieId: 0,
-    uiEffects: [],
     playbackQueue: [],
   };
 }
@@ -109,28 +113,16 @@ export const runActions = {
     runStore.setState({ balance });
   },
 
-  enqueueUiEffect(effect: RunState['uiEffects'][number]): void {
-    runStore.setState((state) => ({
-      uiEffects: [...state.uiEffects, effect],
-    }));
+  enqueuePlayback(command: Parameters<typeof enqueuePlaybackCommand>[0]): void {
+    enqueuePlaybackCommand(command);
   },
 
-  clearUiEffects(): void {
-    runStore.setState({ uiEffects: [] });
+  takePlayback(predicate: Parameters<typeof takePlaybackQueue>[0]): ReturnType<typeof takePlaybackQueue> {
+    return takePlaybackQueue(predicate);
   },
 
-  /** Remove and return effects matching the predicate (one-shot animation consumption). */
-  takeUiEffects(predicate: (effect: RunState['uiEffects'][number]) => boolean): RunState['uiEffects'] {
-    const taken: RunState['uiEffects'] = [];
-    const remaining: RunState['uiEffects'] = [];
-    for (const effect of getRunState().uiEffects) {
-      if (predicate(effect)) taken.push(effect);
-      else remaining.push(effect);
-    }
-    if (taken.length > 0) {
-      runStore.setState({ uiEffects: remaining });
-    }
-    return taken;
+  clearPlayback(): void {
+    clearPlaybackQueue();
   },
 };
 

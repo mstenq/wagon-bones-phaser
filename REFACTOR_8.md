@@ -5,6 +5,18 @@
 
 ---
 
+## REFACTOR 7 handoff
+
+- **Entry:** `import { gameFacade } from '../../game/facade'` (also on store barrel).
+- **Round bootstrap:** `gameFacade.round.beginRoundSession({ restored })` replaces `initRoundSession` / `startRoundSession` / tag+trail block in `GameScene.create`.
+- **Player actions:** `selectDiceForRoll`, `rollLockedDice` (= same as selectForRoll), `rerollUnlockedDice`, `submitScore`, `cancelScore`, `endDay`, `forceWinRound`.
+- **Payout win path:** `gameFacade.run.preparePayoutPresentation()` returns `PayoutSceneState` and calls `sceneActions.enterPayout` — scene still owns `scene.start('Payout')` and SFX.
+- **Reset:** `gameFacade.run.resetAll()` wraps `resetAllGameStores`.
+- **Session helpers:** `initRoundSession` / `startRoundSession` live in `facade/round.ts`; `roundView.ts` re-exports for tests.
+- **Not in facade yet:** consumables, dice selection, boss UI helpers, equipment modifier animations (`processEquipmentModifiersEndOfRound` stays in scene until folded into endDay/runner).
+
+---
+
 ## Goal
 
 `GameScene` becomes a **thin** Phaser scene: input → `gameFacade.round.*`, render from selectors, animations → `PlaybackRunner` only.
