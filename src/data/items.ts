@@ -147,7 +147,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'ADD_MULT',
     effectParams: { value: 4, professionOverrides: { developer: { value: 200 } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'horseshoe');
       const value = resolveEffectParam<number>(equip?.def?.effectParams ?? { value: 4 }, 'value', player.professionId);
       return {
@@ -183,8 +183,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.THREE_OF_A_KIND)
-          ? [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND)], [active('Active!')]]
-          : [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND)], [inactive('Inactive')]],
+          ? [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND, "sm")], [active('Active!', "sm")]]
+          : [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND, "sm")], [inactive('Inactive', "sm")]],
       tooltip: [[text('If played hand contains'), condition(HAND_NAMES.THREE_OF_A_KIND), mult('+12'), text('mult')]],
     }),
   },
@@ -199,8 +199,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.TWO_PAIR)
-          ? [[mult('+10'), condition(HAND_NAMES.TWO_PAIR)], [active('Active!')]]
-          : [[mult('+10'), condition(HAND_NAMES.TWO_PAIR)], [inactive('Inactive')]],
+          ? [[mult('+10'), condition(HAND_NAMES.TWO_PAIR, "sm")], [active('Active!', "sm")]]
+          : [[mult('+10'), condition(HAND_NAMES.TWO_PAIR, "sm")], [inactive('Inactive', "sm")]],
       tooltip: [[text('If played hand contains'), condition(HAND_NAMES.TWO_PAIR), mult('+10'), text('mult')]],
     }),
   },
@@ -215,8 +215,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.PAIR)
-          ? [[miles('+50'), condition(HAND_NAMES.PAIR)], [active('Active!')]]
-          : [[miles('+50'), condition(HAND_NAMES.PAIR)], [inactive('Inactive')]],
+          ? [[miles('+50'), condition(HAND_NAMES.PAIR, "sm")], [active('Active!', "sm")]]
+          : [[miles('+50'), condition(HAND_NAMES.PAIR, "sm")], [inactive('Inactive', "sm")]],
       tooltip: [[text('If played hand contains'), condition(HAND_NAMES.PAIR), miles('+50'), text('miles')]],
     }),
   },
@@ -304,7 +304,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'MULT_PER_EQUIPMENT',
     effectParams: { value: 3 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const total = player.equipment.length * 3;
       return {
         hint: [[mult(`+${total}`)]],
@@ -320,7 +320,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'PARITY_MULT',
     effectParams: { parity: 'even', value: 4 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[mult('+4'), condition('per even')]],
       tooltip: [[mult('+4'), text('mult when an'), condition('even value is scored')]],
     }),
@@ -333,7 +333,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'PARITY_MILES',
     effectParams: { parity: 'odd', value: 31 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[miles('+31'), condition('per odd')]],
       tooltip: [[miles('+31'), text('miles when an'), condition('odd value is scored')]],
     }),
@@ -347,7 +347,7 @@ const items: ItemDef[] = [
     modifierImmunity: ['cursed'],
     effectType: 'ADD_MULT_RISKY',
     effectParams: { value: 15, destroyChance: [1, 6] },
-    display: (_game, player) => ({
+    display: (_round, player) => ({
       hint: [[mult('+15')]],
       tooltip: [
         [mult('+15'), text('mult.'), oddsDisplay([1, 6], player), text('chance to be destroyed at end of round.')],
@@ -363,7 +363,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'MODIFY_REROLLS',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('+1 reroll')]],
       tooltip: [[active('+1 re-roll'), text('per leg')]],
     }),
@@ -376,14 +376,14 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'END_ROUND_MONEY',
     effectParams: { value: 4, professionOverrides: { outlaw: { value: 12 } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const amount = resolveEffectParam<number>(
         { value: 4, professionOverrides: { outlaw: { value: 12 } } },
         'value',
         player.professionId,
       );
       return {
-        hint: [[money(`+$${amount}`)]],
+        hint: [[money(`+$${amount}`)], [text('at end of round', "sm")]],
         tooltip: [[text('Earn'), money('$4'), text('at end of round. Jesse Rawlins (Outlaw) earns'), money('$12')]],
       };
     },
@@ -410,7 +410,7 @@ const items: ItemDef[] = [
     effectParams: {},
     display: (round, _player) => {
       const held = round?.rolledDice?.filter((d) => !round.selectedForScore.some((s) => s.id === d.id)) ?? [];
-      const hint = held.length > 0 ? [[mult(`+${Math.min(...held.map((d) => d.value)) * 2}`)]] : [[inactive('+?')]];
+      const hint = held.length > 0 ? [[mult(`+${Math.min(...held.map((d) => d.value)) * 2}`)]] : [[condition("Add double the rank", "xs")], [text("of lowest held die", "xs")]];
       return {
         hint,
         tooltip: [[text('Adds double the rank of'), condition('lowest held-in-hand die'), text('to'), mult('mult')]],
@@ -494,7 +494,7 @@ const items: ItemDef[] = [
     effectType: 'LUCKY_TRIGGER_XMULT',
     effectParams: { value: 0.25 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'rabbits_foot');
       const xm = equip?.state.xMult ?? 1;
       return {
@@ -511,7 +511,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'UNCOMMON_EQUIP_XMULT',
     effectParams: {},
-    display: (_game, player) => {
+    display: (_round, player) => {
       const count = player.equipment.filter((e) => e.def.rarity === 'uncommon').length;
       const hint =
         count > 0
@@ -531,7 +531,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'MILES_PER_DOLLAR',
     effectParams: { value: 2 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const total = player.balance * 2;
       const hint = [[miles(`+${total}`), text('mi')]];
       return {
@@ -550,7 +550,7 @@ const items: ItemDef[] = [
     effectType: 'SHOP_REROLL_MULT_GAIN',
     effectParams: { value: 2 },
     initialState: { mult: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'bargain_bin');
       const m = equip?.state.mult ?? 0;
       const hint = [[mult(`+${m}`)]];
@@ -570,7 +570,7 @@ const items: ItemDef[] = [
     effectType: 'DECAYING_MULT',
     effectParams: { decayPerRound: 4, maxRounds: 5 },
     initialState: { mult: 20, roundsPlayed: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'fading_memory');
       const m = equip?.state.mult ?? 20;
       const rounds = equip?.state.roundsPlayed ?? 0;
@@ -603,7 +603,7 @@ const items: ItemDef[] = [
       professionOverrides: { con_artist: { value: 4 } },
     },
     initialState: { mult: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'card_counter');
       const m = equip?.state.mult ?? 0;
       const hint = [[mult(`+${m}`), condition(HAND_NAMES.TWO_PAIR)]];
@@ -634,7 +634,7 @@ const items: ItemDef[] = [
     effectType: 'LUCKY_NUMBER_PIP_XMULT',
     effectParams: { value: 1.5, professionOverrides: { gambler: { value: 2 } } },
     initialState: { pip: 7 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'lucky_number');
       const pip = equip?.state.pip ?? 7;
       const xVal = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 1.5 }, 'value', player.professionId);
@@ -663,7 +663,7 @@ const items: ItemDef[] = [
     effectType: 'DECAYING_XMULT',
     effectParams: { decayPerDie: 0.01 },
     initialState: { xMult: 2 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'worn_deck');
       const xm = equip?.state.xMult ?? 2;
       const hint = [[mult(`x${xm.toFixed(2)}`)]];
@@ -683,10 +683,10 @@ const items: ItemDef[] = [
     effectType: 'SCORED_RETRIGGER_TIMED',
     effectParams: {},
     initialState: { daysRemaining: 10 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'war_drums');
       const days = equip?.state.daysRemaining ?? 0;
-      const hint = days > 0 ? [[retrigger('Played')], [active(`${days} days left`)]] : [[inactive('Expired')]];
+      const hint = days > 0 ? [[retrigger('Retrigger', "xs"), condition('scored dice', "xs")], [active(`${days} days left`, "sm")]] : [[inactive('Expired', "sm")]];
       return {
         hint,
         tooltip: [[text('Retrigger all dice played for the next '), condition('10 days'), text(' of travel')]],
@@ -703,7 +703,7 @@ const items: ItemDef[] = [
   //   effectType: 'ENHANCED_SPENT_MILES_GAIN',
   //   effectParams: { value: 3 },
   //   initialState: { miles: 0 },
-  //   hintDisplay: (_game, player) => {
+  //   hintdisplay: (_round, player) => {
   //     const equip = player.equipment.find((e) => e.def.id === 'bone_collector');
   //     const m = equip?.state.miles ?? 0;
   //     return [[miles(`+${m}`)]];
@@ -719,7 +719,7 @@ const items: ItemDef[] = [
     effectType: 'SELL_XMULT_GAIN',
     effectParams: { value: 0.25 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'snake_oil_ledger');
       const xm = equip?.state.xMult ?? 1;
       const hint = [[mult(`x${xm.toFixed(2)}`)]];
@@ -739,7 +739,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'GOLD_DICE_MONEY',
     effectParams: { value: 4 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[money('+$4'), condition('per gold')]],
       tooltip: [[text('Played gold dice earn '), money('$4')]],
     }),
@@ -754,7 +754,7 @@ const items: ItemDef[] = [
     modifierImmunity: ['cursed'],
     effectType: 'PREVENT_DEATH',
     effectParams: { threshold: 0.25 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('Protected')]],
       tooltip: [
         [
@@ -792,7 +792,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'SELL_VALUE_AS_MULT',
     effectParams: {},
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'desperado');
       let total = 0;
       for (const e of player.equipment) {
@@ -813,7 +813,7 @@ const items: ItemDef[] = [
     rarity: 'deprecated',
     effectType: 'NONE',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[inactive('Deprecated')]],
       tooltip: [[text('Deprecated: removed with auto-draw round flow.')]],
     }),
@@ -826,7 +826,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ROUND_START_ADD_DICE',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('+1 die'), condition('round start')]],
       tooltip: [[text('Add a dice at the start of each round with a random sticker')]],
     }),
@@ -841,7 +841,7 @@ const items: ItemDef[] = [
     effectType: 'STATEFUL_XMULT',
     effectParams: { xMultGainPerNegation: 0.25 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const inst = player.equipment.find((e) => e.def.id === 'trail_repair_kit');
       const xm = inst?.state.xMult ?? 1;
       const gain = resolveEffectParam<number>(
@@ -872,7 +872,7 @@ const items: ItemDef[] = [
     effectType: 'STATEFUL_ADD_MILES',
     effectParams: { investigateMiles: 20 },
     initialState: { miles: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const inst = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
       const stored = inst?.state.miles ?? 0;
       const investigateMiles = resolveEffectParam<number>(
@@ -907,7 +907,7 @@ const items: ItemDef[] = [
     rarity: 'legendary',
     effectType: 'NONE',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('Negates'), text(' boss & trail penalties')]],
       tooltip: [
         [
@@ -928,7 +928,7 @@ const items: ItemDef[] = [
     effectType: 'ENHANCED_DESTROYED_XMULT',
     effectParams: { value: 1 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'book_of_the_dead');
       const xm = equip?.state.xMult ?? 1;
       const hint =
@@ -947,7 +947,7 @@ const items: ItemDef[] = [
     rarity: 'legendary',
     effectType: 'PIP_XMULT',
     effectParams: { pip: 6, value: 2 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[mult('x2'), condition('per 6 scored')]],
       tooltip: [[text('Played '), condition('6'), text("'s give "), mult('x2'), text(' mult when scored')]],
     }),
@@ -961,7 +961,7 @@ const items: ItemDef[] = [
     effectType: 'REROLL_COUNT_XMULT',
     effectParams: { threshold: 23, value: 1 },
     initialState: { xMult: 1, rerollsTotal: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'twenty_third_psalm');
       const xm = equip?.state.xMult ?? 1;
       const total = equip?.state.rerollsTotal ?? 0;
@@ -981,7 +981,7 @@ const items: ItemDef[] = [
     rarity: 'legendary',
     effectType: 'SHOP_END_GHOST_CONSUMABLE',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('Ghost copy'), condition('end of shop')]],
       tooltip: [
         [text('Creates a ghost copy of a random consumable card in your possession at the end of the shop phase')],
@@ -996,7 +996,7 @@ const items: ItemDef[] = [
     rarity: 'legendary',
     effectType: 'ALL_RETRIGGER',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[retrigger('Retrigger')], [condition('played/held', 'sm')]],
       tooltip: [[text('Retriggers all played dice, and all held in hand effects')]],
     }),
@@ -1030,8 +1030,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.FOUR_STRAIGHT)
-          ? [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT)], [active('Active!')]]
-          : [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT)], [inactive('Inactive')]],
+          ? [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT, "sm")], [active('Active!', "sm")]]
+          : [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT, "sm")], [inactive('Inactive', "sm")]],
       tooltip: [
         [
           text('If played hand contains a '),
@@ -1054,8 +1054,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.FIVE_STRAIGHT)
-          ? [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT)], [active('Active!')]]
-          : [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT)], [inactive('Inactive')]],
+          ? [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT, "sm")], [active('Active!', "sm")]]
+          : [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT, "sm")], [inactive('Inactive', "sm")]],
       tooltip: [
         [
           text('If played hand contains a '),
@@ -1075,8 +1075,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'HELD_RETRIGGER',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
-      hint: [[retrigger('Held')]],
+    display: (_round, _player) => ({
+      hint: [[retrigger('Retrigger')], [condition('held dice', "sm")]],
       tooltip: [[text('Retrigger all dice held in hand')]],
     }),
   },
@@ -1090,10 +1090,10 @@ const items: ItemDef[] = [
     effectType: 'ROUND_START_DESTROY_RIGHT',
     effectParams: {},
     initialState: { mult: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'funeral_pyre');
       const m = equip?.state.mult ?? 0;
-      const hint = m > 0 ? [[mult(`+${m}`)]] : [[text('Destroys right'), condition('round start')]];
+      const hint = m > 0 ? [[mult(`+${m}`)]] : [[text('Destroys right')], [condition('round start', 'xs')]];
       return {
         hint,
         tooltip: [
@@ -1110,7 +1110,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ROUND_START_ADD_STONE',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('+1 stone'), condition('round start')]],
       tooltip: [[text('Add one stone die to collection when starting round')]],
     }),
@@ -1124,7 +1124,7 @@ const items: ItemDef[] = [
     effectType: 'EVERY_NTH_HAND_XMULT',
     effectParams: { n: 6, value: 4 },
     initialState: { handsPlayed: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'six_shooter');
       const hands = equip?.state.handsPlayed ?? 0;
       const remaining = 6 - (hands % 6);
@@ -1145,9 +1145,9 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'RANDOM_MULT',
     effectParams: { min: 0, max: 23 },
-    display: (_game, _player) => ({
-      hint: [[mult('+0-23'), odds('random')]],
-      tooltip: [[mult('+0'), text(' to '), mult('+23'), text(' mult '), odds('random')]],
+    display: (_round, _player) => ({
+      hint: [[mult('+0-23')], [condition('random', 'sm')]],
+      tooltip: [[mult('+0'), text(' to '), mult('+23'), text(' mult '), condition('random')]],
     }),
   },
   {
@@ -1158,12 +1158,12 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'BANK_NOTE',
     effectParams: { maxDebt: 20 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const debt = player.debtLimit;
       const hint =
         player.balance < 0
-          ? [[money(`$${player.balance}`), condition('in debt')]]
-          : [[money(`-$${debt} max`), condition('debt limit')]];
+          ? [[money(`$${player.balance}`)], [text('in debt', "sm")]]
+          : [[money(`-$${debt} max`)], [text('debt limit', "sm")]];
       return {
         hint,
         tooltip: [
@@ -1184,9 +1184,9 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'PIP_SUPPLY_CHANCE',
     effectParams: { pip: 1, chance: [1, 4], professionOverrides: { merchant: { chance: [1, 2] } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const p = { pip: 1, chance: [1, 4], professionOverrides: { merchant: { chance: [1, 2] } } };
-      const hint = [[oddsDisplay(resolveChance(p, player.professionId), player), condition('supply per 1')]];
+      const hint = [[oddsDisplay(resolveChance(p, player.professionId), player)], [condition('supply per 1 played', "xs")]];
       return {
         hint,
         tooltip: [
@@ -1233,8 +1233,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && round.day >= round.maxDays
-          ? [[retrigger('Played'), active('Final day!')]]
-          : [[retrigger('Played'), condition('final day')], [inactive('Inactive')]],
+          ? [[retrigger('Retrigger', 'xs'), condition('scored dice', "xs")], [active('Active!', "sm")]]
+          : [[retrigger('Retrigger', 'xs'), condition('scored dice', "xs")], [inactive('Inactive', "sm")]],
       tooltip: [[text('Retrigger all played dice on final day of round')]],
     }),
   },
@@ -1250,7 +1250,7 @@ const items: ItemDef[] = [
       hint:
         round && round.day === 1 && round.selectedForScore?.length === 1
           ? [[active('Enhancing!')]]
-          : [[condition('Solo first day'), inactive('Inactive')]],
+          : [[condition('first day 1 die')],[inactive('Inactive', 'sm')]],
       tooltip: [[text('If one die is scored alone on first day, add a random enhancement')]],
     }),
   },
@@ -1262,13 +1262,12 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ENHANCEMENT_COUNT_XMULT',
     effectParams: { enhancement: 'steel', value: 0.2 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const count = player.dice.filter((d) => d.enhancement === 'steel').length;
       const xm = 1 + count * 0.2;
-      const hint =
-        count > 0
-          ? [[mult(`x${xm.toFixed(1)}`), condition(`${count} steel`)]]
-          : [[mult('x0.2'), condition('per steel')], [inactive('None')]];
+      const steelLabel = count === 1 ? 'steel die' : 'steel dice';
+      const hint = [[mult(`x${xm.toFixed(1)}`)], [condition(`${count} ${steelLabel}`, "sm")]]
+         
       return {
         hint,
         tooltip: [[mult('x0.2'), text(' mult for each steel die in collection')]],
@@ -1284,10 +1283,15 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'END_ROUND_MONEY_PER_REROLL',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
-      hint: [[money('$1'), condition('per unused reroll')]],
-      tooltip: [[money('$1'), text(' per unused re-roll at end of round')]],
-    }),
+    display: (round, player) => {
+      const phase = round?.phase
+      console.log(phase);
+      const rerolls = round?.rerollsRemaining ?? 0;
+      return {
+        hint: round ? [[money(`$${rerolls}`)], [condition('unused rerolls', 'sm')]] : [[money('$1')],[condition('unused rerolls', 'sm')]],
+        tooltip: [[money('$1'), text('per unused re-roll at end of round')]],
+      };
+    },
   },
   {
     id: 'one_eyed_jack',
@@ -1296,8 +1300,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'PIP_RETRIGGER',
     effectParams: { pip: 1 },
-    display: (_game, _player) => ({
-      hint: [[retrigger('Played 1s')]],
+    display: (_round, _player) => ({
+      hint: [[retrigger('Retrigger')], [condition('scored 1s', "sm")]],
       tooltip: [[text('Retrigger each played 1')]],
     }),
   },
@@ -1309,13 +1313,13 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'ENHANCED_SCORE_MONEY',
     effectParams: { chance: [1, 2], value: 2, professionOverrides: { prospector: { chance: [1, 1] } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const p = { chance: [1, 2], value: 2, professionOverrides: { prospector: { chance: [1, 1] } } };
       const chance = resolveChance(p, player.professionId);
       const hint =
         chance[0] >= chance[1]
-          ? [[money('$2'), oddsDisplay([1, 1], player), condition('enhanced scored')]]
-          : [[money('$2'), oddsDisplay(chance, player), condition('enhanced scored')]];
+          ? [[money('$2 '), oddsDisplay([1, 1], player, "sm")], [condition('enhanced die', "sm")]]
+          : [[money('$2 '), oddsDisplay(chance, player, "sm")], [condition('enhanced die', "sm")]];
       return {
         hint,
         tooltip: [
@@ -1336,8 +1340,8 @@ const items: ItemDef[] = [
     display: (round, player) => {
       const handType = round?.currentHandType;
       const hint = handType
-        ? [[mult(`+${player.getHandStats(handType).timesPlayed}`), condition(HAND_NAMES[handType])]]
-        : [[mult('+?'), condition('times played')]];
+        ? [[mult(`+${player.getHandStats(handType).timesPlayed}`)], [condition(HAND_NAMES[handType], "sm")]]
+        : [[mult('+?')], [condition('times hand played', "xs")]];
       return {
         hint,
         tooltip: [[text('Adds the number of times the hand has been played this trip as '), mult('mult')]],
@@ -1353,7 +1357,7 @@ const items: ItemDef[] = [
     effectType: 'MARKED_NO_SIX_MULT',
     effectParams: { multPerHand: 1, professionOverrides: { demon_hunter: { multPerHand: 2 } } },
     initialState: { mult: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'marked');
       const m = equip?.state.mult ?? 0;
       const hint = [[mult(`+${m}`), condition('no 6s')]];
@@ -1380,7 +1384,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'HAND_UPGRADE_CHANCE',
     effectParams: { chance: [1, 4], professionOverrides: { surveyor: { chance: [1, 2] } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const p = { chance: [1, 4], professionOverrides: { surveyor: { chance: [1, 2] } } };
       const hint = [[oddsDisplay(resolveChance(p, player.professionId), player), condition('upgrade hand')]];
       return {
@@ -1406,7 +1410,7 @@ const items: ItemDef[] = [
     effectType: 'TRAIL_GUIDE_XMULT',
     effectParams: { value: 0.1, professionOverrides: { scout: { value: 0.2 } } },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'guide_lantern');
       const xm = equip?.state.xMult ?? 1;
       const gain = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 0.1 }, 'value', player.professionId);
@@ -1431,7 +1435,7 @@ const items: ItemDef[] = [
     effectType: 'STATEFUL_ADD_MILES',
     effectParams: { decayPerHand: 5 },
     initialState: { miles: 100 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'steam_engine');
       const m = equip?.state.miles ?? 100;
       const hint = m > 0 ? [[miles(`+${m}`)]] : [[inactive('+0 miles')]];
@@ -1465,8 +1469,8 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'ALL_DICE_SCORE',
     effectParams: {},
-    display: (_game, _player) => ({
-      hint: [[active('All dice score')]],
+    display: (_round, _player) => ({
+      hint: [[active('All dice score', "sm")]],
       tooltip: [[text('All dice count when scoring')]],
     }),
   },
@@ -1495,7 +1499,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'PERMANENT_DIE_MILES_GAIN',
     effectParams: { value: 5 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[miles('+5'), condition('per die (permanent)')]],
       tooltip: [[text('Every played die permanently gains '), miles('+5'), text(' miles when scored')]],
     }),
@@ -1509,7 +1513,7 @@ const items: ItemDef[] = [
     effectType: 'TRAIL_TAX',
     effectParams: { multPerDay: 2, multLostPerReroll: 1 },
     initialState: { mult: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'trail_tax');
       const m = equip?.state.mult ?? 0;
       const hint = [[mult(`+${m}`)]];
@@ -1527,13 +1531,13 @@ const items: ItemDef[] = [
     effectType: 'WANTED_HAND_MONEY',
     effectParams: { value: 4, professionOverrides: { hunter: { value: 8 } } },
     initialState: { targetHand: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'wanted_poster');
       const handIdx = equip?.state.targetHand ?? 0;
       const handTypes = Object.values(HandType);
       const handType = handTypes[handIdx % handTypes.length] as HandType;
       const amount = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 4 }, 'value', player.professionId);
-      const hint = [[money(`$${amount}`), condition(HAND_NAMES[handType] ?? '?')]];
+      const hint = [[money(`$${amount}`)], [condition(HAND_NAMES[handType] ?? '?', "sm")]];
       return {
         hint,
         tooltip: [[text('Earn '), money(`$${amount}`), text(' when hand is '), condition(HAND_NAMES[handType] ?? '?')]],
@@ -1549,7 +1553,7 @@ const items: ItemDef[] = [
     modifierImmunity: ['cursed'],
     effectType: 'XMULT_RISKY',
     effectParams: { value: 3, destroyChance: [1, 1000] },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const hint = [[mult('x3')], [oddsDisplay([1, 1000], player), text('self-destruct')]];
       return {
         hint,
@@ -1591,10 +1595,10 @@ const items: ItemDef[] = [
     effectType: 'STATEFUL_ADD_MULT',
     effectParams: { gainOnPackSkip: 3 },
     initialState: { mult: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'tight_fist');
       const m = equip?.state.mult ?? 0;
-      const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+3'), condition('per pack skipped')]];
+      const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+3')], [condition('per pack skipped', 'xs')]];
       return {
         hint,
         tooltip: [[text('Gains '), mult('+3'), text(' mult when any booster pack is skipped')]],
@@ -1611,10 +1615,10 @@ const items: ItemDef[] = [
     effectType: 'ROUND_START_XMULT_DESTROY',
     effectParams: { value: 0.5 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'haunted_totem');
       const xm = equip?.state.xMult ?? 1;
-      const hint = xm > 1 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult('x0.5'), condition('per round start')]];
+      const hint = xm > 1 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult('+ x0.5')], [condition('per round start', 'xs')]];
       return {
         hint,
         tooltip: [
@@ -1637,11 +1641,10 @@ const items: ItemDef[] = [
     effectType: 'EXACT_DICE_COUNT_MILES',
     effectParams: { count: 4, value: 4 },
     initialState: { miles: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'square_dance');
       const m = equip?.state.miles ?? 0;
-      const hint =
-        m > 0 ? [[miles(`+${m}`), condition('4 dice played')]] : [[miles('+4')], [condition('when 4 dice played')]];
+      const hint =[[miles(`+${m}`)], [condition('4 dice played', "xs")]];
       return {
         hint,
         tooltip: [[text('Gains '), miles('+4'), text(' miles if played hand has exactly '), condition('4 dice')]],
@@ -1656,7 +1659,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ROUND_START_CREATE_EQUIPMENT',
     effectParams: { count: 2, rarity: 'common' },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[text('2 common equip')], [condition('per round')]],
       tooltip: [[text('When round starts, create 2 common pieces of equipment')]],
     }),
@@ -1671,7 +1674,7 @@ const items: ItemDef[] = [
     effectType: 'STATEFUL_XMULT',
     effectParams: { gainOnDiceAdded: 0.25 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'new_blood');
       const xm = equip?.state.xMult ?? 1;
       const hint = xm > 1 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult('x0.25'), condition('per new dice')]];
@@ -1689,7 +1692,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'LOW_MONEY_SUPPLY',
     effectParams: { threshold: 4, professionOverrides: { doctor: { threshold: 8 } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const p = { threshold: 4, professionOverrides: { doctor: { threshold: 8 } } };
       const threshold = resolveEffectParam<number>(p, 'threshold', player.professionId);
       const hint =
@@ -1719,7 +1722,7 @@ const items: ItemDef[] = [
     effectType: 'END_ROUND_MONEY_SCALING',
     effectParams: { base: 1, perBoss: 2 },
     initialState: { bossesDefeated: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'railroad_bonds');
       const bossesDefeated = (equip?.state?.bossesDefeated as number) ?? 0;
       const total = 1 + bossesDefeated * 2;
@@ -1746,7 +1749,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'PACK_OPEN_SUPPLY_CHANCE',
     effectParams: { chance: [1, 2], professionOverrides: { cook: { chance: [1, 1] } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const p = { chance: [1, 2], professionOverrides: { cook: { chance: [1, 1] } } };
       const chance = resolveChance(p, player.professionId);
       const hint = [[oddsDisplay(chance, player)], [condition('supply on pack open', 'xs')]];
@@ -1771,7 +1774,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'SUPPLY_USED_MULT',
     effectParams: { value: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'campfire_stories');
       const m = equip?.state.mult ?? 0;
       const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+1'), condition('per supply used')]];
@@ -1789,14 +1792,14 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ENHANCEMENT_COUNT_MILES',
     effectParams: { enhancement: 'stone', value: 25 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const count = player.dice.filter((d) => d.enhancement === 'stone').length;
       const total = count * 25;
-      const hint =
-        count > 0 ? [[miles(`+${total}`), condition(`${count} stone`)]] : [[miles('+25'), condition('per stone die')]];
+      const stoneLabel = count === 1 ? 'stone' : 'stones';
+      const hint = [[miles(`+${total}`)], [condition(`${count} ${stoneLabel}`, "sm")]];
       return {
         hint,
-        tooltip: [[miles('+25'), text(' miles for each stone die in collection')]],
+        tooltip: [[miles('+25'), text('miles for each stone die in collection')]],
       };
     },
     unlockCondition: unlockByEnhancement('stone'),
@@ -1809,10 +1812,10 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'ROUND_START_SELL_VALUE',
     effectParams: { value: 3 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'antique_revolver');
       const sv = equip?.sellValue ?? 2;
-      const hint = [[money(`$${sv}`)], [condition('sell value', 'xs')]];
+      const hint = [[money(`$${sv}`)], [text('increase sell value', 'xs')]];
       return {
         hint,
         tooltip: [[text('When round starts, gain '), money('$3'), text(' of sell value to current card')]],
@@ -1827,8 +1830,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ROUND_START_DAYS_NO_REROLLS',
     effectParams: { days: 3 },
-    display: (_game, _player) => ({
-      hint: [[text('+3 days'), condition('no rerolls')]],
+    display: (_round, _player) => ({
+      hint: [[text('+3 days')], [condition('no rerolls', "sm")]],
       tooltip: [[text('When round starts, gain '), condition('+3 days'), text(' and lose all rerolls')]],
     }),
   },
@@ -1842,13 +1845,10 @@ const items: ItemDef[] = [
     effectType: 'HAND_MILES_GAIN',
     effectParams: { handType: HandType.FIVE_STRAIGHT, value: 15 },
     initialState: { miles: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = findOwnedEquip(player, 'manifest_destiny');
       const m = equip?.state.miles ?? 0;
-      const hint =
-        m > 0
-          ? [[miles(`+${m}`), condition(HAND_NAMES.FIVE_STRAIGHT)]]
-          : [[miles('+15'), condition(HAND_NAMES.FIVE_STRAIGHT)]];
+      const hint = [[miles(`+${m}`)], [condition(HAND_NAMES.FIVE_STRAIGHT, "sm")]];
       return {
         hint,
         tooltip: [
@@ -1899,7 +1899,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'EMPTY_SLOT_XMULT',
     effectParams: { value: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const emptySlots = player.maxEquipmentSlots - player.usedEquipmentSlots;
       const hint =
         emptySlots > 0
@@ -1921,7 +1921,7 @@ const items: ItemDef[] = [
     effectType: 'ENHANCEMENT_SCORED_MILES',
     effectParams: { enhancement: 'wooden', value: 12 },
     initialState: { miles: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'covered_wagon');
       const m = equip?.state.miles ?? 0;
       const hint =
@@ -1943,10 +1943,10 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ENHANCED_RETRIGGER',
     effectParams: { destroyChance: [1, 6], diamondDestroyChance: [1, 3] },
-    display: (_game, player) => ({
+    display: (_round, player) => ({
       hint: [
         [retrigger('Retrigger', 'xs'), condition('enhanced', 'xs')],
-        [oddsDisplay([1, 6], player), text('destroy')],
+        [oddsDisplay([1, 6], player, "sm"), text('destroy', "sm")],
       ],
       tooltip: [
         [
@@ -1968,8 +1968,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ROUND_START_DESTROY_STANDARD_DICE',
     effectParams: { value: 3 },
-    display: (_game, _player) => ({
-      hint: [[money('+$3'), condition('destroy standard die')]],
+    display: (_round, _player) => ({
+      hint: [[money('+$3')], [condition('destroy standard die', "xs")]],
       tooltip: [
         [
           text('At start of each round, destroy one standard non-enhanced die. If destroyed, earn '),
@@ -1988,14 +1988,11 @@ const items: ItemDef[] = [
     effectType: 'ROUNDS_SKIPPED_XMULT',
     effectParams: { value: 0.25 },
     initialState: { roundsSkipped: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'shortcut_trail');
       const skipped = equip?.state.roundsSkipped ?? 0;
       const xm = 1 + skipped * 0.25;
-      const hint =
-        skipped > 0
-          ? [[mult(`x${xm.toFixed(2)}`), condition(`${skipped} skipped`)]]
-          : [[mult('x0.25'), condition('per round skipped')], [inactive('None')]];
+      const hint = [[mult(`x${xm.toFixed(2)}`)], [condition(`${skipped} skipped`, "sm")]];
       return {
         hint,
         tooltip: [[mult('x0.25'), text(' mult for each round of journey skipped')]],
@@ -2010,8 +2007,8 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'FIRST_DICE_RETRIGGER',
     effectParams: { value: 2 },
-    display: (_game, _player) => ({
-      hint: [[retrigger('First'), condition('×2')]],
+    display: (_round, _player) => ({
+      hint: [[retrigger('Retrigger')],[ condition('first scored die x2', "xs")]],
       tooltip: [[text('Retrigger first played die 2 additional times')]],
     }),
   },
@@ -2023,8 +2020,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'LAST_DICE_RETRIGGER',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
-      hint: [[retrigger('Last'), condition('×1')]],
+    display: (_round, _player) => ({
+      hint: [[retrigger('Retrigger')], [condition('last scored die', "xs")]],
       tooltip: [[text('Retrigger last played die 1 additional time')]],
     }),
   },
@@ -2036,7 +2033,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'LUCKY_DICE_MONEY',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[money('+$1'), condition('per lucky scored')]],
       tooltip: [[text('Played lucky dice earn '), money('$1'), text(' when scored')]],
     }),
@@ -2049,7 +2046,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'BONE_DICE_XMULT_CHANCE',
     effectParams: { chance: [1, 2], value: 1.5 },
-    display: (_game, player) => ({
+    display: (_round, player) => ({
       hint: [[mult('x1.5'), oddsDisplay([1, 2], player), condition('per bone')]],
       tooltip: [
         [
@@ -2071,7 +2068,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'WOODEN_DICE_MILES',
     effectParams: { value: 50 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[miles('+50'), condition('per wooden')]],
       tooltip: [[text('Played wooden dice give '), miles('+50'), text(' miles when scored')]],
     }),
@@ -2085,7 +2082,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'IRON_DICE_MULT',
     effectParams: { value: 7 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[mult('+7'), condition('per steel')]],
       tooltip: [[text('Played iron dice give '), mult('+7'), text(' mult when scored')]],
     }),
@@ -2101,13 +2098,13 @@ const items: ItemDef[] = [
     effectType: 'DIAMOND_DESTROYED_XMULT',
     effectParams: { value: 0.75 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'diamond_coffin');
       const xm = equip?.state.xMult ?? 1;
       const hint =
         xm > 1
           ? [[mult(`x${xm.toFixed(2)}`)]]
-          : [[mult('x0.75'), condition('per diamond destroyed')], [inactive('None')]];
+          : [[mult('x0.75')],[condition('per diamond destroyed', 'xs')]];
       return {
         hint,
         tooltip: [[text('Item gains '), mult('x0.75'), text(' mult for every diamond die that is destroyed')]],
@@ -2123,8 +2120,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ALLOW_DUPLICATES',
     effectParams: {},
-    display: (_game, _player) => ({
-      hint: [[active('Duplicates allowed')]],
+    display: (_round, _player) => ({
+      hint: [[active('Duplicates allowed', "xs")]],
       tooltip: [
         [
           text(
@@ -2176,8 +2173,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'LOADED_DICE',
     effectParams: {},
-    display: (_game, _player) => ({
-      hint: [[odds('x2'), text('all listed odds')]],
+    display: (_round, _player) => ({
+      hint: [[odds('x2')], [text('all listed odds', "sm")]],
       tooltip: [[text('Doubles all listed probabilities')]],
     }),
   },
@@ -2189,7 +2186,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'CHANCE_HAND_XMULT_MONEY',
     effectParams: { chance: [1, 4], xMult: 4, money: 10 },
-    display: (_game, player) => ({
+    display: (_round, player) => ({
       hint: [[mult('x4'),  money('+$10')],[oddsDisplay([1, 4], player, "sm")]],
       tooltip: [
         [
@@ -2211,7 +2208,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'GAMBLERS_DICE_CUP',
     effectParams: {},
-    display: (_game, player) => ({
+    display: (_round, player) => ({
       hint: [[oddsDisplay([1, 6], player)],[text('to roll loaded #', "xs")]],
       tooltip: [
         [
@@ -2232,7 +2229,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'COPY_RIGHT',
     effectParams: {},
-    display: (_game, player) => {
+    display: (_round, player) => {
       const idx = player.equipment.findIndex((e) => e.def.id === 'mirror_lake');
       let target = 'Nothing to copy';
       if (idx >= 0) {
@@ -2260,7 +2257,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'COPY_LEFTMOST',
     effectParams: {},
-    display: (_game, player) => {
+    display: (_round, player) => {
       const idx = player.equipment.findIndex((e) => e.def.id === 'echo_chamber');
       let target = 'Nothing to copy';
       if (idx > 0) {
@@ -2292,10 +2289,10 @@ const items: ItemDef[] = [
     effectType: 'PIP_SCORED_MILES_GAIN',
     effectParams: { pip: 5, value: 5 },
     initialState: { miles: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'five_mile_marker');
       const m = equip?.state.miles ?? 0;
-      const hint = m > 0 ? [[miles(`+${m}`), condition('5s scored')]] : [[miles('+5'), condition('per 5 scored')]];
+      const hint = [[miles(`+${m}`)],[condition('5s scored', "sm")]]
       return {
         hint,
         tooltip: [[text('Gains '), miles('+5'), text(' miles each time a '), condition('5'), text(' pip is scored')]],
@@ -2310,7 +2307,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'TRAIL_BACKPACK',
     effectParams: { rerollsBonus: 2, rollSizePenalty: 1 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('+2 rerolls')], [condition('-1 roll size')]],
       tooltip: [[condition('+2 re-rolls'), text(' per day, '), condition('-1 dice'), text(' when rolling')]],
     }),
@@ -2374,8 +2371,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.FIVE_OF_A_KIND)
-          ? [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND)], [active('Active!')]]
-          : [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND)]],
+          ? [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND, "sm")], [active('Active!', "sm")]]
+          : [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND, "sm")], [inactive('Inactive', "sm")]],
       tooltip: [[mult('x5'), text(' mult if hand contains '), condition(HAND_NAMES.FIVE_OF_A_KIND)]],
     }),
   },
@@ -2403,7 +2400,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'EXPRESS_TRAIN',
     effectParams: { miles: 250, rerollsPenalty: 2 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[miles('+250')], [condition('-2 rerolls')]],
       tooltip: [[miles('+250'), text(' miles, '), condition('-2 re-rolls')]],
     }),
@@ -2418,7 +2415,7 @@ const items: ItemDef[] = [
     effectType: 'PHANTOM_WAGON',
     effectParams: { roundsNeeded: 2 },
     initialState: { roundsHeld: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'phantom_wagon');
       const held = equip?.state.roundsHeld ?? 0;
       const needed = 2;
@@ -2440,7 +2437,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'TRAIL_ALMANAC_MONEY',
     effectParams: { value: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       let discoveredCount = 0;
       for (const stats of Object.values(player.handStats)) {
         if (stats.level > 1) discoveredCount++;
@@ -2459,7 +2456,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ENHANCED_DICE_COUNT_XMULT',
     effectParams: { threshold: 16, value: 3 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const enhCount = player.dice.filter((d) => d.enhancement !== null).length;
       const hint =
         enhCount >= 16
@@ -2481,7 +2478,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ROUND_START_SUPPLY',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('Supply at round start', "xs")]],
       tooltip: [[text('Create a random supply card at start of round')]],
     }),
@@ -2494,7 +2491,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'EXPLORER_GUILD',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('Trail guides free')]],
       tooltip: [[text('All trail guides and trail guide packs are free in the shop')]],
     }),
@@ -2509,7 +2506,7 @@ const items: ItemDef[] = [
     effectType: 'GRAVEROBBER_XMULT',
     effectParams: { value: 0.1 },
     initialState: { xMult: 1 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'graverobber');
       const xm = equip?.state.xMult ?? 1;
       const hint = xm > 1 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult('x0.1'), condition('per enhanced scored')]];
@@ -2528,7 +2525,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'PACK_SADDLE',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('+1 hand size')]],
       tooltip: [[active('+1 hand size')]],
     }),
@@ -2541,7 +2538,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'COFFEE',
     effectParams: { handSizeBonus: 2, daysPenalty: 1 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('+2 hand size')], [condition('-1 day')]],
       tooltip: [[active('+2 hand size'), text(', '), condition('-1 day'), text(' per round')]],
     }),
@@ -2556,7 +2553,7 @@ const items: ItemDef[] = [
     effectType: 'FLOUR_SACK',
     effectParams: { decayPerRound: 1, professionOverrides: { farmer: { decayPerRound: 0 } } },
     initialState: { handSizeBonus: 5 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'flour_sack');
       const bonus = equip?.state.handSizeBonus ?? 5;
       const decay = resolveEffectParam<number>(
@@ -2568,8 +2565,8 @@ const items: ItemDef[] = [
       if (bonus > 0) {
         hint =
           decay === 0
-            ? [[active(`+${bonus} hand size`), condition('no decay')]]
-            : [[active(`+${bonus} hand size`), condition(`-${decay}/round`)]];
+            ? [[active(`+${bonus} hand size`)], [condition('no decay', "sm")]]
+            : [[active(`+${bonus} hand size`)], [condition(`-${decay} per round`, "sm")]];
       } else {
         hint = [[inactive('Empty')]];
       }
@@ -2596,10 +2593,9 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'MULT_PER_MONEY_CHUNK',
     effectParams: { chunk: 5, value: 2 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const multGain = Math.floor(player.balance / 5) * 2;
-      const hint =
-        multGain > 0 ? [[mult(`+${multGain}`), condition('per $5 held')]] : [[mult('+2'), condition('per $5 held')]];
+      const hint = [[mult(`+${multGain}`)], [condition('per $5 held', "sm")]];
       return {
         hint,
         tooltip: [[mult('+2'), text(' mult for every '), money('$5'), text(' you have')]],
@@ -2616,7 +2612,7 @@ const items: ItemDef[] = [
     effectType: 'TRAILBLAZER_XMULT',
     effectParams: { value: 0.2 },
     initialState: { streak: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'trailblazer');
       const streak = equip?.state.streak ?? 0;
       const hint =
@@ -2643,8 +2639,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'SCORED_GOLD_CHANCE',
     effectParams: { chance: [1, 4] },
-    display: (_game, player) => ({
-      hint: [[oddsDisplay([1, 4], player), condition('per scored die')]],
+    display: (_round, player) => ({
+      hint: [[oddsDisplay([1, 4], player)],[condition('turn into gold', "xs")]],
       tooltip: [
         [text('All scored dice have a '), oddsDisplay([1, 4], player), text(' chance to turn into a gold dice')],
       ],
@@ -2659,7 +2655,7 @@ const items: ItemDef[] = [
     modifierImmunity: ['cursed'],
     effectType: 'SELL_DISABLE_BOSS',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[text('Sell to'), condition('disable boss')]],
       tooltip: [[text('Sell this item to disable the current boss effect')]],
     }),
@@ -2673,7 +2669,7 @@ const items: ItemDef[] = [
     modifierImmunity: ['cursed'],
     effectType: 'SELL_GRANT_TAG',
     effectParams: { tagId: 'tag_twin_wagon' },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[text('Sell to'), condition('Twin Wagon')]],
       tooltip: [[text('Sell this item to gain a free Twin Wagon tag')]],
     }),
@@ -2686,7 +2682,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'FIRST_PIP_XMULT',
     effectParams: { pip: 2, value: 2 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[mult('x2'), condition('first 2 scored')]],
       tooltip: [[text('First played '), mult('2'), text(' pip die gives '), mult('x2'), text(' mult when scored')]],
     }),
@@ -2699,8 +2695,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'END_ROUND_SELL_VALUE_ALL',
     effectParams: { value: 1 },
-    display: (_game, _player) => ({
-      hint: [[money('+$1'), condition('sell value each item')]],
+    display: (_round, _player) => ({
+      hint: [[money('+$1')], [condition('sell value each item', "sm")]],
       tooltip: [
         [text('At the end of each round add '), money('$1'), text(' of sell value to each piece of equipment')],
       ],
@@ -2714,7 +2710,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'MULT_PER_MISSING_DICE',
     effectParams: { value: 10 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const missing = Math.max(0, player.startingDiceCount - player.dice.length);
       const hint =
         missing > 0
@@ -2734,7 +2730,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'SAVINGS_ACCOUNT_INTEREST',
     effectParams: { perChunk: 5, value: 1, professionOverrides: { accountant: { ignoreInterestCap: true } } },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const p = { perChunk: 5, value: 1, professionOverrides: { accountant: { ignoreInterestCap: true } } };
       const chunkSize = (p.perChunk as number) ?? 5;
       const perDollar = (p.value as number) ?? 1;
@@ -2742,8 +2738,8 @@ const items: ItemDef[] = [
       const chunks = Math.floor(eligible / chunkSize);
       const hint =
         chunks > 0
-          ? [[money(`+$${chunks * perDollar}`), condition('extra interest')]]
-          : [[money(`+$${perDollar}`), condition(`per $${chunkSize} held`)]];
+          ? [[money(`+$${chunks * perDollar}`)], [condition('extra interest', "sm")]]
+          : [[money(`+$${perDollar}`)], [condition(`per $${chunkSize} held`, "sm")]];
       return {
         hint,
         tooltip: [
@@ -2770,7 +2766,7 @@ const items: ItemDef[] = [
     effectType: 'DICE_DESTROYED_MILES_GAIN',
     effectParams: { value: 66 },
     initialState: { miles: 0 },
-    display: (_game, player) => {
+    display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'six_feet_under');
       const m = equip?.state.miles ?? 0;
       return {
@@ -2787,7 +2783,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'CONSECUTIVE_PIP_XMULT',
     effectParams: { pip: 8, increment: 0.5 },
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[mult('x1→x3+')], [condition('consecutive 8s', 'sm')]],
       tooltip: [
         [
@@ -2821,7 +2817,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'STACKED_DECK',
     effectParams: {},
-    display: (_game, _player) => ({
+    display: (_round, _player) => ({
       hint: [[active('Loaded = all pips')]],
       tooltip: [[text('Loaded dice are considered all pip values for equipment effects')]],
     }),
