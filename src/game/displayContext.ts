@@ -18,6 +18,7 @@ export function getItemDisplayContext(state = getRunState()): ItemDisplayContext
     balance: state.balance,
     equipment: resolveEquipmentList(state) as ItemDisplayContext['equipment'],
     dice: state.dice,
+    lastUsedConsumableId: state.lastUsedConsumableId,
     handStats: state.handStats,
     purchasedPermits: state.purchasedPermits,
     professionId: state.professionId,

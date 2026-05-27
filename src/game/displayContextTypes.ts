@@ -23,6 +23,7 @@ export interface ItemDisplayContext {
   balance: number;
   equipment: DisplayEquipmentRef[];
   dice: Die[];
+  lastUsedConsumableId: string | null;
   handStats: Record<HandType, HandStats>;
   purchasedPermits: string[];
   professionId: string | null;

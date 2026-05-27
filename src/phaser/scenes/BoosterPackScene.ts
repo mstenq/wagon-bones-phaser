@@ -16,6 +16,7 @@ import {
   getPackDefById,
 } from '../../game/facade/pack';
 import { getRunState } from '../../game/store';
+import { getItemDisplayContext } from '../../game/displayContext';
 import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
 import { selectEquipmentSlotsFree } from '../../game/store/selectors/runSelectors';
 import { applyConsumableAnimEvents } from '../animations/ConsumableAnimPlayback';
@@ -704,49 +705,49 @@ export class BoosterPackScene extends Scene {
       itemCard.setTooltipContext(null, null);
       container.add(itemCard);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
-      const tgData = {
-        ...item,
-        id: item.trailGuideId,
-        display: () => ({
-          hint: [],
-          tooltip: [[{ text: item.description, style: 'text' as const }]],
-        }),
-      };
-      itemCard = new ItemCard(this, 0, 0, tgData, {
+      const trailGuideData = trailGuidesData.find((guide) => guide.id === item.trailGuideId);
+      const trailGuideDef = trailGuideData
+        ? createTrailGuideConsumableDef(trailGuideData)
+        : {
+            ...item,
+            id: item.trailGuideId,
+            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+          };
+      itemCard = new ItemCard(this, 0, 0, trailGuideDef, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('trail_guide'),
       });
-      itemCard.setTooltipContext(null, null);
+      itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
     } else if (item.category === 'supply' && item.supplyCardId) {
-      const scData = {
-        ...item,
-        id: item.supplyCardId,
-        display: () => ({
-          hint: [],
-          tooltip: [[{ text: item.description, style: 'text' as const }]],
-        }),
-      };
-      itemCard = new ItemCard(this, 0, 0, scData, {
+      const supplyCardData = supplyCardsData.find((card) => card.id === item.supplyCardId);
+      const supplyDef = supplyCardData
+        ? createSupplyConsumableDef(supplyCardData)
+        : {
+            ...item,
+            id: item.supplyCardId,
+            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+          };
+      itemCard = new ItemCard(this, 0, 0, supplyDef, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('supply'),
       });
-      itemCard.setTooltipContext(null, null);
+      itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
     } else if (item.category === 'frontier' && item.frontierEncounterId) {
-      const feData = {
-        ...item,
-        id: item.frontierEncounterId,
-        display: () => ({
-          hint: [],
-          tooltip: [[{ text: item.description, style: 'text' as const }]],
-        }),
-      };
-      itemCard = new ItemCard(this, 0, 0, feData, {
+      const frontierData = frontierEncountersData.find((encounter) => encounter.id === item.frontierEncounterId);
+      const frontierDef = frontierData
+        ? createFrontierConsumableDef(frontierData)
+        : {
+            ...item,
+            id: item.frontierEncounterId,
+            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+          };
+      itemCard = new ItemCard(this, 0, 0, frontierDef, {
         mode: 'inventory',
         texturePrefix: getConsumableTexturePrefix('frontier'),
       });
-      itemCard.setTooltipContext(null, null);
+      itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
     } else {
       const catLabel = item.category.replace('_', ' ').toUpperCase();

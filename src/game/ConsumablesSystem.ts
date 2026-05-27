@@ -4,10 +4,12 @@
 // held in the consumable bar. They can be used, sold, or reordered.
 
 import type { ItemAura, EquipmentInstance } from './ItemsSystem';
+import type { HintSegment, ItemDisplayResult } from './ItemsSystem';
 import { getItemAuraById, isEquipmentCursed } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
 import { HandType, HandDefinition, HandUpgradeInfo } from './types';
+import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
 import hands from '../data/hands';
 import { PACK_ONLY_FRONTIER_IDS } from './Constants';
 import { checkLoadedChance } from './equipmentUtils';
@@ -45,6 +47,8 @@ export interface ConsumableDef {
   diceSelection?: DiceSelectionConfig;
   /** For trail guides — which hand type they upgrade */
   handType?: string;
+  /** Consumables provide tooltip rows only; adapter wraps into ItemDisplayResult. */
+  display: (round: RoundHintContext | null, player: ItemDisplayContext) => ItemDisplayResult;
 }
 
 export interface ConsumableInstance {
@@ -65,6 +69,12 @@ const FRONTIER_ENCOUNTERS = frontierEncountersData;
 
 /** Create a ConsumableDef from a supply card definition */
 export function createSupplyConsumableDef(cardData: SupplyCardDef, aura?: ItemAura | null): ConsumableDef {
+  const display =
+    cardData.tooltip ??
+    (() => {
+      const segment: HintSegment = { text: cardData.description, style: 'text' };
+      return [[segment]];
+    });
   const def: ConsumableDef = {
     id: cardData.id,
     name: cardData.name,
@@ -73,6 +83,7 @@ export function createSupplyConsumableDef(cardData: SupplyCardDef, aura?: ItemAu
     cost: 3,
     shopBuyAndUse: cardData.shopBuyAndUse,
     aura: aura ?? null,
+    display: (round, player) => ({ hint: [], tooltip: display(round, player) }),
   };
   if (cardData.instantEffect) {
     def.instantEffect = cardData.instantEffect as InstantEffect;
@@ -95,6 +106,12 @@ export function createSupplyConsumableDef(cardData: SupplyCardDef, aura?: ItemAu
 
 /** Create a ConsumableDef from a trail guide definition */
 export function createTrailGuideConsumableDef(tgData: TrailGuideDef, aura?: ItemAura | null): ConsumableDef {
+  const display =
+    tgData.display ??
+    (() => {
+      const segment: HintSegment = { text: tgData.description, style: 'text' };
+      return [[segment]];
+    });
   return {
     id: tgData.id,
     name: tgData.name,
@@ -103,11 +120,18 @@ export function createTrailGuideConsumableDef(tgData: TrailGuideDef, aura?: Item
     cost: 3,
     aura: aura ?? null,
     handType: tgData.handType,
+    display: (round, player) => ({ hint: [], tooltip: display(round, player) }),
   };
 }
 
 /** Create a ConsumableDef from a frontier encounter definition */
 export function createFrontierConsumableDef(feData: FrontierEncounterDef, aura?: ItemAura | null): ConsumableDef {
+  const display =
+    feData.display ??
+    (() => {
+      const segment: HintSegment = { text: feData.description, style: 'text' };
+      return [[segment]];
+    });
   const def: ConsumableDef = {
     id: feData.id,
     name: feData.name,
@@ -116,6 +140,7 @@ export function createFrontierConsumableDef(feData: FrontierEncounterDef, aura?:
     cost: 4,
     shopBuyAndUse: feData.shopBuyAndUse,
     aura: aura ?? null,
+    display: (round, player) => ({ hint: [], tooltip: display(round, player) }),
   };
   if (feData.instantEffect) {
     def.instantEffect = feData.instantEffect as InstantEffect;
@@ -620,9 +645,8 @@ export function executeConsumableEffect(
     }
     case 'fools_gold': {
       const balance = getRunState().balance;
-      const roll = rngFloat('consumables');
-
-      if (roll < 0.5) {
+      const equipment = resolveEquipmentList();
+      if (checkLoadedChance([1, 2], equipment)) {
         economyActions.earn(30);
         enqueueToastFeedback('Success! Gained $30', 'success');
         return { success: true };

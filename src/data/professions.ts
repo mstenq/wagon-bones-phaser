@@ -160,7 +160,7 @@ const professions: ProfessionDef[] = [
     id: 'prospector',
     title: 'Prospector',
     name: 'Davis Holler',
-    description: 'Start with vouchers for extra supplies/trail guides/extra stock',
+    description: 'Start with permits for extra supplies/trail guides/extra stock',
     modifiers: {
       startingVouchers: ['extra_supplies', 'extra_trail_guides', 'extra_stock'],
     },
@@ -237,6 +237,21 @@ const professions: ProfessionDef[] = [
     description: '+2 re-rolls per day, -1 hand size',
     modifiers: { rerolls: 2, handSize: -1 },
     startingDice: ['loaded', 'loaded', 'loaded', 'gold', 'diamond'],
+    specialEquipment: {
+      id: 'card_counter',
+      name: 'Card Counter',
+      effect: '+4 mult when hand contains two pair (normally +2 mult)',
+    },
+  },
+  {
+    id: 'occult_trader',
+    title: 'Occult Trader',
+    name: 'Vivian Crowe',
+    description: 'Starts with permits to make aura 4x more likely and 25% off all shop items',
+    modifiers: {
+      startingVouchers: ['spirit_ritual', 'sacred_ceremony', 'bargain_bin'],
+    },
+    startingDice: ['bone', 'bone', 'wooden', 'wooden', 'lucky'],
     specialEquipment: {
       id: 'card_counter',
       name: 'Card Counter',

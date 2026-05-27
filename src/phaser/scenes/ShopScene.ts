@@ -331,6 +331,7 @@ export class ShopScene extends Scene {
     this.tearDownShopSubscriptions();
     this.displayStoreUnsubs = [
       bindStore(this, runStore, selectShopAffordabilityInputs, () => this.updateDisplays()),
+      bindStore(this, runStore, (state) => state.lastUsedConsumableId, () => this.refreshStockCardTooltipContexts()),
       bindStore(this, sceneStore, selectShopStockRevision, () => this.onShopStockRevisionChanged()),
     ];
   }
@@ -492,6 +493,7 @@ export class ShopScene extends Scene {
 
     card.on('pointerup', () => {
       if (card.sold) return;
+      card.setTooltipContext(null, getItemDisplayContext());
 
       // Toggle: if this card already has tabs, dismiss
       if (this.activeTabCard === card) {
@@ -863,16 +865,7 @@ export class ShopScene extends Scene {
         );
         displayDef = { ...shopItem.def, cost: purchaseCost };
       }
-      const cardData = (displayDef as { display?: unknown }).display
-        ? displayDef
-        : {
-            ...displayDef,
-            display: () => ({
-              hint: [],
-              tooltip: [[{ text: (displayDef as { description?: string }).description ?? '', style: 'text' }]],
-            }),
-          };
-      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, cardData as CardData, {
+      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, displayDef as CardData, {
         mode: 'shop',
         showCost: true,
         ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
@@ -983,6 +976,7 @@ export class ShopScene extends Scene {
 
     const run = getRunState();
     const shopInputs = selectShopAffordabilityInputs(run);
+    const tooltipPlayer = getItemDisplayContext(run);
 
     for (let i = 0; i < this.cards.length; i++) {
       const card = this.cards[i];
@@ -1007,6 +1001,7 @@ export class ShopScene extends Scene {
       } else {
         card.setAffordable(canAfford(run, cost));
       }
+      card.setTooltipContext(null, tooltipPlayer);
     }
 
     for (const packCard of this.packCards) {
@@ -1028,6 +1023,17 @@ export class ShopScene extends Scene {
       this.rerollBtn.setEnabled(shopInputs.canRerollShop);
       const rerollCost = shopInputs.shopRerollCost;
       this.rerollBtn.setText(rerollCost === 0 ? 'Reroll\nFREE' : `Reroll\n$${rerollCost}`);
+    }
+  }
+
+  private refreshStockCardTooltipContexts(): void {
+    if (!this.stockItems) return;
+    const player = getItemDisplayContext();
+    for (let i = 0; i < this.cards.length; i++) {
+      const card = this.cards[i];
+      const shopItem = this.stockItems[i];
+      if (!card || !shopItem || shopItem.type !== 'consumable') continue;
+      card.updateHints(null, player);
     }
   }
 

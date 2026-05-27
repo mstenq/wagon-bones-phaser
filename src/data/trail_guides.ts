@@ -3,6 +3,8 @@
 // Each guide upgrades a hand type's miles and mult per level.
 
 import { HandType } from '../game/types';
+import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
+import type { HintSegment } from './items';
 
 // ─── Types ───
 
@@ -13,11 +15,14 @@ export interface TrailGuideDef {
   handType: HandType;
   milesPerLevel: number;
   multPerLevel: number;
+  display?: (round: RoundHintContext | null, player: ItemDisplayContext) => HintSegment[][];
 }
 
 // ─── Trail Guide Definitions ───
 
-const trailGuides: TrailGuideDef[] = [
+const segment = (text: string, style: HintSegment['style'] = 'text'): HintSegment => ({ text, style });
+
+const trailGuidesBase: TrailGuideDef[] = [
   {
     id: 'tg_high_value',
     name: 'Jackrabbit Scout',
@@ -91,6 +96,14 @@ const trailGuides: TrailGuideDef[] = [
     multPerLevel: 3,
   },
 ];
+
+const trailGuides: TrailGuideDef[] = trailGuidesBase.map((guide) => ({
+  ...guide,
+  display: (_round, player) => {
+    const level = player.getHandStats(guide.handType).level;
+    return [[segment(`${guide.description}`, 'text')], [segment(`Current level: ${level}`, 'active')]];
+  },
+}));
 
 export default trailGuides;
 

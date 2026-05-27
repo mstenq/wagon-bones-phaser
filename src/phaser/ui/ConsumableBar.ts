@@ -65,23 +65,11 @@ export class ConsumableBar extends CardBar {
   protected createCardForItem(x: number, y: number, index: number): ItemCard {
     const consumable = resolveConsumableList()[index]!;
     const texturePrefix = getConsumableTexturePrefix(consumable.def.category);
-    const card = new ItemCard(
-      this.scene,
-      x,
-      y,
-      {
-        ...consumable.def,
-        display: () => ({
-          hint: [],
-          tooltip: [[{ text: consumable.def.description, style: 'text' }]],
-        }),
-      },
-      {
-        mode: 'compact',
-        cardScale: UI.CONSUMABLE_CARD_SCALE,
-        texturePrefix,
-      },
-    );
+    const card = new ItemCard(this.scene, x, y, consumable.def, {
+      mode: 'compact',
+      cardScale: UI.CONSUMABLE_CARD_SCALE,
+      texturePrefix,
+    });
     card.setTooltipContext(null, getItemDisplayContext());
     return card;
   }

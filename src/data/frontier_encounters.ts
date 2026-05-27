@@ -3,6 +3,8 @@
 // Each encounter may use dice selection, an instant effect, or explicit handler logic.
 
 import type { DiceSelectionEffectParams, DiceSelectionEffectType } from '../game/DiceSelectionSystem';
+import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
+import type { HintSegment } from './items';
 
 // ─── Types ───
 
@@ -35,6 +37,7 @@ export interface FrontierEncounterDef {
   shopBuyAndUse?: boolean;
   diceSelection?: FrontierDiceSelectionDef;
   instantEffect?: FrontierInstantEffect;
+  display?: (round: RoundHintContext | null, player: ItemDisplayContext) => HintSegment[][];
 }
 
 // ─── Encounter Definitions ───

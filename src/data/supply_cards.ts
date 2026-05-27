@@ -3,6 +3,10 @@
 // Each card may use dice selection, an instant effect, or explicit handler logic.
 
 import type { DiceSelectionEffectParams, DiceSelectionEffectType } from '../game/DiceSelectionSystem';
+import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
+import { getLoadedDiceMultiplier } from '../game/equipmentUtils';
+import { getTrailGuideById } from './trail_guides';
+import type { HintSegment } from './items';
 
 // ─── Types ───
 
@@ -34,10 +38,16 @@ export interface SupplyCardDef {
   shopBuyAndUse?: boolean;
   diceSelection?: SupplyDiceSelectionDef;
   instantEffect?: SupplyInstantEffect;
+  tooltip?: (round: RoundHintContext | null, player: ItemDisplayContext) => HintSegment[][];
 }
 
 // ─── Supply Card Definitions ───
 
+const segment = (text: string, style: HintSegment['style'] = 'text'): HintSegment => ({ text, style });
+const oddsText = (baseNumerator: number, denominator: number, player: ItemDisplayContext): string => {
+  const oddsNumerator = baseNumerator * getLoadedDiceMultiplier(player.equipment);
+  return `${oddsNumerator} in ${denominator}`;
+};
 const supplyCards: SupplyCardDef[] = [
   {
     id: 'coffee_tin',
@@ -144,6 +154,14 @@ const supplyCards: SupplyCardDef[] = [
     description: 'Get money equal to equipment value (max $50)',
     shopBuyAndUse: true,
     instantEffect: { type: 'TRADE_EQUIPMENT', maxGain: 50 },
+    tooltip: (_round, player) => {
+      const totalEquipmentValue = player.equipment.reduce((sum, equip) => sum + equip.sellValue, 0);
+      const gain = Math.min(totalEquipmentValue, 50);
+      return [
+        [segment(`Current payout: $${gain}`, 'money')],
+        [segment(`cap $50`, 'condition')],
+      ];
+    },
   },
   {
     id: 'doctor',
@@ -190,12 +208,21 @@ const supplyCards: SupplyCardDef[] = [
     name: 'Bless',
     description: '1 in 4 chance to bless equipment with aura',
     shopBuyAndUse: true,
+    tooltip: (_round, player) => [[segment(`Current odds: ${oddsText(1, 4, player)}`, 'odds')]],
   },
   {
     id: 'second_helpings',
     name: 'Second Helpings',
     description: 'Creates last used supply/trail guide',
     shopBuyAndUse: true,
+    tooltip: (_round, player) => {
+      const lastId = player.lastUsedConsumableId;
+      const targetName =
+        (lastId ? getSupplyCardById(lastId)?.name : null) ?? (lastId ? getTrailGuideById(lastId)?.name : null);
+      return targetName
+        ? [[segment(`Copies: ${targetName}`, 'active')]]
+        : [[segment('No valid clone target', 'inactive')]];
+    },
   },
   {
     id: 'medicine',
@@ -225,6 +252,10 @@ const supplyCards: SupplyCardDef[] = [
     name: "Fool's Gold",
     description: '50% chance to gain $30. Otherwise lose half your money',
     shopBuyAndUse: true,
+    tooltip: (_round, player) => [
+      [segment(`Gain $30 odds: ${oddsText(1, 2, player)}`, 'odds')],
+      [segment('Otherwise lose half your money', 'condition')],
+    ],
   },
   {
     id: 'trading_post',

@@ -31,6 +31,7 @@ import {
   shouldUpdateDisplayedDiceValue,
 } from '../DiceSelectionSystem';
 import { DiceEnhancement, HandType } from '../types';
+import { getItemDisplayContext } from '../displayContext';
 import supplyCardsData from '../../data/supply_cards';
 import trailGuidesData from '../../data/trail_guides';
 import frontierEncountersData from '../../data/frontier_encounters';
@@ -1100,6 +1101,63 @@ describe('new supply cards', () => {
     const before = player.economy.balance;
     executeConsumableEffect(createConsumableInstance(def));
     expect(player.economy.balance - before).toBe(Math.min(total, 50));
+  });
+
+  test('bless tooltip odds account for loaded dice', () => {
+    const { player } = setupGame({ equipment: [item('loaded_dice')] });
+    const def = getSupplyDefById('bless')!;
+    const rows = def.display(null, getItemDisplayContext());
+    expect(rows.tooltip[0]?.[0]?.text).toContain('2 in 4');
+    expect(player.equipment[0]?.def.id).toBe('loaded_dice');
+  });
+
+  test('fools_gold tooltip odds account for loaded dice', () => {
+    setupGame({ equipment: [item('loaded_dice')] });
+    const def = getSupplyDefById('fools_gold')!;
+    const rows = def.display(null, getItemDisplayContext());
+    expect(rows.tooltip[0]?.[0]?.text).toContain('2 in 2');
+  });
+
+  test('fools_gold uses loaded odds in execution', () => {
+    resetPlayerState();
+    initRunRng('test-6');
+    const { player } = setupGame({ money: 100, equipment: [item('loaded_dice')] });
+    const def = getSupplyDefById('fools_gold')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance).toBe(130);
+  });
+});
+
+describe('consumable display context', () => {
+  test('trail guide tooltip shows current hand level', () => {
+    setupGame();
+    const def = getTrailGuideDefById('tg_pair')!;
+    const rows = def.display(null, getItemDisplayContext());
+    expect(rows.tooltip[1]?.[0]?.text).toBe('Current level: 1');
+  });
+
+  test('second_helpings tooltip shows no target when unavailable', () => {
+    setupGame();
+    const def = getSupplyDefById('second_helpings')!;
+    const rows = def.display(null, getItemDisplayContext());
+    expect(rows.tooltip[0]?.[0]?.text).toBe('No valid clone target');
+  });
+
+  test('second_helpings tooltip shows clone target when available', () => {
+    resetPlayerState();
+    useConsumableDirectly(getSupplyDefById('coffee_tin')!);
+    const def = getSupplyDefById('second_helpings')!;
+    const rows = def.display(null, getItemDisplayContext());
+    expect(rows.tooltip[0]?.[0]?.text).toContain('Coffee Tin');
+  });
+
+  test('trade tooltip previews capped payout', () => {
+    setupGame({ equipment: [item('horseshoe'), item('war_drums'), item('loaded_dice')] });
+    bumpAllSellValues(19);
+    const def = getSupplyDefById('trade')!;
+    const rows = def.display(null, getItemDisplayContext());
+    expect(rows.tooltip[0]?.[0]?.text).toBe('Current payout: $50');
+    expect(rows.tooltip[1]?.[0]?.text).toContain('cap $50');
   });
 });
 
