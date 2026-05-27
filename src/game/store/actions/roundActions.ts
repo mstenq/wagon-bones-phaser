@@ -424,7 +424,7 @@ export const roundActions = {
     patchRound({ phase: 'ROLL', selectedForScoreIds: [] });
   },
 
-  calculateScore(): ScoreResult | null {
+  calculateScore(options?: { deferConsumableGrants?: boolean }): ScoreResult | null {
     const round = requireRound();
     if (round.phase !== 'SCORE') return null;
     if (round.selectedForScoreIds.length === 0) return null;
@@ -523,7 +523,9 @@ export const roundActions = {
       professionId: run.professionId,
     });
 
-    applyScoringMutations(finalResult.mutations);
+    applyScoringMutations(finalResult.mutations, {
+      deferConsumableGrants: options?.deferConsumableGrants,
+    });
 
     progressionActions.recordHandPlayed(handType);
     applyBossAfterScore();
@@ -569,7 +571,7 @@ export const roundActions = {
     if (blueMoonHeld.consumablesGranted.length > 0) {
       const mutations = createEmptyScoringMutations();
       mutations.consumablesGranted.push(...blueMoonHeld.consumablesGranted);
-      applyScoringMutations(mutations);
+      applyScoringMutations(mutations, { deferConsumableGrants: true });
     }
 
     if (goldHeld.moneyEarned > 0) {

@@ -17,6 +17,7 @@ import { formatScore } from '../../game/formatScore';
 import { addScore, multiplyScore, D } from '../../game/scoreMath';
 import { milesToSave } from '../../game/scoreMath';
 import { roundActions } from '../../game/store/actions/roundActions';
+import { consumableActions } from '../../game/store/actions/consumableActions';
 
 // ─── Floating Score Popup ───
 
@@ -157,6 +158,19 @@ function animateGrantToConsumableBar(
       onComplete();
     },
   });
+}
+
+function getEquipCardWorldPos(equipBar: EquipmentBar, equipIndex: number): { x: number; y: number } | null {
+  const card = equipBar.getCardByEquipIndex(equipIndex);
+  if (!card) return null;
+  return { x: equipBar.x + card.x, y: equipBar.y + card.y };
+}
+
+function applyConsumableGrant(consumableId?: string): ConsumableDef | null {
+  if (!consumableId) return null;
+  const def = getConsumableDefById(consumableId);
+  if (!def) return null;
+  return consumableActions.addConsumable(def) ? def : null;
 }
 
 function popupForEquip(
@@ -520,8 +534,44 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         const sfx = getSoundForType('trail_guide', stepIdx);
         scene.sound.play(sfx.key, sfx.config);
         if (sprite && def) {
-          animateGrantToConsumableBar(scene, sprite.x, sprite.y, def, consumableBar, done);
+          animateGrantToConsumableBar(scene, sprite.x, sprite.y, def, consumableBar, () => {
+            applyConsumableGrant(evt.consumableId);
+            done();
+          });
         } else {
+          applyConsumableGrant(evt.consumableId);
+          done();
+        }
+        return;
+      }
+
+      // Supply/frontier grant animation into consumable bar.
+      if (popupType === 'supply') {
+        const sprite = target.kind === 'die' || target.kind === 'both' ? dieSpriteMap.get(target.dieId) : undefined;
+        const def = evt.consumableId ? getConsumableDefById(evt.consumableId) : null;
+        if (sprite) {
+          popupForDie(scene, sprite, 'supply', value);
+        }
+        if (target.kind === 'equip' || target.kind === 'both') {
+          wiggleEquipCard(scene, equipBar, target.equipIndex);
+          popupForEquip(scene, equipBar, target.equipIndex, 'supply', value);
+        }
+        const sfx = getSoundForType('supply', stepIdx);
+        scene.sound.play(sfx.key, sfx.config);
+
+        const fromPos = sprite
+          ? { x: sprite.x, y: sprite.y }
+          : target.kind === 'equip' || target.kind === 'both'
+            ? getEquipCardWorldPos(equipBar, target.equipIndex)
+            : null;
+
+        if (fromPos && def) {
+          animateGrantToConsumableBar(scene, fromPos.x, fromPos.y, def, consumableBar, () => {
+            applyConsumableGrant(evt.consumableId);
+            done();
+          });
+        } else {
+          applyConsumableGrant(evt.consumableId);
           done();
         }
         return;
@@ -652,8 +702,41 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
       const sfx = getSoundForType('trail_guide', stepIdx);
       scene.sound.play(sfx.key, sfx.config);
       if (sprite && def && consumableBar) {
-        animateGrantToConsumableBar(scene, sprite.x, sprite.y, def, consumableBar, done);
+        animateGrantToConsumableBar(scene, sprite.x, sprite.y, def, consumableBar, () => {
+          applyConsumableGrant(evt.consumableId);
+          done();
+        });
       } else {
+        applyConsumableGrant(evt.consumableId);
+        scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, done);
+      }
+      return;
+    }
+
+    if (popupType === 'supply') {
+      const sprite = target.kind === 'die' || target.kind === 'both' ? dieSpriteMap.get(target.dieId) : undefined;
+      const def = evt.consumableId ? getConsumableDefById(evt.consumableId) : null;
+      if (sprite) {
+        popupForDie(scene, sprite, 'supply', value);
+      }
+      if (equipBar && (target.kind === 'equip' || target.kind === 'both')) {
+        wiggleEquipCard(scene, equipBar, target.equipIndex);
+        popupForEquip(scene, equipBar, target.equipIndex, 'supply', value);
+      }
+      const sfx = getSoundForType('supply', stepIdx);
+      scene.sound.play(sfx.key, sfx.config);
+      const fromPos = sprite
+        ? { x: sprite.x, y: sprite.y }
+        : equipBar && (target.kind === 'equip' || target.kind === 'both')
+          ? getEquipCardWorldPos(equipBar, target.equipIndex)
+          : null;
+      if (fromPos && def && consumableBar) {
+        animateGrantToConsumableBar(scene, fromPos.x, fromPos.y, def, consumableBar, () => {
+          applyConsumableGrant(evt.consumableId);
+          done();
+        });
+      } else {
+        applyConsumableGrant(evt.consumableId);
         scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, done);
       }
       return;

@@ -84,7 +84,12 @@ export function applyDiceEnhancementMutations(mutations: ScoringMutations, scori
  * Apply the accumulated mutations from scoring to run store state.
  * Called after scoring completes.
  */
-export function applyScoringMutations(mutations: ScoringMutations): void {
+export function applyScoringMutations(
+  mutations: ScoringMutations,
+  options?: {
+    deferConsumableGrants?: boolean;
+  },
+): void {
   if (mutations.moneyEarned > 0) {
     economyActions.earn(mutations.moneyEarned);
   }
@@ -120,9 +125,11 @@ export function applyScoringMutations(mutations: ScoringMutations): void {
     runStore.setState({ dice });
   }
 
-  for (const consumableId of mutations.consumablesGranted) {
-    const consumableDef = getConsumableDefById(consumableId);
-    if (consumableDef) consumableActions.addConsumable(consumableDef);
+  if (!options?.deferConsumableGrants) {
+    for (const consumableId of mutations.consumablesGranted) {
+      const consumableDef = getConsumableDefById(consumableId);
+      if (consumableDef) consumableActions.addConsumable(consumableDef);
+    }
   }
 
   if (mutations.diceCopied.length > 0) {

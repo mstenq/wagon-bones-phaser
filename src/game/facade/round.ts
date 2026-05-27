@@ -124,8 +124,8 @@ export const gameRound = {
     return roundActions.selectForScore(ids);
   },
 
-  calculateScore(): ScoreResult | null {
-    return roundActions.calculateScore();
+  calculateScore(options?: { deferConsumableGrants?: boolean }): ScoreResult | null {
+    return roundActions.calculateScore(options);
   },
 
   setSidebarOverlay(overlay: Partial<RoundSidebarOverlay> | null): void {

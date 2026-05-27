@@ -832,7 +832,7 @@ export class GameScene extends Scene {
     this.syncRolledDiceFromSprites();
     this.scoreLayoutGate = this.createScoreLayoutGate();
     this.playbackRunner?.setScoreLayoutGate(this.scoreLayoutGate);
-    const result = gameFacade.round.calculateScore();
+    const result = gameFacade.round.calculateScore({ deferConsumableGrants: true });
     if (result) {
       this.enterScorePhase(result);
     } else {

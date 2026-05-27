@@ -63,6 +63,7 @@ effectRegistry.registerPerDie('PIP_SUPPLY_CHANCE', (ctx, equip, _idx, die, _t) =
         popupType: 'supply',
         value: 0,
         dieId: die.id,
+        consumableId: supplyDef.id,
       });
       console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: granted supply card '${supplyDef.name}'`);
     }

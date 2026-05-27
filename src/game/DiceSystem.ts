@@ -5,7 +5,6 @@ import { Die, DiceEnhancement, HandType, HandResult, HandDefinition, ScoreResult
 import hands from '../data/hands';
 import { getRunState, runStore } from './store/runStore';
 import { diceActions } from './store/actions/diceActions';
-import { consumableActions } from './store/actions/consumableActions';
 import { selectResolvedLoadedDieTarget } from './store/selectors/runSelectors';
 import { resolveEquipmentList } from './store/resolve';
 import type { EquipmentInstance } from './ItemsSystem';
@@ -614,12 +613,17 @@ export function scoreHand(
       // Sticker effects (scored dice)
       if (die.sticker === 'purple_flower') {
         const supplyDef = getRandomSupplyDef();
-        if (consumableActions.addConsumable(supplyDef)) {
-          animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'supply', value: 0, dieId: die.id });
-          console.log(
-            `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER purple_flower: granted supply card '${supplyDef.name}'`,
-          );
-        }
+        pipelineCtx.mutations.consumablesGranted.push(supplyDef.id);
+        animEvents.push({
+          target: { kind: 'die', dieId: die.id },
+          popupType: 'supply',
+          value: 0,
+          dieId: die.id,
+          consumableId: supplyDef.id,
+        });
+        console.log(
+          `  [scoreHand]   Die ${die.id}${triggerLabel} STICKER purple_flower: granted supply card '${supplyDef.name}'`,
+        );
       }
 
       if (die.sticker === 'golden_dollar') {
@@ -704,8 +708,13 @@ export function scoreHand(
             console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced 6 (${target.id}), granting frontier card`);
             const frontierDef = getRandomFrontierDef();
             if (frontierDef) {
-              consumableActions.addConsumable(frontierDef);
-              animEvents.push({ target: { kind: 'equip', equipIndex: eIdx }, popupType: 'supply', value: 0 });
+              pipelineCtx.mutations.consumablesGranted.push(frontierDef.id);
+              animEvents.push({
+                target: { kind: 'equip', equipIndex: eIdx },
+                popupType: 'supply',
+                value: 0,
+                consumableId: frontierDef.id,
+              });
             }
           }
         }
@@ -771,12 +780,13 @@ export function scoreHand(
       if (!checkLoadedChance(chanceTuple, equipment, 'loadedDice')) continue;
       if (!removeRunDie(scoredDie.id)) continue;
       const frontierDef = getRandomFrontierDef();
-      consumableActions.addConsumable(frontierDef);
+      pipelineCtx.mutations.consumablesGranted.push(frontierDef.id);
       animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
       animEvents.push({
         target: { kind: 'equip', equipIndex: equipment.indexOf(equip) },
         popupType: 'supply',
         value: 0,
+        consumableId: frontierDef.id,
       });
     }
   }
