@@ -1,7 +1,8 @@
 // ─── Shop stock generation (No Phaser imports) ───
 // Builds scene-store shop slices and applies tag modifiers to stock rows.
 
-import { CHANCES, SHOP_WEIGHTS } from '../Constants';
+import { SHOP_WEIGHTS } from '../Constants';
+import { rollDiceAura } from '../auraRng';
 import { createDie } from '../DiceSystem';
 import type { Die } from '../types';
 import { generateShopStock, type EquipmentDef } from '../ItemsSystem';
@@ -12,9 +13,8 @@ import {
   type ConsumableDef,
 } from '../ConsumablesSystem';
 import { applyRandomSticker, generateShopPacks } from '../BoosterPackSystem';
-import { hasPermitDiceInShop } from '../PermitsSystem';
+import { getPermitAuraMultiplier, hasPermitDiceInShop } from '../PermitsSystem';
 import { rollShopEquipmentPreview } from '../EquipmentModifiers';
-import { pickRandomAura } from '../DiceSelectionSystem';
 import { getProfessionById } from '../../data/professions';
 import {
   applyAuraTagsToShopStock,
@@ -39,12 +39,11 @@ export interface ShopStockGenRow {
   sold?: boolean;
 }
 
-export function generateShopDie(mode: 'enhanced' | 'stickered'): Die {
+export function generateShopDie(mode: 'enhanced' | 'stickered', run: RunState = getRunState()): Die {
   const enhancement = rngPick('shop', SHOP_ENHANCEMENTS);
   const die = createDie({ enhancement });
-  if (rngFloat('shop') < CHANCES.DICE_AURA) {
-    die.aura = pickRandomAura();
-  }
+  const aura = rollDiceAura(getPermitAuraMultiplier(run.purchasedPermits), 'shop');
+  if (aura) die.aura = aura;
   if (mode === 'stickered') {
     applyRandomSticker(die);
   }

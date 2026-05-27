@@ -14,6 +14,7 @@ import hands from '../data/hands';
 import { PACK_ONLY_FRONTIER_IDS } from './Constants';
 import { checkLoadedChance } from './equipmentUtils';
 import { resolveEffectParam } from './effects/helpers';
+import { pickEquipmentAuraWeighted } from './auraRng';
 import { rngFloat, rngPick, rngShuffle } from './RunRng';
 import { enqueueToastFeedback } from './playback/feedback';
 
@@ -529,20 +530,11 @@ export function executeConsumableEffect(
         enqueueToastFeedback('Unlucky! No blessing', 'failure');
         return { success: true };
       }
-      const blessableAuras = (['fire', 'icy', 'holy'] as const).map((id) => getItemAuraById(id)!);
-      const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
+      const blessableIds = ['fire', 'icy', 'holy'] as const;
       const target = rngPick('consumables', unblessed);
-      const roll = rngFloat('consumables') * totalWeight;
-      let appliedAuraName: string | undefined;
-      let cumulative = 0;
-      for (const aura of blessableAuras) {
-        cumulative += aura.chance;
-        if (roll < cumulative) {
-          target.def = { ...target.def, aura: { ...aura } };
-          appliedAuraName = aura.name;
-          break;
-        }
-      }
+      const appliedAura = pickEquipmentAuraWeighted(blessableIds, 'consumables');
+      target.def = { ...target.def, aura: appliedAura };
+      const appliedAuraName = appliedAura.name;
       writeEquipment(equipment);
       enqueueToastFeedback(
         appliedAuraName ? `Success! ${appliedAuraName} blessing` : 'Success! Equipment blessed',

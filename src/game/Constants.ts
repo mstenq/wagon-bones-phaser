@@ -140,11 +140,6 @@ export const EQUIPMENT_MODIFIER = {
 
 // ─── RNG / Chance Tuning ───
 export const CHANCES = {
-  STICKER_EFFECT: 0.08,
-  DICE_AURA: 0.1,
-  AURA_HOLY: 0.03,
-  AURA_FIRE: 0.14,
-  AURA_ICY: 0.2,
   RARE: 0.05,
   UNCOMMON: 0.25,
   COMMON: 0.7,

@@ -465,12 +465,12 @@ describe('Effect application', () => {
 
   test('LOSE_DAYS reduces maxDays in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    const loseDays = 2;
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_DAYS', amount: 2 }, mods);
+    applyEffect({ type: 'LOSE_DAYS', amount: loseDays }, mods);
     player.trailEventModifiers = mods;
     game.startRound();
-    // base 4 - 2 = 2
-    expect(game.config.maxDays).toBe(2);
+    expect(game.config.maxDays).toBe(GAMEPLAY.MAX_DAYS - loseDays);
   });
 
   test('LOSE_REROLLS reduces maxRerolls in next round', () => {
@@ -752,14 +752,13 @@ describe('Effect application', () => {
 
   test('LOSE_REROLLS_PER_DAY reduces rerolls in next round', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
+    const perDay = 1;
     const mods = createEmptyModifiers();
-    applyEffect({ type: 'LOSE_REROLLS_PER_DAY', amount: 1 }, mods);
-    // 1 reroll/day * 4 days = 4 reroll penalty
-    expect(mods.rerollPenalty).toBe(GAMEPLAY.MAX_DAYS * 1);
+    applyEffect({ type: 'LOSE_REROLLS_PER_DAY', amount: perDay }, mods);
+    expect(mods.rerollPenalty).toBe(GAMEPLAY.MAX_DAYS * perDay);
     player.trailEventModifiers = mods;
     game.startRound();
-    // base 6 - 4 = 2 rerolls
-    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - GAMEPLAY.MAX_DAYS * 1);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - GAMEPLAY.MAX_DAYS * perDay);
   });
 });
 
@@ -969,14 +968,16 @@ describe('Round modifier integration', () => {
   test('modifiers are cleared after round starts', () => {
     const { game, player } = setupGame({ dice: diceWithValue(6, 50) });
 
-    player.trailEventModifiers.dayPenalty = 2;
-    player.trailEventModifiers.rerollPenalty = 1;
+    const dayPenalty = 2;
+    const rerollPenalty = 1;
+    player.trailEventModifiers.dayPenalty = dayPenalty;
+    player.trailEventModifiers.rerollPenalty = rerollPenalty;
     player.trailEventModifiers.scoreMultiplier = 1.5;
     game.startRound({ targetMiles: D(1000) });
 
     // Verify effects were applied
-    expect(game.config.maxDays).toBe(2);
-    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
+    expect(game.config.maxDays).toBe(GAMEPLAY.MAX_DAYS - dayPenalty);
+    expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - rerollPenalty);
     expect(game.config.targetMiles).toBeMiles(1500);
 
     // Verify modifiers are cleared after consumption

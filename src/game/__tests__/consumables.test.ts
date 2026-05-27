@@ -138,7 +138,13 @@ describe('PlayerState consumable management', () => {
 
     // Ghost aura bypasses slot limit
     const ghostDef = getSupplyDefById('buzzards')!;
-    (ghostDef as any).aura = { id: 'ghost', name: 'Ghost', description: 'test', costIncrease: 0, chance: 0 };
+    (ghostDef as any).aura = {
+      id: 'ghost',
+      name: 'Ghost',
+      description: 'test',
+      costIncrease: 0,
+      equipmentChance: 0,
+    };
     expect(player.addConsumable(ghostDef)).toBe(true);
     expect(player.consumables).toHaveLength(3);
     expect(player.usedConsumableSlots).toBe(2); // ghost doesn't count
@@ -622,8 +628,8 @@ describe('Bless supply card aura weighting', () => {
   test('bless applies weighted aura distribution matching item_auras data', () => {
     const blessableIds = ['fire', 'icy', 'holy'] as const;
     const blessableAuras = blessableIds.map((id) => itemAuras.find((a) => a.id === id)!);
-    const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
-    const expectedRates = Object.fromEntries(blessableAuras.map((a) => [a.id, a.chance / totalWeight]));
+    const totalWeight = blessableAuras.reduce((sum, a) => sum + a.equipmentChance, 0);
+    const expectedRates = Object.fromEntries(blessableAuras.map((a) => [a.id, a.equipmentChance / totalWeight]));
 
     const counts: Record<string, number> = { fire: 0, icy: 0, holy: 0 };
     const runs = 10000;
@@ -655,7 +661,7 @@ describe('Bless supply card aura weighting', () => {
     }
 
     // Verify ordering matches weight ordering (highest weight = most common)
-    const sorted = [...blessableAuras].sort((a, b) => b.chance - a.chance);
+    const sorted = [...blessableAuras].sort((a, b) => b.equipmentChance - a.equipmentChance);
     for (let i = 0; i < sorted.length - 1; i++) {
       expect(counts[sorted[i].id]).toBeGreaterThan(counts[sorted[i + 1].id]);
     }

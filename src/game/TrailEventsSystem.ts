@@ -394,7 +394,8 @@ export function resolveChoice(
     applyEffect(effect, modifiers, rng);
   }
 
-  const negatedNegativeEffects = omenConsumed || trailRepairKitNegatedEvent || (Boolean(shieldEquip) && hasNegativeEffects(outcome.effects));
+  const negatedNegativeEffects =
+    omenConsumed || trailRepairKitNegatedEvent || (Boolean(shieldEquip) && hasNegativeEffects(outcome.effects));
   const negationSource = omenConsumed
     ? 'omen_stone'
     : trailRepairKitNegatedEvent
@@ -533,8 +534,7 @@ export function applyEffect(
       break;
 
     case 'LOSE_REROLLS_PER_DAY':
-      // This is modeled as a larger reroll penalty (amount per day * max days approximation)
-      modifiers.rerollPenalty += (effect.amount ?? 0) * 4; // approximate — applied as flat penalty
+      modifiers.rerollPenalty += (effect.amount ?? 0) * GAMEPLAY.MAX_DAYS;
       break;
 
     case 'LOSE_ALL_REROLLS':
@@ -666,7 +666,16 @@ export function applyEffect(
       const pick = rarityFilter.length > 0 ? rarityFilter[0] : stock[0];
       if (pick) {
         const def = effect.aura
-          ? { ...pick, aura: { id: effect.aura, name: effect.aura, description: '', costIncrease: 0, chance: 0 } }
+          ? {
+              ...pick,
+              aura: {
+                id: effect.aura,
+                name: effect.aura,
+                description: '',
+                costIncrease: 0,
+                equipmentChance: 0,
+              },
+            }
           : pick;
         const list = resolveEquipmentList();
         list.push(acquireRewardEquipmentInstance(def, getRunState().purchasedPermits));

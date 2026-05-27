@@ -103,7 +103,7 @@ describe('shopStock', () => {
     expect(unstickeredDiceSeen).toBeGreaterThan(0);
   });
 
-  test('dice_carver shop dice can include auras using booster aura rates', () => {
+  test('dice_carver shop dice can include auras using dice aura rates', () => {
     runActions.patch({
       purchasedPermits: ['dice_carver'],
       shopSlots: 8,
@@ -128,7 +128,7 @@ describe('shopStock', () => {
     expect(nonAuraDiceSeen).toBeGreaterThan(0);
   });
 
-  test('master_engraver shop dice can include auras using booster aura rates', () => {
+  test('master_engraver shop dice can include auras using dice aura rates', () => {
     runActions.patch({
       purchasedPermits: ['dice_carver', 'master_engraver'],
       shopSlots: 8,

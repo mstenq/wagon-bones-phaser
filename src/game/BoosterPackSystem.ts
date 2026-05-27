@@ -9,7 +9,10 @@ import { getItemDisplayContext } from './displayContext';
 import { getRunState } from './store/runStore';
 import { resolveEquipmentList } from './store/resolve';
 import type { RunState } from './store/types';
-import { DiceSelectionConfig, pickRandomAura } from './DiceSelectionSystem';
+import { DiceSelectionConfig } from './DiceSelectionSystem';
+import { rollDiceAura } from './auraRng';
+import { DICE_STICKER_CHANCE } from '../data/item_auras';
+import { getPermitAuraMultiplier } from './PermitsSystem';
 import { CHANCES, PACK_EXCLUDED_SUPPLY_IDS, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS } from './Constants';
 import packsData, { type PackCategory, type PackDef, type PackTier } from '../data/packs';
 import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
@@ -31,7 +34,7 @@ const ALL_STICKERS: DiceSticker[] = ['purple_flower', 'red_bullet', 'golden_doll
 /** Randomly apply a sticker to a die (small chance) */
 export function applyRandomSticker(die: Die): void {
   if (die.sticker) return; // already has one
-  if (rngFloat('sticker') >= CHANCES.STICKER_EFFECT) return;
+  if (rngFloat('sticker') >= DICE_STICKER_CHANCE) return;
   die.sticker = rngPick('sticker', ALL_STICKERS);
 }
 
@@ -263,10 +266,8 @@ function generateDicePackContents(count: number): PackItem[] {
     const die = createDie({ enhancement: enhancement as Die['enhancement'] });
     applyRandomSticker(die);
 
-    // Random aura chance
-    if (rngFloat('pack') < CHANCES.DICE_AURA) {
-      die.aura = pickRandomAura();
-    }
+    const aura = rollDiceAura(getPermitAuraMultiplier(getRunState().purchasedPermits), 'pack');
+    if (aura) die.aura = aura;
 
     const enhInfo = enhancement ? ENHANCEMENT_INFO.get(enhancement) : null;
     const enhName = enhInfo ? enhInfo.name : 'Standard';
@@ -287,7 +288,7 @@ function generateDicePackContents(count: number): PackItem[] {
   return items;
 }
 
-/** True when Counterfeit Goods allows duplicate equipment in packs/shop. */
+/** True when Counterfeit Goods allows duplicate equipment/consumables in packs/shop. */
 export function playerAllowsDuplicateItems(state: RunState = getRunState()): boolean {
   void state;
   return resolveEquipmentList().some((e) => e.def.effectType === 'ALLOW_DUPLICATES');
@@ -298,15 +299,41 @@ export function getEquipmentPackExcludeIds(state: RunState = getRunState()): str
   return playerAllowsDuplicateItems(state) ? undefined : resolveEquipmentList().map((e) => e.def.id);
 }
 
+/** Consumable def ids currently held in the player's bar. */
+export function getOwnedConsumableDefIds(state: RunState = getRunState()): string[] {
+  return state.consumables.map((c) => c.defId);
+}
+
+/** Owned consumable ids excluded from pack stock, or undefined when duplicates are allowed. */
+export function getConsumablePackExcludeIds(state: RunState = getRunState()): string[] | undefined {
+  return playerAllowsDuplicateItems(state) ? undefined : getOwnedConsumableDefIds(state);
+}
+
+function filterPoolByExcludeIds<T extends { id: string }>(pool: T[], excludeIds?: string[]): T[] {
+  if (!excludeIds || excludeIds.length === 0) return pool;
+  const excluded = new Set(excludeIds);
+  const filtered = pool.filter((item) => !excluded.has(item.id));
+  return filtered.length > 0 ? filtered : pool;
+}
+
+function isExcludedId(id: string, excludeIds?: string[]): boolean {
+  return !!excludeIds && excludeIds.includes(id);
+}
+
 function generateSupplyPackContents(count: number): PackItem[] {
+  const run = getRunState();
+  const excludeIds = getConsumablePackExcludeIds(run);
   const items: PackItem[] = [];
-  const supplyPool = SUPPLY_CARDS.filter((s) => !PACK_EXCLUDED_SUPPLY_IDS.includes(s.id));
+  const supplyPool = filterPoolByExcludeIds(
+    SUPPLY_CARDS.filter((s) => !PACK_EXCLUDED_SUPPLY_IDS.includes(s.id)),
+    excludeIds,
+  );
   const normalCards = pickRandom(supplyPool, count, 'supplyPack');
   let normalIdx = 0;
 
   for (let i = 0; i < count; i++) {
     const rare = rollRarePackCard('supply');
-    if (rare) {
+    if (rare && !isExcludedId(rare.id, excludeIds)) {
       items.push(buildFrontierPackItem(rare));
       continue;
     }
@@ -334,16 +361,18 @@ function buildTrailGuidePackItem(tg: TrailGuideDef): PackItem {
 
 function generateTrailGuidePackContents(count: number): PackItem[] {
   const run = getRunState();
-  const targetGuide = hasPermitTrailGuideTargeting(run.purchasedPermits) ? pickTargetTrailGuideForRun(run) : null;
+  const excludeIds = getConsumablePackExcludeIds(run);
+  const pickedTarget = hasPermitTrailGuideTargeting(run.purchasedPermits) ? pickTargetTrailGuideForRun(run) : null;
+  const targetGuide = pickedTarget && !isExcludedId(pickedTarget.id, excludeIds) ? pickedTarget : null;
 
   const items: PackItem[] = [];
-  const normalCards = pickRandom(TRAIL_GUIDES, count, 'trailPack');
+  const normalCards = pickRandom(filterPoolByExcludeIds(TRAIL_GUIDES, excludeIds), count, 'trailPack');
   let normalIdx = 0;
   let placedTarget = false;
 
   for (let i = 0; i < count; i++) {
     const rare = rollRarePackCard('trail_guide');
-    if (rare) {
+    if (rare && !isExcludedId(rare.id, excludeIds)) {
       items.push(buildFrontierPackItem(rare));
       continue;
     }
@@ -361,13 +390,15 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
 }
 
 function generateFrontierPackContents(count: number): PackItem[] {
+  const run = getRunState();
+  const excludeIds = getConsumablePackExcludeIds(run);
   const items: PackItem[] = [];
-  const normalCards = pickRandom(STANDARD_FRONTIER_POOL, count, 'frontierPack');
+  const normalCards = pickRandom(filterPoolByExcludeIds(STANDARD_FRONTIER_POOL, excludeIds), count, 'frontierPack');
   let normalIdx = 0;
 
   for (let i = 0; i < count; i++) {
     const rare = rollRarePackCard('frontier');
-    if (rare) {
+    if (rare && !isExcludedId(rare.id, excludeIds)) {
       items.push(buildFrontierPackItem(rare));
       continue;
     }

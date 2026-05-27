@@ -1431,7 +1431,8 @@ describe('New utility equipment lifecycle effects', () => {
     game.startRound();
     processEndOfRound(player.equipment);
     const inst = player.equipment.find((e) => e.def.id === 'old_calendar')!;
-    expect(inst.state.miles).toBe(4);
-    expect(inst.state.mult).toBe(4);
+    // Day 1 with no days played: maxDays - day + 1; full reroll bank at round start
+    expect(inst.state.miles).toBe(GAMEPLAY.MAX_DAYS);
+    expect(inst.state.mult).toBe(GAMEPLAY.MAX_REROLLS);
   });
 });

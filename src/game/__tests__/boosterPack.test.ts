@@ -6,6 +6,7 @@ import {
   tryRollRarePackCard,
   playerAllowsDuplicateItems,
   getEquipmentPackExcludeIds,
+  getConsumablePackExcludeIds,
   type PackDefinition,
 } from '../BoosterPackSystem';
 import { generateShopStock, getAllEquipment } from '../ItemsSystem';
@@ -14,6 +15,12 @@ import { resetPlayerState, getPlayerState } from './testRunPlayer';
 import { getRunState } from '../store/runStore';
 import { item } from './testHelpers';
 import { HandType } from '../types';
+import {
+  createConsumableInstance,
+  getFrontierDefById,
+  getSupplyDefById,
+  getTrailGuideDefById,
+} from '../ConsumablesSystem';
 
 const frontierPack: PackDefinition = {
   id: 'frontier_standard',
@@ -147,6 +154,69 @@ const trailGuidePack: PackDefinition = {
   color: 0x4682b4,
 };
 
+describe('consumable pack duplicate filtering', () => {
+  beforeEach(() => resetPlayerState());
+
+  test('trail guide packs exclude guides already in the consumable bar', () => {
+    const player = getPlayerState();
+    const owned = getTrailGuideDefById('tg_high_value')!;
+    player.consumables = [createConsumableInstance(owned)];
+    expect(getConsumablePackExcludeIds(getRunState())).toEqual(['tg_high_value']);
+
+    for (let i = 0; i < 40; i++) {
+      const items = generatePackContents(trailGuidePack);
+      for (const packItem of items) {
+        expect(packItem.trailGuideId).not.toBe('tg_high_value');
+        expect(packItem.frontierEncounterId).not.toBe('tg_high_value');
+      }
+    }
+  });
+
+  test('supply packs exclude supply cards already in the consumable bar', () => {
+    const player = getPlayerState();
+    const owned = getSupplyDefById('coffee_tin')!;
+    player.consumables = [createConsumableInstance(owned)];
+
+    for (let i = 0; i < 40; i++) {
+      const items = generatePackContents(supplyPack);
+      for (const packItem of items) {
+        expect(packItem.supplyCardId).not.toBe('coffee_tin');
+      }
+    }
+  });
+
+  test('frontier packs exclude encounters already in the consumable bar', () => {
+    const player = getPlayerState();
+    const owned = getFrontierDefById('gold_rush')!;
+    player.consumables = [createConsumableInstance(owned)];
+
+    for (let i = 0; i < 40; i++) {
+      const items = generatePackContents(frontierPack);
+      for (const packItem of items) {
+        expect(packItem.frontierEncounterId).not.toBe('gold_rush');
+      }
+    }
+  });
+
+  test('allows consumable duplicates with counterfeit_goods', () => {
+    const player = getPlayerState();
+    const owned = getTrailGuideDefById('tg_high_value')!;
+    player.consumables = [createConsumableInstance(owned)];
+    player.equipment = [item('counterfeit_goods')];
+    expect(getConsumablePackExcludeIds(getRunState())).toBeUndefined();
+
+    let sawOwned = false;
+    for (let i = 0; i < 80; i++) {
+      const items = generatePackContents(trailGuidePack);
+      if (items.some((packItem) => packItem.trailGuideId === 'tg_high_value')) {
+        sawOwned = true;
+        break;
+      }
+    }
+    expect(sawOwned).toBe(true);
+  });
+});
+
 describe('Binoculars trail guide targeting', () => {
   beforeEach(() => resetPlayerState());
 
@@ -171,6 +241,19 @@ describe('Binoculars trail guide targeting', () => {
       expect(items.filter((packItem) => packItem.trailGuideId != null).length).toBeGreaterThan(0);
     }
   });
+
+  test('does not inject owned target trail guide when binoculars permit is owned', () => {
+    const player = getPlayerState();
+    player.purchasedPermits.push('binoculars');
+    player.getHandStats(HandType.PAIR).timesPlayed = 10;
+    const owned = getTrailGuideDefById('tg_pair')!;
+    player.consumables = [createConsumableInstance(owned)];
+
+    for (let i = 0; i < 40; i++) {
+      const items = generatePackContents(trailGuidePack);
+      expect(items.some((packItem) => packItem.trailGuideId === 'tg_pair')).toBe(false);
+    }
+  });
 });
 
 describe('supply pack medicine exclusion', () => {
@@ -184,4 +267,3 @@ describe('supply pack medicine exclusion', () => {
     }
   });
 });
-

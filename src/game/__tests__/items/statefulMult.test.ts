@@ -17,11 +17,7 @@ import {
   processEquipmentOnPackSkipped,
   processEquipmentOnSupplyUsed,
 } from '../../EquipmentEffects';
-import {
-  executeConsumableEffect,
-  getRandomTrailGuideDef,
-  getSupplyDefById,
-} from '../../ConsumablesSystem';
+import { executeConsumableEffect, getRandomTrailGuideDef, getSupplyDefById } from '../../ConsumablesSystem';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());

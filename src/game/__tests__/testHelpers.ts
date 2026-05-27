@@ -48,15 +48,15 @@ export function item(id: string, purchasedPermitIds: string[] = []): EquipmentIn
 export function itemWithAura(id: string, auraId: 'fire' | 'icy' | 'holy' | 'ghost'): EquipmentInstance {
   const inst = item(id);
   const auraMap = {
-    fire: { id: 'fire', name: 'Blazing', description: '+10 mult', costIncrease: 3, chance: 0 },
-    icy: { id: 'icy', name: 'Frozen', description: '+50 miles', costIncrease: 3, chance: 0 },
-    holy: { id: 'holy', name: 'Holy', description: 'x1.5 mult', costIncrease: 5, chance: 0 },
+    fire: { id: 'fire', name: 'Blazing', description: '+10 mult', costIncrease: 3, equipmentChance: 0 },
+    icy: { id: 'icy', name: 'Frozen', description: '+50 miles', costIncrease: 3, equipmentChance: 0 },
+    holy: { id: 'holy', name: 'Holy', description: 'x1.5 mult', costIncrease: 5, equipmentChance: 0 },
     ghost: {
       id: 'ghost',
       name: 'Ghost',
       description: "Doesn't take up space in your inventory",
       costIncrease: 5,
-      chance: 0,
+      equipmentChance: 0,
     },
   } as const;
   const def = {

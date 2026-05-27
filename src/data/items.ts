@@ -2225,11 +2225,7 @@ const items: ItemDef[] = [
     display: (_round, player) => ({
       hint: [[oddsDisplay([1, 6], player)], [text('to roll loaded #', 'xs')]],
       tooltip: [
-        [
-          text('All dice have '),
-          oddsDisplay([1, 6], player),
-          text(' odds of rolling the selected loaded die value.')
-        ],
+        [text('All dice have '), oddsDisplay([1, 6], player), text(' odds of rolling the selected loaded die value.')],
       ],
     }),
   },
@@ -2848,7 +2844,7 @@ const items: ItemDef[] = [
     effectType: 'PACK_MULE',
     effectParams: { slots: 2 },
     display: (_round, _player) => ({
-      hint: [[active('+2 consumable slots', "xs")]],
+      hint: [[active('+2 consumable slots', 'xs')]],
       tooltip: [[text('Adds '), active('+2'), text(' consumable slots')]],
     }),
   },

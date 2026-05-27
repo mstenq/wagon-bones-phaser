@@ -9,9 +9,10 @@ import { replaceEquipmentList, resolveEquipmentList } from './store/resolve';
 import { storedFromEquipmentInstances } from './store/resolve';
 import { setDieEnhancement } from './DiceSystem';
 import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
-import { CHANCES } from './Constants';
 import diceAuras from '../data/dice_auras';
-import { rngFloat, rngShuffle } from './RunRng';
+import { pickDiceAuraWeighted, rollDiceAura } from './auraRng';
+import { getPermitAuraMultiplier } from './PermitsSystem';
+import { rngShuffle } from './RunRng';
 
 // ─── Effect Types ───
 
@@ -183,12 +184,10 @@ function applyClone(selectedDice: Die[]): string {
 
 // ─── Aura ───
 
-/** Weighted random aura — thresholds from Constants.CHANCES */
-export function pickRandomAura(): DiceAura {
-  const roll = rngFloat('consumables');
-  if (roll < CHANCES.AURA_HOLY) return 'holy';
-  if (roll < CHANCES.AURA_HOLY + CHANCES.AURA_FIRE) return 'fire';
-  return 'icy';
+/** Random dice aura via sequential spawn rolls (respects permits). */
+export function pickRandomAura(stream: 'shop' | 'pack' | 'consumables' = 'consumables'): DiceAura {
+  const multiplier = getPermitAuraMultiplier(getRunState().purchasedPermits);
+  return rollDiceAura(multiplier, stream) ?? pickDiceAuraWeighted(multiplier, stream);
 }
 
 function applyAura(selectedDice: Die[], aura: DiceAura | null): string {
@@ -196,7 +195,8 @@ function applyAura(selectedDice: Die[], aura: DiceAura | null): string {
   if (!die) return 'No die selected';
   if (!findRunDie(die.id)) return 'Die not found';
 
-  const chosenAura = aura ?? pickRandomAura();
+  const multiplier = getPermitAuraMultiplier(getRunState().purchasedPermits);
+  const chosenAura = aura ?? pickDiceAuraWeighted(multiplier, 'consumables');
   patchRunDie(die.id, (d) => ({ ...d, aura: chosenAura }));
 
   const info = diceAuras.find((a) => a.id === chosenAura);

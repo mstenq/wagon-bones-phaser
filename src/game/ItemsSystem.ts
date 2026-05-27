@@ -6,7 +6,7 @@ import {
   getEquipmentDefById as lookupEquipmentDefById,
   getItemAuraById as lookupItemAuraById,
 } from './equipmentCatalog';
-import itemAuras, { type ItemAura } from '../data/item_auras';
+import { type ItemAura } from '../data/item_auras';
 
 export type { HintSegment, HintStyle, HintSize, ItemDisplayResult, CardTemplate } from '../data/items';
 import type { ItemDisplayResult } from '../data/items';
@@ -14,6 +14,7 @@ import type { ItemDisplayResult } from '../data/items';
 import type { EquipmentModifier } from './types';
 import { getDiscountedShopPrice, getPermitAuraMultiplier } from './PermitsSystem';
 import { CHANCES } from './Constants';
+import { rollEquipmentAura } from './auraRng';
 import { getItemDisplayContext, getRoundHintContext } from './displayContext';
 import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
 import { rngFloat, rngPick, type RngStream } from './RunRng';
@@ -75,8 +76,6 @@ export function isEquipmentLeased(instance: EquipmentInstance): boolean {
   return hasEquipmentModifier(instance, 'leased');
 }
 
-const ITEM_AURAS: ItemAura[] = itemAuras;
-
 function itemsPool(): EquipmentDef[] {
   return getEquipmentPool() as EquipmentDef[];
 }
@@ -107,12 +106,7 @@ export function getItemAuraById(id: string): ItemAura | null {
 
 /** Roll for a random aura. Returns null most of the time. */
 export function rollRandomItemAura(auraMultiplier: number = 1): ItemAura | null {
-  const scaledMultiplier = Math.max(0, auraMultiplier);
-  for (const aura of ITEM_AURAS) {
-    const scaledChance = Math.min(1, aura.chance * scaledMultiplier);
-    if (rngFloat('shop') < scaledChance) return { ...aura };
-  }
-  return null;
+  return rollEquipmentAura(auraMultiplier, 'shop');
 }
 
 /** Apply a random aura to an EquipmentDef, returning a new copy with adjusted cost.
