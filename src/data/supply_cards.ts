@@ -195,6 +195,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'second_helpings',
     name: 'Second Helpings',
     description: 'Creates last used supply/trail guide',
+    shopBuyAndUse: true,
   },
   {
     id: 'medicine',

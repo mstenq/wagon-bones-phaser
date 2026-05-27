@@ -1,10 +1,20 @@
 // ─── Run consumable actions ───
 
 import type { ConsumableDef, ConsumableInstance } from '../../ConsumablesSystem';
-import { createConsumableInstance, isSecondHelpingsCloneTarget } from '../../ConsumablesSystem';
+import {
+  createConsumableInstance,
+  isSecondHelpingsCloneTarget,
+  nextLastUsedConsumableIdAfterUse,
+} from '../../ConsumablesSystem';
 import { processEquipmentOnSell } from '../../EquipmentEffects';
 import { getRunState, runStore } from '../runStore';
-import { replaceConsumableList, replaceEquipmentList, resolveConsumableList, resolveEquipmentList } from '../resolve';
+import {
+  replaceConsumableList,
+  replaceEquipmentList,
+  resolveConsumableList,
+  resolveEquipmentList,
+  resolveLastUsedConsumableDef,
+} from '../resolve';
 import { selectUsedConsumableSlots } from '../selectors/runSelectors';
 import { economyActions } from './economyActions';
 
@@ -47,8 +57,14 @@ export const consumableActions = {
     const list = consumables();
     if (index < 0 || index >= list.length) return null;
     const item = list[index]!;
+    if (item.def.id === 'second_helpings' && !isSecondHelpingsCloneTarget(resolveLastUsedConsumableDef())) {
+      return null;
+    }
     writeConsumables(list.filter((_, i) => i !== index));
-    const lastUsedConsumableId = isSecondHelpingsCloneTarget(item.def) ? item.def.id : state.lastUsedConsumableId;
+    if (item.def.id === 'second_helpings') {
+      item.lastUsedConsumableIdBeforeUse = state.lastUsedConsumableId;
+    }
+    const lastUsedConsumableId = nextLastUsedConsumableIdAfterUse(item.def, state.lastUsedConsumableId);
     runStore.setState({ lastUsedConsumableId });
     return item;
   },

@@ -3,13 +3,18 @@
 import type { Die } from '../../types';
 import type { EquipmentDef, EquipmentInstance } from '../../ItemsSystem';
 import type { ConsumableDef } from '../../ConsumablesSystem';
-import { useConsumableDirectly, type UseConsumableContext, type UseConsumableResult } from '../../ConsumablesSystem';
+import {
+  isSecondHelpingsCloneTarget,
+  useConsumableDirectly,
+  type UseConsumableContext,
+  type UseConsumableResult,
+} from '../../ConsumablesSystem';
 import type { PermitDef } from '../../PermitsSystem';
 import { applyPermitEffectToRun } from '../../PermitsSystem';
 import { getEquipmentListPrice } from '../../ItemsSystem';
 import { acquireEquipmentInstance, getEquipmentPurchasePrice } from '../../EquipmentModifiers';
 import { getRunState, runActions } from '../runStore';
-import { replaceEquipmentList, resolveEquipmentList } from '../resolve';
+import { replaceEquipmentList, resolveEquipmentList, resolveLastUsedConsumableDef } from '../resolve';
 import { economyActions } from './economyActions';
 import { diceActions } from './diceActions';
 import { consumableActions } from './consumableActions';
@@ -59,6 +64,9 @@ export const shopBuyActions = {
   },
 
   buyAndUseConsumable(def: ConsumableDef, cost: number, context: UseConsumableContext = {}): UseConsumableResult {
+    if (def.id === 'second_helpings' && !isSecondHelpingsCloneTarget(resolveLastUsedConsumableDef())) {
+      return { success: false, failReason: 'No previous consumable used!' };
+    }
     if (!economyActions.trySpend(cost)) {
       return { success: false, failReason: "Can't afford!" };
     }

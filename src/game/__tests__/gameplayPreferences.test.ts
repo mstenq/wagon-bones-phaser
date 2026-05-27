@@ -62,7 +62,7 @@ describe('GameplayPreferences', () => {
   });
 
   test('audio and gameplay preferences coexist in storage', () => {
-    setGameplayPreferences({ autoRollFirstHand: true });
+    setGameplayPreferences({ autoRollFirstHand: true, stationaryStickers: false });
     initAudioPreferences();
     setAudioPreferences({
       musicEnabled: false,

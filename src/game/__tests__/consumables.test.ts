@@ -199,8 +199,8 @@ describe('PlayerState consumable management', () => {
     player.addConsumable(secondHelpingsDef);
     const secondHelpings = player.useConsumable(0)!;
     expect(secondHelpings.def.id).toBe('second_helpings');
-    // lastUsedConsumable should NOT have been overwritten to second_helpings
-    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+    // second_helpings becomes most recent used card
+    expect(player.lastUsedConsumable!.id).toBe('second_helpings');
 
     const result = executeConsumableEffect(secondHelpings);
     expect(result.success).toBe(true);
@@ -214,9 +214,9 @@ describe('PlayerState consumable management', () => {
     player.maxConsumableSlots = 4;
     const secondHelpingsDef = getSupplyDefById('second_helpings')!;
     player.addConsumable(secondHelpingsDef);
-    const secondHelpings = player.useConsumable(0)!;
-    const result = executeConsumableEffect(secondHelpings);
-    expect(result.success).toBe(false);
+    const secondHelpings = player.useConsumable(0);
+    expect(secondHelpings).toBeNull();
+    expect(player.consumables).toHaveLength(1);
   });
 
   test('useConsumableDirectly sets lastUsedConsumable for normal cards', () => {
@@ -237,13 +237,12 @@ describe('PlayerState consumable management', () => {
     useConsumableDirectly(coffeeDef);
     expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
 
-    // Use second_helpings — should clone coffee, not overwrite lastUsedConsumable
+    // Use second_helpings — should clone coffee, then become most recent used card
     const result = useConsumableDirectly(secondHelpingsDef);
     expect(result.success).toBe(true);
     expect(result.consumablesCreated).toBe(1);
     expect(player.consumables[0].def.id).toBe('coffee_tin');
-    // lastUsedConsumable should still be coffee_tin
-    expect(player.lastUsedConsumable!.id).toBe('coffee_tin');
+    expect(player.lastUsedConsumable!.id).toBe('second_helpings');
   });
 
   test('useConsumableDirectly second_helpings fails without prior use', () => {
@@ -326,9 +325,37 @@ describe('PlayerState consumable management', () => {
     expect(player.lastUsedConsumable).toBeNull();
 
     player.addConsumable(secondHelpingsDef);
-    const secondHelpings = player.useConsumable(0)!;
-    const result = executeConsumableEffect(secondHelpings);
-    expect(result.success).toBe(false);
+    const secondHelpings = player.useConsumable(0);
+    expect(secondHelpings).toBeNull();
+    expect(player.consumables).toHaveLength(1);
+  });
+
+  test('cannot use second_helpings from pouch without valid target', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+    player.addConsumable(secondHelpingsDef);
+
+    const consumed = player.useConsumable(0);
+    expect(consumed).toBeNull();
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0].def.id).toBe('second_helpings');
+    expect(player.lastUsedConsumable).toBeNull();
+  });
+
+  test('second_helpings cannot be used twice in a row', () => {
+    const player = resetPlayerState();
+    player.maxConsumableSlots = 4;
+    const coffeeDef = getSupplyDefById('coffee_tin')!;
+    const secondHelpingsDef = getSupplyDefById('second_helpings')!;
+
+    useConsumableDirectly(coffeeDef);
+    const first = useConsumableDirectly(secondHelpingsDef);
+    expect(first.success).toBe(true);
+    expect(player.lastUsedConsumable!.id).toBe('second_helpings');
+
+    const second = useConsumableDirectly(secondHelpingsDef);
+    expect(second.success).toBe(false);
   });
 
   test('trail guides update lastUsedConsumable for second_helpings', () => {
@@ -968,6 +995,17 @@ describe('shop consumable use gating', () => {
 
     // Keep this test isolated from subsequent suites.
     resetPlayerState();
+  });
+
+  test('shop buy-and-use does not spend if second_helpings has no valid target', () => {
+    const { player } = setupGame({ money: 20 });
+    const def = getSupplyDefById('second_helpings')!;
+    const before = player.economy.balance;
+
+    const result = shopBuyActions.buyAndUseConsumable(def, 3);
+    expect(result.success).toBe(false);
+    expect(player.economy.balance).toBe(before);
+    expect(player.consumables).toHaveLength(0);
   });
 });
 

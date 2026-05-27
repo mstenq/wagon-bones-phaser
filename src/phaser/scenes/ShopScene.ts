@@ -550,7 +550,20 @@ export class ShopScene extends Scene {
           },
         });
 
-        if (canBuyAndUseConsumableInShop(shopItem.def)) {
+        const canBuyAndUse = canBuyAndUseConsumableInShop(shopItem.def);
+        if (shopItem.def.id === 'second_helpings') {
+          tabs.push({
+            label: 'BUY\n& USE',
+            color: canBuyAndUse ? 0x338833 : 0x555555,
+            textColor: canBuyAndUse ? '#ffffff' : '#bbbbbb',
+            position: 'right',
+            disabled: !canBuyAndUse,
+            callback: () => {
+              this.dismissActiveTab();
+              this.onBuyAndUseConsumable(card, shopItem.def);
+            },
+          });
+        } else if (canBuyAndUse) {
           tabs.push({
             label: 'BUY\n& USE',
             color: 0x338833,

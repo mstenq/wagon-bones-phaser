@@ -1114,12 +1114,6 @@ export class BoosterPackScene extends Scene {
     return !!item.diceSelection;
   }
 
-  private getMinDicePicks(): number {
-    const config = this.activeTabCard?.item.diceSelection;
-    if (!config) return 0;
-    return getDiceSelectionMinPicks(config);
-  }
-
   private getMaxDicePicks(): number {
     const config = this.activeTabCard?.item.diceSelection;
     if (!config) return 0;

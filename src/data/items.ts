@@ -1292,9 +1292,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'END_ROUND_MONEY_PER_REROLL',
     effectParams: { value: 1 },
-    display: (round, player) => {
-      const phase = round?.phase;
-      console.log(phase);
+    display: (round, _player) => {
       const rerolls = round?.rerollsRemaining ?? 0;
       return {
         hint: round

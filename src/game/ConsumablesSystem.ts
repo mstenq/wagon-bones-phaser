@@ -50,6 +50,8 @@ export interface ConsumableDef {
 export interface ConsumableInstance {
   def: ConsumableDef;
   sellValue: number;
+  /** Snapshot of history before using this card (used by second_helpings targeting). */
+  lastUsedConsumableIdBeforeUse?: string | null;
 }
 
 // ─── Generation Helpers ───
@@ -220,6 +222,12 @@ export function getConsumableDefById(id: string, aura?: ItemAura | null): Consum
 export function isSecondHelpingsCloneTarget(def: ConsumableDef | null): boolean {
   if (!def || def.id === 'second_helpings') return false;
   return def.category === 'supply' || def.category === 'trail_guide';
+}
+
+/** Determine how last-used history advances after a consumable is used. */
+export function nextLastUsedConsumableIdAfterUse(usedDef: ConsumableDef, previousId: string | null): string | null {
+  if (usedDef.category === 'frontier') return previousId;
+  return usedDef.id;
 }
 
 /** Shop context has no natural dice board; block dice-edit cards there. */
@@ -474,7 +482,12 @@ export function executeConsumableEffect(
       return { success: true, consumablesCreated: created };
     }
     case 'second_helpings': {
-      const lastUsed = resolveLastUsedConsumableDef();
+      const lastUsed =
+        consumed.lastUsedConsumableIdBeforeUse !== undefined
+          ? consumed.lastUsedConsumableIdBeforeUse
+            ? getConsumableDefById(consumed.lastUsedConsumableIdBeforeUse)
+            : null
+          : resolveLastUsedConsumableDef();
       if (!isSecondHelpingsCloneTarget(lastUsed)) {
         return { success: false, failReason: 'No previous consumable used!' };
       }
@@ -710,9 +723,15 @@ export function executeConsumableEffect(
  */
 export function useConsumableDirectly(def: ConsumableDef, context: UseConsumableContext = {}): UseConsumableResult {
   const consumed = createConsumableInstance(def);
-  if (isSecondHelpingsCloneTarget(def)) {
-    runActions.patch({ lastUsedConsumableId: def.id });
+  const previousLastUsedId = getRunState().lastUsedConsumableId;
+  if (def.id === 'second_helpings') {
+    const lastUsedDef = resolveLastUsedConsumableDef();
+    if (!isSecondHelpingsCloneTarget(lastUsedDef)) {
+      return { success: false, failReason: 'No previous consumable used!' };
+    }
+    consumed.lastUsedConsumableIdBeforeUse = previousLastUsedId;
   }
+  runActions.patch({ lastUsedConsumableId: nextLastUsedConsumableIdAfterUse(def, previousLastUsedId) });
   return executeConsumableEffect(consumed, context);
 }
 

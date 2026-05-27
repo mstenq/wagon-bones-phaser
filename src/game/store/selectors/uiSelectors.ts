@@ -91,8 +91,7 @@ export function selectEquipmentBarSnapshot(state: RunState = getRunState()): str
   const boss = state.bossRoundState;
   const equipKey = state.equipment
     .map(
-      (e, i) =>
-        `${i}:${e.defId}:${e.sellValue}:${e.auraId ?? ''}:${JSON.stringify(e.state)}:${e.modifiers.join(',')}`,
+      (e, i) => `${i}:${e.defId}:${e.sellValue}:${e.auraId ?? ''}:${JSON.stringify(e.state)}:${e.modifiers.join(',')}`,
     )
     .join('|');
   const bossKey = `${boss.equipmentDisplayOrder?.join(',') ?? ''}:${boss.equipmentHidden}:${boss.landSlideRevealed}:${boss.disabledEquipmentIndices.join(',')}`;
