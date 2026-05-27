@@ -181,6 +181,17 @@ export class ItemCard extends GameObjects.Container {
     this.renderEquipmentBadges();
   }
 
+  /** Re-apply aura VFX when equipment.def is replaced in-place (Bless, Blood Moon, dev tools). */
+  syncAuraFromEquipment(equipment: EquipmentInstance): void {
+    this._equipment = equipment;
+    const prevAuraId = this._def.aura?.id ?? '';
+    this._def = equipment.def;
+    const nextAuraId = this._def.aura?.id ?? '';
+    if (prevAuraId === nextAuraId && (nextAuraId === '' || this.auraEmitters.length > 0)) return;
+    this.clearAuraVFX();
+    if (this._def.aura) this.setupAuraVFX();
+  }
+
   /** Pulse the perishable badge red when one round remains. */
   flashPerishableWarning(): void {
     if (!this.perishableBadgeContainer || !this.scene) return;
@@ -368,6 +379,18 @@ export class ItemCard extends GameObjects.Container {
     // Card body — neutral dark background
     g.fillStyle(COLORS.BG_CARD, 1);
     g.fillRoundedRect(-hw, -hh, w, h, CARD_RADIUS);
+  }
+
+  private clearAuraVFX(): void {
+    for (const tw of this.auraTweens) tw.destroy();
+    this.auraTweens = [];
+    for (const em of this.auraEmitters) em.destroy();
+    this.auraEmitters = [];
+    if (this.auraGlowCleanup) {
+      this.auraGlowCleanup();
+      this.auraGlowCleanup = null;
+    }
+    this.setAlpha(1);
   }
 
   private setupAuraVFX(): void {
@@ -1211,14 +1234,7 @@ export class ItemCard extends GameObjects.Container {
     this.hideTooltip();
     this.hideActionTabs();
     this.clearEquipmentBadges();
-    for (const tw of this.auraTweens) tw.destroy();
-    this.auraTweens = [];
-    for (const em of this.auraEmitters) em.destroy();
-    this.auraEmitters = [];
-    if (this.auraGlowCleanup) {
-      this.auraGlowCleanup();
-      this.auraGlowCleanup = null;
-    }
+    this.clearAuraVFX();
     super.destroy(fromScene);
   }
 }

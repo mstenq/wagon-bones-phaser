@@ -11,6 +11,7 @@ import { shopActions } from '../store/actions/shopActions';
 import { shopBuyActions, type ShopBuyFailReason, type ShopBuyResult } from '../store/actions/shopBuyActions';
 import { shopSceneActions } from '../store/actions/shopSceneActions';
 import type { UseConsumableContext, UseConsumableResult } from '../ConsumablesSystem';
+import { enqueueConsumablePlayback } from '../store/uiEffectHelpers';
 import type { RunState, ShopSceneState } from '../store/types';
 import { getRunState } from '../store/runStore';
 
@@ -56,7 +57,9 @@ export const gameShop = {
   },
 
   buyAndUseConsumable(def: ConsumableDef, cost: number, context: UseConsumableContext = {}): UseConsumableResult {
-    return shopBuyActions.buyAndUseConsumable(def, cost, context);
+    const result = shopBuyActions.buyAndUseConsumable(def, cost, context);
+    enqueueConsumablePlayback(result);
+    return result;
   },
 
   buyPermit(permit: PermitDef, cost: number, isPrimary: boolean): ShopBuyResult {

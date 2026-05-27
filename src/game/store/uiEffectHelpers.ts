@@ -3,7 +3,7 @@
 import type { UseConsumableResult } from '../ConsumablesSystem';
 import { runActions } from './runStore';
 
-/** Queue consumable destruction / pop-in playback for Phaser scenes to consume once. */
+/** Queue consumable UI playback (destruction anim, equipment pop-in). */
 export function enqueueConsumablePlayback(
   result: Pick<UseConsumableResult, 'consumableAnimEvents' | 'equipmentCreatedCount'>,
 ): void {

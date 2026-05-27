@@ -13,6 +13,7 @@ import { PACK_ONLY_FRONTIER_IDS } from './Constants';
 import { checkLoadedChance } from './equipmentUtils';
 import { resolveEffectParam } from './effects/helpers';
 import { rngFloat, rngPick, rngShuffle } from './RunRng';
+import { enqueueToastFeedback } from './playback/feedback';
 
 const HAND_TABLE: HandDefinition[] = hands;
 
@@ -469,20 +470,29 @@ export function executeConsumableEffect(
       const equipment = resolveEquipmentList();
       const unblessed = equipment.filter((e) => !e.def.aura);
       if (unblessed.length === 0) return { success: false, failReason: 'All equipment already has auras!' };
-      if (!checkLoadedChance([1, 4], equipment)) return { success: true };
+      if (!checkLoadedChance([1, 4], equipment)) {
+        enqueueToastFeedback('Unlucky! No blessing', 'failure');
+        return { success: true };
+      }
       const blessableAuras = (['fire', 'icy', 'holy'] as const).map((id) => getItemAuraById(id)!);
       const totalWeight = blessableAuras.reduce((sum, a) => sum + a.chance, 0);
       const target = rngPick('consumables', unblessed);
       const roll = rngFloat('consumables') * totalWeight;
+      let appliedAuraName: string | undefined;
       let cumulative = 0;
       for (const aura of blessableAuras) {
         cumulative += aura.chance;
         if (roll < cumulative) {
           target.def = { ...target.def, aura: { ...aura } };
+          appliedAuraName = aura.name;
           break;
         }
       }
       writeEquipment(equipment);
+      enqueueToastFeedback(
+        appliedAuraName ? `Success! ${appliedAuraName} blessing` : 'Success! Equipment blessed',
+        'success',
+      );
       return { success: true };
     }
     case 'priests_blessing': {
@@ -584,14 +594,21 @@ export function executeConsumableEffect(
 
       if (roll < 0.5) {
         economyActions.earn(30);
-      } else {
-        // When at/under $0 (including debt), "lose half" would effectively
-        // move the balance toward zero. On the downside roll, apply no change.
-        if (balance > 0) {
-          const loss = Math.floor(balance / 2);
-          if (loss > 0) economyActions.spend(loss);
+        enqueueToastFeedback('Success! Gained $30', 'success');
+        return { success: true };
+      }
+
+      // When at/under $0 (including debt), "lose half" would effectively
+      // move the balance toward zero. On the downside roll, apply no change.
+      if (balance > 0) {
+        const loss = Math.floor(balance / 2);
+        if (loss > 0) {
+          economyActions.spend(loss);
+          enqueueToastFeedback(`Too bad. Lost $${loss}`, 'failure');
+          return { success: true };
         }
       }
+      enqueueToastFeedback('Too bad. No gold to lose', 'failure');
       return { success: true };
     }
     case 'trading_post': {

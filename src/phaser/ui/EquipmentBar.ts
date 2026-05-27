@@ -81,6 +81,7 @@ export class EquipmentBar extends CardBar {
       const equip = resolveEquipmentList()[equipIndex];
       if (!card || (card.getData('equipIndex') as number) !== equipIndex) return false;
       if (!equip || card.equipment?.def.id !== equip.def.id) return false;
+      if ((card.def.aura?.id ?? '') !== (equip.def.aura?.id ?? '')) return false;
     }
     return true;
   }
@@ -97,7 +98,10 @@ export class EquipmentBar extends CardBar {
       card.setSuppressTooltip(hintsHidden);
       card.setFaceDown(faceHidden);
       card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
-      if (equip) card.updateModifierBadges(equip);
+      if (equip) {
+        card.updateModifierBadges(equip);
+        card.syncAuraFromEquipment(equip);
+      }
       card.setTooltipContext(this.hintRound, player);
       if (!hintsHidden) card.updateHints(this.hintRound, player);
     }

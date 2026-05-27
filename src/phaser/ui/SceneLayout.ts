@@ -42,6 +42,14 @@ export interface LayoutResult {
   contentBottom: number;
 }
 
+/** Horizontal center of the main content area (excludes left sidebar). */
+export function getContentLayoutCenter(scene: Scene): { cx: number; cy: number } {
+  const { width, height } = scene.scale;
+  const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
+  const cx = sidebarW + (width - sidebarW) / 2;
+  return { cx, cy: height / 2 };
+}
+
 export interface LayoutOptions {
   /** Background texture key (e.g. 'bg_1', 'bg_shop'). If null, draws a solid color fill. */
   bgKey?: string | null;

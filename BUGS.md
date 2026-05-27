@@ -5,8 +5,6 @@
 -Golden Spike shouldn't work on disabled dice (the_undertaker and other bosses)
 -follow_traveler trail event, you shouldn't be able to trade back the same item you got from the trade, thats weird.
 -binoculars permit - while it now guarantees my most played hand it also is allowing for duplicates. Dupes should only be allowed if you have counterfeit_goods.
-- buy and use - the new cards should all be able to be bought and used without having a free consumable slot open (like ingenuity, trade, treasure_map, doctor, etc). the ones that need this functionality are: omen_stone, shop_pass, fools_gold, trading_post.
-- fools_gold - give you no feedback. Need an animation of "Success! Gained $30" or "Too bad. Lost $x amount"
 
 ## New Feature Ideas
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.

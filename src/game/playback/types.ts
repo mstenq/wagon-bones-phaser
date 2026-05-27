@@ -1,6 +1,9 @@
 import type { ConsumableAnimEvent } from '../ConsumablesSystem';
 import type { HandUpgradeInfo, ScoreAnimEvent, ScoreResult } from '../types';
 
+/** Center-screen success / failure toast tone. */
+export type ToastTone = 'success' | 'failure';
+
 /** End-of-round leased/perishable feedback shown before destruction animations. */
 export interface ModifierFeedbackPayload {
   leasePaid: { index: number; equipmentName: string; cost: number }[];
@@ -33,7 +36,9 @@ export type PlaybackCommand =
   /** Trail tag earned toast / fly-in. */
   | { kind: 'tag-earned'; tagId: string }
   /** Leased upkeep paid, perishable expired, lease defaulted — before destruction anim. */
-  | { kind: 'modifier-feedback'; payload: ModifierFeedbackPayload };
+  | { kind: 'modifier-feedback'; payload: ModifierFeedbackPayload }
+  /** Center-screen toast (e.g. Fool's Gold, Bless). */
+  | { kind: 'toast'; message: string; tone: ToastTone };
 
 const PLAYBACK_COMMAND_KINDS = new Set<PlaybackCommand['kind']>([
   'dice-added',
@@ -48,6 +53,7 @@ const PLAYBACK_COMMAND_KINDS = new Set<PlaybackCommand['kind']>([
   'hand-upgrades',
   'tag-earned',
   'modifier-feedback',
+  'toast',
 ]);
 
 /** Type guard for deserialized or untyped queue entries (tests, debug). */

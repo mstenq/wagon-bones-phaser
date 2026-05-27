@@ -19,6 +19,7 @@ import {
 import { animateEquipmentPopIn } from '../animations/EquipmentPopInAnimation';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
+import { playCenterToast } from '../animations/ToastAnimation';
 import type { ConsumableBar } from '../ui/ConsumableBar';
 import type { DiceSprite } from '../ui/DiceSprite';
 import type { EquipmentBar } from '../ui/EquipmentBar';
@@ -75,6 +76,8 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
       return Promise.resolve();
     case 'modifier-feedback':
       return playModifierFeedbackPlayback(ctx, command.payload);
+    case 'toast':
+      return playCenterToast(ctx.scene, command.message, command.tone);
     default:
       return Promise.resolve();
   }

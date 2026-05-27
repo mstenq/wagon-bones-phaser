@@ -1,5 +1,6 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { runActions, runStore } from '../../store/runStore';
+import { enqueueToastFeedback } from '../../playback/feedback';
 import { enqueueConsumablePlayback } from '../../store/uiEffectHelpers';
 
 describe('uiEffectHelpers', () => {
@@ -24,5 +25,12 @@ describe('uiEffectHelpers', () => {
   test('enqueueConsumablePlayback skips empty playback', () => {
     enqueueConsumablePlayback({});
     expect(runStore.getState().playbackQueue).toEqual([]);
+  });
+
+  test('enqueueToastFeedback queues toast playback', () => {
+    enqueueToastFeedback('Success! Gained $30', 'success');
+    expect(runStore.getState().playbackQueue).toEqual([
+      { kind: 'toast', message: 'Success! Gained $30', tone: 'success' },
+    ]);
   });
 });

@@ -979,6 +979,11 @@ describe('new supply cards', () => {
     const def = getSupplyDefById('fools_gold')!;
     executeConsumableEffect(createConsumableInstance(def));
     expect(player.economy.balance).toBe(130);
+    expect(getRunState().playbackQueue).toContainEqual({
+      kind: 'toast',
+      message: 'Success! Gained $30',
+      tone: 'success',
+    });
   });
 
   test('fools_gold loses half money on unlucky roll', () => {
@@ -990,6 +995,11 @@ describe('new supply cards', () => {
     const def = getSupplyDefById('fools_gold')!;
     executeConsumableEffect(createConsumableInstance(def));
     expect(player.economy.balance).toBe(50);
+    expect(getRunState().playbackQueue).toContainEqual({
+      kind: 'toast',
+      message: 'Too bad. Lost $50',
+      tone: 'failure',
+    });
   });
 
   test('fools_gold does not change balance when <= $0', () => {
