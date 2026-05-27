@@ -2927,7 +2927,7 @@ const items: ItemDef[] = [
       const equip = findOwnedEquip(player, 'old_calendar');
       return {
         hint: [[miles(`+${equip?.state.miles ?? 0}`)], [mult(`+${equip?.state.mult ?? 0}`)]],
-        tooltip: [[text('Gains miles and mult equal to days + rerolls remaining after each round')]],
+        tooltip: [[text('Gains miles equal to travel days left and mult equal to rerolls left after each round')]],
       };
     },
   },

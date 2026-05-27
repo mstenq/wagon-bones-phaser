@@ -1424,4 +1424,14 @@ describe('New utility equipment lifecycle effects', () => {
     player.economy.earn(10);
     expect(player.equipment[0]!.sellValue).toBe(before + 1);
   });
+
+  test('old calendar gains miles from days left and mult from rerolls left', () => {
+    const calendar = item('old_calendar');
+    const { game, player } = setupGame({ equipment: [calendar] });
+    game.startRound();
+    processEndOfRound(player.equipment);
+    const inst = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    expect(inst.state.miles).toBe(4);
+    expect(inst.state.mult).toBe(4);
+  });
 });

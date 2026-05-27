@@ -73,9 +73,10 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
     case 'OLD_CALENDAR': {
       const round = getRoundState();
       if (!round) break;
-      const gain = round.day + round.rerollsRemaining;
-      equip.state.mult = (equip.state.mult ?? 0) + gain;
-      equip.state.miles = (equip.state.miles ?? 0) + gain;
+      const daysLeft = Math.max(0, round.config.maxDays - round.day + 1);
+      const rerollsLeft = Math.max(0, round.rerollsRemaining);
+      equip.state.mult = (equip.state.mult ?? 0) + rerollsLeft;
+      equip.state.miles = (equip.state.miles ?? 0) + daysLeft;
       break;
     }
     case 'SANDWICH': {
