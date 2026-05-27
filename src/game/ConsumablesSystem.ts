@@ -318,6 +318,21 @@ export type ConsumableAnimEvent =
       equipmentToAdd?: EquipmentInstance[];
     };
 
+/** Increase sell value on all equipment and held consumables. */
+export function bumpAllSellValues(delta: number): void {
+  const equipment = resolveEquipmentList();
+  for (const eq of equipment) {
+    eq.sellValue += delta;
+  }
+  writeEquipment(equipment);
+  const run = getRunState();
+  if (run.consumables.length > 0) {
+    runActions.patch({
+      consumables: run.consumables.map((c) => ({ ...c, sellValue: c.sellValue + delta })),
+    });
+  }
+}
+
 /** Apply deferred equipment changes from consumable anim events (for tests / non-Phaser callers). */
 export function finalizeConsumableEquipmentEvents(events: ConsumableAnimEvent[] | undefined): void {
   if (!events) return;
@@ -534,6 +549,84 @@ export function executeConsumableEffect(
         success: true,
         consumableAnimEvents: [{ type: 'destroy_dice', diceIds: [...destroyIds] }],
       };
+    }
+    case 'omen_stone': {
+      const state = getRunState();
+      const existing = state.statusTraitTokens.find((t) => t.id === 'omen_stone');
+      if (existing) {
+        runActions.patch({
+          statusTraitTokens: state.statusTraitTokens.map((t) =>
+            t.id === 'omen_stone' ? { ...t, copies: t.copies + 1 } : t,
+          ),
+        });
+      } else {
+        runActions.patch({ statusTraitTokens: [...state.statusTraitTokens, { id: 'omen_stone', copies: 1 }] });
+      }
+      return { success: true };
+    }
+    case 'shop_pass': {
+      const state = getRunState();
+      const existing = state.statusTraitTokens.find((t) => t.id === 'shop_pass');
+      if (existing) {
+        runActions.patch({
+          statusTraitTokens: state.statusTraitTokens.map((t) =>
+            t.id === 'shop_pass' ? { ...t, copies: t.copies + 1 } : t,
+          ),
+        });
+      } else {
+        runActions.patch({ statusTraitTokens: [...state.statusTraitTokens, { id: 'shop_pass', copies: 1 }] });
+      }
+      return { success: true };
+    }
+    case 'fools_gold': {
+      const balance = getRunState().balance;
+      const roll = rngFloat('consumables');
+
+      if (roll < 0.5) {
+        economyActions.earn(30);
+      } else {
+        // When at/under $0 (including debt), "lose half" would effectively
+        // move the balance toward zero. On the downside roll, apply no change.
+        if (balance > 0) {
+          const loss = Math.floor(balance / 2);
+          if (loss > 0) economyActions.spend(loss);
+        }
+      }
+      return { success: true };
+    }
+    case 'trading_post': {
+      bumpAllSellValues(1);
+      return { success: true };
+    }
+    case 'all_in': {
+      const balance = getRunState().balance;
+      economyActions.earn(balance);
+      const runAfter = getRunState();
+      const alreadyHad = runAfter.statusTraitTokens.some((t) => t.id === 'all_in');
+      const nextCopies = (runAfter.statusTraitTokens.find((t) => t.id === 'all_in')?.copies ?? 0) + 1;
+      runActions.patch({
+        statusTraitTokens: runAfter.statusTraitTokens
+          .filter((t) => t.id !== 'all_in')
+          .concat({ id: 'all_in', copies: nextCopies }),
+        ...(alreadyHad ? {} : { trailEventModifiers: { ...runAfter.trailEventModifiers, loseAllRerolls: true } }),
+      });
+      return { success: true };
+    }
+    case 'echo_of_the_damned': {
+      const state = getRunState();
+      const existing = state.statusTraitTokens.find((t) => t.id === 'echo_of_the_damned');
+      if (existing) {
+        runActions.patch({
+          statusTraitTokens: state.statusTraitTokens.map((t) =>
+            t.id === 'echo_of_the_damned' ? { ...t, copies: t.copies + 1 } : t,
+          ),
+        });
+      } else {
+        runActions.patch({
+          statusTraitTokens: [...state.statusTraitTokens, { id: 'echo_of_the_damned', copies: 1 }],
+        });
+      }
+      return { success: true };
     }
     case 'skin_walker': {
       const equipment = resolveEquipmentList();

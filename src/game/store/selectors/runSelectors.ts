@@ -109,13 +109,59 @@ export function selectTrailGuidesFree(state: RunState): boolean {
   return resolveEquipmentList(state).some((e) => e.def.effectType === 'EXPLORER_GUILD');
 }
 
+type ShopFreeRerollSource = 'tag' | 'shop_pass' | 'coupon';
+type ShopFreeRerollSlot = ShopFreeRerollSource | null;
+
+/** Build the free reroll queue for the current shop visit (tag → shop pass → coupon books). */
+export function buildShopFreeRerollPlan(state: RunState): ShopFreeRerollSlot[] {
+  const plan: ShopFreeRerollSlot[] = [];
+  if (state.tagFreeReroll) plan.push('tag');
+  const shopPassCopies = state.statusTraitTokens.find((t) => t.id === 'shop_pass')?.copies ?? 0;
+  for (let i = 0; i < shopPassCopies; i++) plan.push('shop_pass');
+  const coupons = getConfigModifiers(resolveEquipmentList(state)).freeShopRerolls;
+  for (let i = 0; i < coupons; i++) plan.push('coupon');
+  return plan;
+}
+
+function resolveShopFreeRerollPlan(state: RunState): ShopFreeRerollSlot[] {
+  // Past indices (< shopRerollCount) are persisted on `state.shopFreeRerollPlan`
+  // by `payShopReroll`. Any missing entries are treated as paid (null).
+  const pastSlots: ShopFreeRerollSlot[] = Array.from({ length: state.shopRerollCount }, (_, i) => {
+    return state.shopFreeRerollPlan[i] ?? null;
+  });
+
+  // Remaining future sources are derived from current run flags/tokens.
+  const tagRemaining: ShopFreeRerollSource[] = state.tagFreeReroll && !pastSlots.includes('tag') ? ['tag'] : [];
+
+  const shopPassCopies = state.statusTraitTokens.find((t) => t.id === 'shop_pass')?.copies ?? 0;
+  const shopPassRemaining = Array.from({ length: shopPassCopies }, () => 'shop_pass' as const);
+
+  // Coupons are equipment-driven and don't decrement in state, so infer "used" from
+  // what we've already persisted for earlier rerolls.
+  const totalCoupons = getConfigModifiers(resolveEquipmentList(state)).freeShopRerolls;
+  const usedCoupons = pastSlots.filter((s) => s === 'coupon').length;
+  const couponRemainingCount = Math.max(0, totalCoupons - usedCoupons);
+  const couponsRemaining = Array.from({ length: couponRemainingCount }, () => 'coupon' as const);
+
+  // Priority: tag → shop pass → coupon books.
+  return [...pastSlots, ...tagRemaining, ...shopPassRemaining, ...couponsRemaining];
+}
+
+/** Which free reroll source applies at the current shopRerollCount (paid rerolls return null). */
+export function selectShopRerollFreeSource(state: RunState): ShopFreeRerollSource | null {
+  const plan = resolveShopFreeRerollPlan(state);
+  if (state.shopRerollCount < plan.length) {
+    return plan[state.shopRerollCount] ?? null;
+  }
+  return null;
+}
+
 export function selectShopRerollCost(state: RunState): number {
-  if (state.tagFreeReroll && state.shopRerollCount === 0) return 0;
-  const equipment = resolveEquipmentList(state);
-  const freeRerolls = getConfigModifiers(equipment).freeShopRerolls;
-  if (state.shopRerollCount < freeRerolls) return 0;
+  if (selectShopRerollFreeSource(state) !== null) return 0;
+  const plan = resolveShopFreeRerollPlan(state);
   const discount = getPermitShopRerollDiscount(state.purchasedPermits);
-  const paidRerollIndex = state.shopRerollCount - freeRerolls;
+  const freeSoFar = plan.slice(0, state.shopRerollCount).filter((s) => s !== null).length;
+  const paidRerollIndex = state.shopRerollCount - freeSoFar;
   return Math.max(0, GAMEPLAY.SHOP_REROLL_COST + paidRerollIndex - discount);
 }
 

@@ -7,7 +7,7 @@ import { getRunState, runStore } from '../runStore';
 import { resolveEquipmentList } from '../resolve';
 import { selectJourneyComplete } from '../selectors/runSelectors';
 import { economyActions } from './economyActions';
-import { selectShopRerollCost } from '../selectors/runSelectors';
+import { selectShopRerollCost, selectShopRerollFreeSource, buildShopFreeRerollPlan } from '../selectors/runSelectors';
 import { canAfford } from '../economy';
 import { equipmentActions } from './equipmentActions';
 
@@ -67,19 +67,51 @@ export const progressionActions = {
     const state = getRunState();
     const cost = selectShopRerollCost(state);
     if (!canAfford(state, cost)) return false;
-    const usedTagFreeReroll = state.tagFreeReroll && state.shopRerollCount === 0;
+    const freeSource = selectShopRerollFreeSource(state);
     economyActions.trySpend(cost);
-    if (usedTagFreeReroll) {
-      runStore.setState((s) => ({ tagFreeReroll: false, shopRerollCount: s.shopRerollCount + 1 }));
-    } else {
-      runStore.setState((s) => ({ shopRerollCount: s.shopRerollCount + 1 }));
-    }
+    runStore.setState((s) => {
+      const rerollIndex = s.shopRerollCount;
+      let statusTraitTokens = s.statusTraitTokens;
+      const next: Partial<typeof s> = { shopRerollCount: s.shopRerollCount + 1 };
+
+      // Persist per-reroll free/paid history so cost growth doesn't depend on
+      // how we rebuild future plans when tokens are acquired mid-shop.
+      const nextPlan = [...s.shopFreeRerollPlan];
+      while (nextPlan.length <= rerollIndex) nextPlan.push(null);
+      nextPlan[rerollIndex] = freeSource;
+      next.shopFreeRerollPlan = nextPlan;
+
+      if (freeSource === 'tag') next.tagFreeReroll = false;
+
+      if (freeSource === 'shop_pass') {
+        const idx = statusTraitTokens.findIndex((t) => t.id === 'shop_pass');
+        if (idx >= 0) {
+          const token = statusTraitTokens[idx]!;
+          const nextCopies = token.copies - 1;
+          statusTraitTokens =
+            nextCopies > 0
+              ? statusTraitTokens.map((t, i) => (i === idx ? { ...t, copies: nextCopies } : t))
+              : statusTraitTokens.filter((t) => t.id !== 'shop_pass');
+        }
+        next.statusTraitTokens = statusTraitTokens;
+      }
+
+      return { ...s, ...next };
+    });
     equipmentActions.processOnShopReroll();
     return true;
   },
 
   resetShopRerolls(): void {
-    runStore.setState({ shopRerollCount: 0, tagFreeReroll: false, bonusShopPermitId: null });
+    runStore.setState((s) => {
+      const next = {
+        ...s,
+        shopRerollCount: 0,
+        tagFreeReroll: false,
+        bonusShopPermitId: null,
+      };
+      return { ...next, shopFreeRerollPlan: buildShopFreeRerollPlan(next) };
+    });
   },
 
   advanceRound(skipped: boolean = false): boolean {

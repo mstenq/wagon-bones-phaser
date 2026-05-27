@@ -4,6 +4,6 @@ lucky,Lucky,"1 in 5 chance for +20 Mult, 1 in 15 chance to win $20"
 wooden,Wooden,+30 base miles
 steel,Steel,x1.5 Mult when not part of scored hand
 gold,Gold,Earn $3 when dice is not scored at end of round
-loaded,Loaded,Double the odds of one chosen value being rolled
+loaded,Loaded,Has 1 in 3 odds of rolling selected value
 diamond,Diamond,"x2 Mult, 25% chance of cracking"
 stone,Stone,"No dice values, counts as 50 base miles and is always scored"

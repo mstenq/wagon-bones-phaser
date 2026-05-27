@@ -158,6 +158,14 @@ export interface RunState {
   storyVictoryPending: boolean;
   bossAssignmentIds: string[];
   nextDieId: number;
+  /** Generic persistent sidebar status tokens (consumed/cleared by lifecycle). */
+  statusTraitTokens: Array<{ id: string; copies: number }>;
+  /** Free reroll sources queued for this shop visit (tag → shop pass → coupons). */
+  /** Per-reroll free source history/queue.
+   * Index = reroll number within the current shop visit.
+   * `null` means that reroll index is treated as paid.
+   */
+  shopFreeRerollPlan: Array<'tag' | 'shop_pass' | 'coupon' | null>;
   /** Authoritative animation queue for UI (transient; not saved). */
   playbackQueue: PlaybackCommand[];
 }

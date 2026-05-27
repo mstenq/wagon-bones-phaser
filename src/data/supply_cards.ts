@@ -198,6 +198,26 @@ const supplyCards: SupplyCardDef[] = [
       effectParams: {},
     },
   },
+  {
+    id: 'omen_stone',
+    name: 'Omen Stone',
+    description: 'Prevent the next negative trail event effects',
+  },
+  {
+    id: 'shop_pass',
+    name: 'Shop Pass',
+    description: 'Reroll shop for free on your next shop visit',
+  },
+  {
+    id: 'fools_gold',
+    name: "Fool's Gold",
+    description: '50% chance to gain $30. Otherwise lose half your money',
+  },
+  {
+    id: 'trading_post',
+    name: 'Trading Post',
+    description: 'Increase sell value of all equipment and consumables by $1',
+  },
 ];
 
 export default supplyCards;

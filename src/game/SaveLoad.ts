@@ -315,6 +315,8 @@ function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
     bossAssignmentIds: [...data.bossAssignmentIds],
     nextDieId: data.nextDieId,
     roundBackgroundIndex: null,
+    statusTraitTokens: [],
+    shopFreeRerollPlan: [],
   };
 }
 

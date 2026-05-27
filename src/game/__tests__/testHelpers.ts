@@ -351,6 +351,8 @@ export interface ScoreTestOptions {
   currentDay?: number;
   /** Max days for the round (default: game default) */
   maxDays?: number;
+  /** Echo of the Damned retrigger stacks before scoring */
+  echoOfTheDamnedStacks?: number;
 }
 
 /**
@@ -368,6 +370,16 @@ export function calculateTestScore(options: ScoreTestOptions) {
     handLevels: options.handLevels,
     bossId: options.bossId,
   });
+
+  if (options.echoOfTheDamnedStacks !== undefined) {
+    const nextCopies = options.echoOfTheDamnedStacks;
+    runActions.patch({
+      statusTraitTokens: [
+        ...run.statusTraitTokens.filter((t) => t.id !== 'echo_of_the_damned'),
+        { id: 'echo_of_the_damned', copies: nextCopies },
+      ],
+    });
+  }
 
   const rerolls = options.rerollsRemaining ?? 6;
 

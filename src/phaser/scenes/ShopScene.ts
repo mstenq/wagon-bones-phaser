@@ -75,7 +75,16 @@ function canBuyAndUse(def: ConsumableDef): boolean {
     return isSecondHelpingsCloneTarget(resolveLastUsedConsumableDef());
   }
   // Special-case supply/frontier IDs handled by switch in executeConsumableEffect
-  const SPECIAL_IDS = ['doctor', 'compass', 'supply_cache', 'bless'];
+  const SPECIAL_IDS = [
+    'doctor',
+    'compass',
+    'supply_cache',
+    'bless',
+    'omen_stone',
+    'shop_pass',
+    'fools_gold',
+    'trading_post',
+  ];
   if (SPECIAL_IDS.includes(def.id)) return true;
   return false;
 }

@@ -2,7 +2,7 @@
 
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { checkLoadedChance } from '../../equipmentUtils';
-import { getRunState } from '../../store/runStore';
+import { getRunState, runActions } from '../../store/runStore';
 import { resolveEffectParam } from '../helpers';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
@@ -47,6 +47,12 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       const bonus = (p.value as number) ?? 1;
       for (const other of ctx.equipment) {
         other.sellValue += bonus;
+      }
+      const run = getRunState();
+      if (run.consumables.length > 0) {
+        runActions.patch({
+          consumables: run.consumables.map((c) => ({ ...c, sellValue: c.sellValue + bonus })),
+        });
       }
       break;
     }

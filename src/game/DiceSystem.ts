@@ -496,6 +496,8 @@ export function scoreHand(
         }
       }
       triggers += globalRetriggerCount;
+      const echoCopies = getRunState().statusTraitTokens.find((t) => t.id === 'echo_of_the_damned')?.copies ?? 0;
+      triggers += echoCopies;
     }
     const retriggerSources = bossDisabled
       ? []

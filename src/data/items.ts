@@ -183,8 +183,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.THREE_OF_A_KIND)
-          ? [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND, "sm")], [active('Active!', "sm")]]
-          : [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND, "sm")], [inactive('Inactive', "sm")]],
+          ? [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND, 'sm')], [active('Active!', 'sm')]]
+          : [[mult('+12'), condition(HAND_NAMES.THREE_OF_A_KIND, 'sm')], [inactive('Inactive', 'sm')]],
       tooltip: [[text('If played hand contains'), condition(HAND_NAMES.THREE_OF_A_KIND), mult('+12'), text('mult')]],
     }),
   },
@@ -199,8 +199,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.TWO_PAIR)
-          ? [[mult('+10'), condition(HAND_NAMES.TWO_PAIR, "sm")], [active('Active!', "sm")]]
-          : [[mult('+10'), condition(HAND_NAMES.TWO_PAIR, "sm")], [inactive('Inactive', "sm")]],
+          ? [[mult('+10'), condition(HAND_NAMES.TWO_PAIR, 'sm')], [active('Active!', 'sm')]]
+          : [[mult('+10'), condition(HAND_NAMES.TWO_PAIR, 'sm')], [inactive('Inactive', 'sm')]],
       tooltip: [[text('If played hand contains'), condition(HAND_NAMES.TWO_PAIR), mult('+10'), text('mult')]],
     }),
   },
@@ -215,8 +215,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.PAIR)
-          ? [[miles('+50'), condition(HAND_NAMES.PAIR, "sm")], [active('Active!', "sm")]]
-          : [[miles('+50'), condition(HAND_NAMES.PAIR, "sm")], [inactive('Inactive', "sm")]],
+          ? [[miles('+50'), condition(HAND_NAMES.PAIR, 'sm')], [active('Active!', 'sm')]]
+          : [[miles('+50'), condition(HAND_NAMES.PAIR, 'sm')], [inactive('Inactive', 'sm')]],
       tooltip: [[text('If played hand contains'), condition(HAND_NAMES.PAIR), miles('+50'), text('miles')]],
     }),
   },
@@ -383,7 +383,7 @@ const items: ItemDef[] = [
         player.professionId,
       );
       return {
-        hint: [[money(`+$${amount}`)], [text('at end of round', "sm")]],
+        hint: [[money(`+$${amount}`)], [text('at end of round', 'sm')]],
         tooltip: [[text('Earn'), money('$4'), text('at end of round. Jesse Rawlins (Outlaw) earns'), money('$12')]],
       };
     },
@@ -410,7 +410,10 @@ const items: ItemDef[] = [
     effectParams: {},
     display: (round, _player) => {
       const held = round?.rolledDice?.filter((d) => !round.selectedForScore.some((s) => s.id === d.id)) ?? [];
-      const hint = held.length > 0 ? [[mult(`+${Math.min(...held.map((d) => d.value)) * 2}`)]] : [[condition("Add double the rank", "xs")], [text("of lowest held die", "xs")]];
+      const hint =
+        held.length > 0
+          ? [[mult(`+${Math.min(...held.map((d) => d.value)) * 2}`)]]
+          : [[condition('Add double the rank', 'xs')], [text('of lowest held die', 'xs')]];
       return {
         hint,
         tooltip: [[text('Adds double the rank of'), condition('lowest held-in-hand die'), text('to'), mult('mult')]],
@@ -686,7 +689,10 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'war_drums');
       const days = equip?.state.daysRemaining ?? 0;
-      const hint = days > 0 ? [[retrigger('Retrigger', "xs"), condition('scored dice', "xs")], [active(`${days} days left`, "sm")]] : [[inactive('Expired', "sm")]];
+      const hint =
+        days > 0
+          ? [[retrigger('Retrigger', 'xs'), condition('scored dice', 'xs')], [active(`${days} days left`, 'sm')]]
+          : [[inactive('Expired', 'sm')]];
       return {
         hint,
         tooltip: [[text('Retrigger all dice played for the next '), condition('10 days'), text(' of travel')]],
@@ -1030,8 +1036,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.FOUR_STRAIGHT)
-          ? [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT, "sm")], [active('Active!', "sm")]]
-          : [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT, "sm")], [inactive('Inactive', "sm")]],
+          ? [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT, 'sm')], [active('Active!', 'sm')]]
+          : [[miles('+80'), condition(HAND_NAMES.FOUR_STRAIGHT, 'sm')], [inactive('Inactive', 'sm')]],
       tooltip: [
         [
           text('If played hand contains a '),
@@ -1054,8 +1060,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.FIVE_STRAIGHT)
-          ? [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT, "sm")], [active('Active!', "sm")]]
-          : [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT, "sm")], [inactive('Inactive', "sm")]],
+          ? [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT, 'sm')], [active('Active!', 'sm')]]
+          : [[miles('+100'), condition(HAND_NAMES.FIVE_STRAIGHT, 'sm')], [inactive('Inactive', 'sm')]],
       tooltip: [
         [
           text('If played hand contains a '),
@@ -1076,7 +1082,7 @@ const items: ItemDef[] = [
     effectType: 'HELD_RETRIGGER',
     effectParams: { value: 1 },
     display: (_round, _player) => ({
-      hint: [[retrigger('Retrigger')], [condition('held dice', "sm")]],
+      hint: [[retrigger('Retrigger')], [condition('held dice', 'sm')]],
       tooltip: [[text('Retrigger all dice held in hand')]],
     }),
   },
@@ -1162,8 +1168,8 @@ const items: ItemDef[] = [
       const debt = player.debtLimit;
       const hint =
         player.balance < 0
-          ? [[money(`$${player.balance}`)], [text('in debt', "sm")]]
-          : [[money(`-$${debt} max`)], [text('debt limit', "sm")]];
+          ? [[money(`$${player.balance}`)], [text('in debt', 'sm')]]
+          : [[money(`-$${debt} max`)], [text('debt limit', 'sm')]];
       return {
         hint,
         tooltip: [
@@ -1186,7 +1192,10 @@ const items: ItemDef[] = [
     effectParams: { pip: 1, chance: [1, 4], professionOverrides: { merchant: { chance: [1, 2] } } },
     display: (_round, player) => {
       const p = { pip: 1, chance: [1, 4], professionOverrides: { merchant: { chance: [1, 2] } } };
-      const hint = [[oddsDisplay(resolveChance(p, player.professionId), player)], [condition('supply per 1 played', "xs")]];
+      const hint = [
+        [oddsDisplay(resolveChance(p, player.professionId), player)],
+        [condition('supply per 1 played', 'xs')],
+      ];
       return {
         hint,
         tooltip: [
@@ -1233,8 +1242,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && round.day >= round.maxDays
-          ? [[retrigger('Retrigger', 'xs'), condition('scored dice', "xs")], [active('Active!', "sm")]]
-          : [[retrigger('Retrigger', 'xs'), condition('scored dice', "xs")], [inactive('Inactive', "sm")]],
+          ? [[retrigger('Retrigger', 'xs'), condition('scored dice', 'xs')], [active('Active!', 'sm')]]
+          : [[retrigger('Retrigger', 'xs'), condition('scored dice', 'xs')], [inactive('Inactive', 'sm')]],
       tooltip: [[text('Retrigger all played dice on final day of round')]],
     }),
   },
@@ -1250,7 +1259,7 @@ const items: ItemDef[] = [
       hint:
         round && round.day === 1 && round.selectedForScore?.length === 1
           ? [[active('Enhancing!')]]
-          : [[condition('first day 1 die')],[inactive('Inactive', 'sm')]],
+          : [[condition('first day 1 die')], [inactive('Inactive', 'sm')]],
       tooltip: [[text('If one die is scored alone on first day, add a random enhancement')]],
     }),
   },
@@ -1266,8 +1275,8 @@ const items: ItemDef[] = [
       const count = player.dice.filter((d) => d.enhancement === 'steel').length;
       const xm = 1 + count * 0.2;
       const steelLabel = count === 1 ? 'steel die' : 'steel dice';
-      const hint = [[mult(`x${xm.toFixed(1)}`)], [condition(`${count} ${steelLabel}`, "sm")]]
-         
+      const hint = [[mult(`x${xm.toFixed(1)}`)], [condition(`${count} ${steelLabel}`, 'sm')]];
+
       return {
         hint,
         tooltip: [[mult('x0.2'), text(' mult for each steel die in collection')]],
@@ -1284,11 +1293,13 @@ const items: ItemDef[] = [
     effectType: 'END_ROUND_MONEY_PER_REROLL',
     effectParams: { value: 1 },
     display: (round, player) => {
-      const phase = round?.phase
+      const phase = round?.phase;
       console.log(phase);
       const rerolls = round?.rerollsRemaining ?? 0;
       return {
-        hint: round ? [[money(`$${rerolls}`)], [condition('unused rerolls', 'sm')]] : [[money('$1')],[condition('unused rerolls', 'sm')]],
+        hint: round
+          ? [[money(`$${rerolls}`)], [condition('unused rerolls', 'sm')]]
+          : [[money('$1')], [condition('unused rerolls', 'sm')]],
         tooltip: [[money('$1'), text('per unused re-roll at end of round')]],
       };
     },
@@ -1301,7 +1312,7 @@ const items: ItemDef[] = [
     effectType: 'PIP_RETRIGGER',
     effectParams: { pip: 1 },
     display: (_round, _player) => ({
-      hint: [[retrigger('Retrigger')], [condition('scored 1s', "sm")]],
+      hint: [[retrigger('Retrigger')], [condition('scored 1s', 'sm')]],
       tooltip: [[text('Retrigger each played 1')]],
     }),
   },
@@ -1318,8 +1329,8 @@ const items: ItemDef[] = [
       const chance = resolveChance(p, player.professionId);
       const hint =
         chance[0] >= chance[1]
-          ? [[money('$2 '), oddsDisplay([1, 1], player, "sm")], [condition('enhanced die', "sm")]]
-          : [[money('$2 '), oddsDisplay(chance, player, "sm")], [condition('enhanced die', "sm")]];
+          ? [[money('$2 '), oddsDisplay([1, 1], player, 'sm')], [condition('enhanced die', 'sm')]]
+          : [[money('$2 '), oddsDisplay(chance, player, 'sm')], [condition('enhanced die', 'sm')]];
       return {
         hint,
         tooltip: [
@@ -1340,8 +1351,8 @@ const items: ItemDef[] = [
     display: (round, player) => {
       const handType = round?.currentHandType;
       const hint = handType
-        ? [[mult(`+${player.getHandStats(handType).timesPlayed}`)], [condition(HAND_NAMES[handType], "sm")]]
-        : [[mult('+?')], [condition('times hand played', "xs")]];
+        ? [[mult(`+${player.getHandStats(handType).timesPlayed}`)], [condition(HAND_NAMES[handType], 'sm')]]
+        : [[mult('+?')], [condition('times hand played', 'xs')]];
       return {
         hint,
         tooltip: [[text('Adds the number of times the hand has been played this trip as '), mult('mult')]],
@@ -1470,7 +1481,7 @@ const items: ItemDef[] = [
     effectType: 'ALL_DICE_SCORE',
     effectParams: {},
     display: (_round, _player) => ({
-      hint: [[active('All dice score', "sm")]],
+      hint: [[active('All dice score', 'sm')]],
       tooltip: [[text('All dice count when scoring')]],
     }),
   },
@@ -1537,7 +1548,7 @@ const items: ItemDef[] = [
       const handTypes = Object.values(HandType);
       const handType = handTypes[handIdx % handTypes.length] as HandType;
       const amount = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 4 }, 'value', player.professionId);
-      const hint = [[money(`$${amount}`)], [condition(HAND_NAMES[handType] ?? '?', "sm")]];
+      const hint = [[money(`$${amount}`)], [condition(HAND_NAMES[handType] ?? '?', 'sm')]];
       return {
         hint,
         tooltip: [[text('Earn '), money(`$${amount}`), text(' when hand is '), condition(HAND_NAMES[handType] ?? '?')]],
@@ -1644,7 +1655,7 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'square_dance');
       const m = equip?.state.miles ?? 0;
-      const hint =[[miles(`+${m}`)], [condition('4 dice played', "xs")]];
+      const hint = [[miles(`+${m}`)], [condition('4 dice played', 'xs')]];
       return {
         hint,
         tooltip: [[text('Gains '), miles('+4'), text(' miles if played hand has exactly '), condition('4 dice')]],
@@ -1796,7 +1807,7 @@ const items: ItemDef[] = [
       const count = player.dice.filter((d) => d.enhancement === 'stone').length;
       const total = count * 25;
       const stoneLabel = count === 1 ? 'stone' : 'stones';
-      const hint = [[miles(`+${total}`)], [condition(`${count} ${stoneLabel}`, "sm")]];
+      const hint = [[miles(`+${total}`)], [condition(`${count} ${stoneLabel}`, 'sm')]];
       return {
         hint,
         tooltip: [[miles('+25'), text('miles for each stone die in collection')]],
@@ -1831,7 +1842,7 @@ const items: ItemDef[] = [
     effectType: 'ROUND_START_DAYS_NO_REROLLS',
     effectParams: { days: 3 },
     display: (_round, _player) => ({
-      hint: [[text('+3 days')], [condition('no rerolls', "sm")]],
+      hint: [[text('+3 days')], [condition('no rerolls', 'sm')]],
       tooltip: [[text('When round starts, gain '), condition('+3 days'), text(' and lose all rerolls')]],
     }),
   },
@@ -1848,7 +1859,7 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'manifest_destiny');
       const m = equip?.state.miles ?? 0;
-      const hint = [[miles(`+${m}`)], [condition(HAND_NAMES.FIVE_STRAIGHT, "sm")]];
+      const hint = [[miles(`+${m}`)], [condition(HAND_NAMES.FIVE_STRAIGHT, 'sm')]];
       return {
         hint,
         tooltip: [
@@ -1946,7 +1957,7 @@ const items: ItemDef[] = [
     display: (_round, player) => ({
       hint: [
         [retrigger('Retrigger', 'xs'), condition('enhanced', 'xs')],
-        [oddsDisplay([1, 6], player, "sm"), text('destroy', "sm")],
+        [oddsDisplay([1, 6], player, 'sm'), text('destroy', 'sm')],
       ],
       tooltip: [
         [
@@ -1969,7 +1980,7 @@ const items: ItemDef[] = [
     effectType: 'ROUND_START_DESTROY_STANDARD_DICE',
     effectParams: { value: 3 },
     display: (_round, _player) => ({
-      hint: [[money('+$3')], [condition('destroy standard die', "xs")]],
+      hint: [[money('+$3')], [condition('destroy standard die', 'xs')]],
       tooltip: [
         [
           text('At start of each round, destroy one standard non-enhanced die. If destroyed, earn '),
@@ -1992,7 +2003,7 @@ const items: ItemDef[] = [
       const equip = player.equipment.find((e) => e.def.id === 'shortcut_trail');
       const skipped = equip?.state.roundsSkipped ?? 0;
       const xm = 1 + skipped * 0.25;
-      const hint = [[mult(`x${xm.toFixed(2)}`)], [condition(`${skipped} skipped`, "sm")]];
+      const hint = [[mult(`x${xm.toFixed(2)}`)], [condition(`${skipped} skipped`, 'sm')]];
       return {
         hint,
         tooltip: [[mult('x0.25'), text(' mult for each round of journey skipped')]],
@@ -2008,7 +2019,7 @@ const items: ItemDef[] = [
     effectType: 'FIRST_DICE_RETRIGGER',
     effectParams: { value: 2 },
     display: (_round, _player) => ({
-      hint: [[retrigger('Retrigger')],[ condition('first scored die x2', "xs")]],
+      hint: [[retrigger('Retrigger')], [condition('first scored die x2', 'xs')]],
       tooltip: [[text('Retrigger first played die 2 additional times')]],
     }),
   },
@@ -2021,7 +2032,7 @@ const items: ItemDef[] = [
     effectType: 'LAST_DICE_RETRIGGER',
     effectParams: { value: 1 },
     display: (_round, _player) => ({
-      hint: [[retrigger('Retrigger')], [condition('last scored die', "xs")]],
+      hint: [[retrigger('Retrigger')], [condition('last scored die', 'xs')]],
       tooltip: [[text('Retrigger last played die 1 additional time')]],
     }),
   },
@@ -2102,9 +2113,7 @@ const items: ItemDef[] = [
       const equip = player.equipment.find((e) => e.def.id === 'diamond_coffin');
       const xm = equip?.state.xMult ?? 1;
       const hint =
-        xm > 1
-          ? [[mult(`x${xm.toFixed(2)}`)]]
-          : [[mult('x0.75')],[condition('per diamond destroyed', 'xs')]];
+        xm > 1 ? [[mult(`x${xm.toFixed(2)}`)]] : [[mult('x0.75')], [condition('per diamond destroyed', 'xs')]];
       return {
         hint,
         tooltip: [[text('Item gains '), mult('x0.75'), text(' mult for every diamond die that is destroyed')]],
@@ -2121,7 +2130,7 @@ const items: ItemDef[] = [
     effectType: 'ALLOW_DUPLICATES',
     effectParams: {},
     display: (_round, _player) => ({
-      hint: [[active('Duplicates allowed', "xs")]],
+      hint: [[active('Duplicates allowed', 'xs')]],
       tooltip: [
         [
           text(
@@ -2174,7 +2183,7 @@ const items: ItemDef[] = [
     effectType: 'LOADED_DICE',
     effectParams: {},
     display: (_round, _player) => ({
-      hint: [[odds('x2')], [text('all listed odds', "sm")]],
+      hint: [[odds('x2')], [text('all listed odds', 'sm')]],
       tooltip: [[text('Doubles all listed probabilities')]],
     }),
   },
@@ -2187,7 +2196,7 @@ const items: ItemDef[] = [
     effectType: 'CHANCE_HAND_XMULT_MONEY',
     effectParams: { chance: [1, 4], xMult: 4, money: 10 },
     display: (_round, player) => ({
-      hint: [[mult('x4'),  money('+$10')],[oddsDisplay([1, 4], player, "sm")]],
+      hint: [[mult('x4'), money('+$10')], [oddsDisplay([1, 4], player, 'sm')]],
       tooltip: [
         [
           oddsDisplay([1, 4], player),
@@ -2209,7 +2218,7 @@ const items: ItemDef[] = [
     effectType: 'GAMBLERS_DICE_CUP',
     effectParams: {},
     display: (_round, player) => ({
-      hint: [[oddsDisplay([1, 6], player)],[text('to roll loaded #', "xs")]],
+      hint: [[oddsDisplay([1, 6], player)], [text('to roll loaded #', 'xs')]],
       tooltip: [
         [
           text('All dice have '),
@@ -2292,7 +2301,7 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'five_mile_marker');
       const m = equip?.state.miles ?? 0;
-      const hint = [[miles(`+${m}`)],[condition('5s scored', "sm")]]
+      const hint = [[miles(`+${m}`)], [condition('5s scored', 'sm')]];
       return {
         hint,
         tooltip: [[text('Gains '), miles('+5'), text(' miles each time a '), condition('5'), text(' pip is scored')]],
@@ -2371,8 +2380,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.FIVE_OF_A_KIND)
-          ? [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND, "sm")], [active('Active!', "sm")]]
-          : [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND, "sm")], [inactive('Inactive', "sm")]],
+          ? [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND, 'sm')], [active('Active!', 'sm')]]
+          : [[mult('x5'), condition(HAND_NAMES.FIVE_OF_A_KIND, 'sm')], [inactive('Inactive', 'sm')]],
       tooltip: [[mult('x5'), text(' mult if hand contains '), condition(HAND_NAMES.FIVE_OF_A_KIND)]],
     }),
   },
@@ -2479,7 +2488,7 @@ const items: ItemDef[] = [
     effectType: 'ROUND_START_SUPPLY',
     effectParams: {},
     display: (_round, _player) => ({
-      hint: [[active('Supply at round start', "xs")]],
+      hint: [[active('Supply at round start', 'xs')]],
       tooltip: [[text('Create a random supply card at start of round')]],
     }),
   },
@@ -2565,8 +2574,8 @@ const items: ItemDef[] = [
       if (bonus > 0) {
         hint =
           decay === 0
-            ? [[active(`+${bonus} hand size`)], [condition('no decay', "sm")]]
-            : [[active(`+${bonus} hand size`)], [condition(`-${decay} per round`, "sm")]];
+            ? [[active(`+${bonus} hand size`)], [condition('no decay', 'sm')]]
+            : [[active(`+${bonus} hand size`)], [condition(`-${decay} per round`, 'sm')]];
       } else {
         hint = [[inactive('Empty')]];
       }
@@ -2595,7 +2604,7 @@ const items: ItemDef[] = [
     effectParams: { chunk: 5, value: 2 },
     display: (_round, player) => {
       const multGain = Math.floor(player.balance / 5) * 2;
-      const hint = [[mult(`+${multGain}`)], [condition('per $5 held', "sm")]];
+      const hint = [[mult(`+${multGain}`)], [condition('per $5 held', 'sm')]];
       return {
         hint,
         tooltip: [[mult('+2'), text(' mult for every '), money('$5'), text(' you have')]],
@@ -2618,7 +2627,7 @@ const items: ItemDef[] = [
       const hint =
         streak > 0
           ? [[mult(`x${(1 + streak * 0.2).toFixed(1)}`)]]
-          : [[mult('+ x0.2')],[condition('if not most-played hand', 'xs')]];
+          : [[mult('+ x0.2')], [condition('if not most-played hand', 'xs')]];
       return {
         hint,
         tooltip: [
@@ -2640,7 +2649,7 @@ const items: ItemDef[] = [
     effectType: 'SCORED_GOLD_CHANCE',
     effectParams: { chance: [1, 4] },
     display: (_round, player) => ({
-      hint: [[oddsDisplay([1, 4], player)],[condition('turn into gold', "xs")]],
+      hint: [[oddsDisplay([1, 4], player)], [condition('turn into gold', 'xs')]],
       tooltip: [
         [text('All scored dice have a '), oddsDisplay([1, 4], player), text(' chance to turn into a gold dice')],
       ],
@@ -2696,9 +2705,13 @@ const items: ItemDef[] = [
     effectType: 'END_ROUND_SELL_VALUE_ALL',
     effectParams: { value: 1 },
     display: (_round, _player) => ({
-      hint: [[money('+$1')], [condition('sell value each item', "sm")]],
+      hint: [[money('+$1')], [condition('sell value each item', 'sm')]],
       tooltip: [
-        [text('At the end of each round add '), money('$1'), text(' of sell value to each piece of equipment')],
+        [
+          text('At the end of each round add '),
+          money('$1'),
+          text(' of sell value to each piece of equipment/consumable'),
+        ],
       ],
     }),
   },
@@ -2738,8 +2751,8 @@ const items: ItemDef[] = [
       const chunks = Math.floor(eligible / chunkSize);
       const hint =
         chunks > 0
-          ? [[money(`+$${chunks * perDollar}`)], [condition('extra interest', "sm")]]
-          : [[money(`+$${perDollar}`)], [condition(`per $${chunkSize} held`, "sm")]];
+          ? [[money(`+$${chunks * perDollar}`)], [condition('extra interest', 'sm')]]
+          : [[money(`+$${perDollar}`)], [condition(`per $${chunkSize} held`, 'sm')]];
       return {
         hint,
         tooltip: [

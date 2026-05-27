@@ -252,6 +252,7 @@ export const roundActions = {
     runActions.patch({
       trailRoundEffects: trailRoundEffectsFromModifiers(trailMods),
       trailEventModifiers: createEmptyModifiers(),
+      statusTraitTokens: getRunState().statusTraitTokens.filter((t) => t.id !== 'all_in'),
       bossEffectDisabled: false,
       roundBackgroundIndex: pickGameRoundBackgroundIndex(),
     });
@@ -446,7 +447,10 @@ export const roundActions = {
         mutations: createEmptyScoringMutations(),
       };
 
-      runActions.patch({ daysScored: run.daysScored + 1 });
+      runActions.patch({
+        daysScored: run.daysScored + 1,
+        statusTraitTokens: run.statusTraitTokens.filter((t) => t.id !== 'echo_of_the_damned'),
+      });
       applyBossAfterScore();
 
       patchRound({
@@ -532,7 +536,10 @@ export const roundActions = {
       finalResult.handUpgrades = allHandUpgrades;
     }
 
-    runActions.patch({ daysScored: run.daysScored + 1 });
+    runActions.patch({
+      daysScored: run.daysScored + 1,
+      statusTraitTokens: run.statusTraitTokens.filter((t) => t.id !== 'echo_of_the_damned'),
+    });
 
     patchRound({
       currentHandType: handResult.type,

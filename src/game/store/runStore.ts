@@ -75,6 +75,8 @@ export function createInitialRunState(): RunState {
     storyVictoryPending: false,
     bossAssignmentIds: [],
     nextDieId: 0,
+    statusTraitTokens: [],
+    shopFreeRerollPlan: [],
     playbackQueue: [],
   };
 }

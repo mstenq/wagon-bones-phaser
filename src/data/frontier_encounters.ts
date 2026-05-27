@@ -151,6 +151,16 @@ const frontierEncounters: FrontierEncounterDef[] = [
     description: 'Increase all trail knowledge by 1 (very rare)',
     instantEffect: { type: 'UPGRADE_ALL_HANDS' },
   },
+  {
+    id: 'all_in',
+    name: 'All In',
+    description: 'Double your money. Lose all rerolls this round',
+  },
+  {
+    id: 'echo_of_the_damned',
+    name: 'Echo of the Damned',
+    description: 'Your next played hand retriggers all scoring dice (stacks)',
+  },
 ];
 
 export default frontierEncounters;

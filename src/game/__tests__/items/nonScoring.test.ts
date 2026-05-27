@@ -14,7 +14,9 @@ import {
 } from '../testHelpers';
 import { getBossRoundConfigMods } from '../../BossEffectsSystem';
 import { computePayoutBreakdown } from '../../runProgression';
-import { getRunState } from '../../store/runStore';
+import { getRunState, runActions } from '../../store/runStore';
+import { buildShopFreeRerollPlan } from '../../store/selectors/runSelectors';
+import { progressionActions } from '../../store/actions/progressionActions';
 import { roundActions } from '../../store';
 import { gte, D } from '../../scoreMath';
 import {
@@ -375,15 +377,18 @@ describe('FREE_SHOP_REROLL: Coupon Book', () => {
     expect(config.freeShopRerolls).toBe(1);
   });
 
-  test('shop reroll cost is 0 for free rerolls', () => {
+  test('shop reroll cost is 0 for the coupon free reroll', () => {
     const { player } = setupGame({ equipment: [item('coupon_book')] });
-    player.shopRerollCount = 0;
     expect(player.shopRerollCost).toBe(0);
+    player.payShopReroll();
+    expect(player.shopRerollCost).toBeGreaterThan(0);
   });
 
   test('shop reroll cost resumes after free rerolls used', () => {
     const { player } = setupGame({ equipment: [item('coupon_book')] });
-    player.shopRerollCount = 1; // 1 free used, now paid
+    // First reroll is free, second should be paid.
+    expect(player.shopRerollCost).toBe(0);
+    player.payShopReroll();
     expect(player.shopRerollCost).toBeGreaterThan(0);
   });
 
@@ -391,12 +396,80 @@ describe('FREE_SHOP_REROLL: Coupon Book', () => {
     const { player } = setupGame({
       equipment: [item('coupon_book'), item('coupon_book')],
     });
+    expect(player.shopRerollCost).toBe(0);
+    player.payShopReroll(); // first free used
+    expect(player.shopRerollCost).toBe(0);
+    player.payShopReroll(); // second free used
+    expect(player.shopRerollCost).toBeGreaterThan(0);
+  });
+});
+
+// ─── Shop Pass (supply card) ───
+
+describe('Shop Pass supply card', () => {
+  test('shop pass free reroll is consumed before coupon book', () => {
+    const { player } = setupGame({ equipment: [item('coupon_book')] });
+    runActions.patch({
+      shopFreeRerollPlan: buildShopFreeRerollPlan({
+        ...getRunState(),
+        statusTraitTokens: [{ id: 'shop_pass', copies: 1 }],
+      }),
+      statusTraitTokens: [{ id: 'shop_pass', copies: 1 }],
+    });
     player.shopRerollCount = 0;
     expect(player.shopRerollCost).toBe(0);
-    player.shopRerollCount = 1;
+
+    progressionActions.payShopReroll();
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'shop_pass')).toBeUndefined();
+    expect(player.shopRerollCount).toBe(1);
+
     expect(player.shopRerollCost).toBe(0);
-    player.shopRerollCount = 2; // both free used
+    progressionActions.payShopReroll();
+    expect(player.shopRerollCount).toBe(2);
     expect(player.shopRerollCost).toBeGreaterThan(0);
+  });
+
+  test('shop_pass tokens: mid-shop purchases still schedule future free rerolls without changing paid progression', () => {
+    const { player } = setupGame({ money: 1000, equipment: [] });
+
+    // 0: paid ($5)
+    expect(player.shopRerollCost).toBe(GAMEPLAY.SHOP_REROLL_COST);
+    player.payShopReroll();
+    expect(player.shopRerollCount).toBe(1);
+    expect(player.shopRerollCost).toBe(GAMEPLAY.SHOP_REROLL_COST + 1);
+
+    // 1: paid ($6)
+    player.payShopReroll();
+    expect(player.shopRerollCount).toBe(2);
+    expect(player.shopRerollCost).toBe(GAMEPLAY.SHOP_REROLL_COST + 2);
+
+    // Buy first shop_pass: 2 should be free.
+    runActions.patch({ statusTraitTokens: [{ id: 'shop_pass', copies: 1 }] });
+    expect(player.shopRerollCost).toBe(0);
+    player.payShopReroll();
+    expect(player.shopRerollCount).toBe(3);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'shop_pass')).toBeUndefined();
+
+    // Next paid reroll cost should continue from paid progression ($7).
+    expect(player.shopRerollCost).toBe(GAMEPLAY.SHOP_REROLL_COST + 2);
+    player.payShopReroll();
+    expect(player.shopRerollCount).toBe(4);
+    expect(player.shopRerollCost).toBe(GAMEPLAY.SHOP_REROLL_COST + 3);
+
+    // One more paid reroll: $8 at index 4.
+    player.payShopReroll();
+    expect(player.shopRerollCount).toBe(5);
+    expect(player.shopRerollCost).toBe(GAMEPLAY.SHOP_REROLL_COST + 4);
+
+    // Buy second shop_pass: 5 should be free again.
+    runActions.patch({ statusTraitTokens: [{ id: 'shop_pass', copies: 1 }] });
+    expect(player.shopRerollCost).toBe(0);
+    player.payShopReroll();
+    expect(player.shopRerollCount).toBe(6);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'shop_pass')).toBeUndefined();
+
+    // Next paid reroll should keep the same progression ($9).
+    expect(player.shopRerollCost).toBe(GAMEPLAY.SHOP_REROLL_COST + 4);
   });
 });
 
@@ -1180,6 +1253,18 @@ describe('END_ROUND_SELL_VALUE_ALL: Raffle Ticket', () => {
     const storedHorse = player.equipment.find((e) => e.def.id === 'horseshoe');
     expect(storedRaffle?.sellValue).toBe(beforeRaffle + 1);
     expect(storedHorse?.sellValue).toBe(beforeHorse + 1);
+  });
+
+  test('adds $1 sell value to held consumables at end of round', () => {
+    const raffle = item('raffle_ticket');
+    const { player } = setupGame({ equipment: [raffle] });
+    const supplyDef = getRandomSupplyDef();
+    player.addConsumable(supplyDef);
+    const before = player.consumables[0]!.sellValue;
+
+    processEndOfRound([raffle]);
+
+    expect(player.consumables[0]!.sellValue).toBe(before + 1);
   });
 });
 

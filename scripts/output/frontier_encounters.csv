@@ -12,3 +12,5 @@ seeing_double,Seeing Double,Create 2 copies of a dice
 magic_beans,Magic Beans,"Create rare item, money is set to $0"
 pandoras_box,Pandora's Box,Create legendary item (very rare)
 spiritual_journey,Spiritual Journey,Increase all trail knowledge by 1 (very rare)
+all_in,All In,Double your money. Lose all rerolls this round
+echo_of_the_damned,Echo of the Damned,Your next played hand retriggers all scoring dice (stacks)

@@ -2,11 +2,7 @@
 // Composite slices for Phaser shared UI subscriptions (step 5).
 
 import type { TrailTagInstance } from '../../types';
-import {
-  getTrailDebuffLines,
-  hasActiveTrailRoundEffects,
-  trailRoundEffectsFromModifiers,
-} from '../../TrailEventsSystem';
+import { selectRunStatusTraits } from '../../runStatusTraits';
 import { getConsumableDefById, isSecondHelpingsCloneTarget } from '../../ConsumablesSystem';
 import { getQueuedAuraTags } from '../../TagSystem';
 import { getRunState } from '../runStore';
@@ -54,13 +50,6 @@ export function selectTagStackModel(state: RunState = getRunState()) {
   };
 }
 
-export function selectTrailDebuffLines(state: RunState = getRunState()): string[] {
-  if (hasActiveTrailRoundEffects(state.trailRoundEffects)) {
-    return getTrailDebuffLines(state.trailRoundEffects);
-  }
-  return getTrailDebuffLines(trailRoundEffectsFromModifiers(state.trailEventModifiers));
-}
-
 export function selectRunSidebarModel(state: RunState = getRunState()) {
   const round = getRoundState();
   const daysRerolls = round
@@ -82,7 +71,7 @@ export function selectRunSidebarModel(state: RunState = getRunState()) {
     difficulty: state.difficulty,
     professionId: state.professionId,
     boss: selectCurrentBoss(state),
-    trailDebuffs: selectTrailDebuffLines(state),
+    statusTraits: selectRunStatusTraits(state),
     ...daysRerolls,
   };
 }

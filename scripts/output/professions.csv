@@ -1,7 +1,7 @@
 id,name,description,title
 farmer,Hank Caldwell,+1 re-roll per day,Farmer
 surveyor,Elias Mercer,+1 day of travel,Surveyor
-banker,Charles Whitlock,Starts with $10,Banker
+banker,Charles Whitlock,Starts with and extra $10,Banker
 outlaw,Jesse Rawlins,Earns no interest. $1 per remaining day and unused re-roll.,Outlaw
 merchant,Abigail Turner,"1 extra equipment slot, -1 day of travel",Merchant
 cook,Martha Delaney,Starts with extra supplies voucher and 2 copies of second helpings supply card,Cook

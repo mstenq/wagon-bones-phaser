@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, die, item, equipWithModifiers } from './testHelpers';
+import { resetDieIds, setupGame, die, item, equipWithModifiers, calculateTestScore } from './testHelpers';
 import { resetPlayerState } from './testRunPlayer';
 import {
   createSupplyConsumableDef,
@@ -15,8 +15,13 @@ import {
   isSecondHelpingsCloneTarget,
   grantGhostMedicine,
   canUseConsumableInShop,
+  bumpAllSellValues,
 } from '../ConsumablesSystem';
+import { getRunState } from '../store/runStore';
+import { selectRunStatusTraits } from '../runStatusTraits';
+import { initRunRng } from '../RunRng';
 import { isEquipmentCursed } from '../ItemsSystem';
+import { shopBuyActions } from '../store/actions/shopBuyActions';
 import {
   applyDiceSelectionEffect,
   DiceSelectionConfig,
@@ -824,7 +829,14 @@ describe('frontier encounter wiring and raid rules', () => {
   });
 
   test('all frontier cards are wired to diceSelection, instantEffect, or explicit handlers', () => {
-    const explicitHandlers = new Set(['priests_blessing', 'skin_walker', 'blood_moon', 'raid']);
+    const explicitHandlers = new Set([
+      'priests_blessing',
+      'skin_walker',
+      'blood_moon',
+      'raid',
+      'all_in',
+      'echo_of_the_damned',
+    ]);
     const supportedInstantEffects = new Set([
       'CREATE_DICE',
       'DOUBLE_MONEY',
@@ -902,6 +914,161 @@ describe('shop consumable use gating', () => {
 
     expect(canUseConsumableInShop(destroyDef)).toBe(true);
     expect(canUseConsumableInShop(instantDef)).toBe(true);
+  });
+
+  test('shop buy-and-use works with full consumable slots for omen_stone/shop_pass/fools_gold/trading_post', () => {
+    const { player } = setupGame({ money: 100, equipment: [item('horseshoe')] });
+    player.maxConsumableSlots = 0;
+    const supplyIds = ['omen_stone', 'shop_pass', 'fools_gold', 'trading_post'] as const;
+
+    // Seed one consumable so Trading Post has a consumable sell value target
+    player.maxConsumableSlots = 1;
+    player.addConsumable(getSupplyDefById('treasure_map')!);
+    player.maxConsumableSlots = 0;
+
+    const eqBefore = player.equipment[0]!.sellValue;
+    const conBefore = player.consumables[0]!.sellValue;
+    const usedBefore = player.usedConsumableSlots;
+
+    for (const id of supplyIds) {
+      const def = getSupplyDefById(id)!;
+      const result = shopBuyActions.buyAndUseConsumable(def, 0);
+      expect(result.success).toBe(true);
+    }
+
+    // Used directly from shop despite maxConsumableSlots=0 (no new cards added to bar)
+    expect(player.usedConsumableSlots).toBe(usedBefore);
+
+    // Token-based effects were applied.
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'omen_stone')?.copies).toBe(1);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'shop_pass')?.copies).toBe(1);
+
+    // Trading Post still executes via buy-and-use path.
+    expect(player.equipment[0]!.sellValue).toBe(eqBefore + 1);
+    expect(player.consumables[0]!.sellValue).toBe(conBefore + 1);
+
+    // Keep this test isolated from subsequent suites.
+    resetPlayerState();
+  });
+});
+
+describe('new supply cards', () => {
+  test('omen_stone activates omen flag', () => {
+    resetPlayerState();
+    const def = getSupplyDefById('omen_stone')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'omen_stone')?.copies).toBe(1);
+    expect(selectRunStatusTraits(getRunState()).some((t) => t.id === 'omen_stone')).toBe(true);
+  });
+
+  test('shop_pass grants free reroll for next shop visit', () => {
+    resetPlayerState();
+    const def = getSupplyDefById('shop_pass')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'shop_pass')?.copies).toBe(2);
+    expect(selectRunStatusTraits(getRunState()).find((t) => t.id === 'shop_pass')?.label).toBe('Shop Pass x2');
+  });
+
+  test('fools_gold wins $30 on lucky roll', () => {
+    resetPlayerState();
+    initRunRng('test-0');
+    const player = resetPlayerState();
+    player.economy.setBalance(100);
+    initRunRng('test-0');
+    const def = getSupplyDefById('fools_gold')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance).toBe(130);
+  });
+
+  test('fools_gold loses half money on unlucky roll', () => {
+    resetPlayerState();
+    initRunRng('test-6');
+    const player = resetPlayerState();
+    player.economy.setBalance(100);
+    initRunRng('test-6');
+    const def = getSupplyDefById('fools_gold')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance).toBe(50);
+  });
+
+  test('fools_gold does not change balance when <= $0', () => {
+    resetPlayerState();
+    initRunRng('test-6');
+    const player = resetPlayerState();
+    player.economy.setBalance(-40);
+    initRunRng('test-6'); // unlucky branch in current RNG mapping
+    const def = getSupplyDefById('fools_gold')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance).toBe(-40);
+  });
+
+  test('fools_gold can still win $30 at negative balance', () => {
+    resetPlayerState();
+    initRunRng('test-0');
+    const player = resetPlayerState();
+    player.economy.setBalance(-40);
+    initRunRng('test-0'); // lucky branch in current RNG mapping
+    const def = getSupplyDefById('fools_gold')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance).toBe(-10);
+  });
+
+  test('trading_post bumps equipment and consumable sell values', () => {
+    const { player } = setupGame({ equipment: [item('horseshoe')] });
+    player.addConsumable(getSupplyDefById('treasure_map')!);
+    const eqBefore = player.equipment[0]!.sellValue;
+    const conBefore = player.consumables[0]!.sellValue;
+    const def = getSupplyDefById('trading_post')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.equipment[0]!.sellValue).toBe(eqBefore + 1);
+    expect(player.consumables[0]!.sellValue).toBe(conBefore + 1);
+  });
+
+  test('trade card respects trading post sell bump', () => {
+    const { player } = setupGame({ equipment: [item('horseshoe')] });
+    bumpAllSellValues(1);
+    const total = player.equipment.reduce((s, e) => s + e.sellValue, 0);
+    const def = getSupplyDefById('trade')!;
+    const before = player.economy.balance;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance - before).toBe(Math.min(total, 50));
+  });
+});
+
+describe('new frontier encounter cards', () => {
+  test('all_in doubles money and sets lose rerolls once', () => {
+    const player = resetPlayerState();
+    player.economy.setBalance(40);
+    const def = getFrontierDefById('all_in')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance).toBe(80);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'all_in')?.copies).toBe(1);
+    expect(getRunState().trailEventModifiers.loseAllRerolls).toBe(true);
+
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.economy.balance).toBe(160);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'all_in')?.copies).toBe(2);
+  });
+
+  test('echo_of_the_damned stacks retrigger bonus', () => {
+    const def = getFrontierDefById('echo_of_the_damned')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    executeConsumableEffect(createConsumableInstance(def));
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'echo_of_the_damned')?.copies).toBe(3);
+  });
+
+  test('echo stacks add to red_bullet triggers per die', () => {
+    const dice = [die({ value: 6, sticker: 'red_bullet' }), die({ value: 6 })];
+    const { result } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [],
+      echoOfTheDamnedStacks: 3,
+    });
+    const milesForBullet = result.animEvents.filter((e) => e.dieId === dice[0]!.id && e.popupType === 'miles');
+    expect(milesForBullet.length).toBe(5);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'echo_of_the_damned')).toBeUndefined();
   });
 });
 

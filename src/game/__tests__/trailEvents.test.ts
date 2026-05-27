@@ -9,9 +9,10 @@ import {
   equipWithModifiers,
   setTestDifficulty,
   syncEquipmentInstances,
+  pushEquipmentState,
 } from './testHelpers';
 import { resetPlayerState } from './testRunPlayer';
-import { getRunState } from '../store/runStore';
+import { getRunState, runActions } from '../store/runStore';
 import { getItemDisplayContext } from '../displayContext';
 import {
   getAllTrailEvents,
@@ -893,6 +894,34 @@ describe('Trail Repair Kit interaction', () => {
     resolveChoice(event, 'wander');
     syncEquipmentInstances(kit);
     expect(kit.state.xMult).toBeCloseTo(1.25, 5);
+  });
+});
+
+// ─── Omen Stone (supply card) ───
+
+describe('Omen Stone supply card', () => {
+  test('blocks negative trail effects and consumes omen', () => {
+    const player = resetPlayerState();
+    runActions.patch({ statusTraitTokens: [{ id: 'omen_stone', copies: 1 }] });
+    const event = getTrailEventById('bad_mosquitos')!;
+    const result = resolveChoice(event, 'endure');
+    expect(result.modifiers.rerollPenalty).toBe(0);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'omen_stone')).toBeUndefined();
+    void player;
+  });
+
+  test('omen takes priority over trail repair kit — kit xMult unchanged', () => {
+    const player = resetPlayerState();
+    const kit = item('trail_repair_kit');
+    player.equipment = [kit];
+    pushEquipmentState(kit);
+    runActions.patch({ statusTraitTokens: [{ id: 'omen_stone', copies: 1 }] });
+
+    const event = getTrailEventById('bad_mosquitos')!;
+    resolveChoice(event, 'endure');
+    syncEquipmentInstances(kit);
+    expect(kit.state.xMult ?? 1).toBe(1);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'omen_stone')).toBeUndefined();
   });
 });
 

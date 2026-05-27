@@ -185,8 +185,10 @@ export function findTrailRepairKit(): EquipmentInstance | undefined {
   return resolveEquipmentList().find((e) => e.def.id === 'trail_repair_kit');
 }
 
-/** True when shield or Trail Repair Kit negates a negative trail effect. */
+/** True when Omen Stone, shield, or Trail Repair Kit negates a negative trail effect. */
 export function isTrailNegativeNegated(): boolean {
+  const omenCopies = getRunState().statusTraitTokens.find((t) => t.id === 'omen_stone')?.copies ?? 0;
+  if (omenCopies > 0) return true;
   return resolveEquipmentList().some((e) => e.def.id === 'saint_elmos_shield') || findTrailRepairKit() !== undefined;
 }
 
@@ -373,11 +375,19 @@ export function resolveChoice(
   const modifiers = createEmptyModifiers();
 
   let trailRepairKitNegatedEvent = false;
+  let omenConsumed = false;
+  const omenActive = (getRunState().statusTraitTokens.find((t) => t.id === 'omen_stone')?.copies ?? 0) > 0;
 
   for (const effect of outcome.effects) {
-    if (isNegativeEffect(effect) && (shieldEquip || trailRepairKit)) {
-      if (trailRepairKit) trailRepairKitNegatedEvent = true;
-      continue;
+    if (isNegativeEffect(effect)) {
+      if (omenActive) {
+        omenConsumed = true;
+        continue;
+      }
+      if (shieldEquip || trailRepairKit) {
+        if (trailRepairKit) trailRepairKitNegatedEvent = true;
+        continue;
+      }
     }
     applyEffect(effect, modifiers, rng);
   }
@@ -401,7 +411,22 @@ export function resolveChoice(
   }
 
   markTrailEventSeen(event.id);
-  runActions.patch({ pendingTrailEventId: null });
+  if (omenConsumed) {
+    const runState = getRunState();
+    const idx = runState.statusTraitTokens.findIndex((t) => t.id === 'omen_stone');
+    if (idx >= 0) {
+      const nextCopies = runState.statusTraitTokens[idx]!.copies - 1;
+      const statusTraitTokens =
+        nextCopies > 0
+          ? runState.statusTraitTokens.map((t, i) => (i === idx ? { ...t, copies: nextCopies } : t))
+          : runState.statusTraitTokens.filter((t) => t.id !== 'omen_stone');
+      runActions.patch({ statusTraitTokens, pendingTrailEventId: null });
+    } else {
+      runActions.patch({ pendingTrailEventId: null });
+    }
+  } else {
+    runActions.patch({ pendingTrailEventId: null });
+  }
 
   return {
     event,

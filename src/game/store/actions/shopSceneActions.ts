@@ -5,6 +5,7 @@ import { generateShopPermit } from '../../PermitsSystem';
 import { progressionActions } from './progressionActions';
 import { generateNewShopState, generateRerolledShopStock } from '../shopStock';
 import { getRunState, runActions } from '../runStore';
+import { buildShopFreeRerollPlan } from '../selectors/runSelectors';
 import { getSceneState, sceneActions, sceneStore } from '../sceneStore';
 import type { ShopSceneState } from '../types';
 
@@ -20,6 +21,7 @@ export const shopSceneActions = {
       const bonusPermit = generateShopPermit(getRunState().purchasedPermits);
       if (bonusPermit) runActions.patch({ bonusShopPermitId: bonusPermit.id });
     }
+    runActions.patch({ shopFreeRerollPlan: buildShopFreeRerollPlan(getRunState()) });
     sceneActions.enterShop(shop);
     return shop;
   },

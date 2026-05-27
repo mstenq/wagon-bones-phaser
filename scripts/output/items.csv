@@ -34,7 +34,7 @@ high_noon,High Noon,x3  mult on  final day  of round
 desperado,Desperado,Add the sell value of all other owned equipment as  mult
 stagecoach,Stagecoach,Deprecated: removed with auto-draw round flow.
 mystery_crate,Mystery Crate,Add a dice at the start of each round with a random sticker
-trail_repair_kit,Trail Repair Kit,Negates negative trail event penalties. Gains  x0.75  mult each time it prevents a penalty.
+trail_repair_kit,Trail Repair Kit,Negates negative trail event penalties. Gains  x0.25  mult each time it prevents a penalty.
 scouts_spyglass,Scout's Spyglass,"View from the spyglass before the next trail event.  Avoid to skip it, or investigate for  +20  stored miles and face the full event."
 saint_elmos_shield,Saint Elmo's Shield,Disables all boss effects and negative effects from trail events are prevented. Divine favor intervenes.
 book_of_the_dead,Book of the Dead,Gains  x1  mult for each destroyed enhanced dice
@@ -56,7 +56,7 @@ coupon_book,Coupon Book,1 free reroll per shop visit
 last_stand,Last Stand,Retrigger all played dice on final day of round
 lucky_find,Lucky Find,"If one die is scored alone on first day, add a random enhancement"
 iron_furnace,Iron Furnace,x0.2  mult for each steel die in collection
-rainy_day_fund,Rainy Day Fund,$1  per unused re-roll at end of round
+rainy_day_fund,Rainy Day Fund,$1 per unused re-roll at end of round
 one_eyed_jack,One-Eyed Jack,Retrigger each played 1
 gold_pan,Gold Pan,"1 in 2 chance to give $2 when an enhanced die scores.
 Davis Holler (Prospector) has a guaranteed chance."
@@ -83,7 +83,7 @@ emergency_supplies,Emergency Supplies,Create a random supply card if hand is pla
 railroad_bonds,Railroad Bonds,"Earn  $1  at end of round, increased by  $2  for every boss defeated"
 leftovers,Leftovers,1 in 2 chance to gain a supply card when opening a booster pack. Martha Delaney (Cook) has a 1 in 1 chance.
 campfire_stories,Campfire Stories,+1  mult per supply card used this journey
-quarry_mine,Quarry Mine,+25  miles for each stone die in collection
+quarry_mine,Quarry Mine,+25 miles for each stone die in collection
 antique_revolver,Antique Revolver,"When round starts, gain  $3  of sell value to current card"
 hardtack,Hardtack,"When round starts, gain  +3 days  and lose all rerolls"
 manifest_destiny,Manifest Destiny,Gains  +15  miles if hand contains a  5 Straight
@@ -104,6 +104,8 @@ diamond_coffin,Diamond Coffin,Item gains  x0.75  mult for every diamond die that
 counterfeit_goods,Counterfeit Goods,Allows items/trail guides/supplies/frontier encounter cards to appear multiple times in the shop and packs
 rainbow_trail,Rainbow Trail,"x2  if 2 different enhanced dice score,  x3  if 3,  x4  if 4,  x5  if 5 different"
 loaded_dice,Loaded Dice,Doubles all listed probabilities
+one_armed_bandit,One Armed Bandit,1 in 4 chance for x4 mult and $10 when a hand is scored
+gamblers_dice_cup,Gambler's Dice Cup,All dice have  1 in 6  odds of rolling the selected loaded die value. Loaded dice use  1 in 3  instead.
 mirror_lake,Mirror Lake,"Copies the ability of: 
 Nothing to copy"
 echo_chamber,Echo Chamber,"Copies the leftmost ability: 
@@ -131,7 +133,7 @@ golden_spike,Golden Spike,All scored dice have a  1 in 4  chance to turn into a 
 sheriffs_badge,Sheriff's Badge,Sell this item to disable the current boss effect
 bounty_contract,Bounty Contract,Sell this item to gain a free Twin Wagon tag
 double_barrel,Double Barrel,First played  2  pip die gives  x2  mult when scored
-raffle_ticket,Raffle Ticket,At the end of each round add  $1  of sell value to each piece of equipment
+raffle_ticket,Raffle Ticket,At the end of each round add  $1  of sell value to each piece of equipment/consumable
 ghost_town,Ghost Town,+10  mult for each dice below the collection's starting size
 savings_account,Savings Account,Earn an extra  $1  of interest for every  $5  you have at end of round. Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped).
 six_feet_under,Six Feet Under,Item gains  +66  miles for every dice that is destroyed

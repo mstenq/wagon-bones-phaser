@@ -17,3 +17,7 @@ mirage,Mirage,Pick 2 of 5 random dice — left becomes a copy of right
 bless,Bless,1 in 4 chance to bless equipment with aura
 second_helpings,Second Helpings,Creates last used supply/trail guide
 medicine,Medicine,Choose a die — bump its value up or down by 1
+omen_stone,Omen Stone,Prevent the next negative trail event effects
+shop_pass,Shop Pass,Reroll shop for free on your next shop visit
+fools_gold,Fool's Gold,50% chance to gain $30. Otherwise lose half your money
+trading_post,Trading Post,Increase sell value of all equipment and consumables by $1
