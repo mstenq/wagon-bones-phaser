@@ -38,6 +38,8 @@ export interface ConsumableDef {
   description: string;
   category: ConsumableCategory;
   cost: number;
+  /** Show Buy & Use action in shop (for non-targeting cards). */
+  shopBuyAndUse?: boolean;
   aura?: ItemAura | null;
   instantEffect?: InstantEffect;
   diceSelection?: DiceSelectionConfig;
@@ -67,6 +69,7 @@ export function createSupplyConsumableDef(cardData: SupplyCardDef, aura?: ItemAu
     description: cardData.description,
     category: 'supply',
     cost: 3,
+    shopBuyAndUse: cardData.shopBuyAndUse,
     aura: aura ?? null,
   };
   if (cardData.instantEffect) {
@@ -109,6 +112,7 @@ export function createFrontierConsumableDef(feData: FrontierEncounterDef, aura?:
     description: feData.description,
     category: 'frontier',
     cost: 4,
+    shopBuyAndUse: feData.shopBuyAndUse,
     aura: aura ?? null,
   };
   if (feData.instantEffect) {
@@ -225,6 +229,19 @@ export function canUseConsumableInShop(def: ConsumableDef): boolean {
   if (!effectType) return true;
   if (effectType === 'ENHANCE' || effectType === 'ADD_STICKER') return false;
   return true;
+}
+
+/** Check if a consumable can be used immediately ("Buy & Use" eligible). */
+export function canBuyAndUseConsumableInShop(
+  def: ConsumableDef,
+  lastUsedDef: ConsumableDef | null = resolveLastUsedConsumableDef(),
+): boolean {
+  if (def.category === 'trail_guide') return true;
+  // second_helpings requires a previous supply or trail guide to clone
+  if (def.id === 'second_helpings') {
+    return isSecondHelpingsCloneTarget(lastUsedDef);
+  }
+  return def.shopBuyAndUse === true;
 }
 
 // ─── Shop Generation ───

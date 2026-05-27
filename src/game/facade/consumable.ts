@@ -16,6 +16,7 @@ export type {
 } from '../ConsumablesSystem';
 
 export {
+  canBuyAndUseConsumableInShop,
   canUseConsumableInShop,
   getConsumableDefById,
   getConsumableTexturePrefix,

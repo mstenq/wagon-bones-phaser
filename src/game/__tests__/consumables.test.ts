@@ -16,6 +16,7 @@ import {
   grantGhostMedicine,
   canUseConsumableInShop,
   bumpAllSellValues,
+  canBuyAndUseConsumableInShop,
 } from '../ConsumablesSystem';
 import { getRunState } from '../store/runStore';
 import { selectRunStatusTraits } from '../runStatusTraits';
@@ -916,10 +917,21 @@ describe('shop consumable use gating', () => {
     expect(canUseConsumableInShop(instantDef)).toBe(true);
   });
 
-  test('shop buy-and-use works with full consumable slots for omen_stone/shop_pass/fools_gold/trading_post', () => {
+  test('shop buy-and-use eligibility is data-driven for non-instant supply/frontier cards', () => {
+    expect(canBuyAndUseConsumableInShop(getSupplyDefById('doctor')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getSupplyDefById('trading_post')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getSupplyDefById('treasure_map')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('all_in')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('echo_of_the_damned')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('magic_beans')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('blood_moon')!)).toBe(false);
+  });
+
+  test('shop buy-and-use works with full consumable slots for non-targeting supply/frontier cards', () => {
     const { player } = setupGame({ money: 100, equipment: [item('horseshoe')] });
     player.maxConsumableSlots = 0;
     const supplyIds = ['omen_stone', 'shop_pass', 'fools_gold', 'trading_post'] as const;
+    const frontierIds = ['all_in', 'echo_of_the_damned'] as const;
 
     // Seed one consumable so Trading Post has a consumable sell value target
     player.maxConsumableSlots = 1;
@@ -935,6 +947,11 @@ describe('shop consumable use gating', () => {
       const result = shopBuyActions.buyAndUseConsumable(def, 0);
       expect(result.success).toBe(true);
     }
+    for (const id of frontierIds) {
+      const def = getFrontierDefById(id)!;
+      const result = shopBuyActions.buyAndUseConsumable(def, 0);
+      expect(result.success).toBe(true);
+    }
 
     // Used directly from shop despite maxConsumableSlots=0 (no new cards added to bar)
     expect(player.usedConsumableSlots).toBe(usedBefore);
@@ -942,6 +959,8 @@ describe('shop consumable use gating', () => {
     // Token-based effects were applied.
     expect(getRunState().statusTraitTokens.find((t) => t.id === 'omen_stone')?.copies).toBe(1);
     expect(getRunState().statusTraitTokens.find((t) => t.id === 'shop_pass')?.copies).toBe(1);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'all_in')?.copies).toBe(1);
+    expect(getRunState().statusTraitTokens.find((t) => t.id === 'echo_of_the_damned')?.copies).toBe(1);
 
     // Trading Post still executes via buy-and-use path.
     expect(player.equipment[0]!.sellValue).toBe(eqBefore + 1);

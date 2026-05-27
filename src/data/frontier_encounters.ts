@@ -31,6 +31,8 @@ export interface FrontierEncounterDef {
   id: string;
   name: string;
   description: string;
+  /** Show Buy & Use action in shop (for non-targeting cards). */
+  shopBuyAndUse?: boolean;
   diceSelection?: FrontierDiceSelectionDef;
   instantEffect?: FrontierInstantEffect;
 }
@@ -128,6 +130,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'magic_beans',
     name: 'Magic Beans',
     description: 'Create rare item, money is set to $0',
+    shopBuyAndUse: true,
     instantEffect: {
       type: 'CREATE_EQUIPMENT',
       rarity: 'rare',
@@ -139,6 +142,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'pandoras_box',
     name: "Pandora's Box",
     description: 'Create legendary item (very rare)',
+    shopBuyAndUse: true,
     instantEffect: {
       type: 'CREATE_EQUIPMENT',
       rarity: 'legendary',
@@ -149,17 +153,20 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'spiritual_journey',
     name: 'Spiritual Journey',
     description: 'Increase all trail knowledge by 1 (very rare)',
+    shopBuyAndUse: true,
     instantEffect: { type: 'UPGRADE_ALL_HANDS' },
   },
   {
     id: 'all_in',
     name: 'All In',
     description: 'Double your money. Lose all rerolls this round',
+    shopBuyAndUse: true,
   },
   {
     id: 'echo_of_the_damned',
     name: 'Echo of the Damned',
     description: 'Your next played hand retriggers all scoring dice (stacks)',
+    shopBuyAndUse: true,
   },
 ];
 

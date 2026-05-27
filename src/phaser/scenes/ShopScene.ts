@@ -8,17 +8,17 @@ import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableDef, ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
 import {
+  canBuyAndUseConsumableInShop,
   canUseConsumableInShop,
   getConsumableTexturePrefix,
   getRandomSupplyDef,
   getRandomTrailGuideDef,
   getShopRandomFrontierDef,
-  isSecondHelpingsCloneTarget,
 } from '../../game/facade/consumable';
 import type { EquipmentDef, EquipmentInstance, PackInstance } from '../../game/facade/shop';
 import { getConsumableDefById } from '../../game/facade/consumable';
 import { getEquipmentDefById, getPackDefById } from '../../game/facade/shop';
-import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
+import { resolveEquipmentList } from '../../game/store/resolve';
 import {
   selectProfession,
   selectShopRerollCost,
@@ -62,32 +62,6 @@ import { rngFloat } from '../../game/RunRng';
 import { generateShopDie } from '../../game/store/shopStock';
 
 const CARD_SPACING = 185;
-
-/** Check if a consumable can be used immediately ("Buy & Use" eligible).
- *  Trail guides, cards with instantEffect, diceSelection, or special-case IDs all qualify. */
-function canBuyAndUse(def: ConsumableDef): boolean {
-  if (def.category === 'trail_guide') return true;
-  // Dice-selection cards can't be used from the shop (no dice to select)
-  if (def.diceSelection) return false;
-  if (def.instantEffect) return true;
-  // second_helpings requires a previous supply or trail guide to clone
-  if (def.id === 'second_helpings') {
-    return isSecondHelpingsCloneTarget(resolveLastUsedConsumableDef());
-  }
-  // Special-case supply/frontier IDs handled by switch in executeConsumableEffect
-  const SPECIAL_IDS = [
-    'doctor',
-    'compass',
-    'supply_cache',
-    'bless',
-    'omen_stone',
-    'shop_pass',
-    'fools_gold',
-    'trading_post',
-  ];
-  if (SPECIAL_IDS.includes(def.id)) return true;
-  return false;
-}
 
 /** A shop stock item — equipment, consumable, or dice */
 type ShopItem =
@@ -576,7 +550,7 @@ export class ShopScene extends Scene {
           },
         });
 
-        if (canBuyAndUse(shopItem.def)) {
+        if (canBuyAndUseConsumableInShop(shopItem.def)) {
           tabs.push({
             label: 'BUY\n& USE',
             color: 0x338833,
