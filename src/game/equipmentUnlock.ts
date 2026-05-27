@@ -33,4 +33,6 @@ export const unlockAnyEnhanced: EquipmentUnlockCondition = (_round, player) => p
 export const unlockTwoEnhancedTypes: EquipmentUnlockCondition = (_round, player) =>
   playerHasDistinctEnhancedTypes(player, 2);
 
+export const unlockDynamite: EquipmentUnlockCondition = () => !runStore.getState().dynamiteSelfDestructed;
+
 export const unlockNitro: EquipmentUnlockCondition = () => runStore.getState().dynamiteSelfDestructed;

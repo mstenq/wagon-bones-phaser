@@ -1,0 +1,140 @@
+id,name,description
+horseshoe,Horseshoe,+4 mult
+wedding_ring,Wedding Ring,If played hand contains a Pair +8 mult
+town_choir,Town Choir,If played hand contains 3 of a Kind +12 mult
+deputy_brothers,Deputy Brothers,If played hand contains Two Pair +10 mult
+work_boots,Work Boots,If played hand contains Pair +50 miles
+buffalo_stampede,Buffalo Stampede,If played hand contains 3 of a Kind +100 miles
+trail_rations,Trail Rations,+30 miles per unused re-roll
+deadeye,Deadeye,+20 mult if 3 or fewer dice are scored
+stubborn_mule,Stubborn Mule,+15 mult when 0 re-rolls remaining
+toolbelt,Toolbelt,+3 mult for each piece of equipment. Currently +0
+even_odds,Even Odds,+4 mult when an even value is scored
+odd_fellow,Odd Fellow,+31 miles when an odd value is scored
+dynamite,Dynamite,+15 mult. 1 in 6 chance to be destroyed at end of round.
+spare_holster,Spare Holster,+1 re-roll per leg
+payday,Payday,Earn $4 at end of round. Jesse Rawlins (Outlaw) earns $12
+bottom_dollar,Bottom Dollar,Adds double the rank of lowest held-in-hand die to mult
+ace_in_the_hole,Ace in the Hole,Each 1 held in hand gives x1.5 mult
+prospectors_pouch,Prospector's Pouch,Each enhanced die held in hand has a  1 in 2  chance to give  $1
+eleventh_crossing,The Eleventh Crossing,Each  11  held in hand gives  +11 mult
+rabbits_foot,Rabbit's Foot,Item gains x0.25 mult for every lucky dice trigger
+collectors_case,Collector's Case,Uncommon equipment each give x1.5 mult
+money_wagon,Money Wagon,+2 miles for every $1 you have
+bargain_bin,Bargain Bin,Item gains  +2  mult per reroll in the shop
+fading_memory,Fading Memory,"+20  mult,  -4  mult per round played, removed after  5 rounds"
+card_counter,Card Counter,Item gains  +2  mult if played hand contains  Two Pair . Victor Hale (Con Artist) gains  +4  mult if played hand contains  Two Pair .
+lucky_number,Lucky Number,Each played  7  gives  x1.5  mult when scored. Number changes each round.
+worn_deck,Worn Deck,x2  Mult. Loses  x0.01  mult per dice re-rolled
+war_drums,War Drums,Retrigger all dice played for the next  10 days  of travel
+snake_oil_ledger,Snake Oil Ledger,Item gains  x0.25  mult for each card sold. Resets when boss is defeated.
+gold_tooth,Gold Tooth,Played gold dice earn  $4
+guardian_totem,Guardian Totem,Prevents death if miles travelled is at least  25%  of required distance. Card is destroyed if used.
+high_noon,High Noon,x3  mult on  final day  of round
+desperado,Desperado,Add the sell value of all other owned equipment as  mult
+stagecoach,Stagecoach,Deprecated: removed with auto-draw round flow.
+mystery_crate,Mystery Crate,Add a dice at the start of each round with a random sticker
+trail_repair_kit,Trail Repair Kit,Negates negative trail event penalties. Gains  x0.75  mult each time it prevents a penalty.
+scouts_spyglass,Scout's Spyglass,"View from the spyglass before the next trail event.  Avoid to skip it, or investigate for  +20  stored miles and face the full event."
+saint_elmos_shield,Saint Elmo's Shield,Disables all boss effects and negative effects from trail events are prevented. Divine favor intervenes.
+book_of_the_dead,Book of the Dead,Gains  x1  mult for each destroyed enhanced dice
+devils_hand,The Devil's Hand,Played  6 's give  x2  mult when scored
+twenty_third_psalm,The 23rd Psalm,Item gains  x1  mult for every  23  dice re-rolled
+ghost_lantern,Ghost Lantern,Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
+seventh_trumpet,The Seventh Trumpet,"Retriggers all played dice, and all held in hand effects"
+twin_colts,Twin Colts,If played hand contains  Two Pair   +80  miles
+rail_line,Rail Line,If played hand contains a  4 Straight   +80  miles
+long_haul,Long Haul,If played hand contains a  5 Straight   +100  miles
+silver_bullets,Silver Bullets,Retrigger all dice held in hand
+funeral_pyre,Funeral Pyre,"When starting round, destroy equipment to right and add double its sell value as  mult"
+quarry_stone,Quarry Stone,Add one stone die to collection when starting round
+six_shooter,Six Shooter,x4  mult every  6th  hand played
+wild_card,Wild Card,+0  to  +23  mult  random
+bank_note,Bank Note,"Go up to  $20  in debt. When Charles Whitlock (Banker) sells this item, his debt is wiped clean."
+snake_eyes,Snake Eyes,1 in 4  chance to get a supply card when a 1 is scored. Abigail Turner (Merchant) has a  1 in 2  chance.
+coupon_book,Coupon Book,1 free reroll per shop visit
+last_stand,Last Stand,Retrigger all played dice on final day of round
+lucky_find,Lucky Find,"If one die is scored alone on first day, add a random enhancement"
+iron_furnace,Iron Furnace,x0.2  mult for each steel die in collection
+rainy_day_fund,Rainy Day Fund,$1  per unused re-roll at end of round
+one_eyed_jack,One-Eyed Jack,Retrigger each played 1
+gold_pan,Gold Pan,"1 in 2 chance to give $2 when an enhanced die scores.
+Davis Holler (Prospector) has a guaranteed chance."
+trail_journal,Trail Journal,Adds the number of times the hand has been played this trip as  mult
+marked,Marked,+1  mult per hand played without scoring a 6. Scoring a 6 resets mult to 0. Isaac Granger (Demon Hunter) gets  +2  per hand.
+surveyors_transit,Surveyor's Transit,1 in 4  chance to upgrade trail knowledge of hand type played.  1 in 2  chance if used by Elias Mercer (Surveyor).
+guide_lantern,Guide Lantern,"Gain  x0.1 mult for every trail guide used.
+Caleb Winters (Scout) gains  x0.2 mult for every trail guide used."
+steam_engine,Steam Engine,Gains  +100  miles.  -5  miles per hand played.
+bloodline,Bloodline,"If first day of round only scores one die, add a permanent copy to your collection"
+open_palm,Open Palm,All dice count when scoring
+hellfire_round,Hellfire Round,"If first hand of round is an enhanced 6, destroy it and gain a Frontier Encounter card"
+cowboy_boots,Cowboy Boots,Every played die permanently gains  +5  miles when scored
+trail_tax,Trail Tax,"+2  mult per day travelled,  -1  mult per re-roll used"
+wanted_poster,Wanted Poster,Earn  $4  when hand is  High Value
+nitro,Nitro,x3  mult.  1 in 1000  chance to be destroyed at end of round.
+repeat_offender,Repeat Offender,x3  mult if played hand has already been played this round
+tight_fist,Tight Fist,Gains  +3  mult when any booster pack is skipped
+haunted_totem,Haunted Totem,Gains  x0.5  mult when round starts (not boss rounds). Destroys one random equipment.
+square_dance,Square Dance,Gains  +4  miles if played hand has exactly  4 dice
+junk_dealer,Junk Dealer,"When round starts, create 2 common pieces of equipment"
+new_blood,New Blood,Gains  x0.25  mult for every new dice added to collection
+emergency_supplies,Emergency Supplies,Create a random supply card if hand is played with  $4  or less. Dr. Eleanor Sykes (Doctor) gets a supply card if hand is played with  $8  or less.
+railroad_bonds,Railroad Bonds,"Earn  $1  at end of round, increased by  $2  for every boss defeated"
+leftovers,Leftovers,1 in 2 chance to gain a supply card when opening a booster pack. Martha Delaney (Cook) has a 1 in 1 chance.
+campfire_stories,Campfire Stories,+1  mult per supply card used this journey
+quarry_mine,Quarry Mine,+25  miles for each stone die in collection
+antique_revolver,Antique Revolver,"When round starts, gain  $3  of sell value to current card"
+hardtack,Hardtack,"When round starts, gain  +3 days  and lose all rerolls"
+manifest_destiny,Manifest Destiny,Gains  +15  miles if hand contains a  5 Straight
+rail_splitter,Rail Splitter,If played hand contains a  4 Straight   +8  mult
+open_range,Open Range,If played hand contains  5 Straight +12  mult
+one_man_posse,One-Man Posse,x1  mult for each empty equipment slot
+covered_wagon,Covered Wagon,Gains  +12 miles for every Wood die scored
+moonshine,Moonshine,"Retrigger all enhanced dice. Enhanced dice have  1 in 6  chance of being destroyed, diamond dice  1 in 3 ."
+burn_barrel,Burn Barrel,"At start of each round, destroy one standard non-enhanced die. If destroyed, earn  $3 ."
+shortcut_trail,Shortcut Trail,x0.25  mult for each round of journey skipped
+quick_draw,Quick Draw,Retrigger first played die 2 additional times
+last_laugh,Last Laugh,Retrigger last played die 1 additional time
+lucky_penny,Lucky Penny,Played lucky dice earn  $1  when scored
+bone_charm,Bone Charm,Played bone dice have  1 in 2  chance to give  x1.5  mult
+wood_axe,Wood Axe,Played wooden dice give  +50  miles when scored
+iron_spurs,Iron Spurs,Played iron dice give  +7  mult when scored
+diamond_coffin,Diamond Coffin,Item gains  x0.75  mult for every diamond die that is destroyed
+counterfeit_goods,Counterfeit Goods,Allows items/trail guides/supplies/frontier encounter cards to appear multiple times in the shop and packs
+rainbow_trail,Rainbow Trail,"x2  if 2 different enhanced dice score,  x3  if 3,  x4  if 4,  x5  if 5 different"
+loaded_dice,Loaded Dice,Doubles all listed probabilities
+mirror_lake,Mirror Lake,"Copies the ability of: 
+Nothing to copy"
+echo_chamber,Echo Chamber,"Copies the leftmost ability: 
+Nothing to copy"
+five_mile_marker,5 Mile Marker,Gains  +5  miles each time a  5  pip is scored
+trail_backpack,Trail Backpack,"+2 re-rolls  per day,  -1 dice  when rolling"
+hitched_pair,Hitched Pair,x2  mult if hand contains  Pair
+hat_trick,Hat Trick,x3  mult if hand contains  3 of a Kind
+posse_wagon,Posse Wagon,x4  mult if hand contains  4 of a Kind
+five_finger_fillet,Five Finger Fillet,x5  mult if hand contains  5 of a Kind
+snake_river,Snake River,x3  mult if hand contains  5 Straight
+express_train,Express Train,"+250  miles,  -2 re-rolls"
+phantom_wagon,Phantom Wagon,"After 2 rounds, sell this card to duplicate a random item (removes ghost aura)"
+trail_almanac,Trail Almanac,$1  at end of round for every type of trail guide discovered
+blessed_herd,Blessed Herd,x3  mult if you have at least  16  enhanced dice in collection
+supply_drop,Supply Drop,Create a random supply card at start of round
+explorers_guild,Explorer's Guild,All trail guides and trail guide packs are free in the shop
+graverobber,Graverobber,"Gains  x0.1  mult per scored enhanced dice, removes dice enhancement"
+pack_saddle,Pack Saddle,+1 hand size
+coffee,Coffee,"+2 hand size ,  -1 day  per round"
+flour_sack,Flour Sack,"+5 hand size , reduces by  1 each round . Hank Caldwell (Farmer) keeps the full  +5  with no decay."
+oil_baron,Oil Baron,+2  mult for every  $5  you have
+trailblazer,Trailblazer,Earns  x0.2  mult per consecutive hand played without playing your most played hand
+golden_spike,Golden Spike,All scored dice have a  1 in 4  chance to turn into a gold dice
+sheriffs_badge,Sheriff's Badge,Sell this item to disable the current boss effect
+bounty_contract,Bounty Contract,Sell this item to gain a free Twin Wagon tag
+double_barrel,Double Barrel,First played  2  pip die gives  x2  mult when scored
+raffle_ticket,Raffle Ticket,At the end of each round add  $1  of sell value to each piece of equipment
+ghost_town,Ghost Town,+10  mult for each dice below the collection's starting size
+savings_account,Savings Account,Earn an extra  $1  of interest for every  $5  you have at end of round. Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped).
+six_feet_under,Six Feet Under,Item gains  +66  miles for every dice that is destroyed
+eight_second_ride,Eight Second Ride,"Each consecutive scored  8  gains  +0.5  xMult over the previous
+( x1 ,  x1.5 ,  x2 ,  x2.5 ,  x3 ...)"
+stacked_deck,Stacked Deck,Loaded dice are considered all pip values for equipment effects

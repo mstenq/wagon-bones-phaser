@@ -5,7 +5,9 @@ import { detectBestHand } from '../DiceSystem';
 import { addScore, D, milesToSave } from '../scoreMath';
 import { consumeNextRoundTags } from '../TagSystem';
 import { hasActiveTrailRoundEffects, trailRoundEffectsFromModifiers } from '../TrailEventsSystem';
+import { previewBossScoreSelection } from '../BossEffectsSystem';
 import { roundActions } from '../store/actions/roundActions';
+import { resolveDiceByIds } from '../store/roundResolve';
 import { getRunHandStats } from '../store/runReads';
 import {
   removeDestroyedDiceFromRound,
@@ -90,6 +92,17 @@ export const gameRound = {
     return roundActions.calculateScore();
   },
 
+  getBossScoreWarning(selectedIds: string[]): string | null {
+    const round = getRoundState();
+    if (!round || selectedIds.length === 0) return null;
+    const selected = resolveDiceByIds(
+      selectedIds.filter((id) => round.rolledDice.some((r) => r.id === id)),
+      round,
+    );
+    if (selected.length === 0) return null;
+    return previewBossScoreSelection(selected).warning;
+  },
+
   cancelScore(): void {
     roundActions.cancelScore();
   },
@@ -103,7 +116,7 @@ export const gameRound = {
     roundActions.patch({ totalMiles: D(1_000_000), phase: 'DAY_END' });
   },
 
-  validateScoreSelection(ids: string[]): { allowed: boolean; reason?: string } {
+  validateScoreSelection(ids: string[]): { allowed: boolean; reason?: string; warning?: string } {
     return roundActions.validateScoreSelection(ids);
   },
 

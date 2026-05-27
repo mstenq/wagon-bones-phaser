@@ -108,7 +108,7 @@ export class GameState {
     return roundActions.selectForScore(diceIds);
   }
 
-  validateScoreSelection(diceIds: string[]): { allowed: boolean; reason?: string } {
+  validateScoreSelection(diceIds: string[]): { allowed: boolean; reason?: string; warning?: string } {
     return roundActions.validateScoreSelection(diceIds);
   }
 

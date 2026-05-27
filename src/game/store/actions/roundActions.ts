@@ -38,10 +38,13 @@ import {
   applyBossAfterRoll,
   applyBossOnScore,
   applyBossAfterScore,
-  applyBossHandRestriction,
   getBossAdjustedHandStats,
-  canPlayHandType,
   recordBossHandPlayed,
+  previewBossScoreSelection,
+  isBossScoreForfeit,
+  applyBossTricksterDowngrade,
+  initInspectorRollSize,
+  getInspectorRollSizeForDay,
 } from '../../BossEffectsSystem';
 import { generateRandomEquipment } from '../../ItemsSystem';
 import { acquireRewardEquipmentInstance } from '../../EquipmentModifiers';
@@ -316,6 +319,7 @@ export const roundActions = {
     }
     runActions.patch({ pendingNewDiceIds: [], pendingAnimatedDestructions: [], pendingJunkDealerCount: 0 });
 
+    initInspectorRollSize(config.rollSize);
     setRound(createInitialRound(config));
   },
 
@@ -401,7 +405,7 @@ export const roundActions = {
     return true;
   },
 
-  validateScoreSelection(diceIds: string[]): { allowed: boolean; reason?: string } {
+  validateScoreSelection(diceIds: string[]): { allowed: boolean; reason?: string; warning?: string } {
     const round = getRoundState();
     if (!round) return { allowed: false, reason: 'No active round' };
     const selected = resolveDiceByIds(
@@ -409,8 +413,8 @@ export const roundActions = {
       round,
     );
     if (selected.length !== diceIds.length) return { allowed: false, reason: 'Invalid dice selection' };
-    const handResult = applyBossHandRestriction(detectBestHand(selected), selected);
-    return canPlayHandType(handResult.type as HandType);
+    const preview = previewBossScoreSelection(selected);
+    return { allowed: true, warning: preview.warning ?? undefined };
   },
 
   cancelScore(): void {
@@ -425,32 +429,54 @@ export const roundActions = {
     if (round.selectedForScoreIds.length === 0) return null;
 
     const selectedDice = resolveDiceByIds(round.selectedForScoreIds, round);
-    let handResult: HandResult = detectBestHand(selectedDice);
-    handResult = applyBossHandRestriction(handResult, selectedDice);
-
+    const handResult: HandResult = detectBestHand(selectedDice);
     const handType = handResult.type as HandType;
-    const playCheck = canPlayHandType(handType);
-    if (!playCheck.allowed) {
-      roundActions.cancelScore();
-      return null;
-    }
+    const preview = previewBossScoreSelection(selectedDice);
+    const forfeit = isBossScoreForfeit(preview);
 
     const run = getRunState();
-    const equipment = resolveEquipmentList();
-    const hasOpenPalm = equipment.some((e) => e.def.effectType === 'ALL_DICE_SCORE');
-    if (hasOpenPalm) {
-      handResult.scoringDice = [...selectedDice];
+
+    if (forfeit) {
+      const forfeitResult: ScoreResult = {
+        handResult,
+        totalValue: 0,
+        miles: ZERO,
+        mult: D(1),
+        animEvents: [],
+        mutations: createEmptyScoringMutations(),
+      };
+
+      runActions.patch({ daysScored: run.daysScored + 1 });
+      applyBossAfterScore();
+
+      patchRound({
+        currentHandType: handResult.type,
+        handHistory: [...round.handHistory, handResult.type],
+        phase: 'DAY_END',
+        lastScoreResult: forfeitResult,
+      });
+
+      runActions.enqueuePlayback({ kind: 'score', result: forfeitResult });
+      return forfeitResult;
     }
 
+    const equipment = resolveEquipmentList();
+    const hasOpenPalm = equipment.some((e) => e.def.effectType === 'ALL_DICE_SCORE');
+    let scoringHandResult = handResult;
+    if (hasOpenPalm) {
+      scoringHandResult = { ...handResult, scoringDice: [...selectedDice] };
+    }
+
+    const tricksterDowngrade = applyBossTricksterDowngrade(handType);
     const stats = getBossAdjustedHandStats(handType, selectHandStats(run, handType));
     recordBossHandPlayed(handType);
     applyBossOnScore(handType, selectedDice);
 
     const levelBonus = stats.level - 1;
     const leveledResult = {
-      ...handResult,
-      baseMiles: addScore(handResult.baseMiles, D(stats.milesPerLevel * levelBonus)),
-      baseMult: addScore(handResult.baseMult, D(stats.multPerLevel * levelBonus)),
+      ...scoringHandResult,
+      baseMiles: addScore(scoringHandResult.baseMiles, D(stats.milesPerLevel * levelBonus)),
+      baseMult: addScore(scoringHandResult.baseMult, D(stats.multPerLevel * levelBonus)),
     };
 
     processEquipmentOnHandPlayed(equipment, handType, selectedDice);
@@ -501,8 +527,9 @@ export const roundActions = {
     const handUpgrades = processEquipmentAfterHandScored(equipment, handType);
     replaceEquipmentList(equipment);
 
-    if (handUpgrades.length > 0) {
-      finalResult.handUpgrades = handUpgrades;
+    const allHandUpgrades = [...(tricksterDowngrade ? [tricksterDowngrade] : []), ...handUpgrades];
+    if (allHandUpgrades.length > 0) {
+      finalResult.handUpgrades = allHandUpgrades;
     }
 
     runActions.patch({ daysScored: run.daysScored + 1 });
@@ -649,8 +676,13 @@ export const roundActions = {
 
     applyBossOnDayStart(round.day + 1);
 
+    const nextDay = round.day + 1;
+    const inspectorRollSize = getInspectorRollSizeForDay(nextDay);
+    const nextConfig = inspectorRollSize !== null ? { ...round.config, rollSize: inspectorRollSize } : round.config;
+
     patchRound({
-      day: round.day + 1,
+      day: nextDay,
+      config: nextConfig,
       phase: 'SELECT',
       handDiceIds,
       dieValuesByDieId,

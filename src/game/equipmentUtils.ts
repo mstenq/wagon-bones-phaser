@@ -3,6 +3,7 @@
 
 import { COPY_INCOMPATIBLE_EFFECTS } from './Constants';
 import { rngFloat, type RngStream } from './RunRng';
+import type { DiceEnhancement } from './types';
 
 /**
  * Count how many Loaded Dice are equipped and return the probability multiplier.
@@ -15,6 +16,55 @@ export function getLoadedDiceMultiplier(equipment: { def: { effectType: string }
     if (equip.def.effectType === 'LOADED_DICE') count++;
   }
   return count > 0 ? Math.pow(2, count) : 1;
+}
+
+export function hasGamblersDiceCup(equipment: { def: { effectType: string } }[]): boolean {
+  return equipment.some((equip) => equip.def.effectType === 'GAMBLERS_DICE_CUP');
+}
+
+/**
+ * Probability that a die rolls the selected loaded-face value.
+ * Loaded enhancement uses 1-in-3 base (× Loaded Dice item); cup gives other dice 1-in-6.
+ */
+export function getLoadedFaceRollChance(
+  equipment: { def: { effectType: string } }[],
+  dieEnhancement: DiceEnhancement,
+): number {
+  const ldm = getLoadedDiceMultiplier(equipment);
+  if (dieEnhancement === 'loaded') {
+    return Math.min(1, ldm / 3);
+  }
+  if (hasGamblersDiceCup(equipment)) {
+    return Math.min(1, ldm / 6);
+  }
+  return 0;
+}
+
+function formatLoadedFaceOdds(chance: number): string {
+  if (chance >= 1) return 'guaranteed';
+  if (Math.abs(chance - 2 / 3) < 1e-9) return '2 in 3';
+  if (Math.abs(chance - 1 / 3) < 1e-9) return '1 in 3';
+  if (Math.abs(chance - 1 / 2) < 1e-9) return '1 in 2';
+  if (Math.abs(chance - 1 / 6) < 1e-9) return '1 in 6';
+  const denom = Math.round(1 / chance);
+  return `1 in ${denom}`;
+}
+
+/** Human-readable odds for loaded-face rolling (picker UI). */
+export function formatLoadedDieOddsNote(equipment: { def: { effectType: string } }[]): string {
+  const loadedChance = getLoadedFaceRollChance(equipment, 'loaded');
+  if (!hasGamblersDiceCup(equipment)) {
+    if (loadedChance >= 1) return 'Selected face is guaranteed to roll.';
+    if (loadedChance === 2 / 3) return 'Selected face rolls at 2 in 3.';
+    if (loadedChance === 1 / 3) return 'Selected face rolls at 1 in 3.';
+    return 'Selected face rolls at 1 in 6.';
+  }
+
+  const otherChance = getLoadedFaceRollChance(equipment, null);
+  if (loadedChance >= 1 && otherChance >= 1) {
+    return 'All dice always roll the selected face.';
+  }
+  return `Loaded dice: ${formatLoadedFaceOdds(loadedChance)} · Other dice: ${formatLoadedFaceOdds(otherChance)}`;
 }
 
 /**

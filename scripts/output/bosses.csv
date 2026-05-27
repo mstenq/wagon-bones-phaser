@@ -1,0 +1,19 @@
+id,name,description
+the_inspector,The Inspector,Hand size shrinks by 1 each day (8, 7, 6, …)
+the_tax_man,The Tax Man,Playing your most played hand sets money to zero
+the_marathon,The Marathon,Distance is 4x normal
+the_ghost_town,The Ghost Town,All played even dice values are disabled (no additional miles or enhancements will trigger)
+the_undertaker,The Undertaker,All played odd dice values are disabled (no additional miles or enhancements will trigger)
+the_preacher,The Preacher,Only one hand type allowed for round
+the_call_girl,The Call Girl,Must play different hands each round
+the_trickster,The Trickster,Every scored hand permanently reduces that hand's trail knowledge by one (min level 1)
+the_river,The River,Only straights score; other hands forfeit the day for 0 miles
+the_chain_gang,The Chain Gang,Start with 0 rerolls
+the_standoff,The Standoff,Play only 1 hand
+the_banker,The Banker,Lose $1 per played dice
+the_bottle,The Bottle,Base trail knowledge is halved for entire round
+the_jinx,The Jinx,One random piece of equipment disabled per day
+the_bank_lien,The Bank Lien,All dice disabled until one piece of equipment is sold
+the_bounty,The Bounty,Forces 1 dice to be selected/locked randomly each day after first roll (Cannot unselect)
+the_land_slide,The Land Slide,Flips and shuffles all equipment (can't see front of card)
+the_finish_line,The Finish Line,Distance is 6x normal

@@ -852,7 +852,7 @@ describe('saint_elmos_shield equipment interaction', () => {
 // ─── Trail Repair Kit ───
 
 describe('Trail Repair Kit interaction', () => {
-  test('negates negative effects and gains xMult per event from effectParams', () => {
+  test('negates negative effects and gains x0.25 mult per event', () => {
     const player = resetPlayerState();
     const kit = item('trail_repair_kit');
     player.equipment = [kit];
@@ -860,12 +860,13 @@ describe('Trail Repair Kit interaction', () => {
       getEquipmentDefById('trail_repair_kit')!.effectParams,
       'xMultGainPerNegation',
     );
+    expect(gain).toBe(0.25);
 
     const event = getTrailEventById('bad_mosquitos')!;
     const result = resolveChoice(event, 'endure');
     expect(result.modifiers.rerollPenalty).toBe(0);
     syncEquipmentInstances(kit);
-    expect(kit.state.xMult).toBeCloseTo(1 + gain, 5);
+    expect(kit.state.xMult).toBeCloseTo(1.25, 5);
   });
 
   test('does not gain xMult on positive-only events', () => {
@@ -878,7 +879,7 @@ describe('Trail Repair Kit interaction', () => {
     expect(kit.state.xMult ?? 1).toBe(1);
   });
 
-  test('shield and repair kit still only add xMult gain once per event', () => {
+  test('shield and repair kit still only add x0.25 mult gain once per event', () => {
     const player = resetPlayerState();
     const kit = item('trail_repair_kit');
     player.equipment = [item('saint_elmos_shield'), kit];
@@ -886,11 +887,12 @@ describe('Trail Repair Kit interaction', () => {
       getEquipmentDefById('trail_repair_kit')!.effectParams,
       'xMultGainPerNegation',
     );
+    expect(gain).toBe(0.25);
 
     const event = getTrailEventById('lose_trail')!;
     resolveChoice(event, 'wander');
     syncEquipmentInstances(kit);
-    expect(kit.state.xMult).toBeCloseTo(1 + gain, 5);
+    expect(kit.state.xMult).toBeCloseTo(1.25, 5);
   });
 });
 

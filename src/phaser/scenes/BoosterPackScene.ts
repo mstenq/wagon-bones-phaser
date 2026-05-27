@@ -19,8 +19,13 @@ import { getRunState } from '../../game/store';
 import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
 import { selectEquipmentSlotsFree } from '../../game/store/selectors/runSelectors';
 import { applyConsumableAnimEvents } from '../animations/ConsumableAnimPlayback';
+import {
+  getDiceSelectionMaxPicks,
+  getDiceSelectionMinPicks,
+  isDiceSelectionReady,
+} from '../../game/DiceSelectionSystem';
 import { Die } from '../../game/types';
-import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, UI, ANIM, DICE } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
@@ -89,6 +94,19 @@ export class BoosterPackScene extends Scene {
   private lineupLockIcons: Phaser.GameObjects.Text[] = [];
   private selectedDiceIds: Set<string> = new Set();
   private lineupY: number = 0;
+
+  // Drag-to-reorder (dice lineup — manual pointer drag, same feel as GameScene)
+  private draggingLineupSprite: DiceSprite | null = null;
+  private lineupDragCandidate: DiceSprite | null = null;
+  private lineupDragPointerId: number | null = null;
+  private lineupWasDragging = false;
+  private lineupDragOffsetX = 0;
+  private lineupDragOffsetY = 0;
+  private lineupDragStartX = 0;
+  private lineupDragStartY = 0;
+  private lineupDragPrevX = 0;
+  private lineupDragVelocityX = 0;
+  private lineupPointerTracking = false;
 
   // Active card tab state
   private activeTabCard: CardSprite | null = null;
@@ -167,7 +185,10 @@ export class BoosterPackScene extends Scene {
     this.activeTabCard = null;
 
     this.scale.on('resize', this.onResize, this);
-    this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
+    this.events.on('shutdown', () => {
+      this.scale.off('resize', this.onResize, this);
+      this.stopLineupPointerTracking();
+    });
 
     this.buildLayout();
   }
@@ -287,12 +308,19 @@ export class BoosterPackScene extends Scene {
   // ─── Dice Lineup ───
 
   private buildDiceLineup(): void {
-    this.clearDiceLineup();
     const run = getRunState();
     const spent = new Set(run.spentDiceIds);
     const nonSpent = run.dice.filter((d) => !spent.has(d.id));
     const shuffled = rngShuffle('dice', nonSpent);
-    this.lineupDice = shuffled.slice(0, Math.min(run.handSize, shuffled.length));
+    const dice = shuffled.slice(0, Math.min(run.handSize, shuffled.length));
+    this.layoutDiceLineup(dice);
+  }
+
+  /** Lay out dice in the given order (no shuffle). Used on pack open and after lineup count changes. */
+  private layoutDiceLineup(dice: Die[], restoreSelection?: Set<string>): void {
+    const selected = restoreSelection ?? new Set<string>();
+    this.clearDiceLineup();
+    this.lineupDice = dice.map((d) => ({ ...d }));
 
     if (this.lineupDice.length === 0) return;
 
@@ -300,61 +328,7 @@ export class BoosterPackScene extends Scene {
     const startX = this.contentCX - totalWidth / 2;
 
     for (let i = 0; i < this.lineupDice.length; i++) {
-      const die = this.lineupDice[i];
-      const arc = this.getArcOffset(i, this.lineupDice.length);
-      const x = startX + i * DICE_SPACING;
-      const y = this.lineupY + arc.y;
-
-      const sprite = new DiceSprite(this, x, y, die);
-      sprite.rotation = arc.rotation;
-      sprite.setDepth(10);
-      this.lineupSprites.push(sprite);
-
-      // Lock icon (hidden initially)
-      const lockIcon = this.add
-        .text(x, y + 46, '🔒', { fontSize: '14px' })
-        .setOrigin(0.5)
-        .setDepth(11)
-        .setVisible(false);
-      this.lineupLockIcons.push(lockIcon);
-
-      // Click handler for dice selection
-      sprite.on('pointerdown', () => this.onLineupDieClick(i));
-    }
-
-    // Disable lineup interaction by default (enabled when a dice-selection card is active)
-    this.setLineupInteractive(false);
-  }
-
-  private clearDiceLineup(): void {
-    for (const s of this.lineupSprites) s.destroy();
-    for (const icon of this.lineupLockIcons) icon.destroy();
-    this.lineupSprites = [];
-    this.lineupLockIcons = [];
-    this.lineupDice = [];
-    this.selectedDiceIds.clear();
-  }
-
-  private refreshDiceLineup(): void {
-    if (!this.hasDiceSelectionLineup) return;
-
-    // Re-draw dice from current player pool
-    const oldSelected = new Set(this.selectedDiceIds);
-    this.clearDiceLineup();
-
-    const run = getRunState();
-    const spent = new Set(run.spentDiceIds);
-    const nonSpent = run.dice.filter((d) => !spent.has(d.id));
-    const shuffled = rngShuffle('dice', nonSpent);
-    this.lineupDice = shuffled.slice(0, Math.min(run.handSize, shuffled.length));
-
-    if (this.lineupDice.length === 0) return;
-
-    const totalWidth = (this.lineupDice.length - 1) * DICE_SPACING;
-    const startX = this.contentCX - totalWidth / 2;
-
-    for (let i = 0; i < this.lineupDice.length; i++) {
-      const die = this.lineupDice[i];
+      const die = this.lineupDice[i]!;
       const arc = this.getArcOffset(i, this.lineupDice.length);
       const x = startX + i * DICE_SPACING;
       const y = this.lineupY + arc.y;
@@ -371,10 +345,9 @@ export class BoosterPackScene extends Scene {
         .setVisible(false);
       this.lineupLockIcons.push(lockIcon);
 
-      sprite.on('pointerdown', () => this.onLineupDieClick(i));
+      this.wireLineupSpriteInteraction(sprite);
 
-      // Restore selection if die still exists
-      if (oldSelected.has(die.id)) {
+      if (selected.has(die.id)) {
         this.selectedDiceIds.add(die.id);
         sprite.setSelected(true);
         lockIcon.setVisible(true);
@@ -384,20 +357,281 @@ export class BoosterPackScene extends Scene {
     this.setLineupInteractive(false);
   }
 
-  private setLineupInteractive(enabled: boolean): void {
-    for (const sprite of this.lineupSprites) {
-      sprite.setDisabled(!enabled);
+  /**
+   * After a pack card or pouch consumable mutates dice, refresh visuals without reshuffling.
+   * Preserves lineup order; drops destroyed dice and relayouts only when the count changes.
+   */
+  private syncDiceLineupFromRun(): void {
+    if (!this.hasDiceSelectionLineup || this.lineupDice.length === 0) return;
+
+    const run = getRunState();
+    const runDiceById = new Map(run.dice.map((d) => [d.id, d]));
+    const oldSelected = new Set(this.selectedDiceIds);
+
+    const nextLineup: Die[] = [];
+    for (const die of this.lineupDice) {
+      const fresh = runDiceById.get(die.id);
+      if (fresh) nextLineup.push({ ...fresh });
+    }
+
+    this.lineupDice = nextLineup;
+    this.selectedDiceIds.clear();
+    for (const die of nextLineup) {
+      if (oldSelected.has(die.id)) this.selectedDiceIds.add(die.id);
+    }
+
+    if (nextLineup.length !== this.lineupSprites.length) {
+      this.layoutDiceLineup(nextLineup, new Set(this.selectedDiceIds));
+      return;
+    }
+
+    for (let i = 0; i < this.lineupSprites.length; i++) {
+      const die = nextLineup[i]!;
+      this.lineupSprites[i]!.setDieData(die);
+      const isSelected = this.selectedDiceIds.has(die.id);
+      this.lineupSprites[i]!.setSelected(isSelected);
+      this.lineupLockIcons[i]?.setVisible(isSelected);
     }
   }
 
-  private onLineupDieClick(index: number): void {
+  private clearDiceLineup(): void {
+    this.cancelLineupDrag();
+    for (const s of this.lineupSprites) s.destroy();
+    for (const icon of this.lineupLockIcons) icon.destroy();
+    this.lineupSprites = [];
+    this.lineupLockIcons = [];
+    this.lineupDice = [];
+    this.selectedDiceIds.clear();
+  }
+
+  private setLineupInteractive(enabled: boolean): void {
+    const hitArea = new Phaser.Geom.Rectangle(0, 0, DICE.SIZE, DICE.SIZE);
+
+    for (const sprite of this.lineupSprites) {
+      sprite.setDisabled(!enabled);
+      if (enabled) {
+        sprite.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+        if (sprite.input) sprite.input.cursor = 'grab';
+      } else {
+        sprite.disableInteractive();
+      }
+    }
+    if (!enabled) {
+      this.cancelLineupDrag();
+    }
+  }
+
+  private getLineupRowXPositions(count: number): number[] {
+    if (count === 0) return [];
+    const totalWidth = (count - 1) * DICE_SPACING;
+    const startX = this.contentCX - totalWidth / 2;
+    return Array.from({ length: count }, (_, i) => startX + i * DICE_SPACING);
+  }
+
+  private wireLineupSpriteInteraction(sprite: DiceSprite): void {
+    sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.activeTabCard?.item.diceSelection || sprite._disabled) return;
+
+      this.lineupWasDragging = false;
+      this.lineupDragCandidate = sprite;
+      this.lineupDragPointerId = pointer.id;
+      this.lineupDragOffsetX = pointer.worldX - sprite.x;
+      this.lineupDragOffsetY = pointer.worldY - sprite.y;
+      this.lineupDragStartX = pointer.worldX;
+      this.lineupDragStartY = pointer.worldY;
+      this.lineupDragPrevX = pointer.worldX;
+      this.lineupDragVelocityX = 0;
+      this.startLineupPointerTracking();
+    });
+  }
+
+  private startLineupPointerTracking(): void {
+    if (this.lineupPointerTracking) return;
+    this.lineupPointerTracking = true;
+    this.input.on('pointermove', this.onLineupPointerMove);
+    this.input.on('pointerup', this.onLineupPointerUp);
+  }
+
+  private stopLineupPointerTracking(): void {
+    if (!this.lineupPointerTracking) return;
+    this.lineupPointerTracking = false;
+    this.input.off('pointermove', this.onLineupPointerMove);
+    this.input.off('pointerup', this.onLineupPointerUp);
+  }
+
+  private cancelLineupDrag(): void {
+    this.draggingLineupSprite = null;
+    this.lineupDragCandidate = null;
+    this.lineupDragPointerId = null;
+    this.lineupDragVelocityX = 0;
+    DiceSprite.suppressTooltips = false;
+    this.stopLineupPointerTracking();
+  }
+
+  private beginLineupDrag(sprite: DiceSprite): void {
+    this.draggingLineupSprite = sprite;
+    this.lineupDragCandidate = null;
+    this.lineupWasDragging = true;
+
+    sprite.emit('pointerout');
+    DiceSprite.suppressTooltips = true;
+    sprite.setDepth(30);
+    sprite.scaleX = 1.1;
+    sprite.scaleY = 1.1;
+  }
+
+  private updateLineupDrag(pointer: Phaser.Input.Pointer): void {
+    if (!this.draggingLineupSprite) return;
+
+    const dx = pointer.worldX - this.lineupDragPrevX;
+    this.lineupDragVelocityX =
+      this.lineupDragVelocityX * ANIM.CARD_DRAG_SWING_DAMPING + dx * (1 - ANIM.CARD_DRAG_SWING_DAMPING);
+    this.lineupDragPrevX = pointer.worldX;
+
+    const swing = Phaser.Math.Clamp(
+      this.lineupDragVelocityX * ANIM.CARD_DRAG_SWING_FACTOR,
+      -ANIM.CARD_DRAG_SWING_MAX,
+      ANIM.CARD_DRAG_SWING_MAX,
+    );
+    this.draggingLineupSprite.rotation = swing;
+    this.draggingLineupSprite.x = pointer.worldX - this.lineupDragOffsetX;
+    this.draggingLineupSprite.y = pointer.worldY - this.lineupDragOffsetY + ANIM.CARD_DRAG_LIFT_Y;
+
+    const list = this.lineupSprites;
+    const positions = this.getLineupRowXPositions(list.length);
+    let newIndex = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < positions.length; i++) {
+      const dist = Math.abs(this.draggingLineupSprite.x - positions[i]);
+      if (dist < minDist) {
+        minDist = dist;
+        newIndex = i;
+      }
+    }
+
+    const currentIndex = list.indexOf(this.draggingLineupSprite);
+    if (newIndex !== currentIndex) {
+      list.splice(currentIndex, 1);
+      list.splice(newIndex, 0, this.draggingLineupSprite);
+
+      const die = this.lineupDice.splice(currentIndex, 1)[0]!;
+      this.lineupDice.splice(newIndex, 0, die);
+
+      const lockIcon = this.lineupLockIcons.splice(currentIndex, 1)[0]!;
+      this.lineupLockIcons.splice(newIndex, 0, lockIcon);
+
+      for (let i = 0; i < list.length; i++) {
+        if (list[i] === this.draggingLineupSprite) continue;
+        const arc = this.getArcOffset(i, list.length);
+        this.tweens.add({
+          targets: list[i],
+          x: positions[i],
+          y: this.lineupY + arc.y,
+          rotation: arc.rotation,
+          duration: 150,
+          ease: 'Power2',
+        });
+        this.lineupLockIcons[i]?.setPosition(positions[i], this.lineupY + arc.y + 46);
+      }
+    }
+  }
+
+  private finishLineupDrag(): void {
+    if (!this.draggingLineupSprite) return;
+
+    const sprite = this.draggingLineupSprite;
+    const finalVelocity = this.lineupDragVelocityX;
+    this.draggingLineupSprite = null;
+    this.lineupDragVelocityX = 0;
+    DiceSprite.suppressTooltips = false;
+
+    sprite.setDepth(10);
+    this.sound.play('sfx_dice_land', { volume: 0.2 });
+
+    const positions = this.getLineupRowXPositions(this.lineupSprites.length);
+    const idx = this.lineupSprites.indexOf(sprite);
+    const arc = this.getArcOffset(idx, this.lineupSprites.length);
+    const settleY = this.lineupY + arc.y;
+
+    const overshoot = Phaser.Math.Clamp(
+      finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
+      -ANIM.CARD_DRAG_SWING_MAX,
+      ANIM.CARD_DRAG_SWING_MAX,
+    );
+    const dur = ANIM.CARD_DRAG_SETTLE_DURATION;
+
+    this.tweens.chain({
+      targets: sprite,
+      tweens: [
+        {
+          x: positions[idx],
+          y: settleY,
+          rotation: overshoot + arc.rotation,
+          scaleX: 1,
+          scaleY: 1,
+          duration: dur * 0.3,
+          ease: 'Sine.easeOut',
+        },
+        {
+          rotation: -overshoot * 0.4 + arc.rotation,
+          duration: dur * 0.25,
+          ease: 'Sine.easeInOut',
+        },
+        {
+          rotation: overshoot * 0.1 + arc.rotation,
+          duration: dur * 0.2,
+          ease: 'Sine.easeInOut',
+        },
+        {
+          rotation: arc.rotation,
+          duration: dur * 0.25,
+          ease: 'Sine.easeIn',
+        },
+      ],
+    });
+
+    this.lineupLockIcons[idx]?.setPosition(positions[idx], settleY + 46);
+  }
+
+  private onLineupPointerMove = (pointer: Phaser.Input.Pointer): void => {
+    if (this.lineupDragPointerId !== null && pointer.id !== this.lineupDragPointerId) return;
+
+    if (!this.draggingLineupSprite && this.lineupDragCandidate) {
+      const dx = pointer.worldX - this.lineupDragStartX;
+      const dy = pointer.worldY - this.lineupDragStartY;
+      if (Math.hypot(dx, dy) < 8) return;
+      this.beginLineupDrag(this.lineupDragCandidate);
+    }
+
+    this.updateLineupDrag(pointer);
+  };
+
+  private onLineupPointerUp = (pointer: Phaser.Input.Pointer): void => {
+    if (this.lineupDragPointerId !== null && pointer.id !== this.lineupDragPointerId) return;
+
+    const candidate = this.lineupDragCandidate;
+    const wasDragging = this.lineupWasDragging;
+
+    if (this.draggingLineupSprite) {
+      this.finishLineupDrag();
+    } else if (candidate && !wasDragging) {
+      this.onLineupDieClick(candidate);
+    }
+
+    this.lineupDragCandidate = null;
+    this.lineupDragPointerId = null;
+    this.stopLineupPointerTracking();
+  };
+
+  private onLineupDieClick(sprite: DiceSprite): void {
     if (!this.activeTabCard) return;
+    const index = this.lineupSprites.indexOf(sprite);
+    if (index < 0) return;
     const die = this.lineupDice[index];
     if (!die) return;
 
-    const sprite = this.lineupSprites[index];
     const lockIcon = this.lineupLockIcons[index];
-    const requiredPicks = this.getRequiredDicePicks();
+    const maxPicks = this.getMaxDicePicks();
 
     if (this.selectedDiceIds.has(die.id)) {
       // Deselect
@@ -405,7 +639,7 @@ export class BoosterPackScene extends Scene {
       sprite.setSelected(false);
       if (lockIcon) lockIcon.setVisible(false);
       this.sound.play('sfx_card_slide2', { volume: 0.25 });
-    } else if (this.selectedDiceIds.size < requiredPicks) {
+    } else if (this.selectedDiceIds.size < maxPicks) {
       // Select
       this.selectedDiceIds.add(die.id);
       sprite.setSelected(true);
@@ -880,9 +1114,16 @@ export class BoosterPackScene extends Scene {
     return !!item.diceSelection;
   }
 
-  private getRequiredDicePicks(): number {
-    if (!this.activeTabCard?.item.diceSelection) return 0;
-    return this.activeTabCard.item.diceSelection.pickCount;
+  private getMinDicePicks(): number {
+    const config = this.activeTabCard?.item.diceSelection;
+    if (!config) return 0;
+    return getDiceSelectionMinPicks(config);
+  }
+
+  private getMaxDicePicks(): number {
+    const config = this.activeTabCard?.item.diceSelection;
+    if (!config) return 0;
+    return getDiceSelectionMaxPicks(config);
   }
 
   private updateActiveTabEnabled(): void {
@@ -890,9 +1131,9 @@ export class BoosterPackScene extends Scene {
     if (!this.activeTabCard) return;
     if (!this.cardNeedsDiceSelection(this.activeTabCard.item)) return;
 
-    const required = this.getRequiredDicePicks();
+    const config = this.activeTabCard.item.diceSelection!;
     const selected = this.selectedDiceIds.size;
-    const enabled = selected === required;
+    const enabled = isDiceSelectionReady(config, selected);
 
     // Update tab visuals — just adjust alpha on action tabs
     const { container, itemCard } = this.activeTabCard;
@@ -928,13 +1169,26 @@ export class BoosterPackScene extends Scene {
       this.instructionText.setText('');
       return;
     }
-    const required = this.getRequiredDicePicks();
+    const config = this.activeTabCard.item.diceSelection!;
+    const min = getDiceSelectionMinPicks(config);
+    const max = getDiceSelectionMaxPicks(config);
     const selected = this.selectedDiceIds.size;
-    const remaining = required - selected;
-    if (remaining > 0) {
-      this.instructionText.setText(`Select ${remaining} more dice from the lineup`);
+    const isClone = config.effectType === 'CLONE';
+
+    if (selected < min) {
+      const hint = isClone ? 'Drag to order — left copies right. ' : '';
+      const need = min - selected;
+      if (min === max) {
+        this.instructionText.setText(`${hint}Select ${need} more dice from the lineup`);
+      } else {
+        this.instructionText.setText(`${hint}Select at least ${need} more die${need === 1 ? '' : 's'} (up to ${max})`);
+      }
+    } else if (selected < max) {
+      this.instructionText.setText(
+        isClone ? 'Ready! Left die will copy the right' : 'Ready! Pick another die or click USE',
+      );
     } else {
-      this.instructionText.setText('Ready! Click USE to apply');
+      this.instructionText.setText(isClone ? 'Ready! Left die will copy the right' : 'Ready! Click USE to apply');
     }
   }
 
@@ -949,14 +1203,13 @@ export class BoosterPackScene extends Scene {
 
     // If card needs dice selection, validate
     if (this.cardNeedsDiceSelection(item)) {
-      const required = this.getRequiredDicePicks();
-      if (this.selectedDiceIds.size !== required) return;
+      const config = item.diceSelection!;
+      if (!isDiceSelectionReady(config, this.selectedDiceIds.size)) return;
 
       // Get actual selected dice from player's pool
       const selectedDice = this.lineupDice.filter((d) => this.selectedDiceIds.has(d.id));
 
       // Apply the dice selection effect
-      const config = item.diceSelection!;
       const result = gameFacade.pack.applyDiceSelection(config, selectedDice);
       this.showFloatingText(result);
     } else if (item.category === 'equipment' && item.equipmentDef) {
@@ -1053,7 +1306,7 @@ export class BoosterPackScene extends Scene {
       });
     } else {
       if (this.hasDiceSelectionLineup) {
-        this.refreshDiceLineup();
+        this.syncDiceLineupFromRun();
       }
     }
   }
@@ -1157,7 +1410,9 @@ export class BoosterPackScene extends Scene {
 
   private isPackDiceTargetingPending(): boolean {
     if (!this.activeTabCard?.item.diceSelection) return false;
-    return this.selectedDiceIds.size < this.getRequiredDicePicks();
+    const config = this.activeTabCard.item.diceSelection;
+    if (!config) return false;
+    return this.selectedDiceIds.size < getDiceSelectionMinPicks(config);
   }
 
   private handleConsumableUsed(consumed: ConsumableInstance): void {
@@ -1168,7 +1423,7 @@ export class BoosterPackScene extends Scene {
 
   private async handleConsumableUsedAsync(consumed: ConsumableInstance): Promise<void> {
     const result = gameFacade.pack.useFromPouch(consumed);
-    this.refreshDiceLineup();
+    this.syncDiceLineupFromRun();
 
     if (!result.success && result.failReason) {
       this.showFloatingText(result.failReason);

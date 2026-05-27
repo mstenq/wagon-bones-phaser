@@ -5,7 +5,7 @@
 // ─── Types ───
 
 export type BossEffectType =
-  | 'SPEND_RANDOM_AFTER_SCORE'
+  | 'SHRINK_HAND_PER_DAY'
   | 'ZERO_MONEY_ON_MOST_PLAYED'
   | 'DISTANCE_MULTIPLIER'
   | 'DISABLE_VALUES'
@@ -45,9 +45,9 @@ const bosses: BossDef[] = [
   {
     id: 'the_inspector',
     name: 'The Inspector',
-    description: 'Spend 2 random dice after each day',
-    effectType: 'SPEND_RANDOM_AFTER_SCORE',
-    effectParams: { count: 2 },
+    description: 'Hand size shrinks by 1 each day (8, 7, 6, …)',
+    effectType: 'SHRINK_HAND_PER_DAY',
+    effectParams: {},
     minimumLeg: 1,
   },
   {
@@ -101,7 +101,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_trickster',
     name: 'The Trickster',
-    description: 'Every played hand reduces trail knowledge by one before scoring. (Capped at level 1)',
+    description: "Every scored hand permanently reduces that hand's trail knowledge by one (min level 1)",
     effectType: 'DOWNGRADE_TRAIL_KNOWLEDGE',
     effectParams: { amount: 1 },
     minimumLeg: 2,

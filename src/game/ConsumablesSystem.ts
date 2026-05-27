@@ -76,6 +76,7 @@ export function createSupplyConsumableDef(cardData: SupplyCardDef, aura?: ItemAu
     def.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
+      minPickCount: ds.minPickCount,
       effectType: ds.effectType,
       effectParams: ds.effectParams,
       cardName: cardData.name,

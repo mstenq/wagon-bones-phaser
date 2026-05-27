@@ -1,0 +1,14 @@
+id,name,description
+gold_rush,Gold Rush,Add golden dollar sticker to one die
+snake_oil_salesman,Snake Oil Salesman,Add purple flower sticker to one die
+spirit_guide,Spirit Guide,Add blue moon sticker to one die
+deputize,Deputize,Add red bullet sticker to one die
+blood_moon,Blood Moon,"Add ghost aura to random item, -1 re-roll"
+spirit_shaman,Spirit Shaman,Bless one dice with random aura
+raid,Raid,"Destroy 5 random dice from active pool, gain $20"
+skin_walker,Skin Walker,"Copy random item, destroy all others"
+priests_blessing,Priest's Blessing,"Add holy aura to random item, delete all others"
+seeing_double,Seeing Double,Create 2 copies of a dice
+magic_beans,Magic Beans,"Create rare item, money is set to $0"
+pandoras_box,Pandora's Box,Create legendary item (very rare)
+spiritual_journey,Spiritual Journey,Increase all trail knowledge by 1 (very rare)

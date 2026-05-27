@@ -1,0 +1,16 @@
+id,name,description,category,tier
+dice_standard,Dice Grab Bag,,dice,normal
+dice_jumbo,Jumbo Grab Bag,,dice,jumbo
+dice_mega,Mega Grab Bag,,dice,mega
+supply_standard,Supply Pack,,supply,normal
+supply_jumbo,Jumbo Supply Pack,,supply,jumbo
+supply_mega,Mega Supply Pack,,supply,mega
+trail_guide_standard,Trail Guide Pack,,trail_guide,normal
+trail_guide_jumbo,Jumbo Trail Guide Pack,,trail_guide,jumbo
+trail_guide_mega,Mega Trail Guide Pack,,trail_guide,mega
+frontier_standard,Frontier Pack,,frontier,normal
+frontier_jumbo,Jumbo Frontier Pack,,frontier,jumbo
+frontier_mega,Mega Frontier Pack,,frontier,mega
+equipment_standard,Equipment Pack,,equipment,normal
+equipment_jumbo,Jumbo Equipment Pack,,equipment,jumbo
+equipment_mega,Mega Equipment Pack,,equipment,mega

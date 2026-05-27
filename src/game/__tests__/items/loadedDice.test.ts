@@ -100,7 +100,7 @@ describe('loaded enhancement rolling', () => {
     }
   });
 
-  test('raises the selected face close to one-in-six for loaded dice', () => {
+  test('raises the selected face close to one-in-three for loaded dice', () => {
     const player = getPlayerState();
     player.setLoadedDieTarget(9);
 
@@ -113,11 +113,11 @@ describe('loaded enhancement rolling', () => {
     }
 
     const rate = targetHits / trials;
-    expect(rate).toBeGreaterThan(0.15);
-    expect(rate).toBeLessThan(0.185);
+    expect(rate).toBeGreaterThan(0.31);
+    expect(rate).toBeLessThan(0.36);
   });
 
-  test('Loaded Dice equipment raises the selected face close to one-in-three', () => {
+  test('Loaded Dice equipment raises the selected face close to two-in-three', () => {
     const player = getPlayerState();
     player.setLoadedDieTarget(9);
     player.equipment = [item('loaded_dice')];
@@ -126,6 +126,60 @@ describe('loaded enhancement rolling', () => {
     const trials = 20000;
     for (let i = 0; i < trials; i++) {
       if (rollDie(die({ enhancement: 'loaded', value: 0 })).value === 9) {
+        targetHits++;
+      }
+    }
+
+    const rate = targetHits / trials;
+    expect(rate).toBeGreaterThan(0.64);
+    expect(rate).toBeLessThan(0.69);
+  });
+
+  test("Gambler's Dice Cup gives unenhanced dice ~1-in-6 toward selected face", () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(9);
+    player.equipment = [item('gamblers_dice_cup')];
+
+    let targetHits = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ value: 0 })).value === 9) {
+        targetHits++;
+      }
+    }
+
+    const rate = targetHits / trials;
+    expect(rate).toBeGreaterThan(0.15);
+    expect(rate).toBeLessThan(0.185);
+  });
+
+  test("Gambler's Dice Cup keeps loaded enhancement at ~1-in-3", () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(9);
+    player.equipment = [item('gamblers_dice_cup')];
+
+    let targetHits = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ enhancement: 'loaded', value: 0 })).value === 9) {
+        targetHits++;
+      }
+    }
+
+    const rate = targetHits / trials;
+    expect(rate).toBeGreaterThan(0.31);
+    expect(rate).toBeLessThan(0.36);
+  });
+
+  test('cup + Loaded Dice item raises unenhanced dice toward ~1-in-3', () => {
+    const player = getPlayerState();
+    player.setLoadedDieTarget(9);
+    player.equipment = [item('gamblers_dice_cup'), item('loaded_dice')];
+
+    let targetHits = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ value: 0 })).value === 9) {
         targetHits++;
       }
     }

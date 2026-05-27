@@ -198,6 +198,7 @@ function buildSupplyPackItem(s: SupplyCardDef): PackItem {
     item.diceSelection = {
       drawCount: ds.drawCount,
       pickCount: ds.pickCount,
+      minPickCount: ds.minPickCount,
       effectType: ds.effectType,
       effectParams: ds.effectParams,
       cardName: s.name,

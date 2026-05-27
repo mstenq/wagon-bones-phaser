@@ -6,7 +6,7 @@ import { getBaseTargetMilesForLeg } from '../../data/target_miles';
 import { isFinisherLeg } from '../../data/bosses';
 import { setupGame, calculateTestScore, die, diceFromValues, item, setTestDifficulty } from './testHelpers';
 import { getSupplyDefById } from '../ConsumablesSystem';
-import { multiplyScore, eq, gt, lt } from '../scoreMath';
+import { multiplyScore, eq, gt, lt, D } from '../scoreMath';
 import {
   getBossRoundConfigMods,
   initBossRoundState,
@@ -16,25 +16,21 @@ import {
   canPlayHandType,
   recordBossHandPlayed,
   getBossAdjustedHandStats,
-  applyBossHandRestriction,
-  applyBossAfterScore,
+  applyBossTricksterDowngrade,
   applyBossOnDayStart,
   getBossRoundState,
+  previewBossScoreSelection,
+  isBossScoreForfeit,
+  getInspectorRollSizeForDay,
   isBossEquipmentHintsHidden,
   revealLandSlideHints,
   remapEquipmentDisplayOrderAfterReorder,
   remapEquipmentDisplayOrderAfterRemove,
 } from '../BossEffectsSystem';
-import { detectBestHand } from '../DiceSystem';
 import { bossActions, consumableActions, equipmentActions, progressionActions } from '../store/actions';
 import { runActions } from '../store';
 import { getRunState } from '../store/runStore';
-import {
-  selectAvailableDice,
-  selectBossForLeg,
-  selectHandStats,
-  selectTargetMiles,
-} from '../store/selectors/runSelectors';
+import { selectBossForLeg, selectHandStats, selectTargetMiles } from '../store/selectors/runSelectors';
 
 describe('Boss round config', () => {
   test('Marathon: 4x leg base (replaces round 3 2×, not stacked)', () => {
@@ -166,44 +162,73 @@ describe('UNIQUE_HANDS_ONLY: Call Girl', () => {
 });
 
 describe('STRAIGHTS_ONLY: The River', () => {
-  test('non-straight downgrades to high card', () => {
+  test('non-straight preview warns and forfeits', () => {
     setupGame({ bossId: 'the_river' });
     const dice = diceFromValues([6, 6, 4, 3, 2]);
-    const pair = detectBestHand(dice);
-    const restricted = applyBossHandRestriction(pair, dice);
-    expect(restricted.type).toBe(HandType.HIGH_VALUE);
-    expect(restricted.scoringDice.length).toBe(1);
-    expect(restricted.scoringDice[0].value).toBe(6);
+    const preview = previewBossScoreSelection(dice);
+    expect(preview.handType).toBe(HandType.PAIR);
+    expect(preview.warning).toBe('Only Straights can score this round.');
+    expect(isBossScoreForfeit(preview)).toBe(true);
   });
 
-  test('straight hand unchanged', () => {
+  test('straight preview has no warning', () => {
     setupGame({ bossId: 'the_river' });
     const dice = diceFromValues([1, 2, 3, 4, 5]);
-    const straight = detectBestHand(dice);
-    const restricted = applyBossHandRestriction(straight, dice);
-    expect(restricted.type).toBe(HandType.FIVE_STRAIGHT);
+    const preview = previewBossScoreSelection(dice);
+    expect(preview.handType).toBe(HandType.FIVE_STRAIGHT);
+    expect(preview.warning).toBeNull();
+    expect(isBossScoreForfeit(preview)).toBe(false);
+  });
+
+  test('forfeit non-straight scores zero miles', () => {
+    const { game } = setupGame({ bossId: 'the_river' });
+    game.startRound();
+    const rolled = diceFromValues([6, 6, 4, 3, 2]);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = rolled;
+    game.selectForScore(rolled.map((d) => d.id));
+    const result = game.calculateScore()!;
+    expect(eq(result.miles, D(0))).toBe(true);
+  });
+
+  test('straight scores normally', () => {
+    const { result } = calculateTestScore({
+      bossId: 'the_river',
+      scoredDice: diceFromValues([1, 2, 3, 4, 5]),
+    });
+    expect(result.handResult.type).toBe(HandType.FIVE_STRAIGHT);
+    expect(gt(result.miles, 0)).toBe(true);
   });
 });
 
 describe('Trail knowledge bosses', () => {
-  test('Trickster reduces effective hand level', () => {
-    setupGame({ bossId: 'the_trickster' });
+  test('Trickster permanently downgrades on score', () => {
+    const { game } = setupGame({ bossId: 'the_trickster' });
     progressionActions.upgradeHandLevel(HandType.PAIR, 2); // level 3
-    const stats = getBossAdjustedHandStats(HandType.PAIR, selectHandStats(getRunState(), HandType.PAIR));
-    expect(stats.level).toBe(2);
+    game.startRound();
+    const rolled = diceFromValues([6, 6]);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = rolled;
+    game.selectForScore(rolled.map((d) => d.id));
+    const result = game.calculateScore()!;
+    expect(selectHandStats(getRunState(), HandType.PAIR).level).toBe(2);
+    expect(result.handUpgrades?.[0]?.oldLevel).toBe(3);
+    expect(result.handUpgrades?.[0]?.newLevel).toBe(2);
   });
 
-  test('Bottle halves hand level', () => {
+  test('Trickster downgrade caps at level 1', () => {
+    setupGame({ bossId: 'the_trickster' });
+    const info = applyBossTricksterDowngrade(HandType.PAIR);
+    expect(info).toBeNull();
+    expect(selectHandStats(getRunState(), HandType.PAIR).level).toBe(1);
+  });
+
+  test('Bottle halves hand level for the round only', () => {
     setupGame({ bossId: 'the_bottle' });
     progressionActions.upgradeHandLevel(HandType.PAIR, 4); // level 5
     const stats = getBossAdjustedHandStats(HandType.PAIR, selectHandStats(getRunState(), HandType.PAIR));
     expect(stats.level).toBe(2);
-  });
-
-  test('Trickster caps at level 1', () => {
-    setupGame({ bossId: 'the_trickster' });
-    const stats = getBossAdjustedHandStats(HandType.PAIR, selectHandStats(getRunState(), HandType.PAIR));
-    expect(stats.level).toBe(1);
+    expect(selectHandStats(getRunState(), HandType.PAIR).level).toBe(5);
   });
 });
 
@@ -237,17 +262,25 @@ describe('LOSE_MONEY_PER_PLAYED: Banker', () => {
   });
 });
 
-describe('SPEND_RANDOM_AFTER_SCORE: Inspector', () => {
-  test('spends dice from available pool after score', () => {
+describe('SHRINK_HAND_PER_DAY: Inspector', () => {
+  test('stores base roll size and shrinks each day', () => {
     const { game } = setupGame({
       bossId: 'the_inspector',
-      dice: diceFromValues([1, 2, 3, 4, 5, 6, 7, 8]),
+      dice: diceFromValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     });
     game.startRound();
-    const before = selectAvailableDice(getRunState()).length;
-    applyBossAfterScore();
-    expect(getRunState().spentDiceIds.length).toBeGreaterThan(0);
-    expect(selectAvailableDice(getRunState()).length).toBeLessThan(before);
+    const base = game.config.rollSize;
+    expect(getBossRoundState().inspectorBaseRollSize).toBe(base);
+    expect(getInspectorRollSizeForDay(1)).toBe(base);
+    expect(getInspectorRollSizeForDay(2)).toBe(base - 1);
+
+    const rolled = diceFromValues([6, 6]);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = rolled;
+    game.selectForScore(rolled.map((d) => d.id));
+    game.calculateScore();
+    game.endDay({ deferEquipmentDestructionAnimation: true });
+    expect(game.config.rollSize).toBe(base - 1);
   });
 });
 
@@ -400,8 +433,37 @@ describe('DISABLE_ALL_DICE: Bank Lien', () => {
   });
 });
 
-describe('UNIQUE_HANDS_ONLY: Call Girl score rejection', () => {
-  test('validateScoreSelection rejects duplicate hand', () => {
+describe('SINGLE_HAND_TYPE: Preacher integration', () => {
+  test('forfeit wrong hand scores zero and does not change lock', () => {
+    const { game } = setupGame({
+      bossId: 'the_preacher',
+      dice: diceFromValues([6, 6, 6, 4, 3, 2, 1, 7]),
+    });
+    game.startRound();
+    const pairDice = diceFromValues([6, 6]);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = pairDice;
+    game.selectForScore(pairDice.map((d) => d.id));
+    const first = game.calculateScore()!;
+    expect(gt(first.miles, 0)).toBe(true);
+    expect(getBossRoundState().preacherLockedHand).toBe(HandType.PAIR);
+
+    game.endDay({ deferEquipmentDestructionAnimation: true });
+
+    const tripleDice = diceFromValues([6, 6, 6]);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = tripleDice;
+    const preview = previewBossScoreSelection(tripleDice);
+    expect(preview.forfeit).toBe(true);
+    game.selectForScore(tripleDice.map((d) => d.id));
+    const forfeit = game.calculateScore()!;
+    expect(eq(forfeit.miles, D(0))).toBe(true);
+    expect(getBossRoundState().preacherLockedHand).toBe(HandType.PAIR);
+  });
+});
+
+describe('UNIQUE_HANDS_ONLY: Call Girl score warning', () => {
+  test('validateScoreSelection allows duplicate with warning', () => {
     const { game } = setupGame({ bossId: 'the_call_girl' });
     game.startRound();
     getBossRoundState().handsPlayedThisRound = [HandType.PAIR];
@@ -409,7 +471,21 @@ describe('UNIQUE_HANDS_ONLY: Call Girl score rejection', () => {
     game.state.phase = 'ROLL';
     game.state.rolledDice = rolled;
     const check = game.validateScoreSelection(rolled.map((d) => d.id));
-    expect(check.allowed).toBe(false);
+    expect(check.allowed).toBe(true);
+    expect(check.warning).toContain('already been played');
+  });
+
+  test('forfeit duplicate hand scores zero', () => {
+    const { game } = setupGame({ bossId: 'the_call_girl' });
+    game.startRound();
+    recordBossHandPlayed(HandType.PAIR);
+    const rolled = diceFromValues([6, 6]);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = rolled;
+    game.selectForScore(rolled.map((d) => d.id));
+    const result = game.calculateScore()!;
+    expect(eq(result.miles, D(0))).toBe(true);
+    expect(getBossRoundState().handsPlayedThisRound).toEqual([HandType.PAIR]);
   });
 
   test('cancelScore returns to ROLL phase', () => {

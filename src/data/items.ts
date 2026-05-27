@@ -54,6 +54,7 @@ import { resolveEffectParam, resolveChance, savingsAccountEligibleBalance } from
 import {
   unlockAnyEnhanced,
   unlockByEnhancement,
+  unlockDynamite,
   unlockNitro,
   unlockTwoEnhancedTypes,
   type EquipmentUnlockCondition,
@@ -352,6 +353,7 @@ const items: ItemDef[] = [
         [mult('+15'), text('mult.'), oddsDisplay([1, 6], player), text('chance to be destroyed at end of round.')],
       ],
     }),
+    unlockCondition: unlockDynamite,
   },
   {
     id: 'spare_holster',
@@ -837,13 +839,13 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     modifierImmunity: ['perishable'],
     effectType: 'STATEFUL_XMULT',
-    effectParams: { xMultGainPerNegation: 0.75 },
+    effectParams: { xMultGainPerNegation: 0.25 },
     initialState: { xMult: 1 },
     display: (_game, player) => {
       const inst = player.equipment.find((e) => e.def.id === 'trail_repair_kit');
       const xm = inst?.state.xMult ?? 1;
       const gain = resolveEffectParam<number>(
-        inst?.def.effectParams ?? { xMultGainPerNegation: 0.75 },
+        inst?.def.effectParams ?? { xMultGainPerNegation: 0.25 },
         'xMultGainPerNegation',
         player.professionId,
       );
@@ -2180,6 +2182,49 @@ const items: ItemDef[] = [
     }),
   },
   {
+    id: 'one_armed_bandit',
+    name: 'One Armed Bandit',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    effectType: 'CHANCE_HAND_XMULT_MONEY',
+    effectParams: { chance: [1, 4], xMult: 4, money: 10 },
+    display: (_game, player) => ({
+      hint: [[mult('x4'),  money('+$10')],[oddsDisplay([1, 4], player, "sm")]],
+      tooltip: [
+        [
+          oddsDisplay([1, 4], player),
+          text('chance for'),
+          mult('x4'),
+          text('mult and'),
+          money('$10'),
+          text('when a hand is scored'),
+        ],
+      ],
+    }),
+  },
+  {
+    id: 'gamblers_dice_cup',
+    name: "Gambler's Dice Cup",
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'rare',
+    effectType: 'GAMBLERS_DICE_CUP',
+    effectParams: {},
+    display: (_game, player) => ({
+      hint: [[oddsDisplay([1, 6], player)],[text('to roll loaded #', "xs")]],
+      tooltip: [
+        [
+          text('All dice have '),
+          oddsDisplay([1, 6], player),
+          text(' odds of rolling the selected loaded die value. Loaded dice use '),
+          odds('1 in 3'),
+          text(' instead.'),
+        ],
+      ],
+    }),
+  },
+  {
     id: 'mirror_lake',
     name: 'Mirror Lake',
     cardTemplate: 'white-text-black-outline',
@@ -2437,7 +2482,7 @@ const items: ItemDef[] = [
     effectType: 'ROUND_START_SUPPLY',
     effectParams: {},
     display: (_game, _player) => ({
-      hint: [[active('Supply at round start')]],
+      hint: [[active('Supply at round start', "xs")]],
       tooltip: [[text('Create a random supply card at start of round')]],
     }),
   },
@@ -2576,8 +2621,8 @@ const items: ItemDef[] = [
       const streak = equip?.state.streak ?? 0;
       const hint =
         streak > 0
-          ? [[mult(`x${(1 + streak * 0.2).toFixed(1)}`), condition(`${streak} hands`)], [active('Active!')]]
-          : [[mult('x0.2'), condition('per hand off-meta')], [inactive('None')]];
+          ? [[mult(`x${(1 + streak * 0.2).toFixed(1)}`)]]
+          : [[mult('+ x0.2')],[condition('if not most-played hand', 'xs')]];
       return {
         hint,
         tooltip: [

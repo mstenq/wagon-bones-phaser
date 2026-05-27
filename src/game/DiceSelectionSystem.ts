@@ -34,12 +34,27 @@ export interface DiceSelectionEffectParams {
 
 export interface DiceSelectionConfig {
   drawCount: number; // how many dice to show (typically 5)
-  pickCount: number; // how many the player selects
+  /** Maximum dice the player may select. */
+  pickCount: number;
+  /** Minimum dice required to apply (defaults to pickCount). */
+  minPickCount?: number;
   effectType: DiceSelectionEffectType;
   effectParams: DiceSelectionEffectParams;
   cardName: string; // for display
   description: string; // for display
   skippable: boolean; // can the player skip without picking?
+}
+
+export function getDiceSelectionMinPicks(config: DiceSelectionConfig): number {
+  return config.minPickCount ?? config.pickCount;
+}
+
+export function getDiceSelectionMaxPicks(config: DiceSelectionConfig): number {
+  return config.pickCount;
+}
+
+export function isDiceSelectionReady(config: DiceSelectionConfig, selectedCount: number): boolean {
+  return selectedCount >= getDiceSelectionMinPicks(config) && selectedCount <= getDiceSelectionMaxPicks(config);
 }
 
 export interface DiceSelectionState {

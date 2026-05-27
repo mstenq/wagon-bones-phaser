@@ -1017,3 +1017,63 @@ describe('REROLL_COUNT_XMULT: The 23rd Psalm', () => {
     expect(result.mult).toBeMultCloseTo(3, 5);
   });
 });
+
+// ─── CHANCE_HAND_XMULT_MONEY: One Armed Bandit ───
+
+describe('CHANCE_HAND_XMULT_MONEY: One Armed Bandit', () => {
+  test('has correct definition', () => {
+    const inst = item('one_armed_bandit');
+    expect(inst.def.effectType).toBe('CHANCE_HAND_XMULT_MONEY');
+    expect(inst.def.cost).toBe(6);
+    expect(inst.def.rarity).toBe('uncommon');
+    expect(inst.def.effectParams).toEqual({ chance: [1, 4], xMult: 4, money: 10 });
+  });
+
+  test('applies x4 mult and $10 on successful roll', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+
+    try {
+      const { result } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('one_armed_bandit')],
+      });
+      expect(result.mult).toBeMult(4);
+      expect(result.mutations.moneyEarned).toBe(10);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('does nothing on failed roll', () => {
+    const original = Math.random;
+    Math.random = () => 0.5;
+
+    try {
+      const { result } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('one_armed_bandit')],
+      });
+      expect(result.mult).toBeMult(1);
+      expect(result.mutations.moneyEarned).toBe(0);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('Loaded Dice item improves trigger to 1 in 2', () => {
+    const original = Math.random;
+    Math.random = () => 0.4;
+
+    try {
+      const { result } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('one_armed_bandit'), item('loaded_dice')],
+      });
+      expect(result.mult).toBeMult(4);
+      expect(result.mutations.moneyEarned).toBe(10);
+    } finally {
+      Math.random = original;
+    }
+  });
+});

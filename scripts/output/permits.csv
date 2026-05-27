@@ -1,0 +1,33 @@
+id,name,description,stage,pairId,prerequisiteId
+supply_wagon,Supply Wagon,+1 card slot available in shop (3 total),1,supply_wagon_pair,
+freight_caravan,Freight Caravan,+1 additional card slot available in shop (4 total),2,supply_wagon_pair,supply_wagon
+bargain_bin,Bargain Bin,All cards/dice/packs/permits are 25% off,1,bargain_pair,
+estate_auction,Estate Auction,All cards/dice/packs/permits are 50% off,2,bargain_pair,bargain_bin
+spirit_ritual,Spirit Ritual,Ghost/Holy/Fire/Ice aura is 2x more likely to appear,1,aura_pair,
+sacred_ceremony,Sacred Ceremony,Ghost/Holy/Fire/Ice aura is 4x more likely to appear,2,aura_pair,spirit_ritual
+lucky_streak,Lucky Streak,Shop rerolls cost $2 less,1,reroll_cost_pair,
+devils_luck,Devil's Luck,Shop rerolls cost an additional $2 less,2,reroll_cost_pair,lucky_streak
+devils_eye,Devil's Eye,+1 consumable slot,1,consumable_pair,
+infernal_vision,Infernal Vision,Frontier Experience cards may appear in supply packs (20% chance),2,consumable_pair,devils_eye
+binoculars,Binoculars,Trail guide packs always contain the trail guide for your most played hand,1,trail_guide_target_pair,
+surveyors_scope,Surveyor's Scope,Trail guide cards in consumable area give x1.5 mult for their specified hand,2,trail_guide_target_pair,binoculars
+extra_rations,Extra Rations,Permanently gain +1 day per round,1,day_bonus_pair,
+supply_cache,Supply Cache,Permanently gain an additional +1 day per round,2,day_bonus_pair,extra_rations
+second_chance,Second Chance,Permanently gain +1 reroll per round,1,reroll_bonus_pair,
+third_times_charm,Third Time's Charm,Permanently gain an additional +1 reroll per round,2,reroll_bonus_pair,second_chance
+camp_merchant,Camp Merchant,Supply cards appear 2x more frequently in the shop,1,supply_weight_pair,
+supply_baron,Supply Baron,Supply cards appear 4x more frequently in the shop,2,supply_weight_pair,camp_merchant
+trail_cartographer,Trail Cartographer,Trail guide cards appear 2x more frequently in the shop,1,trail_weight_pair,
+frontier_pathfinder,Frontier Pathfinder,Trail guide cards appear 4x more frequently in the shop,2,trail_weight_pair,trail_cartographer
+savings_bond,Savings Bond,Raise the cap on interest earned each round to $10,1,interest_pair,
+railroad_investment,Railroad Investment,Raise the cap on interest earned each round to $20,2,interest_pair,savings_bond
+strange_coin,Strange Coin,Does nothing... or does it?,1,strange_pair,
+bottomless_satchel,Bottomless Satchel,+1 equipment slot,2,strange_pair,strange_coin
+dice_carver,Dice Carver,Enhanced Dice can be purchased from the shop,1,dice_shop_pair,
+master_engraver,Master Engraver,Enhanced Dice with stickers may appear in the shop,2,dice_shop_pair,dice_carver
+shortcut_trail,Shortcut Trail,"Reduce required score by one leg, but -1 day of travel per round",1,shortcut_pair,
+hidden_pass,Hidden Pass,"Reduce required score by another leg, but -1 reroll per round",2,shortcut_pair,shortcut_trail
+bounty_board,Bounty Board,Reroll boss 1 time per leg for $10,1,boss_reroll_pair,
+wanted_dead_or_alive,Wanted Dead or Alive,"Reroll boss unlimited times, $10 per roll",2,boss_reroll_pair,bounty_board
+supply_pouch,Supply Pouch,+1 hand size,1,hand_size_pair,
+pack_mule,Pack Mule,+1 hand size,2,hand_size_pair,supply_pouch

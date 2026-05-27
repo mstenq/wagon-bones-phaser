@@ -7,7 +7,14 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
-import { DiceSelectionConfig, drawDiceForSelection, applyDiceSelectionEffect } from '../../game/DiceSelectionSystem';
+import {
+  DiceSelectionConfig,
+  drawDiceForSelection,
+  applyDiceSelectionEffect,
+  getDiceSelectionMaxPicks,
+  getDiceSelectionMinPicks,
+  isDiceSelectionReady,
+} from '../../game/DiceSelectionSystem';
 import { Die } from '../../game/types';
 import { UI } from '../../game/Constants';
 
@@ -141,7 +148,7 @@ export class DiceSelectionScene extends Scene {
       // Deselect
       entry.selected = false;
       entry.sprite.setSelected(false);
-    } else if (selectedCount < this.config.pickCount) {
+    } else if (selectedCount < getDiceSelectionMaxPicks(this.config)) {
       // Select
       entry.selected = true;
       entry.sprite.setSelected(true);
@@ -149,17 +156,25 @@ export class DiceSelectionScene extends Scene {
 
     this.updatePicksText();
     const newCount = this.entries.filter((e) => e.selected).length;
-    this.confirmBtn.setEnabled(newCount === this.config.pickCount);
+    this.confirmBtn.setEnabled(isDiceSelectionReady(this.config, newCount));
   }
 
   private updatePicksText(): void {
     const selected = this.entries.filter((e) => e.selected).length;
-    const total = this.config.pickCount;
-    this.picksText.setText(`Select ${total - selected} more dice (${selected}/${total})`);
+    const min = getDiceSelectionMinPicks(this.config);
+    const max = getDiceSelectionMaxPicks(this.config);
+    if (min === max) {
+      this.picksText.setText(`Select ${max - selected} more dice (${selected}/${max})`);
+    } else if (selected < min) {
+      this.picksText.setText(`Select at least ${min - selected} more (${selected}/${max} max)`);
+    } else {
+      this.picksText.setText(`Ready — ${selected}/${max} selected (optional: pick more)`);
+    }
   }
 
   private onConfirm(): void {
     const selectedDice = this.entries.filter((e) => e.selected).map((e) => e.die);
+    if (!isDiceSelectionReady(this.config, selectedDice.length)) return;
 
     // BUMP_VALUE needs a direction choice before applying
     if (this.config.effectType === 'BUMP_VALUE') {

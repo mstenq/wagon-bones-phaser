@@ -17,7 +17,13 @@ import {
   canUseConsumableInShop,
 } from '../ConsumablesSystem';
 import { isEquipmentCursed } from '../ItemsSystem';
-import { applyDiceSelectionEffect, DiceSelectionConfig, shouldUpdateDisplayedDiceValue } from '../DiceSelectionSystem';
+import {
+  applyDiceSelectionEffect,
+  DiceSelectionConfig,
+  getDiceSelectionMinPicks,
+  isDiceSelectionReady,
+  shouldUpdateDisplayedDiceValue,
+} from '../DiceSelectionSystem';
 import { DiceEnhancement, HandType } from '../types';
 import supplyCardsData from '../../data/supply_cards';
 import trailGuidesData from '../../data/trail_guides';
@@ -46,6 +52,17 @@ describe('ConsumableDef creation', () => {
     expect(def.diceSelection).toBeDefined();
     expect(def.diceSelection!.drawCount).toBe(5);
     expect(def.diceSelection!.pickCount).toBe(2);
+    expect(getDiceSelectionMinPicks(def.diceSelection!)).toBe(2);
+  });
+
+  test('two-die enhance supply cards require only one selection', () => {
+    const card = supplyCardsData.find((c) => c.id === 'buzzards')!;
+    const def = createSupplyConsumableDef(card);
+    expect(def.diceSelection!.pickCount).toBe(2);
+    expect(def.diceSelection!.minPickCount).toBe(1);
+    expect(isDiceSelectionReady(def.diceSelection!, 1)).toBe(true);
+    expect(isDiceSelectionReady(def.diceSelection!, 0)).toBe(false);
+    expect(isDiceSelectionReady(def.diceSelection!, 2)).toBe(true);
   });
 
   test('createTrailGuideConsumableDef creates a valid def', () => {
@@ -522,6 +539,21 @@ describe('pre-roll consumable targeting regression', () => {
     expect(applyMessage).toContain('Enhanced 1 dice');
     const updated = player.dice.find((d) => d.id === target.id);
     expect(updated?.enhancement).toBe('loaded');
+  });
+
+  test('two-die enhance cards apply to only the dice selected', () => {
+    const player = resetPlayerState();
+    const d1 = die({ enhancement: null });
+    const d2 = die({ enhancement: null });
+    player.dice = [d1, d2];
+
+    const buzzards = supplyCardsData.find((c) => c.id === 'buzzards')!;
+    const config = createSupplyConsumableDef(buzzards).diceSelection!;
+
+    const msg = applyDiceSelectionEffect(config, [d1]);
+    expect(msg).toBe('Enhanced 1 dice to bone');
+    expect(player.dice.find((d) => d.id === d1.id)?.enhancement).toBe('bone');
+    expect(player.dice.find((d) => d.id === d2.id)?.enhancement).toBeNull();
   });
 
   test('enhancing stone dice assigns a random face value', () => {

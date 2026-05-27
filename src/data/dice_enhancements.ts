@@ -71,7 +71,7 @@ const diceEnhancements: DiceEnhancementDef[] = [
   {
     id: 'loaded',
     name: 'Loaded',
-    description: 'Double the odds of one chosen value being rolled',
+    description: 'Has 1 in 3 odds of rolling selected value',
     color: 'ffffff',
     strokeColor: '6b1106',
     strokeWidth: 2,

@@ -1,0 +1,16 @@
+id,name,description,title
+farmer,Hank Caldwell,+1 re-roll per day,Farmer
+surveyor,Elias Mercer,+1 day of travel,Surveyor
+banker,Charles Whitlock,Starts with $10,Banker
+outlaw,Jesse Rawlins,Earns no interest. $1 per remaining day and unused re-roll.,Outlaw
+merchant,Abigail Turner,"1 extra equipment slot, -1 day of travel",Merchant
+cook,Martha Delaney,Starts with extra supplies voucher and 2 copies of second helpings supply card,Cook
+scout,Caleb Winters,"Starts with binoculars voucher, -1 supply slot",Scout
+demon_hunter,Isaac Granger,"Frontier Encounter cards appear in shop, start with a Priests Blessings card",Demon Hunter
+prospector,Davis Holler,Start with vouchers for extra supplies/trail guides/extra stock,Prospector
+gambler,"Thomas ""Tommy"" Reeve",Start with +2 hand size and -1 equipment slot,Gambler
+hunter,Nathan Cole,After each boss gain a double tag,Hunter
+accountant,Henry Pritchard,Balance miles and mult before calculating. x2 base blind size.,Accountant
+doctor,Dr. Eleanor Sykes,"Start with 2 medicine cards with ghost aura, receive 1 free medicine card  with ghost aura after each boss",Doctor
+con_artist,Victor Hale,"+2 re-rolls per day, -1 hand size",Con Artist
+developer,Dev Mode,Starts with $999. For testing purposes.,Developer

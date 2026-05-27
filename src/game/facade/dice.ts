@@ -1,6 +1,6 @@
 // ─── Loaded-die / dice config facade (No Phaser imports) ───
 
-import { getLoadedDiceMultiplier } from '../equipmentUtils';
+import { formatLoadedDieOddsNote } from '../equipmentUtils';
 import { diceActions } from '../store/actions/diceActions';
 import { getResolvedLoadedDieTarget, runHasLuckyNumberEquipment } from '../store/runReads';
 import { resolveEquipmentList } from '../store/resolve';
@@ -35,10 +35,6 @@ export const gameDice = {
 
   /** Human-readable loaded-die odds for the picker UI. */
   getLoadedDieOddsNote(): string {
-    const chance = Math.min(1, getLoadedDiceMultiplier(resolveEquipmentList()) / 6);
-    if (chance >= 1) return 'Selected face is guaranteed to roll.';
-    if (chance === 2 / 3) return 'Selected face rolls at 2 in 3.';
-    if (chance === 1 / 3) return 'Selected face rolls at 1 in 3.';
-    return 'Selected face rolls at 1 in 6.';
+    return formatLoadedDieOddsNote(resolveEquipmentList());
   },
 };

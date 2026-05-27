@@ -1,0 +1,10 @@
+id,name,description
+tg_high_value,Jackrabbit Scout,"High Value: +10 miles, +1 mult"
+tg_pair,Coyote Twins,"Pair: +15 miles, +1 mult"
+tg_two_pair,Mule & Buckboard,"Two Pair: +20 miles, +1 mult"
+tg_three_kind,Three Wolf Moon,"Three of a Kind: +20 miles, +2 mult"
+tg_full_house,Buffalo Herd,"Full House: +25 miles, +2 mult"
+tg_four_kind,Wild Mustang,"Four of a Kind: +30 miles, +3 mult"
+tg_five_kind,Five-Point Buck,"Five of a Kind: +35 miles, +3 mult"
+tg_four_straight,Mountain Cougar,"4 Straight: +20 miles, +1 mult"
+tg_five_straight,Diamondback,"5 Straight: +30 miles, +3 mult"

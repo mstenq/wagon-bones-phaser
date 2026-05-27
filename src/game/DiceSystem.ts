@@ -14,7 +14,7 @@ import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from './E
 import { dispatchLifecycle } from './effects/lifecycle/dispatch';
 import { getRandomSupplyDef, getRandomFrontierDef } from './ConsumablesSystem';
 import { GAMEPLAY } from './Constants';
-import { resolveCopyTarget, checkLoadedChance, getLoadedDiceMultiplier } from './equipmentUtils';
+import { resolveCopyTarget, checkLoadedChance, getLoadedFaceRollChance } from './equipmentUtils';
 import { getEnhancementScoreDestroyChance } from '../data/dice_enhancements';
 import { dieMatchesPip, hasStackedDeck } from './effects/helpers';
 import { buildScoredRetriggerSources, pushRetriggerAgainEvent } from './effects/retriggerAnim';
@@ -118,11 +118,13 @@ export function rollDie(die: Die): Die {
   const run = getRunState();
   const equipment = resolveEquipmentList();
   const loadedTarget = selectResolvedLoadedDieTarget(run);
-  if (die.enhancement === 'loaded' && loadedTarget !== null) {
-    const loadedChance = Math.min(1, getLoadedDiceMultiplier(equipment) / 6);
-    const otherFaces = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((face) => face !== loadedTarget);
-    if (rngFloat('loadedDice') < loadedChance) return { ...die, value: loadedTarget };
-    return { ...die, value: rngPick('loadedDice', otherFaces) };
+  if (loadedTarget !== null) {
+    const loadedChance = getLoadedFaceRollChance(equipment, die.enhancement);
+    if (loadedChance > 0) {
+      const otherFaces = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((face) => face !== loadedTarget);
+      if (rngFloat('loadedDice') < loadedChance) return { ...die, value: loadedTarget };
+      return { ...die, value: rngPick('loadedDice', otherFaces) };
+    }
   }
   return { ...die, value: rngInt('dice', 1, 12) };
 }

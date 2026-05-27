@@ -20,6 +20,8 @@ export interface SupplyInstantEffect {
 export interface SupplyDiceSelectionDef {
   drawCount: number;
   pickCount: number;
+  /** Minimum selections to apply (defaults to pickCount). */
+  minPickCount?: number;
   effectType: DiceSelectionEffectType;
   effectParams: DiceSelectionEffectParams;
 }
@@ -53,6 +55,7 @@ const supplyCards: SupplyCardDef[] = [
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
+      minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'bone' },
     },
@@ -64,6 +67,7 @@ const supplyCards: SupplyCardDef[] = [
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
+      minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'lucky' },
     },
@@ -75,6 +79,7 @@ const supplyCards: SupplyCardDef[] = [
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
+      minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'wooden' },
     },
@@ -86,6 +91,7 @@ const supplyCards: SupplyCardDef[] = [
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
+      minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'loaded' },
     },

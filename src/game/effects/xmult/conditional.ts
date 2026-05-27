@@ -1,6 +1,7 @@
 // ─── FINAL_DAY_XMULT, EVERY_NTH_HAND_XMULT, HAND_CONTAINS_XMULT, ENHANCED_DICE_COUNT_XMULT, ROUNDS_SKIPPED_XMULT ───
 
 import { effectRegistry } from '../registry';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { handTypeMatches, multiplyCtxXMult } from '../helpers';
 
 effectRegistry.registerXMult('FINAL_DAY_XMULT', (ctx, equip, index) => {
@@ -69,4 +70,15 @@ effectRegistry.registerXMult('ROUNDS_SKIPPED_XMULT', (ctx, equip, index) => {
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
     console.log(`  [xmult] ${equip.def.name}: x${xVal} (${skipped} rounds skipped) (xMult: ${ctx.xMult})`);
   }
+});
+
+effectRegistry.registerXMult('CHANCE_HAND_XMULT_MONEY', (ctx, equip, index) => {
+  const p = equip.def.effectParams as { chance: [number, number]; xMult: number; money: number };
+  if (!checkLoadedChance(p.chance, ctx.equipment)) return;
+
+  multiplyCtxXMult(ctx, p.xMult);
+  ctx.mutations.moneyEarned += p.money;
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: p.xMult });
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'money', value: p.money });
+  console.log(`  [xmult] ${equip.def.name}: x${p.xMult} + $${p.money} (xMult: ${ctx.xMult})`);
 });

@@ -1,0 +1,19 @@
+id,name,description
+coffee_tin,Coffee Tin,Make 2 dice steel
+buzzards,Buzzards,Make 2 dice bone
+rabbits_foot,Rabbit's Foot,Make 2 dice lucky
+firewood,Firewood,Make 2 dice wooden
+loaded,Loaded,Make two dice loaded
+pick_axe,Pick Axe,Make one dice diamond
+pan_for_gold,Pan for Gold,Make 1 dice golden
+treasure_map,Treasure Map,Double your money (max $20)
+shallow_grave,Shallow Grave,Choose 2 from 5 random dice to destroy
+trade,Trade,Get money equal to equipment value (max $50)
+doctor,Doctor,Creates 2 medicine cards
+compass,Compass,Get 2 random trail guides
+supply_cache,Supply Cache,Get 2 random supply cards
+ingenuity,Ingenuity,Get 1 random piece of equipment
+mirage,Mirage,Pick 2 of 5 random dice — left becomes a copy of right
+bless,Bless,1 in 4 chance to bless equipment with aura
+second_helpings,Second Helpings,Creates last used supply/trail guide
+medicine,Medicine,Choose a die — bump its value up or down by 1

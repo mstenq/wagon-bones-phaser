@@ -1,0 +1,5 @@
+id,name,description
+purple_flower,Purple Flower,"When this die scores, gain a supply card"
+red_bullet,Red Bullet,"When this die scores, trigger it twice"
+golden_dollar,Golden Dollar,When this die scores earn $3
+blue_moon,Blue Moon,"If this dice is not scored and held in hand at end of round, receive a trail guide for the scored hand"

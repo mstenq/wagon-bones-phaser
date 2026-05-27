@@ -2,10 +2,11 @@
 // Applies boss modifiers during boss rounds, unless negated by Saint Elmo's Shield
 // or Sheriff's Badge (sold this round).
 
-import { Die, HandResult, HandType, type HandStats } from './types';
+import { Die, HandType, type HandStats, type HandUpgradeInfo } from './types';
 import { isBossEffectNegated, dieMatchesParity } from './effects/helpers';
-import { getMostPlayedHandTypes } from './handStatsHelpers';
-import { buildHandResult } from './DiceSystem';
+import { getMostPlayedHandTypes, buildHandUpgradeInfo } from './handStatsHelpers';
+import { detectBestHand } from './DiceSystem';
+import { getHandByType } from '../data/hands';
 import { rngFloat, rngShuffle } from './RunRng';
 import { getRunState } from './store/runStore';
 import { resolveEquipmentList } from './store/resolve';
@@ -15,9 +16,9 @@ import {
   resetBossRoundStateSlice,
   updateBossRoundState,
 } from './store/bossRoundState';
-import { selectAvailableDice, selectCurrentBoss } from './store/selectors/runSelectors';
+import { selectCurrentBoss, selectHandStats } from './store/selectors/runSelectors';
 import { economyActions } from './store/actions/economyActions';
-import { diceActions } from './store/actions/diceActions';
+import { progressionActions } from './store/actions/progressionActions';
 
 export type { BossRoundState } from './store/types';
 export { EMPTY_BOSS_ROUND_STATE } from './store/types';
@@ -170,26 +171,66 @@ export function isEquipmentDisabledByBoss(equipIndex: number): boolean {
   return getBossRoundState().disabledEquipmentIndices.includes(equipIndex);
 }
 
-/** Validate hand type before scoring (Preacher, Call Girl) */
-export function canPlayHandType(handType: HandType): { allowed: boolean; reason?: string } {
+export interface BossScorePreview {
+  handType: HandType;
+  handName: string;
+  warning: string | null;
+  forfeit: boolean;
+}
+
+function getHandDisplayName(handType: HandType): string {
+  return getHandByType(handType)?.name ?? handType;
+}
+
+function getBossHandTypeWarning(handType: HandType): string | null {
   const boss = getActiveBoss();
-  if (!boss) return { allowed: true };
+  if (!boss) return null;
 
   const state = getBossRoundState();
 
   if (boss.effectType === 'SINGLE_HAND_TYPE') {
-    if (state.preacherLockedHand === null) return { allowed: true };
-    if (handType !== state.preacherLockedHand) {
-      return { allowed: false, reason: `Only ${state.preacherLockedHand} hands allowed` };
+    if (state.preacherLockedHand !== null && handType !== state.preacherLockedHand) {
+      return `Only ${getHandDisplayName(state.preacherLockedHand)} hands score this round.`;
     }
   }
 
   if (boss.effectType === 'UNIQUE_HANDS_ONLY') {
     if (state.handsPlayedThisRound.includes(handType)) {
-      return { allowed: false, reason: 'Must play a different hand each day' };
+      return `${getHandDisplayName(handType)} has already been played and won't score.`;
     }
   }
 
+  if (boss.effectType === 'STRAIGHTS_ONLY') {
+    const straightTypes: HandType[] = [HandType.FOUR_STRAIGHT, HandType.FIVE_STRAIGHT];
+    if (!straightTypes.includes(handType)) {
+      return 'Only Straights can score this round.';
+    }
+  }
+
+  return null;
+}
+
+/** Preview boss restrictions for the current dice selection (ROLL phase UI + scoring). */
+export function previewBossScoreSelection(selectedDice: Die[]): BossScorePreview {
+  const handResult = detectBestHand(selectedDice);
+  const handType = handResult.type;
+  const warning = getBossHandTypeWarning(handType);
+  return {
+    handType,
+    handName: getHandByType(handType)?.name ?? handResult.name,
+    warning,
+    forfeit: warning !== null,
+  };
+}
+
+export function isBossScoreForfeit(preview: BossScorePreview): boolean {
+  return preview.forfeit;
+}
+
+/** @deprecated Prefer previewBossScoreSelection — kept for unit tests */
+export function canPlayHandType(handType: HandType): { allowed: boolean; reason?: string } {
+  const warning = getBossHandTypeWarning(handType);
+  if (warning) return { allowed: false, reason: warning };
   return { allowed: true };
 }
 
@@ -208,39 +249,44 @@ export function recordBossHandPlayed(handType: HandType): void {
   });
 }
 
-/** Trickster: reduce hand level before scoring (min level 1) */
+/** Bottle: halve effective hand level for the round (temporary, not permanent). */
 export function getBossAdjustedHandStats(_handType: HandType, stats: HandStats): HandStats {
   const boss = getActiveBoss();
-  if (!boss) return stats;
+  if (!boss || boss.effectType !== 'HALVE_TRAIL_KNOWLEDGE') return stats;
 
-  let level = stats.level;
-
-  if (boss.effectType === 'DOWNGRADE_TRAIL_KNOWLEDGE') {
-    const amount = (boss.effectParams.amount as number) ?? 1;
-    level = Math.max(1, level - amount);
-  }
-
-  if (boss.effectType === 'HALVE_TRAIL_KNOWLEDGE') {
-    level = Math.max(1, Math.floor(level / 2));
-  }
-
+  const level = Math.max(1, Math.floor(stats.level / 2));
   if (level === stats.level) return stats;
   return { ...stats, level };
 }
 
-/** River: only straight hands score full value; others downgrade to high card */
-export function applyBossHandRestriction(handResult: HandResult, selectedDice: Die[]): HandResult {
+/** Trickster: permanently downgrade played hand before scoring; returns animation payload. */
+export function applyBossTricksterDowngrade(handType: HandType): HandUpgradeInfo | null {
   const boss = getActiveBoss();
-  if (!boss || boss.effectType !== 'STRAIGHTS_ONLY') return handResult;
+  if (!boss || boss.effectType !== 'DOWNGRADE_TRAIL_KNOWLEDGE') return null;
 
-  const straightTypes: HandType[] = [HandType.FOUR_STRAIGHT, HandType.FIVE_STRAIGHT];
-  if (straightTypes.includes(handResult.type)) return handResult;
+  const run = getRunState();
+  const stats = selectHandStats(run, handType);
+  const oldLevel = stats.level;
+  if (oldLevel <= 1) return null;
 
-  const active = selectedDice.filter((d) => !isDiceScoringDisabledByBoss(d) && d.enhancement !== 'stone');
-  if (active.length === 0) return handResult;
-  const highest = active.reduce((a, b) => (b.value > a.value ? b : a));
-  const stoneDice = selectedDice.filter((d) => d.enhancement === 'stone');
-  return buildHandResult(HandType.HIGH_VALUE, [highest, ...stoneDice]);
+  const amount = (boss.effectParams.amount as number) ?? 1;
+  progressionActions.downgradeHandLevel(handType, amount);
+  const newStats = selectHandStats(getRunState(), handType);
+  return buildHandUpgradeInfo(handType, oldLevel, newStats.level, newStats);
+}
+
+/** Inspector: record day-1 roll size at round start. */
+export function initInspectorRollSize(rollSize: number): void {
+  const boss = getActiveBoss();
+  if (!boss || boss.effectType !== 'SHRINK_HAND_PER_DAY') return;
+  patchBossRoundState({ inspectorBaseRollSize: rollSize });
+}
+
+/** Inspector: roll size for a given day (day 1 = base, day 2 = base - 1, …). */
+export function getInspectorRollSizeForDay(day: number): number | null {
+  const base = getBossRoundState().inspectorBaseRollSize;
+  if (base === null) return null;
+  return Math.max(1, base - (day - 1));
 }
 
 /** Dice that contribute miles/effects (excludes parity-disabled, not hand detection) */
@@ -268,24 +314,12 @@ export function applyBossOnScore(handType: HandType, playedDice: Die[]): void {
   }
 }
 
-/** After a hand is scored (Inspector spends dice, Land Slide reveal) */
+/** After a hand is scored (Land Slide reveal) */
 export function applyBossAfterScore(): void {
   const boss = getActiveBoss();
   if (!boss) return;
 
   const state = getBossRoundState();
-
-  if (boss.effectType === 'SPEND_RANDOM_AFTER_SCORE') {
-    const count = (boss.effectParams.count as number) ?? 2;
-    const available = selectAvailableDice(getRunState());
-    const toSpend: string[] = [];
-    const pool = [...available];
-    for (let i = 0; i < count && pool.length > 0; i++) {
-      const idx = Math.floor(rngFloat('boss') * pool.length);
-      toSpend.push(pool.splice(idx, 1)[0].id);
-    }
-    if (toSpend.length > 0) diceActions.markDiceSpent(toSpend);
-  }
 
   if (boss.effectType === 'HIDE_EQUIPMENT' && !state.landSlideRevealed) {
     patchBossRoundState({ landSlideRevealed: true });

@@ -9,7 +9,6 @@
 
 ## New Features
 - our tooltips need access to game/player state so things like second helpings can tell us the card we'll get, trade tells us how much money we'll get, etc. Needs to work like displayHints I think.
-- Gambling Themed Item - One Armed Bandit? - 1 in 4 chance to get x4 mult and $10.
 - the tool tip for trail guides should show the current hand level (level 3 or whatever)
 - tool tip on second helpings should show the card that you'll get if you use it now.
 - new permits for luck:

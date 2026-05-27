@@ -135,6 +135,8 @@ Echo Chamber - $10 - copies the ability of the leftmost item
 
 ## Phase 8
 Loaded Dice - $4 - doubles all listed probabilities
+One Armed Bandit - $6 - 1 in 4 chance for x4 mult and $10 when a hand is scored
+Gambler's Dice Cup - $8 - all dice have 1 in 6 odds of rolling the selected loaded die value (loaded dice use 1 in 3)
 
 ## Phase 9
 5 Mile Marker - $8 - gains +5 miles each time a 5 pip is scored

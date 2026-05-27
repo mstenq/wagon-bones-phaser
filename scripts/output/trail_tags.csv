@@ -1,0 +1,25 @@
+id,name,description
+tag_uncommon,Outfitter's Pick,Next camp shop includes one free Uncommon equipment.
+tag_rare,Saloon Find,Next camp shop includes one free Rare equipment.
+tag_permit,Permit Stamp,Adds a Frontier Permit to the next shop.
+tag_company_store,On the House,"Next shop: initial equipment, consumables, and booster packs cost $0."
+tag_free_reroll,Coupon Book,Next shop: first camp reroll costs $0.
+tag_ghost,Haunted Relic,Next base equipment in shop becomes Ghost aura and is free.
+tag_icy,Frosted Tin,Next base equipment in shop becomes Icy aura (+50 miles) and is free.
+tag_fire,Branded Iron,Next base equipment in shop becomes Fire aura (+10 mult) and is free.
+tag_holy,Gilded Cross,Next base equipment in shop becomes Holy aura (×1.5 mult) and is free.
+tag_investment,Bounty Payout,Gain $25 after defeating the next boss.
+tag_boss,Change of Guard,Re-roll the boss assigned to this leg's Showdown.
+tag_dice_mega,Wagon Load,Immediately open a free Mega Dice Grab Bag (pick 2 of 5).
+tag_supply_mega,Supply Drop,Immediately open a free Mega Supply Pack (pick 2 of 5).
+tag_trail_guide_mega,Surveyor's Cache,Immediately open a free Mega Trail Guide Pack (pick 2 of 5).
+tag_equipment_mega,Outfitter's Wagon,Immediately open a free Mega Equipment Pack (pick 2 of 4).
+tag_frontier,Spirit Walk,Immediately open a free Frontier Pack (pick 1 of 2).
+tag_well_traveled,Well-Traveled,Gain $1 for each day scored this run.
+tag_pack_rat,Pack Rat,Gain $1 for each unused reroll remaining across the whole run.
+tag_shortcut,Shortcut,Gain $5 for each round skipped this run.
+tag_bank_deposit,Bank Deposit,Double your money (adds at most $40).
+tag_top_up,Junk Pile,Create up to 2 Common equipment (if you have space).
+tag_surveyor,Surveyor's Mark,Upgrade a random hand type by 3 trail guide levels.
+tag_wide_saddle,Wide Saddle,+3 dice hand size for the next round only.
+tag_twin_wagon,Twin Wagon,Duplicate the next tag earned (excluding Twin Wagon).

@@ -208,12 +208,21 @@ describe('Shop stock exclusion', () => {
 
   test('locked equipment is excluded from shop stock', () => {
     const player = resetPlayerState();
+    const dynamite = getEquipmentDefById('dynamite')!;
     const nitro = getEquipmentDefById('nitro')!;
     const excludeAllButNitro = getAllEquipment()
       .filter((item) => item.id !== 'nitro')
       .map((item) => item.id);
+    const excludeAllButDynamite = getAllEquipment()
+      .filter((item) => item.id !== 'dynamite')
+      .map((item) => item.id);
 
+    expect(isEquipmentUnlocked(dynamite, null, getItemDisplayContext())).toBe(true);
     expect(isEquipmentUnlocked(nitro, null, getItemDisplayContext())).toBe(false);
+
+    // Before self-destruct, dynamite can still be generated.
+    const preExplosionDynamiteStock = generateShopStock(1, excludeAllButDynamite);
+    expect(preExplosionDynamiteStock[0]?.id).toBe('dynamite');
 
     // While locked, nitro cannot appear even when every other item is excluded.
     const lockedStock = generateShopStock(1, excludeAllButNitro);
@@ -225,7 +234,12 @@ describe('Shop stock exclusion', () => {
     }
 
     player.dynamiteSelfDestructed = true;
+    expect(isEquipmentUnlocked(dynamite, null, getItemDisplayContext())).toBe(false);
     expect(isEquipmentUnlocked(nitro, null, getItemDisplayContext())).toBe(true);
+
+    // After self-destruct, dynamite is retired from the pool.
+    const postExplosionDynamiteStock = generateShopStock(1, excludeAllButDynamite);
+    expect(postExplosionDynamiteStock[0]?.id).toBe('horseshoe');
 
     // After unlock, nitro is the only eligible pick when everything else is excluded.
     const unlockedStock = generateShopStock(1, excludeAllButNitro);

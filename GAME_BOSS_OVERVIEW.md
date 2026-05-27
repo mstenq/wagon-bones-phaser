@@ -1,15 +1,15 @@
 # Bosses
 Bosses are more or less the same as in Balatro. Also there are no suit disabling so instead there is an odd/even disable boss.
 
-- The Inspector - exhaust 2 random dice from your hand after each scoring round (move to spent pile)
+- The Inspector - hand size shrinks by 1 each day (8, 7, 6, …)
 - The Tax Man - playing your most played hand sets money to zero
 - The Marathon - distance is 4x normal
 - The Ghost Town - all played even pips are disabled
 - The Undertaker - all played odd pips are disabled
 - The Preacher - only one hand type allowed for round
 - The Call Girl - must play different hands each round
-- The Trickster - every played hand reduces trail knowledge by one before scoring
-- The River - only straights count when scoring
+- The Trickster - every scored hand permanently reduces that hand's trail knowledge by one (min level 1)
+- The River - only straights score; other hands forfeit the day for 0 miles
 - The Chain Gang - No rerolls
 - The Standoff - Play only 1 hand
 - The Banker - Lose $1 per die played when scoring (every die you select, not just the hand)

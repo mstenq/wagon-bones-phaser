@@ -87,6 +87,8 @@ export class DiceSprite extends GameObjects.Container {
     this.add([this.dieImage, this.valueText, this.selectionGfx, this.disabledOverlay]);
 
     this.setSize(DICE_SIZE, DICE_SIZE);
+    // Container origin is 0.5 — InputManager adds displayOriginX/Y before hit tests,
+    // so (0,0,w,h) aligns with the visually centered die, not (-half,-half,w,h).
     this.setInteractive(new Phaser.Geom.Rectangle(0, 0, DICE_SIZE, DICE_SIZE), Phaser.Geom.Rectangle.Contains);
 
     this.redraw();

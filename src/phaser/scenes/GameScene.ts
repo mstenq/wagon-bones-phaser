@@ -9,7 +9,12 @@ import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableDef, ConsumableInstance } from '../../game/facade/consumable';
 import type { DiceSelectionConfig } from '../../game/facade/diceSelection';
-import { shouldUpdateDisplayedDiceValue } from '../../game/facade/diceSelection';
+import {
+  getDiceSelectionMaxPicks,
+  getDiceSelectionMinPicks,
+  isDiceSelectionReady,
+  shouldUpdateDisplayedDiceValue,
+} from '../../game/facade/diceSelection';
 import { getRoundHintContext } from '../../game/displayContext';
 import { getRunState } from '../../game/store/runStore';
 import { getRoundState } from '../../game/store/roundStore';
@@ -832,7 +837,7 @@ export class GameScene extends Scene {
       this.enterScorePhase(result);
     } else {
       gameFacade.round.cancelScore();
-      this.showFloatingText('Cannot play this hand', 0xff6644);
+      this.showFloatingText('Could not score', 0xff6644);
       this.updateRollButtons();
     }
   }
@@ -1009,7 +1014,14 @@ export class GameScene extends Scene {
     );
 
     this.scoreBtn.setEnabled(lockedCount > 0);
-    this.scoreBtn.setText(lockedCount > 0 ? `Score ${lockedCount} Dice` : 'Lock Dice to Score');
+    const lockedIds = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
+    const bossWarning = lockedCount > 0 ? gameFacade.round.getBossScoreWarning(lockedIds) : null;
+    if (bossWarning) {
+      const maxLen = 52;
+      this.scoreBtn.setText(bossWarning.length > maxLen ? `${bossWarning.slice(0, maxLen - 1)}…` : bossWarning);
+    } else {
+      this.scoreBtn.setText(lockedCount > 0 ? `Score ${lockedCount} Dice` : 'Lock Dice to Score');
+    }
 
     const lockedDice = selectRolledDice().filter((d) => this.lockedDiceIds.has(d.id));
     gameFacade.round.updateHandPreviewOverlay(lockedDice);
@@ -2045,21 +2057,21 @@ export class GameScene extends Scene {
   private onConsumableTargetClick(sprite: DiceSprite): void {
     if (!this.consumableTargeting) return;
     const id = sprite.dieData.id;
-    const required = this.consumableTargeting.pickCount;
+    const max = getDiceSelectionMaxPicks(this.consumableTargeting);
 
     if (this.consumableTargetIds.has(id)) {
       // Deselect
       this.consumableTargetIds.delete(id);
       sprite.setSelected(false);
       this.sound.play('sfx_card_slide2', { volume: 0.25 });
-    } else if (this.consumableTargetIds.size < required) {
+    } else if (this.consumableTargetIds.size < max) {
       // Select
       this.consumableTargetIds.add(id);
       sprite.setSelected(true);
       this.sound.play('sfx_highlight1', { volume: 0.3 });
     }
 
-    const enough = this.consumableTargetIds.size === required;
+    const enough = isDiceSelectionReady(this.consumableTargeting, this.consumableTargetIds.size);
     if (this.consumableConfirmBtn) this.consumableConfirmBtn.setEnabled(enough);
     // For BUMP_VALUE, the cancel button is actually the -1 Down button
     if (this.consumableTargeting.effectType === 'BUMP_VALUE' && this.consumableCancelBtn) {
@@ -2070,12 +2082,20 @@ export class GameScene extends Scene {
 
   private updateConsumableTargetingText(): void {
     if (!this.consumableTargeting) return;
-    const required = this.consumableTargeting.pickCount;
+    const config = this.consumableTargeting;
+    const min = getDiceSelectionMinPicks(config);
+    const max = getDiceSelectionMaxPicks(config);
     const selected = this.consumableTargetIds.size;
-    const remaining = required - selected;
-    const name = this.consumableTargeting.cardName || 'Effect';
-    if (remaining > 0) {
-      this.instructionText.setText(`${name}: Select ${remaining} more dice`);
+    const name = config.cardName || 'Effect';
+    if (selected < min) {
+      const need = min - selected;
+      if (min === max) {
+        this.instructionText.setText(`${name}: Select ${need} more dice`);
+      } else {
+        this.instructionText.setText(`${name}: Select at least ${need} more (up to ${max})`);
+      }
+    } else if (selected < max) {
+      this.instructionText.setText(`${name}: Ready! Pick another die or click Apply`);
     } else {
       this.instructionText.setText(`${name}: Ready! Click Apply`);
     }
@@ -2083,8 +2103,7 @@ export class GameScene extends Scene {
 
   private async applyConsumableTargeting(): Promise<void> {
     if (!this.consumableTargeting) return;
-    const required = this.consumableTargeting.pickCount;
-    if (this.consumableTargetIds.size !== required) return;
+    if (!isDiceSelectionReady(this.consumableTargeting, this.consumableTargetIds.size)) return;
     const effectType = this.consumableTargeting.effectType;
 
     // Get the actual dice objects from the targetable set

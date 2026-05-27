@@ -77,6 +77,8 @@ export interface BossRoundState {
   equipmentHidden: boolean;
   landSlideRevealed: boolean;
   diceScoringReenabledBySell: boolean;
+  /** Day-1 roll size for The Inspector (shrinks each subsequent day). */
+  inspectorBaseRollSize: number | null;
 }
 
 export const EMPTY_BOSS_ROUND_STATE: BossRoundState = {
@@ -88,6 +90,7 @@ export const EMPTY_BOSS_ROUND_STATE: BossRoundState = {
   equipmentHidden: false,
   landSlideRevealed: false,
   diceScoringReenabledBySell: false,
+  inspectorBaseRollSize: null,
 };
 
 // ─── Run state (replaces PlayerState fields) ───

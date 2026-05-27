@@ -46,6 +46,23 @@ export const progressionActions = {
     });
   },
 
+  downgradeHandLevel(type: HandType, amount: number = 1): void {
+    runStore.setState((s) => {
+      const stats = s.handStats[type] ?? {
+        level: 1,
+        timesPlayed: 0,
+        milesPerLevel: 10,
+        multPerLevel: 1,
+      };
+      return {
+        handStats: {
+          ...s.handStats,
+          [type]: { ...stats, level: Math.max(1, stats.level - amount) },
+        },
+      };
+    });
+  },
+
   payShopReroll(): boolean {
     const state = getRunState();
     const cost = selectShopRerollCost(state);
