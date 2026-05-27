@@ -14,7 +14,7 @@ export const GAME = {
 
 // ─── Gameplay Defaults ───
 export const GAMEPLAY = {
-  MAX_DAYS: 4,
+  MAX_DAYS: 3,
   MAX_REROLLS: 4,
   ROLL_SIZE: 8,
   SCORE_SIZE: 5,
@@ -297,8 +297,16 @@ export const UI = {
   CARD_TOOLTIP_META_FONT_SIZE: 14,
 
   // Game scene (main content area — right of sidebar)
+  /** Bottom HUD: action buttons inset from screen bottom */
+  GAME_BOTTOM_BTN_MARGIN: 36,
+  /** Gap between action buttons and instruction line */
+  GAME_INSTRUCTION_ABOVE_BTN: 58,
+  /** Gap between instruction line and sort controls */
+  GAME_SORT_ABOVE_INSTRUCTION: 46,
+  /** Centered boss hand warning (e.g. river ford) */
+  GAME_BOSS_WARNING_Y_RATIO: 0.5,
   HAND_Y_RATIO: 0.72,
-  ROLL_Y_RATIO: 0.75, // dice row y position from top of play area
+  ROLL_Y_RATIO: 0.7, // dice row y position from top of play area
   DICE_SPACING: 85,
   DICE_ARC_HEIGHT: 12, // max Y lift at center of arc (px)
   DICE_ARC_ROTATION: 0.04, // max rotation at edges (radians, ~2.3°)
@@ -346,6 +354,9 @@ export const DICE = {
   PIP_COLOR: 0x222222,
   SELECTED_STROKE: 0xffcc00,
   FORCED_STROKE: 0xff4444,
+  /** Roll phase: 🔒 label below die when pinned against re-rolls (not scored) */
+  REROLL_LOCK_LABEL_Y: 48,
+  REROLL_LOCK_FONT_SIZE: 22,
 };
 
 // ─── Marquee selection (roll phase dice lock) ───
@@ -432,5 +443,5 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'COPY_RIGHT', // Mirror Lake (prevent self-reference)
   'COPY_LEFTMOST', // Echo Chamber (prevent self-reference)
   'TRAIL_BACKPACK', // Trail Backpack,
-  'GAMBLERS_DICE_CUP' // Gambler's Dice Cup
+  'GAMBLERS_DICE_CUP', // Gambler's Dice Cup
 ]);

@@ -2500,7 +2500,7 @@ const items: ItemDef[] = [
     name: "Explorer's Guild",
     cardTemplate: 'white-text',
     cost: 8,
-    rarity: 'rare',
+    rarity: 'uncommon',
     effectType: 'EXPLORER_GUILD',
     effectParams: {},
     display: (_round, _player) => ({
@@ -2848,7 +2848,7 @@ const items: ItemDef[] = [
     effectType: 'PACK_MULE',
     effectParams: { slots: 2 },
     display: (_round, _player) => ({
-      hint: [[active('+2 consumable slots')]],
+      hint: [[active('+2 consumable slots', "xs")]],
       tooltip: [[text('Adds '), active('+2'), text(' consumable slots')]],
     }),
   },
@@ -3035,16 +3035,11 @@ const items: ItemDef[] = [
     cost: 5,
     rarity: 'uncommon',
     effectType: 'ROULETTE_WHEEL',
-    effectParams: { values: [2.5, 1.5, 1.5] },
-    initialState: { xMult: 1.5 },
-    display: (_round, player) => {
-      const equip = findOwnedEquip(player, 'roulette_wheel');
-      const current = equip?.state.xMult ?? 1.5;
-      return {
-        hint: [[mult(`x${current.toFixed(1)}`)]],
-        tooltip: [[text('Each day rolls one of: '), mult('x2.5'), text(', '), mult('x1.5'), text(', '), mult('x1.5')]],
-      };
-    },
+    effectParams: { min: 1.0, max: 4.0 },
+    display: (_round, _player) => ({
+      hint: [[mult('x1.0-4.0')], [condition('random', 'sm')]],
+      tooltip: [[mult('x1.0'), text(' to '), mult('x4.0'), text(' xMult '), condition('random'), text(' each day')]],
+    }),
   },
   {
     id: 'offering_bowl',

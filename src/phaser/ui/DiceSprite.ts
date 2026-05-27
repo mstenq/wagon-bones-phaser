@@ -62,6 +62,8 @@ export class DiceSprite extends GameObjects.Container {
   private auraGlowCleanup: (() => void) | null = null;
   private _dieData: Die;
   private _selected: boolean = false;
+  private _rerollLocked: boolean = false;
+  private rerollLockLabel: GameObjects.Text | null = null;
   private _forced: boolean = false;
   _disabled: boolean = false;
   private disabledOverlay: GameObjects.Graphics;
@@ -120,6 +122,15 @@ export class DiceSprite extends GameObjects.Container {
     this.redraw();
   }
 
+  setRerollLocked(locked: boolean): void {
+    this._rerollLocked = locked;
+    this.drawRerollLockLabel();
+  }
+
+  get rerollLocked(): boolean {
+    return this._rerollLocked;
+  }
+
   setForced(forced: boolean): void {
     this._forced = forced;
     this._selected = forced;
@@ -165,6 +176,7 @@ export class DiceSprite extends GameObjects.Container {
     this.dieImage.clearTint();
 
     this.drawSelectionStroke();
+    this.drawRerollLockLabel();
 
     if (this._dieData.value > 0) {
       const enhInfo = hasEnhancement ? ENHANCEMENT_INFO.get(this._dieData.enhancement!) : null;
@@ -253,6 +265,22 @@ export class DiceSprite extends GameObjects.Container {
     const radius = DICE_SIZE / 2 - strokeWidth / 2;
     this.selectionGfx.lineStyle(strokeWidth, strokeColor, 1);
     this.selectionGfx.strokeCircle(0, 0, radius);
+  }
+
+  private drawRerollLockLabel(): void {
+    if (this.rerollLockLabel) {
+      this.rerollLockLabel.destroy();
+      this.rerollLockLabel = null;
+    }
+    if (!this._rerollLocked) return;
+
+    this.rerollLockLabel = this.scene.add
+      .text(0, DICE.REROLL_LOCK_LABEL_Y, '🔒', {
+        fontSize: `${DICE.REROLL_LOCK_FONT_SIZE}px`,
+      })
+      .setOrigin(0.5, 0);
+    this.rerollLockLabel.setDepth(12);
+    this.add(this.rerollLockLabel);
   }
 
   private drawAuraFX(): void {
@@ -397,6 +425,10 @@ export class DiceSprite extends GameObjects.Container {
   destroy(fromScene?: boolean): void {
     DiceSprite.instances.delete(this);
     this.hideTooltip();
+    if (this.rerollLockLabel) {
+      this.rerollLockLabel.destroy();
+      this.rerollLockLabel = null;
+    }
     this.clearStickerOrbit();
     for (const tw of this.auraTweens) tw.destroy();
     this.auraTweens = [];

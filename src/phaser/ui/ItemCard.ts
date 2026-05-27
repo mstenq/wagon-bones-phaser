@@ -117,6 +117,8 @@ export class ItemCard extends GameObjects.Container {
   private auraEmitters: GameObjects.Particles.ParticleEmitter[] = [];
   private auraTweens: Phaser.Tweens.Tween[] = [];
   private auraGlowCleanup: (() => void) | null = null;
+  private ghostTintOverlay: GameObjects.Graphics | null = null;
+  private auraImageFilterCleanup: (() => void) | null = null;
   private hintObjects: GameObjects.GameObject[] = [];
   private actionTabs: ActionTabInstance[] = [];
   private _tabsVisible: boolean = false;
@@ -187,7 +189,8 @@ export class ItemCard extends GameObjects.Container {
     const prevAuraId = this._def.aura?.id ?? '';
     this._def = equipment.def;
     const nextAuraId = this._def.aura?.id ?? '';
-    if (prevAuraId === nextAuraId && (nextAuraId === '' || this.auraEmitters.length > 0)) return;
+    // Ghost aura has no particle emitters; only compare aura id to avoid stacking filters on every hint sync.
+    if (prevAuraId === nextAuraId) return;
     this.clearAuraVFX();
     if (this._def.aura) this.setupAuraVFX();
   }
@@ -390,6 +393,17 @@ export class ItemCard extends GameObjects.Container {
       this.auraGlowCleanup();
       this.auraGlowCleanup = null;
     }
+    if (this.ghostTintOverlay) {
+      this.ghostTintOverlay.destroy();
+      this.ghostTintOverlay = null;
+    }
+    if (this.auraImageFilterCleanup) {
+      this.auraImageFilterCleanup();
+      this.auraImageFilterCleanup = null;
+    }
+    if (this.cardImage) {
+      this.cardImage.setAlpha(1);
+    }
     this.setAlpha(1);
   }
 
@@ -413,13 +427,20 @@ export class ItemCard extends GameObjects.Container {
     if (aura.id === 'ghost') {
       this.setAlpha(0.8);
       if (this.cardImage) {
-        (this.cardImage as any).enableFilters();
-        const cm = (this.cardImage as any).filters.internal.addColorMatrix();
-        cm.colorMatrix.negative();
+        const img = this.cardImage as GameObjects.Image & { enableFilters?: () => void; filters?: any };
+        if (img.enableFilters) {
+          img.enableFilters();
+          const cm = img.filters.internal.addColorMatrix();
+          cm.colorMatrix.negative();
+          this.auraImageFilterCleanup = () => {
+            if (img.filters) img.filters.internal.remove(cm);
+          };
+        }
       }
       const tintOverlay = this.scene.add.graphics();
       tintOverlay.fillStyle(0x44dd88, 0.3);
       tintOverlay.fillRoundedRect(-hw, -hh, this._cardW, this._cardH, CARD_RADIUS);
+      this.ghostTintOverlay = tintOverlay;
       this.add(tintOverlay);
     }
 

@@ -8,6 +8,7 @@ import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 import { processEquipmentOnDiceDestroyed } from './onDiceDestroyed';
 import { rngInt, rngPick } from '../../RunRng';
+import { rollRouletteWheelXMult } from './rouletteWheel';
 import { getRunState, runStore } from '../../store/runStore';
 import { replaceEquipmentList, resolveEquipmentList } from '../../store/resolve';
 import { replaceConsumableList, resolveConsumableList } from '../../store/resolve';
@@ -180,14 +181,10 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
       equip.state.mult = (equip.state.mult ?? 0) + gain;
       break;
     }
-    case 'ROULETTE_WHEEL': {
+    case 'ROULETTE_WHEEL':
       if (isCopy) break;
-      const options = ((equip.def.effectParams.values as number[]) ?? [2.5, 1.5, 1.5]).filter((v) => v > 0);
-      if (options.length > 0) {
-        equip.state.xMult = rngPick('equipment', options);
-      }
+      rollRouletteWheelXMult(equip);
       break;
-    }
   }
 });
 

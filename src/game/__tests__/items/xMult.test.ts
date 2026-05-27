@@ -277,13 +277,27 @@ describe('New xMult equipment', () => {
     expect(result.mult).toBeMult(1);
   });
 
-  test('roulette wheel applies one of its configured daily multipliers', () => {
-    const inst = itemWithState('roulette_wheel', { xMult: 2.5 });
+  test('roulette wheel applies rolled xMult when scoring', () => {
+    const inst = item('roulette_wheel');
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [inst],
     });
-    expect([1.5, 2.5]).toContain(Number(result.mult.toFixed(1)));
+    const xm = inst.state.xMult ?? 1;
+    if (xm > 1) {
+      expect(result.mult).toBeMultCloseTo(xm, 5);
+    } else {
+      expect(result.mult).toBeMult(1);
+    }
+  });
+
+  test('roulette wheel rolls xMult within range on round start', () => {
+    const inst = item('roulette_wheel');
+    processEquipmentOnRoundStart([inst]);
+    const xm = inst.state.xMult ?? 1;
+    expect(xm).toBeGreaterThanOrEqual(1.0);
+    expect(xm).toBeLessThanOrEqual(4.0);
+    expect(Number.isInteger(Math.round(xm * 10))).toBe(true);
   });
 });
 

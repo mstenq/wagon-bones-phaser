@@ -1369,14 +1369,14 @@ const trailEvents: TrailEventDef[] = [
     choices: [
       {
         id: 'wander',
-        label: 'Wander (-2 days)',
+        label: 'Wander (-1 day)',
         outcomes: [
           {
             probability: 1,
             effects: [
               {
                 type: 'LOSE_DAYS',
-                amount: 2,
+                amount: 1,
               },
             ],
           },
@@ -1944,14 +1944,14 @@ const trailEvents: TrailEventDef[] = [
     choices: [
       {
         id: 'wait',
-        label: 'Wait for thaw (-2 days)',
+        label: 'Wait for thaw (-1 day)',
         outcomes: [
           {
             probability: 1,
             effects: [
               {
                 type: 'LOSE_DAYS',
-                amount: 2,
+                amount: 1,
               },
             ],
           },

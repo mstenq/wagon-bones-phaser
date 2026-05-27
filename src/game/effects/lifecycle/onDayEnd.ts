@@ -3,7 +3,7 @@
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
-import { rngPick } from '../../RunRng';
+import { rollRouletteWheelXMult } from './rouletteWheel';
 
 effectRegistry.registerLifecycle('on-day-end', (equip) => {
   switch (equip.def.effectType) {
@@ -17,15 +17,9 @@ effectRegistry.registerLifecycle('on-day-end', (equip) => {
       equip.state.mult = (equip.state.mult ?? 0) + multPerDay;
       break;
     }
-    case 'ROULETTE_WHEEL': {
-      const options = (
-        ((equip.def.effectParams as Record<string, unknown>).values as number[]) ?? [2.5, 1.5, 1.5]
-      ).filter((v) => v > 0);
-      if (options.length > 0) {
-        equip.state.xMult = rngPick('equipment', options);
-      }
+    case 'ROULETTE_WHEEL':
+      rollRouletteWheelXMult(equip);
       break;
-    }
   }
 });
 

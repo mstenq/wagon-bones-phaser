@@ -113,6 +113,14 @@ export function rngInt(stream: RngStream, minInclusive: number, maxInclusive: nu
   return Math.floor(rngFloat(stream) * (maxInclusive - minInclusive + 1)) + minInclusive;
 }
 
+/** Random value in [min, max] inclusive, at most one decimal place (e.g. 1.0–4.0). */
+export function rngOneDecimal(stream: RngStream, min: number, max: number): number {
+  const minTenths = Math.round(min * 10);
+  const maxTenths = Math.round(max * 10);
+  if (maxTenths <= minTenths) return minTenths / 10;
+  return rngInt(stream, minTenths, maxTenths) / 10;
+}
+
 export function rngChance(stream: RngStream, numerator: number, denominator: number): boolean {
   if (denominator <= 0) return false;
   return rngFloat(stream) < numerator / denominator;

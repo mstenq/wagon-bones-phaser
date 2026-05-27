@@ -80,9 +80,11 @@ export class GameScene extends Scene {
 
   // Instruction text
   private instructionText: Phaser.GameObjects.Text;
+  private bossWarningText: Phaser.GameObjects.Text;
 
-  // Track selections
-  private lockedDiceIds: Set<string> = new Set();
+  // Roll-phase dice UI: selected = score hand; rerollLocked = keep face, not scored
+  private selectedDiceIds: Set<string> = new Set();
+  private rerollLockedDiceIds: Set<string> = new Set();
 
   // Sort controls
   private sortOrder: 'asc' | 'desc' = 'asc';
@@ -131,7 +133,8 @@ export class GameScene extends Scene {
   private consumableConfirmBtn: Button | null = null;
   private consumableCancelBtn: Button | null = null;
   private savedInstructionText: string = '';
-  private savedLockedDiceIds: Set<string> = new Set();
+  private savedSelectedDiceIds: Set<string> = new Set();
+  private savedRerollLockedDiceIds: Set<string> = new Set();
 
   constructor() {
     super('Game');
@@ -163,9 +166,12 @@ export class GameScene extends Scene {
       });
       this.roundSessionActive = true;
       this.pendingNewDiceIds = [];
-      // Clear lock state from previous round (scene instance is reused)
-      this.lockedDiceIds = new Set();
+      // Clear roll-phase dice UI from previous round (scene instance is reused)
+      this.selectedDiceIds = new Set();
+      this.rerollLockedDiceIds = new Set();
     }
+
+    this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
@@ -252,9 +258,15 @@ export class GameScene extends Scene {
       void this.handleConsumableUsed(consumed);
     });
 
+    const btnY = height - UI.GAME_BOTTOM_BTN_MARGIN;
+    const instructionY = btnY - UI.GAME_INSTRUCTION_ABOVE_BTN;
+    const sortY = instructionY - UI.GAME_SORT_ABOVE_INSTRUCTION;
+    const playAreaW = this.scale.width - this.sidebarW;
+    const bossWarningY = height * UI.GAME_BOSS_WARNING_Y_RATIO;
+
     // Instruction text
     this.instructionText = this.add
-      .text(this.contentCX, height - 60, '', {
+      .text(this.contentCX, instructionY, '', {
         fontFamily: FONTS.PRIMARY,
         fontSize: '16px',
         color: TEXT_COLORS.SECONDARY,
@@ -263,10 +275,22 @@ export class GameScene extends Scene {
       .setOrigin(0.5)
       .setDepth(50);
 
+    this.bossWarningText = this.add
+      .text(this.contentCX, bossWarningY, '', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '20px',
+        color: TEXT_COLORS.ERROR_RED,
+        align: 'center',
+        fontStyle: 'bold',
+        wordWrap: { width: Math.max(200, playAreaW * 0.85) },
+      })
+      .setOrigin(0.5)
+      .setDepth(55)
+      .setVisible(false);
+
     this.buildLoadedDiceControl();
 
     // Create buttons (all hidden initially)
-    const btnY = height - 30;
     this.readyBtn = new Button(this, this.contentCX, btnY, 'Roll Selected', 200, 40).onClick(() =>
       this.onReadyToRoll(),
     );
@@ -288,7 +312,6 @@ export class GameScene extends Scene {
     }
 
     // Sort buttons (small, positioned above the main buttons)
-    const sortY = btnY - 50;
     this.sortAscBtn = new Button(this, this.contentCX - 50, sortY, '↑ Low', 80, 28).onClick(() =>
       this.setSortOrder('asc'),
     );
@@ -463,7 +486,8 @@ export class GameScene extends Scene {
 
   private enterRollPhase(): void {
     this.clearSprites();
-    this.lockedDiceIds.clear();
+    this.selectedDiceIds.clear();
+    this.rerollLockedDiceIds.clear();
     this.hideAllButtons();
 
     // Create sprites for rolled dice
@@ -483,7 +507,7 @@ export class GameScene extends Scene {
       this.showSortButtons();
       this.updateRollButtons();
 
-      this.instructionText.setText('Lock dice you want to keep, then re-roll the rest');
+      this.instructionText.setText('Click to select for score · Right-click to lock against re-rolls');
       this.applyBossRollDiceState();
     });
 
@@ -497,48 +521,101 @@ export class GameScene extends Scene {
       const id = sprite.dieData.id;
       sprite.setDisabled(gameFacade.boss.isDiceScoringDisabled(sprite.dieData));
       if (bossState.lockedDieIds.includes(id)) {
-        this.lockedDiceIds.add(id);
+        this.rerollLockedDiceIds.add(id);
       }
     }
+    this.syncRollDieVisuals();
     this.syncSelectedForScore();
     this.repositionRollDice(true);
     this.updateRollButtons();
   }
 
-  /** Toggle lock state for one rolled die (click or marquee batch). */
-  private toggleDiceLock(sprite: DiceSprite, playSound = true, updateButtons = true): void {
+  private getRollDieUiState(id: string): 'unselected' | 'selected' | 'rerollLocked' {
+    if (this.selectedDiceIds.has(id)) return 'selected';
+    if (this.rerollLockedDiceIds.has(id) || gameFacade.boss.isDiceLocked(id)) return 'rerollLocked';
+    return 'unselected';
+  }
+
+  private isRollDieSelected(sprite: DiceSprite): boolean {
+    return this.selectedDiceIds.has(sprite.dieData.id);
+  }
+
+  private applyRollDieUiState(sprite: DiceSprite, next: 'unselected' | 'selected' | 'rerollLocked'): void {
+    const id = sprite.dieData.id;
+    if (gameFacade.boss.isDiceLocked(id) && next === 'unselected') {
+      next = 'rerollLocked';
+    }
+
+    this.selectedDiceIds.delete(id);
+    this.rerollLockedDiceIds.delete(id);
+
+    if (next === 'selected') {
+      this.selectedDiceIds.add(id);
+    } else if (next === 'rerollLocked') {
+      this.rerollLockedDiceIds.add(id);
+    }
+
+    sprite.setSelected(next === 'selected');
+    sprite.setRerollLocked(next === 'rerollLocked');
+  }
+
+  private syncRollDieVisuals(): void {
+    for (const sprite of this.rollSprites) {
+      const id = sprite.dieData.id;
+      const state = this.getRollDieUiState(id);
+      sprite.setSelected(state === 'selected');
+      sprite.setRerollLocked(state === 'rerollLocked');
+    }
+  }
+
+  /** Click rolled die: left = select for score, right = reroll lock (marquee uses left-click rules). */
+  private onRollDieClick(sprite: DiceSprite, isRightClick: boolean, playSound = true, updateButtons = true): void {
     if (this.consumableTargeting) return;
     const id = sprite.dieData.id;
-    if (gameFacade.boss.isDiceLocked(id)) return;
+    const state = this.getRollDieUiState(id);
 
-    if (this.lockedDiceIds.has(id)) {
-      this.lockedDiceIds.delete(id);
-      if (playSound) this.sound.play('sfx_card_slide2', { volume: 0.25 });
+    let next: 'unselected' | 'selected' | 'rerollLocked';
+    if (isRightClick) {
+      if (gameFacade.boss.isDiceLocked(id)) return;
+      next = state === 'unselected' ? 'rerollLocked' : state === 'rerollLocked' ? 'unselected' : 'rerollLocked';
     } else {
-      this.lockedDiceIds.add(id);
-      if (playSound) this.sound.play('sfx_highlight1', { volume: 0.3 });
+      next = state === 'unselected' ? 'selected' : state === 'rerollLocked' ? 'selected' : 'unselected';
     }
-    const lockIdx = this.rollSprites.indexOf(sprite);
-    if (lockIdx >= 0) this.animateRollDieLockLift(sprite, lockIdx);
+
+    this.applyRollDieUiState(sprite, next);
+
+    if (playSound) {
+      if (next === 'selected') {
+        this.sound.play('sfx_highlight1', { volume: 0.3 });
+      } else if (next === 'rerollLocked') {
+        this.sound.play('sfx_card_slide2', { volume: 0.25 });
+      } else {
+        this.sound.play('sfx_card_slide2', { volume: 0.25 });
+      }
+    }
+
+    const idx = this.rollSprites.indexOf(sprite);
+    if (idx >= 0) this.animateRollDieSelectLift(sprite, idx);
     this.syncSelectedForScore();
     if (updateButtons) this.updateRollButtons();
   }
 
   private syncSelectedForScore(): void {
-    gameFacade.round.setSelectedForScoreDice(selectRolledDice().filter((d) => this.lockedDiceIds.has(d.id)));
+    gameFacade.round.setSelectedForScoreDice(selectRolledDice().filter((d) => this.selectedDiceIds.has(d.id)));
   }
 
-  /** Shared: wire up click handlers on roll sprites (click to lock/unlock, drag to reorder) */
+  /** Shared: wire up click handlers on roll sprites (select / reroll-lock, drag to reorder) */
   private setupRollSpriteInteraction(): void {
     for (let i = 0; i < this.rollSprites.length; i++) {
       const sprite = this.rollSprites[i];
       this.input.setDraggable(sprite);
 
-      sprite.on('pointerdown', () => {
+      sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         this.wasDragging = false;
+        sprite.setData('rollClickRight', pointer.rightButtonDown());
       });
 
-      sprite.on('pointerup', () => {
+      sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
         if (this.wasDragging || this.animating || this.marqueeActive) return;
 
         // Consumable targeting mode takes over click behavior
@@ -547,7 +624,8 @@ export class GameScene extends Scene {
           return;
         }
 
-        this.toggleDiceLock(sprite);
+        const isRightClick = pointer.rightButtonReleased() || sprite.getData('rollClickRight') === true;
+        this.onRollDieClick(sprite, isRightClick);
       });
     }
   }
@@ -608,7 +686,7 @@ export class GameScene extends Scene {
       const hits = this.getDiceInMarquee(rect);
       let playSound = true;
       for (const sprite of hits) {
-        this.toggleDiceLock(sprite, playSound, false);
+        this.onRollDieClick(sprite, false, playSound, false);
         playSound = false;
       }
       if (hits.length > 0) this.updateRollButtons();
@@ -667,7 +745,8 @@ export class GameScene extends Scene {
   /** Layout-only version for resize: shows rolled dice without replaying animation */
   private enterRollPhaseLayout(): void {
     this.clearSprites();
-    this.lockedDiceIds.clear();
+    this.selectedDiceIds.clear();
+    this.rerollLockedDiceIds.clear();
     this.hideAllButtons();
 
     const rolled = selectRolledDice();
@@ -681,7 +760,7 @@ export class GameScene extends Scene {
     this.sortAndRepositionDice();
     this.updateRollButtons();
 
-    this.instructionText.setText('Lock dice you want to keep, then re-roll the rest');
+    this.instructionText.setText('Click to select for score · Right-click to lock against re-rolls');
     this.applyBossRollDiceState();
     this.updateHUD();
   }
@@ -702,8 +781,8 @@ export class GameScene extends Scene {
   /** Move locked dice to a centered score line; held dice stay in the roll row below */
   private layoutDiceForScoring(result: ScoreResult, onComplete: () => void): void {
     const scoringIds = new Set(result.handResult.scoringDice.map((d) => d.id));
-    const selectedSprites = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id));
-    const heldSprites = this.rollSprites.filter((s) => !this.lockedDiceIds.has(s.dieData.id));
+    const selectedSprites = this.rollSprites.filter((s) => this.selectedDiceIds.has(s.dieData.id));
+    const heldSprites = this.rollSprites.filter((s) => !this.selectedDiceIds.has(s.dieData.id));
     const tweenCount = selectedSprites.length + heldSprites.length;
 
     if (tweenCount === 0) {
@@ -777,9 +856,9 @@ export class GameScene extends Scene {
   private onReroll(): void {
     if (this.animating) return;
 
-    // Re-roll all dice that are NOT locked
+    // Re-roll dice that are neither selected for score nor pinned against re-rolls
     const allIds = selectRolledDice().map((d) => d.id);
-    const idsToReroll = allIds.filter((id) => !this.lockedDiceIds.has(id));
+    const idsToReroll = allIds.filter((id) => !this.selectedDiceIds.has(id) && !this.rerollLockedDiceIds.has(id));
     if (idsToReroll.length === 0) return;
 
     const success = gameFacade.round.rerollUnlockedDice(idsToReroll);
@@ -817,7 +896,7 @@ export class GameScene extends Scene {
   private onScore(): void {
     if (this.animating) return;
     // Use rollSprites order (user's visual/drag order) instead of rolledDice order
-    const ids = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
+    const ids = this.rollSprites.filter((s) => this.selectedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     if (ids.length === 0) return;
 
     const validation = gameFacade.round.validateScoreSelection(ids);
@@ -986,6 +1065,7 @@ export class GameScene extends Scene {
     this.continueBtn.setVisible(false);
     this.sortAscBtn.setVisible(false);
     this.sortDescBtn.setVisible(false);
+    this.bossWarningText.setVisible(false);
   }
 
   private updateDrawButtons(): void {
@@ -995,9 +1075,10 @@ export class GameScene extends Scene {
   }
 
   private updateRollButtons(): void {
-    const lockedCount = this.lockedDiceIds.size;
+    const selectedCount = this.selectedDiceIds.size;
+    const pinnedCount = this.rerollLockedDiceIds.size;
     const totalCount = selectRolledDice().length;
-    const rerollCount = totalCount - lockedCount;
+    const rerollCount = totalCount - selectedCount - pinnedCount;
     const remaining = selectRerollsRemaining();
     const hasRerolls = remaining > 0;
     const canUseReroll = gameFacade.round.canUseReroll();
@@ -1008,28 +1089,32 @@ export class GameScene extends Scene {
         ? 'No Re-rolls'
         : !canUseReroll
           ? `Day 1: no re-rolls (${remaining} from Day 2)`
-          : lockedCount === 0
+          : rerollCount === totalCount
             ? `Re-roll All (${remaining} remaining)`
             : `Re-roll ${rerollCount} (${remaining} remaining)`,
     );
 
-    this.scoreBtn.setEnabled(lockedCount > 0);
-    const lockedIds = this.rollSprites.filter((s) => this.lockedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
-    const bossWarning = lockedCount > 0 ? gameFacade.round.getBossScoreWarning(lockedIds) : null;
+    this.scoreBtn.setEnabled(selectedCount > 0);
+    this.scoreBtn.setText(selectedCount > 0 ? `Score ${selectedCount} Dice` : 'Select Dice to Score');
+
+    const selectedIds = this.rollSprites.filter((s) => this.selectedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
+    const bossWarning = selectedCount > 0 ? gameFacade.round.getBossScoreWarning(selectedIds) : null;
     if (bossWarning) {
-      const maxLen = 52;
-      this.scoreBtn.setText(bossWarning.length > maxLen ? `${bossWarning.slice(0, maxLen - 1)}…` : bossWarning);
+      this.bossWarningText.setText(bossWarning);
+      this.bossWarningText.setVisible(true);
+      this.scoreBtn.setColor(0x8b2020, 0xb03030);
     } else {
-      this.scoreBtn.setText(lockedCount > 0 ? `Score ${lockedCount} Dice` : 'Lock Dice to Score');
+      this.bossWarningText.setVisible(false);
+      this.scoreBtn.setColor(COLORS.BTN_DEFAULT, COLORS.BTN_HOVER);
     }
 
-    const lockedDice = selectRolledDice().filter((d) => this.lockedDiceIds.has(d.id));
-    gameFacade.round.updateHandPreviewOverlay(lockedDice);
+    const selectedDice = selectRolledDice().filter((d) => this.selectedDiceIds.has(d.id));
+    gameFacade.round.updateHandPreviewOverlay(selectedDice);
 
     this.equipBar?.setHintRound(getRoundHintContext());
   }
 
-  /** Sort roll sprites by die value and reposition them (locked dice stay raised) */
+  /** Sort roll sprites by die value and reposition them (selected dice stay raised) */
   private sortAndRepositionDice(): void {
     // Stone dice sort as highest (above 12s)
     const sortValue = (d: Die) => (d.enhancement === 'stone' ? 13 : d.value);
@@ -1041,23 +1126,19 @@ export class GameScene extends Scene {
     this.repositionRollDice(true);
   }
 
-  private isRollDieLocked(sprite: DiceSprite): boolean {
-    return this.lockedDiceIds.has(sprite.dieData.id);
-  }
-
-  /** Y for a roll-row die: arc baseline minus Balatro-style lift when locked */
-  private getRollDieY(index: number, locked: boolean): number {
+  /** Y for a roll-row die: arc baseline minus Balatro-style lift when selected for score */
+  private getRollDieY(index: number, selected: boolean): number {
     const rollY = this.scale.height * UI.ROLL_Y_RATIO;
     const arc = this.getArcOffset(index, this.rollSprites.length);
-    const lift = locked ? UI.DICE_LOCKED_LIFT_Y : 0;
+    const lift = selected ? UI.DICE_LOCKED_LIFT_Y : 0;
     return rollY + arc.y - lift;
   }
 
-  private applyRollDieDepth(sprite: DiceSprite, locked: boolean): void {
-    sprite.setDepth(locked ? 15 : 10);
+  private applyRollDieDepth(sprite: DiceSprite, selected: boolean): void {
+    sprite.setDepth(selected ? 15 : 10);
   }
 
-  /** Reposition all roll sprites (row layout + locked lift + depth) */
+  /** Reposition all roll sprites (row layout + selected lift + depth) */
   private repositionRollDice(animated: boolean, duration = 250): void {
     if (this.rollSprites.length === 0) return;
 
@@ -1065,11 +1146,11 @@ export class GameScene extends Scene {
     const startX = this.contentCX - totalWidth / 2;
     for (let i = 0; i < this.rollSprites.length; i++) {
       const sprite = this.rollSprites[i];
-      const locked = this.isRollDieLocked(sprite);
+      const selected = this.isRollDieSelected(sprite);
       const arc = this.getArcOffset(i, this.rollSprites.length);
       const targetX = startX + i * DICE_SPACING;
-      const targetY = this.getRollDieY(i, locked);
-      this.applyRollDieDepth(sprite, locked);
+      const targetY = this.getRollDieY(i, selected);
+      this.applyRollDieDepth(sprite, selected);
 
       if (animated) {
         this.tweens.add({
@@ -1088,12 +1169,12 @@ export class GameScene extends Scene {
     this.syncRolledDiceFromSprites();
   }
 
-  private animateRollDieLockLift(sprite: DiceSprite, index: number): void {
-    const locked = this.isRollDieLocked(sprite);
-    this.applyRollDieDepth(sprite, locked);
+  private animateRollDieSelectLift(sprite: DiceSprite, index: number): void {
+    const selected = this.isRollDieSelected(sprite);
+    this.applyRollDieDepth(sprite, selected);
     this.tweens.add({
       targets: sprite,
-      y: this.getRollDieY(index, locked),
+      y: this.getRollDieY(index, selected),
       duration: 200,
       ease: 'Power2',
     });
@@ -1630,7 +1711,8 @@ export class GameScene extends Scene {
         for (let i = 0; i < list.length; i++) {
           if (list[i] === this.draggingSprite) continue;
           const arc = this.getArcOffset(i, list.length);
-          const targetY = list === this.rollSprites ? this.getRollDieY(i, this.isRollDieLocked(list[i])) : rowY + arc.y;
+          const targetY =
+            list === this.rollSprites ? this.getRollDieY(i, this.isRollDieSelected(list[i])) : rowY + arc.y;
           this.tweens.add({
             targets: list[i],
             x: positions[i],
@@ -1650,8 +1732,8 @@ export class GameScene extends Scene {
 
       const sprite = this.draggingSprite;
       const finalVelocity = this.dragVelocityX;
-      const locked = list === this.rollSprites && this.isRollDieLocked(sprite);
-      sprite.setDepth(list === this.rollSprites ? (locked ? 15 : 10) : 20);
+      const selected = list === this.rollSprites && this.isRollDieSelected(sprite);
+      sprite.setDepth(list === this.rollSprites ? (selected ? 15 : 10) : 20);
       this.sound.play('sfx_dice_land', { volume: 0.2 });
 
       this.draggingSprite = null;
@@ -1663,7 +1745,7 @@ export class GameScene extends Scene {
       const idx = list.indexOf(sprite);
       const rowY = this.getDraggableRowY();
       const arc = this.getArcOffset(idx, list.length);
-      const settleY = list === this.rollSprites ? this.getRollDieY(idx, locked) : rowY + arc.y;
+      const settleY = list === this.rollSprites ? this.getRollDieY(idx, selected) : rowY + arc.y;
 
       const overshoot = Phaser.Math.Clamp(
         finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
@@ -1881,7 +1963,8 @@ export class GameScene extends Scene {
   private removeDestroyedDiceFromRoundState(destroyedSet: Set<string>): void {
     gameFacade.round.removeDestroyedDiceFromRound(destroyedSet);
     if (selectRoundPhase() === 'ROLL') {
-      this.lockedDiceIds = new Set([...this.lockedDiceIds].filter((id) => !destroyedSet.has(id)));
+      this.selectedDiceIds = new Set([...this.selectedDiceIds].filter((id) => !destroyedSet.has(id)));
+      this.rerollLockedDiceIds = new Set([...this.rerollLockedDiceIds].filter((id) => !destroyedSet.has(id)));
     }
   }
 
@@ -1989,10 +2072,13 @@ export class GameScene extends Scene {
 
     // Save current state so we can restore
     this.savedInstructionText = this.instructionText.text;
-    this.savedLockedDiceIds = new Set(this.lockedDiceIds);
+    this.savedSelectedDiceIds = new Set(this.selectedDiceIds);
+    this.savedRerollLockedDiceIds = new Set(this.rerollLockedDiceIds);
 
-    // Clear existing lock selections — we repurpose selection for targeting
-    this.lockedDiceIds.clear();
+    // Clear roll-phase selections — we repurpose highlight for targeting
+    this.selectedDiceIds.clear();
+    this.rerollLockedDiceIds.clear();
+    this.syncRollDieVisuals();
     this.repositionRollDice(true, 150);
 
     // Hide normal game buttons
@@ -2175,7 +2261,9 @@ export class GameScene extends Scene {
     this.consumableTargetIds.clear();
 
     // Restore saved state
-    this.lockedDiceIds = new Set(this.savedLockedDiceIds);
+    this.selectedDiceIds = new Set(this.savedSelectedDiceIds);
+    this.rerollLockedDiceIds = new Set(this.savedRerollLockedDiceIds);
+    this.syncRollDieVisuals();
     this.instructionText.setText(this.savedInstructionText);
 
     // Restore locked-die lift positions
