@@ -64,6 +64,8 @@ export interface TrailEventResult {
   effects: TrailEventEffect[];
   modifiers: TrailEventModifiers;
   message?: string;
+  negatedNegativeEffects?: boolean;
+  negationSource?: 'omen_stone' | 'saint_elmos_shield' | 'trail_repair_kit';
 }
 
 // ─── Data Access ───
@@ -392,6 +394,15 @@ export function resolveChoice(
     applyEffect(effect, modifiers, rng);
   }
 
+  const negatedNegativeEffects = omenConsumed || trailRepairKitNegatedEvent || (Boolean(shieldEquip) && hasNegativeEffects(outcome.effects));
+  const negationSource = omenConsumed
+    ? 'omen_stone'
+    : trailRepairKitNegatedEvent
+      ? 'trail_repair_kit'
+      : shieldEquip && hasNegativeEffects(outcome.effects)
+        ? 'saint_elmos_shield'
+        : undefined;
+
   if (trailRepairKit && trailRepairKitNegatedEvent) {
     const gain = resolveEffectParam<number>(
       trailRepairKit.def.effectParams,
@@ -435,6 +446,8 @@ export function resolveChoice(
     effects: outcome.effects,
     modifiers,
     message: outcome.message,
+    negatedNegativeEffects,
+    negationSource,
   };
 }
 
@@ -477,6 +490,10 @@ export function isNegativeEffect(effect: TrailEventEffect): boolean {
     'SCORE_MULTIPLIER', // x1.5 means you need more score, so it's negative
   ];
   return negativeTypes.includes(effect.type);
+}
+
+function hasNegativeEffects(effects: TrailEventEffect[]): boolean {
+  return effects.some((effect) => isNegativeEffect(effect));
 }
 
 // ─── Effect Application ───

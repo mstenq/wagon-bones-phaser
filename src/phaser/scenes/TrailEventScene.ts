@@ -352,7 +352,7 @@ export class TrailEventScene extends Scene {
     const equipment = resolveEquipmentList();
     const shieldEquip = equipment.find((e) => e.def.id === 'saint_elmos_shield');
     const repairKitEquip = gameFacade.trail.findTrailRepairKit();
-    const negatesNegatives = gameFacade.trail.isTrailNegativeNegated();
+    const negatesNegatives = result.negatedNegativeEffects ?? false;
 
     // Build effect summary lines
     const effectLines: { text: string; color: string; negative: boolean }[] = [];
@@ -436,20 +436,20 @@ export class TrailEventScene extends Scene {
     }
 
     const hadNegatedNegative = result.effects.some((e) => gameFacade.trail.isNegativeEffect(e) && negatesNegatives);
-    if (shieldEquip && hadNegatedNegative) {
+    let protectionText: string | null = null;
+    if (hadNegatedNegative) {
+      if (result.negationSource === 'omen_stone') {
+        protectionText = '✨ Good Omen prevents the bad outcome! ✨';
+      } else if (result.negationSource === 'saint_elmos_shield' && shieldEquip) {
+        protectionText = `✨ ${shieldEquip.def.name} protects you! ✨`;
+      } else if (result.negationSource === 'trail_repair_kit' && repairKitEquip) {
+        const xm = repairKitEquip.state.xMult ?? 1;
+        protectionText = `🔧 ${repairKitEquip.def.name} patches the trail (x${xm.toFixed(2)})`;
+      }
+    }
+    if (protectionText) {
       const provText = this.add
-        .text(contentCX, resultY - 28, `✨ ${shieldEquip.def.name} protects you! ✨`, {
-          fontFamily: FONTS.HEADING,
-          fontSize: '16px',
-          color: TEXT_COLORS.GOLD,
-          align: 'center',
-        })
-        .setOrigin(0.5, 0);
-      this.resultContainer.add(provText);
-    } else if (repairKitEquip && hadNegatedNegative) {
-      const xm = repairKitEquip.state.xMult ?? 1;
-      const provText = this.add
-        .text(contentCX, resultY - 28, `🔧 ${repairKitEquip.def.name} patches the trail (x${xm.toFixed(2)})`, {
+        .text(contentCX, resultY - 28, protectionText, {
           fontFamily: FONTS.HEADING,
           fontSize: '16px',
           color: TEXT_COLORS.GOLD,
