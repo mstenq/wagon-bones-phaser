@@ -331,7 +331,12 @@ export class ShopScene extends Scene {
     this.tearDownShopSubscriptions();
     this.displayStoreUnsubs = [
       bindStore(this, runStore, selectShopAffordabilityInputs, () => this.updateDisplays()),
-      bindStore(this, runStore, (state) => state.lastUsedConsumableId, () => this.refreshStockCardTooltipContexts()),
+      bindStore(
+        this,
+        runStore,
+        (state) => state.lastUsedConsumableId,
+        () => this.refreshStockCardTooltipContexts(),
+      ),
       bindStore(this, sceneStore, selectShopStockRevision, () => this.onShopStockRevisionChanged()),
     ];
   }

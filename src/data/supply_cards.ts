@@ -157,10 +157,7 @@ const supplyCards: SupplyCardDef[] = [
     tooltip: (_round, player) => {
       const totalEquipmentValue = player.equipment.reduce((sum, equip) => sum + equip.sellValue, 0);
       const gain = Math.min(totalEquipmentValue, 50);
-      return [
-        [segment(`Current payout: $${gain}`, 'money')],
-        [segment(`cap $50`, 'condition')],
-      ];
+      return [[segment(`Current payout: $${gain}`, 'money')], [segment(`cap $50`, 'condition')]];
     },
   },
   {

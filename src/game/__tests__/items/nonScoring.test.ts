@@ -32,6 +32,7 @@ import {
   processEquipmentOnBossDefeat,
   processEquipmentOnRoundStart,
   processEquipmentOnShopEnd,
+  processEquipmentOnPackSkipped,
 } from '../../EquipmentEffects';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { resolveChance, resolveEffectParam } from '../../effectParams';
@@ -1391,5 +1392,36 @@ describe("Saint Elmo's Shield boss negation", () => {
     ] as any;
 
     expect(getBossRoundConfigMods().targetMilesMultiplier).toBe(1);
+  });
+});
+
+describe('New utility equipment lifecycle effects', () => {
+  test('pack mule increases consumable slots by 2', () => {
+    const base = setupGame().player.maxConsumableSlots;
+    const boosted = setupGame({ equipment: [item('pack_mule')] }).player.maxConsumableSlots;
+    expect(boosted).toBe(base + 2);
+  });
+
+  test('penny pincher grants $5 when a pack is skipped', () => {
+    const { player } = setupGame({ equipment: [item('penny_pincher')], money: 0 });
+    const before = player.economy.balance;
+    processEquipmentOnPackSkipped(player.equipment);
+    expect(player.economy.balance).toBe(before + 5);
+  });
+
+  test('potluck fills free slots with second helpings after boss defeat', () => {
+    const { player } = setupGame({ equipment: [item('potluck')] });
+    player.maxConsumableSlots = 3;
+    processEquipmentOnBossDefeat(player.equipment);
+    expect(player.consumables.length).toBe(3);
+    expect(player.consumables.every((card) => card.def.id === 'second_helpings')).toBe(true);
+  });
+
+  test('pawn broker gains sell value whenever money is earned', () => {
+    const broker = item('pawn_broker');
+    const { player } = setupGame({ equipment: [broker], money: 0 });
+    const before = player.equipment[0]!.sellValue;
+    player.economy.earn(10);
+    expect(player.equipment[0]!.sellValue).toBe(before + 1);
   });
 });

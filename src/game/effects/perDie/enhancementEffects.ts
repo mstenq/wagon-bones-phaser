@@ -5,8 +5,20 @@ import { checkLoadedChance } from '../../equipmentUtils';
 import { multiplyCtxXMult, resolveChance } from '../helpers';
 import { addScore } from '../../scoreMath';
 
+function hasAlchemyKit(ctx: { equipment: Array<{ def: { effectType: string } }> }): boolean {
+  return ctx.equipment.some((equip) => equip.def.effectType === 'ALCHEMY_KIT');
+}
+
+function isGoldOrSteel(enhancement: string | null, alchemy: boolean, target: 'gold' | 'steel'): boolean {
+  if (enhancement === target) return true;
+  if (!alchemy) return false;
+  if (target === 'gold') return enhancement === 'steel';
+  return enhancement === 'gold';
+}
+
 effectRegistry.registerPerDie('GOLD_DICE_MONEY', (ctx, equip, _idx, die, _t) => {
-  if (die.enhancement === 'gold') {
+  const alchemy = hasAlchemyKit(ctx);
+  if (isGoldOrSteel(die.enhancement, alchemy, 'gold')) {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     ctx.mutations.moneyEarned += value;
     ctx.animEvents.push({
@@ -82,7 +94,8 @@ effectRegistry.registerPerDie('WOODEN_DICE_MILES', (ctx, equip, _idx, die, _t) =
 });
 
 effectRegistry.registerPerDie('IRON_DICE_MULT', (ctx, equip, _idx, die, _t) => {
-  if (die.enhancement === 'steel') {
+  const alchemy = hasAlchemyKit(ctx);
+  if (isGoldOrSteel(die.enhancement, alchemy, 'steel')) {
     const value = (equip.def.effectParams as Record<string, unknown>).value as number;
     ctx.bonusMult = addScore(ctx.bonusMult, value);
     ctx.animEvents.push({

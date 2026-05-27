@@ -245,6 +245,48 @@ describe('FINAL_DAY_XMULT: High Noon', () => {
   });
 });
 
+describe('New xMult equipment', () => {
+  test('silver reserve scales with money chunks', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('silver_reserve')],
+      money: 50,
+    });
+    expect(result.mult).toBeMultCloseTo(1.8, 5);
+  });
+
+  test('split trail requires odd and even scored values', () => {
+    const active = calculateTestScore({
+      scoredDice: [die({ value: 1 }), die({ value: 2 }), die({ value: 3 }), die({ value: 4 })],
+      equipment: [item('split_trail')],
+    }).result;
+    const inactive = calculateTestScore({
+      scoredDice: [die({ value: 1 }), die({ value: 3 }), die({ value: 5 }), die({ value: 7 })],
+      equipment: [item('split_trail')],
+    }).result;
+    // 1-2-3-4 is FOUR_STRAIGHT (base mult 2), then Split Trail applies x2.5 => 5
+    expect(active.mult).toBeMultCloseTo(5, 5);
+    expect(inactive.mult).toBeMult(1);
+  });
+
+  test('split trail does not activate for [1,2] because only high value scores', () => {
+    const result = calculateTestScore({
+      scoredDice: [die({ value: 1 }), die({ value: 2 })],
+      equipment: [item('split_trail')],
+    }).result;
+    expect(result.mult).toBeMult(1);
+  });
+
+  test('roulette wheel applies one of its configured daily multipliers', () => {
+    const inst = itemWithState('roulette_wheel', { xMult: 2.5 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    expect([1.5, 2.5]).toContain(Number(result.mult.toFixed(1)));
+  });
+});
+
 // ─── EVERY_NTH_HAND_XMULT: Six Shooter ───
 
 describe('EVERY_NTH_HAND_XMULT: Six Shooter', () => {

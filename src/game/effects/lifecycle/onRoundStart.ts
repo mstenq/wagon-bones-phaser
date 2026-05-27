@@ -10,6 +10,7 @@ import { processEquipmentOnDiceDestroyed } from './onDiceDestroyed';
 import { rngInt, rngPick } from '../../RunRng';
 import { getRunState, runStore } from '../../store/runStore';
 import { replaceEquipmentList, resolveEquipmentList } from '../../store/resolve';
+import { replaceConsumableList, resolveConsumableList } from '../../store/resolve';
 import { economyActions } from '../../store/actions/economyActions';
 import { diceActions } from '../../store/actions/diceActions';
 
@@ -129,6 +130,13 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
         }
       }
       break;
+    case 'FRESH_TRAIL':
+      for (const key of Object.keys(equip.state)) {
+        if (key.startsWith('round_hand_')) {
+          delete equip.state[key];
+        }
+      }
+      break;
     case 'SCORED_RETRIGGER_TIMED':
       break;
     case 'PHANTOM_WAGON':
@@ -149,6 +157,25 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
     case 'ROUND_START_SUPPLY':
       result.supplyCardsToAdd++;
       break;
+    case 'OFFERING_BOWL': {
+      if (isCopy) break;
+      const consumables = resolveConsumableList();
+      if (consumables.length === 0) break;
+      const destroyIdx = rngInt('consumables', 0, consumables.length - 1);
+      consumables.splice(destroyIdx, 1);
+      replaceConsumableList(consumables);
+      const gain = (equip.def.effectParams.value as number) ?? 4;
+      equip.state.mult = (equip.state.mult ?? 0) + gain;
+      break;
+    }
+    case 'ROULETTE_WHEEL': {
+      if (isCopy) break;
+      const options = ((equip.def.effectParams.values as number[]) ?? [2.5, 1.5, 1.5]).filter((v) => v > 0);
+      if (options.length > 0) {
+        equip.state.xMult = rngPick('equipment', options);
+      }
+      break;
+    }
   }
 });
 

@@ -3,8 +3,10 @@
 import type { Die } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { replaceEquipmentList } from '../../store/resolve';
+import { getSupplyDefById } from '../../ConsumablesSystem';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
+import { consumableActions } from '../../store/actions/consumableActions';
 
 effectRegistry.registerLifecycle('on-sell', (equip) => {
   switch (equip.def.effectType) {
@@ -22,6 +24,14 @@ effectRegistry.registerLifecycle('on-boss-defeat', (equip) => {
     case 'END_ROUND_MONEY_SCALING':
       equip.state.bossesDefeated = (equip.state.bossesDefeated ?? 0) + 1;
       break;
+    case 'POTLUCK': {
+      const card = getSupplyDefById('second_helpings');
+      if (!card) break;
+      while (consumableActions.addConsumable(card)) {
+        // fill all available slots
+      }
+      break;
+    }
   }
 });
 

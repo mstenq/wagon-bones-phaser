@@ -494,6 +494,9 @@ export function scoreHand(
         if (equip.def.effectType === 'ENHANCED_RETRIGGER' && scoringEnhancement(die) !== null) {
           triggers++;
         }
+        if (equip.def.effectType === 'LOADED_CHAMBER' && scoringEnhancement(die) === 'lucky') {
+          triggers++;
+        }
       }
       triggers += globalRetriggerCount;
       const echoCopies = getRunState().statusTraitTokens.find((t) => t.id === 'echo_of_the_damned')?.copies ?? 0;
@@ -756,6 +759,25 @@ export function scoreHand(
 
       animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
       console.log(`  [scoreHand] ${equip.def.name}: destroyed enhanced die ${scoredDie.id} (${scoredDie.enhancement})`);
+    }
+  }
+
+  // CURSED_DICE: loaded dice can shatter and grant a frontier encounter when scored
+  for (const equip of equipment) {
+    if (equip.def.effectType !== 'CURSED_DICE') continue;
+    const chanceTuple = ((equip.def.effectParams as Record<string, unknown>).chance as [number, number]) ?? [1, 7];
+    for (const scoredDie of handResult.scoringDice) {
+      if (scoredDie.enhancement !== 'loaded') continue;
+      if (!checkLoadedChance(chanceTuple, equipment, 'loadedDice')) continue;
+      if (!removeRunDie(scoredDie.id)) continue;
+      const frontierDef = getRandomFrontierDef();
+      consumableActions.addConsumable(frontierDef);
+      animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
+      animEvents.push({
+        target: { kind: 'equip', equipIndex: equipment.indexOf(equip) },
+        popupType: 'supply',
+        value: 0,
+      });
     }
   }
 

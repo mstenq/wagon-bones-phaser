@@ -2,6 +2,7 @@
 
 import { canAfford, trySpendBalance, earnBalance } from '../economy';
 import { getRunState, runStore } from '../runStore';
+import { replaceEquipmentList, resolveEquipmentList } from '../resolve';
 
 export const economyActions = {
   canAfford(amount: number, state = getRunState()): boolean {
@@ -11,6 +12,14 @@ export const economyActions = {
   earn(amount: number): void {
     if (amount === 0) return;
     runStore.setState((s) => ({ balance: earnBalance(s.balance, amount) }));
+    const equipment = resolveEquipmentList();
+    let changed = false;
+    for (const equip of equipment) {
+      if (equip.def.effectType !== 'PAWN_BROKER') continue;
+      equip.sellValue += 1;
+      changed = true;
+    }
+    if (changed) replaceEquipmentList(equipment);
   },
 
   spend(amount: number): boolean {

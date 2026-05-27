@@ -6,8 +6,10 @@ import { replaceEquipmentList } from '../../store/resolve';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { dieMatchesPip, handTypeMatches, hasStackedDeck, resolveEffectParam } from '../helpers';
+import { checkLoadedChance } from '../../equipmentUtils';
 import { getMostPlayedHandTypes } from '../../handStatsHelpers';
 import { getRunState } from '../../store/runStore';
+import { getRoundState } from '../../store/roundStore';
 import { resolveEquipmentList } from '../../store/resolve';
 
 effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice) => {
@@ -62,6 +64,23 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
     }
     case 'CONSECUTIVE_PIP_XMULT':
       equip.state.consecutiveCount = 0;
+      break;
+    case 'FRESH_TRAIL': {
+      const handKey = `round_hand_${handType as string}`;
+      const seen = (equip.state[handKey] ?? 0) > 0;
+      equip.state.freshActive = seen ? 0 : 1;
+      equip.state[handKey] = (equip.state[handKey] ?? 0) + 1;
+      break;
+    }
+    case 'STEW':
+      if ((equip.state.roundsRemaining ?? 0) > 0 && (getRoundState()?.day ?? 1) === 1) {
+        const chance = (equip.def.effectParams.chance as [number, number]) ?? [1, 2];
+        if (checkLoadedChance(chance, equipment)) {
+          equip.state.stewUpgradePending = 1;
+        } else {
+          equip.state.stewUpgradePending = 0;
+        }
+      }
       break;
   }
 });

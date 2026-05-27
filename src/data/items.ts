@@ -2834,6 +2834,284 @@ const items: ItemDef[] = [
     }),
     unlockCondition: unlockByEnhancement('loaded'),
   },
+  {
+    id: 'pack_mule',
+    name: 'Pack Mule',
+    cardTemplate: 'white-text-black-outline',
+    cost: 5,
+    rarity: 'uncommon',
+    effectType: 'PACK_MULE',
+    effectParams: { slots: 2 },
+    display: (_round, _player) => ({
+      hint: [[active('+2 consumable slots')]],
+      tooltip: [[text('Adds '), active('+2'), text(' consumable slots')]],
+    }),
+  },
+  {
+    id: 'loaded_chamber',
+    name: 'Loaded Chamber',
+    cardTemplate: 'white-text-black-outline',
+    cost: 5,
+    rarity: 'uncommon',
+    effectType: 'LOADED_CHAMBER',
+    unlockCondition: unlockByEnhancement('lucky'),
+    effectParams: { value: 1 },
+    display: (_round, _player) => ({
+      hint: [[retrigger('Lucky retrigger')]],
+      tooltip: [[text('Retrigger all scored '), condition('lucky'), text(' dice')]],
+    }),
+  },
+  {
+    id: 'stew',
+    name: 'Stew',
+    cardTemplate: 'white-text',
+    cost: 6,
+    rarity: 'common',
+    effectType: 'STEW',
+    effectParams: { chance: [1, 2], rounds: 5 },
+    initialState: { roundsRemaining: 5, stewUpgradePending: 0 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'stew');
+      const rounds = equip?.state.roundsRemaining ?? 5;
+      return {
+        hint: [[oddsDisplay([1, 2], player)], [condition(`${rounds} rounds left`, 'sm')]],
+        tooltip: [
+          [text('First hand each round has '), oddsDisplay([1, 2], player), text(' to gain +1 trail guide level')],
+        ],
+      };
+    },
+  },
+  {
+    id: 'pioneer_spirit',
+    name: 'Pioneer Spirit',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'rare',
+    effectType: 'PIONEER_SPIRIT',
+    effectParams: { value: 12 },
+    display: (_round, _player) => ({
+      hint: [[miles('+12')], [condition('per hand level above 1', 'sm')]],
+      tooltip: [[miles('+12'), text(' miles for each trail guide level above 1 on scored hand')]],
+    }),
+  },
+  {
+    id: 'cursed_dice',
+    name: 'Cursed Dice',
+    cardTemplate: 'white-text',
+    cost: 7,
+    rarity: 'uncommon',
+    effectType: 'CURSED_DICE',
+    effectParams: { chance: [1, 7] },
+    unlockCondition: unlockByEnhancement('loaded'),
+    display: (_round, player) => ({
+      hint: [[oddsDisplay([1, 7], player)], [condition('loaded die shatters', 'sm')]],
+      tooltip: [
+        [
+          text('Scored loaded dice have '),
+          oddsDisplay([1, 7], player),
+          text(' to be destroyed and grant a frontier card'),
+        ],
+      ],
+    }),
+  },
+  {
+    id: 'old_calendar',
+    name: 'Old Calendar',
+    cardTemplate: 'white-text-black-outline',
+    cost: 4,
+    rarity: 'common',
+    effectType: 'OLD_CALENDAR',
+    effectParams: {},
+    initialState: { mult: 0, miles: 0 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'old_calendar');
+      return {
+        hint: [[miles(`+${equip?.state.miles ?? 0}`)], [mult(`+${equip?.state.mult ?? 0}`)]],
+        tooltip: [[text('Gains miles and mult equal to days + rerolls remaining after each round')]],
+      };
+    },
+  },
+  {
+    id: 'sandwich',
+    name: 'Sandwich',
+    cardTemplate: 'white-text',
+    cost: 8,
+    rarity: 'uncommon',
+    effectType: 'SANDWICH',
+    effectParams: { rounds: 5 },
+    initialState: { roundsRemaining: 5 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'sandwich');
+      const rounds = equip?.state.roundsRemaining ?? 5;
+      return {
+        hint: [[active('Free pack tag')], [condition(`${rounds} rounds left`, 'sm')]],
+        tooltip: [[text('At end of round, gain a random mega pack/grab-bag tag (lasts 5 rounds)')]],
+      };
+    },
+  },
+  {
+    id: 'penny_pincher',
+    name: 'Penny Pincher',
+    cardTemplate: 'white-text',
+    cost: 6,
+    rarity: 'common',
+    effectType: 'PENNY_PINCHER',
+    effectParams: { value: 5 },
+    display: (_round, _player) => ({
+      hint: [[money('+$5')], [condition('when pack skipped', 'sm')]],
+      tooltip: [[text('Gain '), money('$5'), text(' whenever a pack is skipped')]],
+    }),
+  },
+  {
+    id: 'campfire_embers',
+    name: 'Campfire Embers',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    effectType: 'CAMPFIRE_EMBERS',
+    effectParams: { value: 0.2 },
+    initialState: { xMult: 1 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'campfire_embers');
+      return {
+        hint: [[mult(`x${(equip?.state.xMult ?? 1).toFixed(1)}`)], [condition('grows on non-boss rounds', 'xs')]],
+        tooltip: [[text('Gains '), mult('x0.2'), text(' at end of each non-boss round')]],
+      };
+    },
+  },
+  {
+    id: 'potluck',
+    name: 'Potluck',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    effectType: 'POTLUCK',
+    effectParams: {},
+    display: (_round, _player) => ({
+      hint: [[active('Fill with Second Helpings')]],
+      tooltip: [[text('After boss defeat, fill free consumable slots with '), condition('Second Helpings')]],
+    }),
+  },
+  {
+    id: 'fresh_trail',
+    name: 'Fresh Trail',
+    cardTemplate: 'white-text-black-outline',
+    cost: 5,
+    rarity: 'common',
+    effectType: 'FRESH_TRAIL',
+    effectParams: { value: 5 },
+    initialState: { freshActive: 0 },
+    display: (_round, _player) => ({
+      hint: [[miles('+5')], [condition('new hand this round', 'sm')]],
+      tooltip: [[miles('+5'), text(' miles if played hand has not already been played this round')]],
+    }),
+  },
+  {
+    id: 'silver_reserve',
+    name: 'Silver Reserve',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'rare',
+    effectType: 'SILVER_RESERVE',
+    effectParams: { chunk: 25, value: 0.4 },
+    display: (_round, player) => {
+      const chunks = Math.floor(player.balance / 25);
+      return {
+        hint: [[mult(`x${(1 + chunks * 0.4).toFixed(1)}`)], [condition('per $25 held', 'sm')]],
+        tooltip: [[text('Gain '), mult('x0.4'), text(' mult for every '), money('$25'), text(' you have')]],
+      };
+    },
+  },
+  {
+    id: 'roulette_wheel',
+    name: 'Roulette Wheel',
+    cardTemplate: 'white-text-black-outline',
+    cost: 5,
+    rarity: 'uncommon',
+    effectType: 'ROULETTE_WHEEL',
+    effectParams: { values: [2.5, 1.5, 1.5] },
+    initialState: { xMult: 1.5 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'roulette_wheel');
+      const current = equip?.state.xMult ?? 1.5;
+      return {
+        hint: [[mult(`x${current.toFixed(1)}`)]],
+        tooltip: [[text('Each day rolls one of: '), mult('x2.5'), text(', '), mult('x1.5'), text(', '), mult('x1.5')]],
+      };
+    },
+  },
+  {
+    id: 'offering_bowl',
+    name: 'Offering Bowl',
+    cardTemplate: 'white-text-black-outline',
+    cost: 4,
+    rarity: 'common',
+    effectType: 'OFFERING_BOWL',
+    effectParams: { value: 4 },
+    initialState: { mult: 0 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'offering_bowl');
+      return {
+        hint: [[mult(`+${equip?.state.mult ?? 0}`)], [condition('destroys random consumable', 'xs')]],
+        tooltip: [[text('Round start: destroy a random consumable. If destroyed, gain '), mult('+4'), text(' mult')]],
+      };
+    },
+  },
+  {
+    id: 'supply_caravan',
+    name: 'Supply Caravan',
+    cardTemplate: 'white-text-black-outline',
+    cost: 4,
+    rarity: 'common',
+    effectType: 'MILES_PER_EQUIPMENT',
+    effectParams: { value: 16 },
+    display: (_round, player) => {
+      const total = player.equipment.length * 16;
+      return {
+        hint: [[miles(`+${total}`)], [condition('per equipment', 'sm')]],
+        tooltip: [[miles('+16'), text(' miles for each equipment card owned')]],
+      };
+    },
+  },
+  {
+    id: 'split_trail',
+    name: 'Split Trail',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    effectType: 'SPLIT_TRAIL',
+    effectParams: { value: 2.5 },
+    display: (_round, _player) => ({
+      hint: [[mult('x2.5')], [condition('if odd + even scored', 'sm')]],
+      tooltip: [[text('Gain '), mult('x2.5'), text(' if scored hand contains both odd and even values')]],
+    }),
+  },
+  {
+    id: 'pawn_broker',
+    name: 'Pawn Broker',
+    cardTemplate: 'white-text',
+    cost: 5,
+    rarity: 'uncommon',
+    effectType: 'PAWN_BROKER',
+    effectParams: { value: 1 },
+    display: (_round, _player) => ({
+      hint: [[money('+$1 sell value')], [condition('when money earned', 'sm')]],
+      tooltip: [[text('This item gains '), money('$1'), text(' sell value whenever money is earned')]],
+    }),
+  },
+  {
+    id: 'alchemy_kit',
+    name: 'Alchemy Kit',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    effectType: 'ALCHEMY_KIT',
+    effectParams: {},
+    display: (_round, _player) => ({
+      hint: [[active('Gold <-> Steel')]],
+      tooltip: [[text('Gold dice count as steel, and steel dice count as gold')]],
+    }),
+  },
 ];
 
 export default items;

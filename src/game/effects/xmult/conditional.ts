@@ -3,6 +3,7 @@
 import { effectRegistry } from '../registry';
 import { checkLoadedChance } from '../../equipmentUtils';
 import { handTypeMatches, multiplyCtxXMult } from '../helpers';
+import { HandType } from '../../types';
 
 effectRegistry.registerXMult('FINAL_DAY_XMULT', (ctx, equip, index) => {
   const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
@@ -81,4 +82,32 @@ effectRegistry.registerXMult('CHANCE_HAND_XMULT_MONEY', (ctx, equip, index) => {
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: p.xMult });
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'money', value: p.money });
   console.log(`  [xmult] ${equip.def.name}: x${p.xMult} + $${p.money} (xMult: ${ctx.xMult})`);
+});
+
+effectRegistry.registerXMult('SILVER_RESERVE', (ctx, equip, index) => {
+  const p = equip.def.effectParams as Record<string, unknown>;
+  const chunk = (p.chunk as number) ?? 25;
+  const perChunk = (p.value as number) ?? 0.4;
+  const chunks = Math.floor(ctx.playerBalance / chunk);
+  if (chunks <= 0) return;
+  const xVal = 1 + chunks * perChunk;
+  multiplyCtxXMult(ctx, xVal);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
+});
+
+effectRegistry.registerXMult('SPLIT_TRAIL', (ctx, equip, index) => {
+  if (
+    ctx.handResult.type !== HandType.FOUR_STRAIGHT &&
+    ctx.handResult.type !== HandType.FIVE_STRAIGHT &&
+    ctx.handResult.type !== HandType.TWO_PAIR &&
+    ctx.handResult.type !== HandType.FULL_HOUSE
+  ) {
+    return;
+  }
+  const hasEven = ctx.scoringDice.some((die) => die.value % 2 === 0);
+  const hasOdd = ctx.scoringDice.some((die) => die.value % 2 === 1);
+  if (!hasEven || !hasOdd) return;
+  const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
+  multiplyCtxXMult(ctx, xVal);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
 });

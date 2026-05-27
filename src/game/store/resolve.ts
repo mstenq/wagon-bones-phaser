@@ -93,7 +93,15 @@ export function resolveLastUsedConsumableDef(state = getRunState()): ConsumableD
 
 /** Persist resolved equipment instances to the run store. */
 export function replaceEquipmentList(instances: EquipmentInstance[]): void {
-  runStore.setState({ equipment: storedFromEquipmentInstances(instances) });
+  const state = getRunState();
+  const prevPackMules = state.equipment.filter((item) => item.defId === 'pack_mule').length;
+  const nextPackMules = instances.filter((item) => item.def.id === 'pack_mule').length;
+  const slotDelta = (nextPackMules - prevPackMules) * 2;
+  const nextPatch: Partial<RunState> = { equipment: storedFromEquipmentInstances(instances) };
+  if (slotDelta !== 0) {
+    nextPatch.maxConsumableSlots = Math.max(0, state.maxConsumableSlots + slotDelta);
+  }
+  runStore.setState(nextPatch);
 }
 
 /** Persist resolved consumable instances to the run store. */

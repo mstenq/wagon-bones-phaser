@@ -3,6 +3,7 @@
 import { effectRegistry } from '../registry';
 import { getRunState } from '../../store/runStore';
 import { addScore } from '../../scoreMath';
+import { selectHandStats } from '../../store/selectors/runSelectors';
 
 effectRegistry.registerAdditive('CONDITIONAL_MULT', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
@@ -98,6 +99,24 @@ effectRegistry.registerAdditive('DICE_DESTROYED_MILES_GAIN', (ctx, equip, index)
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: val });
     console.log(`  [equip] ${equip.def.name}: +${val} miles (destroyed dice) (bonusMiles: ${ctx.bonusMiles})`);
   }
+});
+
+effectRegistry.registerAdditive('PIONEER_SPIRIT', (ctx, equip, index) => {
+  if (!ctx.handType) return;
+  const stats = selectHandStats(getRunState(), ctx.handType);
+  const levelsAboveOne = Math.max(0, stats.level - 1);
+  if (levelsAboveOne <= 0) return;
+  const value = (equip.def.effectParams as Record<string, unknown>).value as number;
+  const total = levelsAboveOne * value;
+  ctx.bonusMiles = addScore(ctx.bonusMiles, total);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: total });
+});
+
+effectRegistry.registerAdditive('FRESH_TRAIL', (ctx, equip, index) => {
+  if ((equip.state.freshActive ?? 0) <= 0) return;
+  const value = (equip.def.effectParams as Record<string, unknown>).value as number;
+  ctx.bonusMiles = addScore(ctx.bonusMiles, value);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value });
 });
 
 effectRegistry.registerAdditive('MARKED_NO_SIX_MULT', (ctx, equip, index) => {

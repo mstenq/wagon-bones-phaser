@@ -218,6 +218,16 @@ describe('ALL_DICE_SCORE: Open Palm', () => {
   });
 });
 
+describe('New conditional/additive mileage items', () => {
+  test('supply caravan adds miles per equipment owned', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('supply_caravan'), item('horseshoe')],
+    });
+    expect(result.miles).toBeMiles(260);
+  });
+});
+
 // ─── FIRST_DAY_SOLO_COPY: Bloodline ───
 
 describe('FIRST_DAY_SOLO_COPY: Bloodline', () => {

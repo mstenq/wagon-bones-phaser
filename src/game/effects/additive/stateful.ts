@@ -86,3 +86,24 @@ effectRegistry.registerAdditive('ENHANCED_SPENT_MILES_GAIN', (ctx, equip, index)
     console.log(`  [equip] ${equip.def.name}: +${val} miles (accumulated) (bonusMiles: ${ctx.bonusMiles})`);
   }
 });
+
+effectRegistry.registerAdditive('OLD_CALENDAR', (ctx, equip, index) => {
+  const multVal = equip.state.mult ?? 0;
+  const milesVal = equip.state.miles ?? 0;
+  if (multVal > 0) {
+    ctx.bonusMult = addScore(ctx.bonusMult, multVal);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: multVal });
+  }
+  if (milesVal > 0) {
+    ctx.bonusMiles = addScore(ctx.bonusMiles, milesVal);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: milesVal });
+  }
+});
+
+effectRegistry.registerAdditive('OFFERING_BOWL', (ctx, equip, index) => {
+  const val = equip.state.mult ?? 0;
+  if (val > 0) {
+    ctx.bonusMult = addScore(ctx.bonusMult, val);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: val });
+  }
+});

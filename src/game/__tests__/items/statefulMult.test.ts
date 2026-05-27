@@ -17,7 +17,11 @@ import {
   processEquipmentOnPackSkipped,
   processEquipmentOnSupplyUsed,
 } from '../../EquipmentEffects';
-import { executeConsumableEffect, getRandomSupplyDef, getRandomTrailGuideDef } from '../../ConsumablesSystem';
+import {
+  executeConsumableEffect,
+  getRandomTrailGuideDef,
+  getSupplyDefById,
+} from '../../ConsumablesSystem';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
@@ -378,17 +382,14 @@ describe('SUPPLY_USED_MULT: Campfire Stories', () => {
 
 // ─── Campfire Stories: supply card use integration ───
 
-// Supply cards that create other consumables and fill slots — exclude from tests
-const SLOT_CREATING_SUPPLIES = ['compass', 'doctor', 'supply_cache'];
-
 describe('Campfire Stories: supply card use integration', () => {
   test('gains +1 mult when a supply card is used via executeConsumableEffect', () => {
     const campfire = item('campfire_stories');
     const { player } = setupGame({ equipment: [campfire] });
+    const stableSupply = getSupplyDefById('firewood');
+    expect(stableSupply).not.toBeNull();
 
-    // Create and use a supply card (exclude ones that create other consumables)
-    const supplyDef = getRandomSupplyDef(null, SLOT_CREATING_SUPPLIES);
-    player.addConsumable(supplyDef);
+    player.addConsumable(stableSupply!);
     const consumed = player.useConsumable(0)!;
     executeConsumableEffect(consumed);
     syncEquipmentInstances(campfire);
@@ -412,12 +413,11 @@ describe('Campfire Stories: supply card use integration', () => {
   test('accumulates mult across multiple supply uses', () => {
     const campfire = item('campfire_stories');
     const { player } = setupGame({ equipment: [campfire] });
-    const history = [];
+    const stableSupply = getSupplyDefById('firewood');
+    expect(stableSupply).not.toBeNull();
 
     for (let i = 0; i < 3; i++) {
-      const supplyDef = getRandomSupplyDef(null, SLOT_CREATING_SUPPLIES);
-      history.push(supplyDef);
-      player.addConsumable(supplyDef);
+      player.addConsumable(stableSupply!);
       const consumed = player.useConsumable(0)!;
       executeConsumableEffect(consumed);
     }

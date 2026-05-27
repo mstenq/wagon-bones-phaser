@@ -7,6 +7,7 @@ import {
   processEquipmentOnPackOpened,
   processEquipmentOnRoundStart,
 } from '../../EquipmentEffects';
+import { PACK_ONLY_FRONTIER_IDS } from '../../Constants';
 import { getLoadedDiceMultiplier } from '../../equipmentUtils';
 import { gt, lte } from '../../scoreMath';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
@@ -236,6 +237,52 @@ describe('loaded enhancement rolling', () => {
       expect(rolled.value).toBe(4);
     } finally {
       Math.random = original;
+    }
+  });
+});
+
+describe('New loaded/lucky equipment', () => {
+  test('loaded chamber retriggers lucky dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'lucky' }), die({ value: 5 })],
+      equipment: [item('loaded_chamber')],
+    });
+    expect(result.totalValue).toBe(15);
+  });
+
+  test('cursed dice has loaded destroy chance metadata', () => {
+    const inst = item('cursed_dice');
+    expect(inst.def.effectType).toBe('CURSED_DICE');
+    expect(inst.def.effectParams.chance).toEqual([1, 7]);
+  });
+
+  test('cursed dice hit adds a frontier encounter consumable', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 9, enhancement: 'loaded' })],
+      equipment: [item('cursed_dice'), item('loaded_dice'), item('loaded_dice'), item('loaded_dice')],
+    });
+
+    expect(player.consumables.length).toBe(1);
+    expect(player.consumables[0]?.def.category).toBe('frontier');
+  });
+
+  test('cursed dice never grants pack-only frontier encounters', () => {
+    const packOnlyIds = [...PACK_ONLY_FRONTIER_IDS];
+    const grantedIds = new Set<string>();
+
+    for (let i = 0; i < 150; i++) {
+      const { player } = calculateTestScore({
+        scoredDice: [die({ value: 11, enhancement: 'loaded' })],
+        equipment: [item('cursed_dice'), item('loaded_dice'), item('loaded_dice'), item('loaded_dice')],
+      });
+      const grantedId = player.consumables[0]?.def.id;
+      expect(grantedId).toBeDefined();
+      grantedIds.add(grantedId!);
+      expect(PACK_ONLY_FRONTIER_IDS.has(grantedId!)).toBe(false);
+    }
+
+    for (const packOnly of packOnlyIds) {
+      expect(grantedIds.has(packOnly)).toBe(false);
     }
   });
 });

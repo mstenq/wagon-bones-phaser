@@ -69,6 +69,31 @@ function applyAfterHandScoredEffect(
       }
       break;
     }
+    case 'STEW': {
+      if ((equip.state.stewUpgradePending ?? 0) <= 0) break;
+      const stats = selectHandStats(run, handType);
+      const handDef = HAND_TABLE.find((h) => h.type === handType)!;
+      const oldLevel = stats.level;
+      const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
+      const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
+      progressionActions.upgradeHandLevel(handType);
+      const newStats = selectHandStats(getRunState(), handType);
+      const newLevel = newStats.level;
+      const newBaseMiles = handDef.baseMiles + newStats.milesPerLevel * (newLevel - 1);
+      const newBaseMult = handDef.baseMult + newStats.multPerLevel * (newLevel - 1);
+      upgrades.push({
+        handType,
+        handName: handDef.name,
+        oldLevel,
+        newLevel,
+        oldBaseMiles,
+        newBaseMiles,
+        oldBaseMult,
+        newBaseMult,
+      });
+      equip.state.stewUpgradePending = 0;
+      break;
+    }
   }
 }
 
