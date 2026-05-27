@@ -47,6 +47,7 @@ import {
   getInspectorRollSizeForDay,
 } from '../../BossEffectsSystem';
 import { generateRandomEquipment } from '../../ItemsSystem';
+import { getPermitAuraMultiplier } from '../../PermitsSystem';
 import { acquireRewardEquipmentInstance } from '../../EquipmentModifiers';
 import { pickGameRoundBackgroundIndex } from '../../roundBackgrounds';
 import { getRunState, runActions } from '../runStore';
@@ -273,10 +274,14 @@ export const roundActions = {
       let created = 0;
       const freshRun = getRunState();
       const equip = resolveEquipmentList();
+      const allowedRarities =
+        roundStartEffects.equipmentCreateRarities.length > 0 ? roundStartEffects.equipmentCreateRarities : ['common'];
+      const auraMultiplier = getPermitAuraMultiplier(freshRun.purchasedPermits);
       for (let i = 0; i < roundStartEffects.equipmentToCreate; i++) {
         const used = equip.filter((e) => e.def.aura?.id !== 'ghost').length;
         if (used < freshRun.maxEquipmentSlots) {
-          const def = generateRandomEquipment({ rarity: roundStartEffects.equipmentCreateRarity });
+          const rarity = rngPick('createRandomEquipment', allowedRarities);
+          const def = generateRandomEquipment({ rarity, auraMultiplier });
           equip.push(acquireRewardEquipmentInstance(def, freshRun.purchasedPermits));
           created++;
         }
@@ -659,8 +664,12 @@ export const roundActions = {
       replaceEquipmentList(equipmentAfterRoundEnd);
     }
 
+    const nextDay = round.day + 1;
+    const inspectorRollSize = getInspectorRollSizeForDay(nextDay);
+    const nextConfig = inspectorRollSize !== null ? { ...round.config, rollSize: inspectorRollSize } : round.config;
+
     const run = getRunState();
-    if (selectAvailableDice(run).length < round.config.rollSize) {
+    if (selectAvailableDice(run).length < nextConfig.rollSize) {
       runActions.patch({ spentDiceIds: [] });
       patchRound({ phase: 'ROUND_END' });
       roundActions.processRoundEndHeldDice(round, 'lost');
@@ -675,7 +684,7 @@ export const roundActions = {
     const scoredSet = new Set(scoredIds);
     const carryoverRefs = round.rolledDice.filter((r) => !scoredSet.has(r.id));
     const carryoverIds = carryoverRefs.map((r) => r.id);
-    const needed = Math.max(0, round.config.rollSize - carryoverIds.length);
+    const needed = Math.max(0, nextConfig.rollSize - carryoverIds.length);
     const refillPool = selectAvailableDice(run).filter((d) => !carryoverIds.includes(d.id));
     const refill = needed > 0 ? drawFromPouch(refillPool, Math.min(needed, refillPool.length)).drawn : [];
     const handDiceIds = [...carryoverIds, ...refill.map((d) => d.id)];
@@ -683,11 +692,7 @@ export const roundActions = {
     let dieValuesByDieId = syncDieValuesFromRefs(round.dieValuesByDieId, carryoverRefs);
     dieValuesByDieId = syncDieValuesFromDice(dieValuesByDieId, refill);
 
-    applyBossOnDayStart(round.day + 1);
-
-    const nextDay = round.day + 1;
-    const inspectorRollSize = getInspectorRollSizeForDay(nextDay);
-    const nextConfig = inspectorRollSize !== null ? { ...round.config, rollSize: inspectorRollSize } : round.config;
+    applyBossOnDayStart(nextDay);
 
     patchRound({
       day: nextDay,

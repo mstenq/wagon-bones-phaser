@@ -7,6 +7,7 @@ import {
   getAllEquipment,
   getEquipmentDefById,
   isEquipmentUnlocked,
+  rollRandomItemAura,
 } from '../ItemsSystem';
 import { getItemDisplayContext } from '../displayContext';
 import {
@@ -273,6 +274,39 @@ describe('Shop stock exclusion', () => {
 
     try {
       expect(generateRandomEquipment({ rarity: 'common' }).rarity).toBe('common');
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
+  test('rollRandomItemAura scales correctly with aura multiplier', () => {
+    const originalRandom = Math.random;
+    Math.random = () => 0.01;
+    try {
+      expect(rollRandomItemAura(0.5)).toBeNull();
+      expect(rollRandomItemAura(1)?.id).toBe('fire');
+      expect(rollRandomItemAura(4)?.id).toBe('holy');
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
+  test('generateShopStock uses permit-based aura multiplier from run state', () => {
+    const originalRandom = Math.random;
+    const player = resetPlayerState();
+    const onlyHorseshoe = getAllEquipment()
+      .filter((def) => def.id !== 'horseshoe')
+      .map((def) => def.id);
+    Math.random = () => 0.02;
+
+    try {
+      player.purchasedPermits = [];
+      const [withoutAuraBoost] = generateShopStock(1, onlyHorseshoe);
+      expect(withoutAuraBoost?.aura).toBeUndefined();
+
+      player.purchasedPermits = ['spirit_ritual', 'sacred_ceremony'];
+      const [withAuraBoost] = generateShopStock(1, onlyHorseshoe);
+      expect(withAuraBoost?.aura).toBeDefined();
     } finally {
       Math.random = originalRandom;
     }

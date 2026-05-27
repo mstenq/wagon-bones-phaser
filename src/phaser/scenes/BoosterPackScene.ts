@@ -1246,7 +1246,9 @@ export class BoosterPackScene extends Scene {
       const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
       if (fe) {
         const def = createFrontierConsumableDef(fe);
-        consumableResult = gameFacade.pack.useConsumableDirectly(def);
+        consumableResult = gameFacade.pack.useConsumableDirectly(def, {
+          visibleDiceIds: this.lineupDice.map((d) => d.id),
+        });
         if (!consumableResult.success && consumableResult.failReason) {
           this.showFloatingText(consumableResult.failReason);
         }
@@ -1417,7 +1419,9 @@ export class BoosterPackScene extends Scene {
   }
 
   private async handleConsumableUsedAsync(consumed: ConsumableInstance): Promise<void> {
-    const result = gameFacade.pack.useFromPouch(consumed);
+    const result = gameFacade.pack.useFromPouch(consumed, {
+      visibleDiceIds: this.lineupDice.map((d) => d.id),
+    });
     this.syncDiceLineupFromRun();
 
     if (!result.success && result.failReason) {

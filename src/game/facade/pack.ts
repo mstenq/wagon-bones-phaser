@@ -6,6 +6,7 @@ import {
   getRandomSupplyDef,
   useConsumableDirectly,
   type ConsumableDef,
+  type UseConsumableContext,
   type UseConsumableResult,
 } from '../ConsumablesSystem';
 import { applyDiceSelectionEffect, type DiceSelectionConfig } from '../DiceSelectionSystem';
@@ -20,7 +21,15 @@ import { enqueueConsumablePlayback } from '../store/uiEffectHelpers';
 import { gameConsumable } from './consumable';
 import type { ConsumableInstance } from './consumable';
 
-export type { PackDefinition, PackItem, ConsumableDef, UseConsumableResult, DiceSelectionConfig, ConsumableInstance };
+export type {
+  PackDefinition,
+  PackItem,
+  ConsumableDef,
+  UseConsumableContext,
+  UseConsumableResult,
+  DiceSelectionConfig,
+  ConsumableInstance,
+};
 
 export {
   createFrontierConsumableDef,
@@ -76,8 +85,8 @@ export const gamePack = {
     return applyDiceSelectionEffect(config, selectedDice);
   },
 
-  useConsumableDirectly(def: ConsumableDef): UseConsumableResult {
-    const result = useConsumableDirectly(def);
+  useConsumableDirectly(def: ConsumableDef, context: UseConsumableContext = {}): UseConsumableResult {
+    const result = useConsumableDirectly(def, context);
     enqueueConsumablePlayback(result);
     return result;
   },
@@ -86,8 +95,8 @@ export const gamePack = {
     return applyRunInstantEffect(effect);
   },
 
-  useFromPouch(consumed: ConsumableInstance): UseConsumableResult {
-    return gameConsumable.use(consumed);
+  useFromPouch(consumed: ConsumableInstance, context: UseConsumableContext = {}): UseConsumableResult {
+    return gameConsumable.use(consumed, context);
   },
 
   enqueueEquipmentPopIn(count: number): void {

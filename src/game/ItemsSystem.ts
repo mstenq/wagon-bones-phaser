@@ -12,7 +12,7 @@ export type { HintSegment, HintStyle, HintSize, ItemDisplayResult, CardTemplate 
 import type { ItemDisplayResult } from '../data/items';
 
 import type { EquipmentModifier } from './types';
-import { getDiscountedShopPrice } from './PermitsSystem';
+import { getDiscountedShopPrice, getPermitAuraMultiplier } from './PermitsSystem';
 import { CHANCES } from './Constants';
 import { getItemDisplayContext, getRoundHintContext } from './displayContext';
 import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
@@ -106,18 +106,20 @@ export function getItemAuraById(id: string): ItemAura | null {
 }
 
 /** Roll for a random aura. Returns null most of the time. */
-export function rollRandomItemAura(): ItemAura | null {
+export function rollRandomItemAura(auraMultiplier: number = 1): ItemAura | null {
+  const scaledMultiplier = Math.max(0, auraMultiplier);
   for (const aura of ITEM_AURAS) {
-    if (rngFloat('shop') < aura.chance) return { ...aura };
+    const scaledChance = Math.min(1, aura.chance * scaledMultiplier);
+    if (rngFloat('shop') < scaledChance) return { ...aura };
   }
   return null;
 }
 
 /** Apply a random aura to an EquipmentDef, returning a new copy with adjusted cost.
  *  Items can only have one aura. */
-export function applyRandomAura(def: EquipmentDef): EquipmentDef {
+export function applyRandomAura(def: EquipmentDef, auraMultiplier: number = 1): EquipmentDef {
   if (def.aura) return def; // already has one
-  const aura = rollRandomItemAura();
+  const aura = rollRandomItemAura(auraMultiplier);
   if (!aura) return def;
   return {
     ...def,
@@ -126,19 +128,29 @@ export function applyRandomAura(def: EquipmentDef): EquipmentDef {
   };
 }
 
+function resolveAuraMultiplier(auraMultiplier?: number): number {
+  if (typeof auraMultiplier === 'number') return Math.max(0, auraMultiplier);
+  return getPermitAuraMultiplier(getItemDisplayContext().purchasedPermits);
+}
+
 // ─── Shop Stock ───
 
 /** Generate a random shop stock of equipment, with random aura rolls.
  *  Each slot rolls rarity via CHANCES (5% rare / 25% uncommon / 70% common), then picks uniformly within that tier. */
-export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string[]): EquipmentDef[] {
+export function generateShopStock(
+  count: number = SHOP_SIZE,
+  excludeIds?: string[],
+  auraMultiplier?: number,
+): EquipmentDef[] {
   const horseshoe = itemsPool().find((i) => i.id === 'horseshoe') ?? itemsPool()[0];
   const usedIds = new Set(excludeIds ?? []);
   const stock: EquipmentDef[] = [];
+  const effectiveAuraMultiplier = resolveAuraMultiplier(auraMultiplier);
 
   for (let i = 0; i < count; i++) {
     const available = getShopEquipmentPool([...usedIds]);
     if (available.length === 0) {
-      stock.push(applyRandomAura({ ...horseshoe }));
+      stock.push(applyRandomAura({ ...horseshoe }, effectiveAuraMultiplier));
       continue;
     }
 
@@ -150,7 +162,7 @@ export function generateShopStock(count: number = SHOP_SIZE, excludeIds?: string
     }
 
     const picked = rngPick('shop', candidates);
-    stock.push(applyRandomAura({ ...picked }));
+    stock.push(applyRandomAura({ ...picked }, effectiveAuraMultiplier));
     usedIds.add(picked.id);
   }
 
@@ -218,8 +230,13 @@ export function createEquipmentInstance(def: EquipmentDef, purchasedPermitIds: s
   };
 }
 
-export function generateRandomEquipment(options?: { rarity?: string; excludeRarity?: string }): EquipmentDef {
+export function generateRandomEquipment(options?: {
+  rarity?: string;
+  excludeRarity?: string;
+  auraMultiplier?: number;
+}): EquipmentDef {
   let pool = itemsPool().filter((i) => isEquipmentUnlocked(i));
+  const effectiveAuraMultiplier = resolveAuraMultiplier(options?.auraMultiplier);
   const stream: RngStream =
     options?.rarity === 'rare'
       ? 'createRare'
@@ -251,5 +268,5 @@ export function generateRandomEquipment(options?: { rarity?: string; excludeRari
   }
 
   const picked = rngPick(stream, pool);
-  return applyRandomAura({ ...picked });
+  return applyRandomAura({ ...picked }, effectiveAuraMultiplier);
 }

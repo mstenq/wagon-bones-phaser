@@ -149,12 +149,25 @@ describe('ROUND_START_CREATE_EQUIPMENT: Junk Dealer', () => {
     const junk = item('junk_dealer');
     const result = processEquipmentOnRoundStart([junk]);
     expect(result.equipmentToCreate).toBe(2);
-    expect(result.equipmentCreateRarity).toBe('common');
+    expect(result.equipmentCreateRarities).toEqual(['common']);
   });
 
   test('multiple junk dealers stack', () => {
     const result = processEquipmentOnRoundStart([item('junk_dealer'), item('junk_dealer')]);
     expect(result.equipmentToCreate).toBe(4);
+    expect(result.equipmentCreateRarities).toEqual(['common']);
+  });
+
+  test('occult trader override allows common through rare (not rare-only)', () => {
+    setupGame({ profession: 'occult_trader' });
+    const result = processEquipmentOnRoundStart([item('junk_dealer')]);
+    expect(result.equipmentCreateRarities).toEqual(['common', 'uncommon', 'rare']);
+  });
+
+  test('non-occult profession keeps junk dealer at common-only', () => {
+    setupGame({ profession: 'farmer' });
+    const result = processEquipmentOnRoundStart([item('junk_dealer')]);
+    expect(result.equipmentCreateRarities).toEqual(['common']);
   });
 });
 

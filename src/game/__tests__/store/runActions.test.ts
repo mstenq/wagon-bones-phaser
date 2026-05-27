@@ -1,6 +1,8 @@
 import '../setup';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { getPlayerState, resetPlayerState } from '../../__tests__/testRunPlayer';
+import { getPermitAuraMultiplier } from '../../PermitsSystem';
+import { roundActions } from '../../store/actions/roundActions';
 import { item } from '../testHelpers';
 import {
   createInitialRunState,
@@ -43,6 +45,45 @@ describe('run store actions', () => {
     expect(state.professionId).toBe('banker');
     expect(state.dice.length).toBeGreaterThan(0);
     expect(state.balance).toBeGreaterThanOrEqual(initialBalance);
+  });
+
+  test('occult trader + junk dealer creates common/uncommon/rare at expected rates across round starts', () => {
+    setupActions.applyProfession('occult_trader');
+    setupActions.finalizeRunSetup();
+    runActions.patch({ maxEquipmentSlots: 99 });
+
+    const rounds = 400;
+    const counts = { common: 0, uncommon: 0, rare: 0 };
+
+    for (let i = 0; i < rounds; i++) {
+      equipmentActions.setEquipment([item('junk_dealer')]);
+      roundActions.startRound();
+
+      const player = getPlayerState();
+      player.syncFromStore();
+      const created = player.equipment.slice(1);
+
+      expect(created.length).toBe(2);
+      for (const eq of created) {
+        expect(['common', 'uncommon', 'rare']).toContain(eq.def.rarity);
+        counts[eq.def.rarity as keyof typeof counts]++;
+      }
+    }
+
+    const total = counts.common + counts.uncommon + counts.rare;
+    expect(total).toBe(rounds * 2);
+
+    // Rarity is chosen uniformly from [common, uncommon, rare] for Vivian's Junk Dealer.
+    const commonPct = counts.common / total;
+    const uncommonPct = counts.uncommon / total;
+    const rarePct = counts.rare / total;
+    expect(commonPct).toBeCloseTo(1 / 3, 1);
+    expect(uncommonPct).toBeCloseTo(1 / 3, 1);
+    expect(rarePct).toBeCloseTo(1 / 3, 1);
+
+    const state = runStore.getState();
+    expect(state.purchasedPermits).toEqual(['spirit_ritual', 'sacred_ceremony', 'bargain_bin']);
+    expect(getPermitAuraMultiplier(state.purchasedPermits)).toBe(4);
   });
 
   test('diceActions addDie assigns monotonic ids', () => {

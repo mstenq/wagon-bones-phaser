@@ -263,12 +263,13 @@ describe('LOSE_MONEY_PER_PLAYED: Banker', () => {
 });
 
 describe('SHRINK_HAND_PER_DAY: Inspector', () => {
-  test('stores base roll size and shrinks each day', () => {
+  test('shrinks actual next-day hand size, not just config', () => {
     const { game } = setupGame({
       bossId: 'the_inspector',
       dice: diceFromValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     });
     game.startRound();
+    game.config.targetMiles = D(999_999);
     const base = game.config.rollSize;
     expect(getBossRoundState().inspectorBaseRollSize).toBe(base);
     expect(getInspectorRollSizeForDay(1)).toBe(base);
@@ -279,8 +280,11 @@ describe('SHRINK_HAND_PER_DAY: Inspector', () => {
     game.state.rolledDice = rolled;
     game.selectForScore(rolled.map((d) => d.id));
     game.calculateScore();
-    game.endDay({ deferEquipmentDestructionAnimation: true });
+    const end = game.endDay({ deferEquipmentDestructionAnimation: true });
+    expect(end.outcome).toBe('next-day');
+    expect(game.state.day).toBe(2);
     expect(game.config.rollSize).toBe(base - 1);
+    expect(game.state.hand.length).toBe(base - 1);
   });
 });
 

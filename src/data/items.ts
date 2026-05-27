@@ -1667,10 +1667,17 @@ const items: ItemDef[] = [
     cost: 6,
     rarity: 'uncommon',
     effectType: 'ROUND_START_CREATE_EQUIPMENT',
-    effectParams: { count: 2, rarity: 'common' },
+    effectParams: {
+      count: 2,
+      rarities: ['common'],
+      professionOverrides: { occult_trader: { rarities: ['common', 'uncommon', 'rare'] } },
+    },
     display: (_round, _player) => ({
       hint: [[text('2 common equip')], [condition('per round')]],
-      tooltip: [[text('When round starts, create 2 common pieces of equipment')]],
+      tooltip: [
+        [text('When round starts, create 2 common pieces of equipment.')],
+        [text('Occult Trader (Vivian Crowe) can also create uncommon/rare equipment.')],
+      ],
     }),
   },
   {
@@ -2221,9 +2228,7 @@ const items: ItemDef[] = [
         [
           text('All dice have '),
           oddsDisplay([1, 6], player),
-          text(' odds of rolling the selected loaded die value. Loaded dice use '),
-          odds('1 in 3'),
-          text(' instead.'),
+          text(' odds of rolling the selected loaded die value.')
         ],
       ],
     }),
@@ -2877,6 +2882,7 @@ const items: ItemDef[] = [
         hint: [[oddsDisplay([1, 2], player)], [condition(`${rounds} rounds left`, 'sm')]],
         tooltip: [
           [text('First hand each round has '), oddsDisplay([1, 2], player), text(' to gain +1 trail guide level')],
+          [text('Lasts for '), condition(`${rounds} rounds`)],
         ],
       };
     },
@@ -2952,7 +2958,7 @@ const items: ItemDef[] = [
   {
     id: 'penny_pincher',
     name: 'Penny Pincher',
-    cardTemplate: 'white-text',
+    cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'common',
     effectType: 'PENNY_PINCHER',

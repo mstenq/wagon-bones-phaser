@@ -22,7 +22,7 @@ export interface AnimatedDestruction {
 
 export interface RoundStartAccumulators {
   equipmentToCreate: number;
-  equipmentCreateRarity: string;
+  equipmentCreateRarities: string[];
   stoneDiceToAdd: number;
   stickerDiceToAdd: number;
   daysBonus: number;
@@ -56,8 +56,20 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
       result.stickerDiceToAdd++;
       break;
     case 'ROUND_START_CREATE_EQUIPMENT':
-      result.equipmentToCreate += equip.def.effectParams.count as number;
-      result.equipmentCreateRarity = equip.def.effectParams.rarity as string;
+      {
+        const professionId = getRunState().professionId ?? undefined;
+        const params = equip.def.effectParams as Record<string, unknown>;
+        const count = resolveEffectParam<number>(params, 'count', professionId);
+        const configuredRarities =
+          resolveEffectParam<string[] | string | undefined>(params, 'rarities', professionId) ??
+          resolveEffectParam<string | undefined>(params, 'rarity', professionId) ??
+          'common';
+        const rarities = Array.isArray(configuredRarities) ? configuredRarities : [configuredRarities];
+        const validRarities = rarities.filter((r): r is string => typeof r === 'string' && r.length > 0);
+
+        result.equipmentToCreate += count;
+        result.equipmentCreateRarities = [...new Set([...result.equipmentCreateRarities, ...validRarities])];
+      }
       break;
     case 'ROUND_START_XMULT_DESTROY':
       if (isCopy) break;
@@ -186,7 +198,7 @@ export function processEquipmentOnRoundStart(
   destroyedIndices: number[];
   animatedDestructions: AnimatedDestruction[];
   equipmentToCreate: number;
-  equipmentCreateRarity: string;
+  equipmentCreateRarities: string[];
   stoneDiceToAdd: number;
   stickerDiceToAdd: number;
   daysBonus: number;
@@ -200,7 +212,7 @@ export function processEquipmentOnRoundStart(
   const pendingAnimatedDestroy = new Set<number>();
   const result: RoundStartAccumulators = {
     equipmentToCreate: 0,
-    equipmentCreateRarity: 'common',
+    equipmentCreateRarities: ['common'],
     stoneDiceToAdd: 0,
     stickerDiceToAdd: 0,
     daysBonus: 0,
@@ -247,7 +259,7 @@ export function processEquipmentOnRoundStart(
     destroyedIndices,
     animatedDestructions,
     equipmentToCreate: result.equipmentToCreate,
-    equipmentCreateRarity: result.equipmentCreateRarity,
+    equipmentCreateRarities: result.equipmentCreateRarities,
     stoneDiceToAdd: result.stoneDiceToAdd,
     stickerDiceToAdd: result.stickerDiceToAdd,
     daysBonus: result.daysBonus,

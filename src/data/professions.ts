@@ -253,9 +253,9 @@ const professions: ProfessionDef[] = [
     },
     startingDice: ['bone', 'bone', 'wooden', 'wooden', 'lucky'],
     specialEquipment: {
-      id: 'card_counter',
-      name: 'Card Counter',
-      effect: '+4 mult when hand contains two pair (normally +2 mult)',
+      id: 'junk_dealer',
+      name: 'Junk Dealer',
+      effect: 'When round starts, create 2 pieces of equipment up to rare rarity (Normally common)',
     },
   },
   {
