@@ -1,8 +1,22 @@
 // ─── Run economy actions ───
 
+import type { EquipmentInstance } from '../../ItemsSystem';
 import { canAfford, trySpendBalance, earnBalance } from '../economy';
 import { getRunState, runStore } from '../runStore';
 import { replaceEquipmentList, resolveEquipmentList } from '../resolve';
+
+/**
+ * After earn() updates pawn_broker sell value in the store, copy those values onto
+ * in-memory equipment arrays so a later replaceEquipmentList() does not clobber them.
+ */
+export function syncPawnBrokerSellValueFromStore(equipment: EquipmentInstance[]): void {
+  const stored = getRunState().equipment;
+  for (let i = 0; i < equipment.length; i++) {
+    if (equipment[i].def.effectType !== 'PAWN_BROKER') continue;
+    const row = stored[i];
+    if (row) equipment[i].sellValue = row.sellValue;
+  }
+}
 
 export const economyActions = {
   canAfford(amount: number, state = getRunState()): boolean {

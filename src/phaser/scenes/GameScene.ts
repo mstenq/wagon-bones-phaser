@@ -1126,16 +1126,34 @@ export class GameScene extends Scene {
     this.repositionRollDice(true);
   }
 
-  /** Y for a roll-row die: arc baseline minus Balatro-style lift when selected for score */
-  private getRollDieY(index: number, selected: boolean): number {
+  private isConsumableTargetDie(sprite: DiceSprite): boolean {
+    return this.consumableTargeting !== null && this.consumableTargetIds.has(sprite.dieData.id);
+  }
+
+  private isDieLifted(sprite: DiceSprite): boolean {
+    return this.isRollDieSelected(sprite) || this.isConsumableTargetDie(sprite);
+  }
+
+  /** Y for a roll-row die: arc baseline minus Balatro-style lift when selected */
+  private getRollDieY(index: number, sprite: DiceSprite): number {
     const rollY = this.scale.height * UI.ROLL_Y_RATIO;
     const arc = this.getArcOffset(index, this.rollSprites.length);
-    const lift = selected ? UI.DICE_LOCKED_LIFT_Y : 0;
+    const lift = this.isDieLifted(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
     return rollY + arc.y - lift;
   }
 
-  private applyRollDieDepth(sprite: DiceSprite, selected: boolean): void {
-    sprite.setDepth(selected ? 15 : 10);
+  private getPlayAreaDieY(index: number, sprite: DiceSprite): number {
+    const arc = this.getArcOffset(index, this.playAreaSprites.length);
+    const lift = this.isConsumableTargetDie(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
+    return this.playAreaY + arc.y - lift;
+  }
+
+  private applyRollDieDepth(sprite: DiceSprite): void {
+    sprite.setDepth(this.isDieLifted(sprite) ? 15 : 10);
+  }
+
+  private applyPlayAreaDieDepth(sprite: DiceSprite): void {
+    sprite.setDepth(this.isConsumableTargetDie(sprite) ? 15 : 10);
   }
 
   /** Reposition all roll sprites (row layout + selected lift + depth) */
@@ -1146,11 +1164,10 @@ export class GameScene extends Scene {
     const startX = this.contentCX - totalWidth / 2;
     for (let i = 0; i < this.rollSprites.length; i++) {
       const sprite = this.rollSprites[i];
-      const selected = this.isRollDieSelected(sprite);
       const arc = this.getArcOffset(i, this.rollSprites.length);
       const targetX = startX + i * DICE_SPACING;
-      const targetY = this.getRollDieY(i, selected);
-      this.applyRollDieDepth(sprite, selected);
+      const targetY = this.getRollDieY(i, sprite);
+      this.applyRollDieDepth(sprite);
 
       if (animated) {
         this.tweens.add({
@@ -1170,14 +1187,24 @@ export class GameScene extends Scene {
   }
 
   private animateRollDieSelectLift(sprite: DiceSprite, index: number): void {
-    const selected = this.isRollDieSelected(sprite);
-    this.applyRollDieDepth(sprite, selected);
+    this.applyRollDieDepth(sprite);
     this.tweens.add({
       targets: sprite,
-      y: this.getRollDieY(index, selected),
+      y: this.getRollDieY(index, sprite),
       duration: 200,
       ease: 'Power2',
     });
+  }
+
+  private repositionConsumableTargets(animated: boolean, duration = 200): void {
+    if (!this.consumableTargeting) return;
+
+    const phase = selectRoundPhase();
+    if (phase === 'ROLL' && this.rollSprites.length > 0) {
+      this.repositionRollDice(animated, duration);
+    } else if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
+      this.repositionPlayArea(animated, duration);
+    }
   }
 
   /** Keep game-state dice order aligned with on-screen roll sprite order (held-in-hand scoring). */
@@ -1590,22 +1617,25 @@ export class GameScene extends Scene {
   }
 
   /** Reposition play area sprites */
-  private repositionPlayArea(animated: boolean): void {
+  private repositionPlayArea(animated: boolean, duration = 200): void {
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < this.playAreaSprites.length; i++) {
+      const sprite = this.playAreaSprites[i];
       const arc = this.getArcOffset(i, this.playAreaSprites.length);
+      const targetY = this.getPlayAreaDieY(i, sprite);
+      this.applyPlayAreaDieDepth(sprite);
       if (animated) {
         this.tweens.add({
-          targets: this.playAreaSprites[i],
+          targets: sprite,
           x: positions[i],
-          y: this.playAreaY + arc.y,
+          y: targetY,
           rotation: arc.rotation,
-          duration: 200,
+          duration,
           ease: 'Power2',
         });
       } else {
-        this.playAreaSprites[i].setPosition(positions[i], this.playAreaY + arc.y);
-        this.playAreaSprites[i].rotation = arc.rotation;
+        sprite.setPosition(positions[i], targetY);
+        sprite.rotation = arc.rotation;
       }
     }
   }
@@ -1712,7 +1742,7 @@ export class GameScene extends Scene {
           if (list[i] === this.draggingSprite) continue;
           const arc = this.getArcOffset(i, list.length);
           const targetY =
-            list === this.rollSprites ? this.getRollDieY(i, this.isRollDieSelected(list[i])) : rowY + arc.y;
+            list === this.rollSprites ? this.getRollDieY(i, list[i]) : rowY + arc.y;
           this.tweens.add({
             targets: list[i],
             x: positions[i],
@@ -1732,8 +1762,8 @@ export class GameScene extends Scene {
 
       const sprite = this.draggingSprite;
       const finalVelocity = this.dragVelocityX;
-      const selected = list === this.rollSprites && this.isRollDieSelected(sprite);
-      sprite.setDepth(list === this.rollSprites ? (selected ? 15 : 10) : 20);
+      const lifted = list === this.rollSprites && this.isDieLifted(sprite);
+      sprite.setDepth(list === this.rollSprites ? (lifted ? 15 : 10) : 20);
       this.sound.play('sfx_dice_land', { volume: 0.2 });
 
       this.draggingSprite = null;
@@ -1745,7 +1775,7 @@ export class GameScene extends Scene {
       const idx = list.indexOf(sprite);
       const rowY = this.getDraggableRowY();
       const arc = this.getArcOffset(idx, list.length);
-      const settleY = list === this.rollSprites ? this.getRollDieY(idx, selected) : rowY + arc.y;
+      const settleY = list === this.rollSprites ? this.getRollDieY(idx, sprite) : rowY + arc.y;
 
       const overshoot = Phaser.Math.Clamp(
         finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
@@ -2111,6 +2141,10 @@ export class GameScene extends Scene {
       this.consumableCancelBtn.onClick(() => this.cancelConsumableTargeting());
     }
 
+    for (const sprite of this.getTargetableDice().sprites) {
+      sprite.setSelected(false);
+    }
+
     this.updateConsumableTargetingText();
   }
 
@@ -2148,14 +2182,14 @@ export class GameScene extends Scene {
     if (this.consumableTargetIds.has(id)) {
       // Deselect
       this.consumableTargetIds.delete(id);
-      sprite.setSelected(false);
       this.sound.play('sfx_card_slide2', { volume: 0.25 });
     } else if (this.consumableTargetIds.size < max) {
       // Select
       this.consumableTargetIds.add(id);
-      sprite.setSelected(true);
       this.sound.play('sfx_highlight1', { volume: 0.3 });
     }
+
+    this.repositionConsumableTargets(true);
 
     const enough = isDiceSelectionReady(this.consumableTargeting, this.consumableTargetIds.size);
     if (this.consumableConfirmBtn) this.consumableConfirmBtn.setEnabled(enough);
@@ -2266,9 +2300,11 @@ export class GameScene extends Scene {
     this.syncRollDieVisuals();
     this.instructionText.setText(this.savedInstructionText);
 
-    // Restore locked-die lift positions
+    // Restore roll / play-area lift positions
     if (this.rollSprites.length > 0) {
       this.repositionRollDice(true, 150);
+    } else if (this.playAreaSprites.length > 0) {
+      this.repositionPlayArea(true, 150);
     }
 
     // Restore game buttons for current phase

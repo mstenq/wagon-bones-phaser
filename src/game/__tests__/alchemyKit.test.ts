@@ -24,7 +24,7 @@ describe('alchemyKit helpers', () => {
     expect(enhancementCountsAsSteel('gold', true)).toBe(true);
     expect(enhancementCountsAsSteel('steel', true)).toBe(true);
     expect(enhancementHeldSteelXMult('gold', true)).toBe(true);
-    expect(enhancementHeldSteelXMult('steel', true)).toBe(false);
+    expect(enhancementHeldSteelXMult('steel', true)).toBe(true);
     expect(enhancementHeldGoldPayout('steel', true)).toBe(true);
     expect(enhancementHeldGoldPayout('gold', true)).toBe(true);
   });

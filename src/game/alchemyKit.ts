@@ -18,11 +18,9 @@ export function enhancementCountsAsSteel(enhancement: DiceEnhancement | null, al
   return alchemy && enhancement === 'gold';
 }
 
-/** Held in hand during scoring: steel x1.5 (gold becomes steel; steel becomes gold). */
+/** Held in hand during scoring: steel x1.5 when die counts as steel (same rules as scored). */
 export function enhancementHeldSteelXMult(enhancement: DiceEnhancement | null, alchemy: boolean): boolean {
-  if (enhancement === 'steel') return !alchemy;
-  if (enhancement === 'gold') return alchemy;
-  return false;
+  return enhancementCountsAsSteel(enhancement, alchemy);
 }
 
 /** Held at leg round end: $3 payout (gold always; steel when it counts as gold). */

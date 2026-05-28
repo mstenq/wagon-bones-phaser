@@ -6,6 +6,8 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
+import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
+import { canUseConsumableInShop } from '../../game/facade/consumable';
 import { getRunState } from '../../game/store';
 import { selectProfession, selectStoryVictoryOffered } from '../../game/store/selectors/runSelectors';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
@@ -18,6 +20,7 @@ import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import { createLayout, type LayoutResult } from '../ui/SceneLayout';
 import type { DecimalSource } from '../../game/decimal';
 import type { PayoutBreakdown, PayoutPresentationState } from '../../game/store/types';
+import { ConsumableBar } from '../ui/ConsumableBar';
 
 export interface PayoutData {
   totalMiles: DecimalSource;
@@ -45,6 +48,8 @@ function presentationToView(p: PayoutPresentationState): PayoutData {
 }
 
 export class PayoutScene extends Scene {
+  private consumableBar: ConsumableBar;
+
   constructor() {
     super('Payout');
   }
@@ -63,6 +68,11 @@ export class PayoutScene extends Scene {
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
 
     const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'PAYOUT' });
+    this.consumableBar = layout.consumableBar;
+    this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
+    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
+      this.handleConsumableUsed(consumed);
+    });
     this.buildPayoutPanel(layout, payout, data, investmentBonus);
 
     EventBus.emit(Events.SCENE_READY, this);
@@ -263,5 +273,34 @@ export class PayoutScene extends Scene {
 
   private onResize(): void {
     this.scene.restart({});
+  }
+
+  private handleConsumableUsed(consumed: ConsumableInstance): void {
+    const result = gameFacade.consumable.use(consumed);
+    this.handleConsumableResult(result);
+  }
+
+  private handleConsumableResult(result: UseConsumableResult): void {
+    if (!result.success && result.failReason) {
+      const text = this.add
+        .text(this.consumableBar.x + this.consumableBar.width / 2, this.consumableBar.y, result.failReason, {
+          fontFamily: 'sans-serif',
+          fontSize: '24px',
+          color: '#fff',
+          stroke: '#000000',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(1000);
+      this.sound.play('sfx_cancel', { volume: 0.5 });
+      this.tweens.add({
+        targets: text,
+        y: text.y - 15,
+        alpha: 0,
+        duration: 2000,
+        ease: 'Power2',
+        onComplete: () => text.destroy(),
+      });
+    }
   }
 }

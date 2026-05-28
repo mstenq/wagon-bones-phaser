@@ -10,6 +10,8 @@ import { createLayout, LayoutResult } from '../ui/SceneLayout';
 import { createLegRoundPanels } from '../ui/RoundInfo';
 import { TagTooltip } from '../ui/TagTooltip';
 import { gameFacade } from '../../game/facade';
+import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
+import { canUseConsumableInShop } from '../../game/facade/consumable';
 import type { ImmediateTagResult, TrailTagInstance } from '../../game/facade/meta';
 import { resolveTagDescription } from '../../data/trail_tags';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
@@ -58,6 +60,10 @@ export class RoundSelectScene extends Scene {
       bgKey: null,
       felt: true,
       sidebarTitle: 'TRAIL MAP',
+    });
+    this.layout.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
+    this.layout.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
+      this.handleConsumableUsed(consumed);
     });
 
     gameFacade.meta.ensureRoundSkipPreviewTags();
@@ -294,5 +300,35 @@ export class RoundSelectScene extends Scene {
 
   private onResize(): void {
     this.scene.restart();
+  }
+
+  private handleConsumableUsed(consumed: ConsumableInstance): void {
+    const result = gameFacade.consumable.use(consumed);
+    this.handleConsumableResult(result);
+  }
+
+  private handleConsumableResult(result: UseConsumableResult): void {
+    if (!result.success && result.failReason) {
+      const bar = this.layout.consumableBar;
+      const text = this.add
+        .text(bar.x + bar.width / 2, bar.y, result.failReason, {
+          fontFamily: 'sans-serif',
+          fontSize: '24px',
+          color: '#fff',
+          stroke: '#000000',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(1000);
+      this.sound.play('sfx_cancel', { volume: 0.5 });
+      this.tweens.add({
+        targets: text,
+        y: text.y - 15,
+        alpha: 0,
+        duration: 2000,
+        ease: 'Power2',
+        onComplete: () => text.destroy(),
+      });
+    }
   }
 }

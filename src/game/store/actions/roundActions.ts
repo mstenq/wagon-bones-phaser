@@ -73,7 +73,7 @@ import { replaceEquipmentList, resolveEquipmentList } from '../resolve';
 import { diceActions } from './diceActions';
 import { consumableActions } from './consumableActions';
 import { progressionActions } from './progressionActions';
-import { economyActions } from './economyActions';
+import { economyActions, syncPawnBrokerSellValueFromStore } from './economyActions';
 
 function requireRound(): RoundRuntimeState {
   const round = getRoundState();
@@ -532,6 +532,7 @@ export const roundActions = {
     applyScoringMutations(finalResult.mutations, {
       deferConsumableGrants: options?.deferConsumableGrants,
     });
+    syncPawnBrokerSellValueFromStore(equipment);
 
     progressionActions.recordHandPlayed(handType);
     applyBossAfterScore();

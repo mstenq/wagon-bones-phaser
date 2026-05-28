@@ -6,6 +6,8 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
+import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
+import { canUseConsumableInShop } from '../../game/facade/consumable';
 import type { TrailEventChoice, TrailEventDef, TrailEventEffect, TrailEventResult } from '../../game/facade/trail';
 import { resolveEquipmentList } from '../../game/store/resolve';
 import { selectEffectiveDays, selectEffectiveRerolls } from '../../game/store/selectors/runSelectors';
@@ -21,6 +23,7 @@ import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import { getRunState, runActions } from '../../game/store/runStore';
 import { flushAutoSave } from '../AutoSaveManager';
 import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
+import { ConsumableBar } from '../ui/ConsumableBar';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -38,6 +41,7 @@ const CATEGORY_COLORS: Record<string, number> = {
 
 export class TrailEventScene extends Scene {
   private sidebar: Sidebar;
+  private consumableBar: ConsumableBar;
 
   private currentEvent: TrailEventDef;
   private resolved: boolean = false;
@@ -118,6 +122,11 @@ export class TrailEventScene extends Scene {
     // Standard layout with sidebar, equip bar, consumable bar, pouch
     const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'TRAIL' });
     this.sidebar = layout.sidebar;
+    this.consumableBar = layout.consumableBar;
+    this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
+    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
+      this.handleConsumableUsed(consumed);
+    });
 
     // Select / preview trail event (persist across resize restarts)
     if (!this.currentEvent) {
@@ -904,6 +913,35 @@ export class TrailEventScene extends Scene {
     if (!this.resolved) {
       this.syncTrailToStore();
       this.scene.restart({});
+    }
+  }
+
+  private handleConsumableUsed(consumed: ConsumableInstance): void {
+    const result = gameFacade.consumable.use(consumed);
+    this.handleConsumableResult(result);
+  }
+
+  private handleConsumableResult(result: UseConsumableResult): void {
+    if (!result.success && result.failReason) {
+      const text = this.add
+        .text(this.consumableBar.x + this.consumableBar.width / 2, this.consumableBar.y, result.failReason, {
+          fontFamily: 'sans-serif',
+          fontSize: '24px',
+          color: '#fff',
+          stroke: '#000000',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(1000);
+      this.safePlaySound('sfx_cancel', { volume: 0.5 });
+      this.tweens.add({
+        targets: text,
+        y: text.y - 15,
+        alpha: 0,
+        duration: 2000,
+        ease: 'Power2',
+        onComplete: () => text.destroy(),
+      });
     }
   }
 }

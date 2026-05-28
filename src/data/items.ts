@@ -880,23 +880,20 @@ const items: ItemDef[] = [
     initialState: { miles: 0 },
     display: (_round, player) => {
       const inst = player.equipment.find((e) => e.def.id === 'scouts_spyglass');
-      const stored = inst?.state.miles ?? 0;
+      const storedRaw = inst?.state?.miles;
+      const stored = typeof storedRaw === 'number' && Number.isFinite(storedRaw) ? storedRaw : 0;
       const investigateMiles = resolveEffectParam<number>(
         inst?.def.effectParams ?? { investigateMiles: 20 },
         'investigateMiles',
         player.professionId,
       );
-      const hint = [
-        [text('View'), condition('trail ahead')],
-        stored > 0
-          ? [miles(`+${stored}`), text(' stored miles')]
-          : [miles(`+${investigateMiles}`), text(' if investigated')],
-      ];
+      const hint = [[miles(`+${stored}`)], [condition('investigate events', 'xs')]];
+
       return {
         hint,
         tooltip: [
           [
-            text('View from the spyglass before the next trail event. '),
+            text('View from the spyglass before the next trail event. ')],[
             text('Avoid to skip it, or investigate for '),
             miles(`+${investigateMiles}`),
             text(' stored miles and face the full event.'),
@@ -2899,8 +2896,12 @@ const items: ItemDef[] = [
       }
       const total = levelsAboveOne * perLevel;
       return {
-        hint:[[miles(`+${total}`)], [condition('trail guide levels', 'sm')]],        
-        tooltip: [[miles('+12'), text(' miles for each trail guide level above 1 on every hand type')]],
+        hint: [[miles(`+${total}`)], [condition('trail guide levels', 'sm')]],
+        tooltip: [[miles('+12'), text(' miles for each trail guide level above 1 on every hand type')], [
+          text('Currently: '),
+          miles(`+${total}`),
+          text(' miles'),
+        ]],
       };
     },
   },
@@ -3106,10 +3107,14 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'PAWN_BROKER',
     effectParams: { value: 1 },
-    display: (_round, _player) => ({
-      hint: [[money('+$1 sell value')], [condition('when money earned', 'sm')]],
-      tooltip: [[text('This item gains '), money('$1'), text(' sell value whenever money is earned')]],
-    }),
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'pawn_broker');
+      const sv = equip?.sellValue ?? 1;
+      return {
+        hint: [[money(`$${sv}`)], [condition('when money earned', 'xs')]],
+        tooltip: [[text('This item gains '), money('$1'), text(' sell value whenever money is earned')]],
+      };
+    },
   },
   {
     id: 'alchemy_kit',
@@ -3121,7 +3126,7 @@ const items: ItemDef[] = [
     effectParams: {},
     display: (_round, _player) => ({
       hint: [[active('Gold <-> Steel')]],
-      tooltip: [[text('Gold dice count as steel, and steel dice count as gold')]],
+      tooltip: [[text('Gold dice also count as steel, and steel dice also count as gold')]],
     }),
   },
 ];

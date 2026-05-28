@@ -334,7 +334,7 @@ export class BoosterPackScene extends Scene {
       const x = startX + i * DICE_SPACING;
       const y = this.lineupY + arc.y;
 
-      const sprite = new DiceSprite(this, x, y, die);
+      const sprite = new DiceSprite(this, x, y, die, { showSelectedStroke: true });
       sprite.rotation = arc.rotation;
       sprite.setDepth(10);
       this.lineupSprites.push(sprite);

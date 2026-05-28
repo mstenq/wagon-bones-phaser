@@ -416,13 +416,25 @@ describe('ALCHEMY_KIT: held in hand and round end', () => {
     expect(result.mult).toBeMult(1);
   });
 
-  test('held steel does not apply steel x1.5 with alchemy kit', () => {
+  test('held steel still applies steel x1.5 with alchemy kit', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       heldDice: [die({ value: 3, enhancement: 'steel' })],
       equipment: [item('alchemy_kit')],
     });
-    expect(result.mult).toBeMult(1);
+    expect(result.mult).toBeMult(1.5);
+  });
+
+  test('held steel with alchemy kit gets steel xMult and round-end gold payout', () => {
+    const heldSteel = die({ value: 4, enhancement: 'steel' });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [heldSteel],
+      equipment: [item('alchemy_kit')],
+    });
+    expect(result.mult).toBeMult(1.5);
+    const payout = processGoldHeldAtRoundEnd([heldSteel], [item('alchemy_kit')]);
+    expect(payout.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY);
   });
 
   test('held steel earns round-end gold payout with alchemy kit', () => {

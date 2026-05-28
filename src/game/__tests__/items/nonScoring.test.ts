@@ -1386,6 +1386,24 @@ describe('New utility equipment lifecycle effects', () => {
     expect(player.equipment[0]!.sellValue).toBe(before + 1);
   });
 
+  test('pawn broker keeps sell value after scoring money (e.g. one armed bandit)', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+
+    try {
+      const broker = item('pawn_broker');
+      const before = broker.sellValue;
+      const { player } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('one_armed_bandit'), broker],
+      });
+      const stored = player.equipment.find((e) => e.def.id === 'pawn_broker')!;
+      expect(stored.sellValue).toBe(before + 1);
+    } finally {
+      Math.random = original;
+    }
+  });
+
   test('old calendar gains miles from days left and mult from rerolls left at leg round end', () => {
     const calendar = item('old_calendar');
     const { game, player } = setupGame({ equipment: [calendar] });

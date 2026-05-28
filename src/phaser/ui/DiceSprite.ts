@@ -72,16 +72,24 @@ export class DiceSprite extends GameObjects.Container {
   private _dieData: Die;
   private _selected: boolean = false;
   private _rerollLocked: boolean = false;
+  private _showSelectedStroke: boolean = false;
   private rerollLockLabel: GameObjects.Text | null = null;
   private _forced: boolean = false;
   _disabled: boolean = false;
   private disabledOverlay: GameObjects.Graphics;
   private _showAuraLabel: boolean = false;
 
-  constructor(scene: Scene, x: number, y: number, dieData: Die, options?: { showAuraLabel?: boolean }) {
+  constructor(
+    scene: Scene,
+    x: number,
+    y: number,
+    dieData: Die,
+    options?: { showAuraLabel?: boolean; showSelectedStroke?: boolean },
+  ) {
     super(scene, x, y);
     this._dieData = dieData;
     this._showAuraLabel = options?.showAuraLabel ?? false;
+    this._showSelectedStroke = options?.showSelectedStroke ?? false;
 
     this.dieImage = scene.add.image(0, 0, 'dice_standard').setOrigin(0.5, 0.5);
     this.selectionGfx = scene.add.graphics();
@@ -128,6 +136,11 @@ export class DiceSprite extends GameObjects.Container {
 
   setSelected(selected: boolean): void {
     this._selected = selected;
+    this.redraw();
+  }
+
+  setShowSelectedStroke(show: boolean): void {
+    this._showSelectedStroke = show;
     this.redraw();
   }
 
@@ -269,7 +282,7 @@ export class DiceSprite extends GameObjects.Container {
 
   private drawSelectionStroke(): void {
     this.selectionGfx.clear();
-    if (!this._selected && !this._forced) return;
+    if (!this._forced && !(this._selected && this._showSelectedStroke)) return;
 
     const strokeColor = this._forced ? FORCED_STROKE : SELECTED_STROKE;
     const strokeWidth = 3;

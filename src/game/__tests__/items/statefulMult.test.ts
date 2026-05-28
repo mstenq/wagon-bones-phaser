@@ -134,6 +134,14 @@ describe('STATEFUL_ADD_MILES: Steam Engine', () => {
     expect(inst.state.miles).toBe(0);
   });
 
+  test("does not produce NaN for stateful miles items without decayPerHand", () => {
+    const inst = item('scouts_spyglass');
+    setupGame({ equipment: [inst] });
+    processEquipmentAfterHandScored([inst], HandType.PAIR);
+    expect(inst.state.miles).toBe(0);
+    expect(Number.isNaN(inst.state.miles as number)).toBe(false);
+  });
+
   test('current miles apply during scoring', () => {
     const inst = item('steam_engine');
     inst.state.miles = 50;

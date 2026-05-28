@@ -30,6 +30,7 @@ export class DiceSelectionScene extends Scene {
   private returnSceneData: Record<string, unknown> = {};
   private drawnDice: Die[] = [];
   private entries: DiceSpriteEntry[] = [];
+  private diceRowY: number = 0;
   private confirmBtn: Button;
   private skipBtn: Button;
   private picksText: Phaser.GameObjects.Text;
@@ -105,12 +106,12 @@ export class DiceSelectionScene extends Scene {
     const DICE_SPACING = UI.DICE_SPACING;
     const totalWidth = (this.drawnDice.length - 1) * DICE_SPACING;
     const startX = width / 2 - totalWidth / 2;
-    const diceY = height * 0.45;
+    this.diceRowY = height * 0.45;
 
     for (let i = 0; i < this.drawnDice.length; i++) {
       const die = this.drawnDice[i];
       const x = startX + i * DICE_SPACING;
-      const sprite = new DiceSprite(this, x, diceY, die);
+      const sprite = new DiceSprite(this, x, this.diceRowY, die);
 
       const entry: DiceSpriteEntry = { sprite, die, selected: false };
       this.entries.push(entry);
@@ -121,7 +122,7 @@ export class DiceSelectionScene extends Scene {
     // "No dice available" message
     if (this.drawnDice.length === 0) {
       this.add
-        .text(width / 2, diceY, 'No dice available!', {
+        .text(width / 2, this.diceRowY, 'No dice available!', {
           fontFamily: 'Arial',
           fontSize: '20px',
           color: '#ff6666',
@@ -147,16 +148,33 @@ export class DiceSelectionScene extends Scene {
     if (entry.selected) {
       // Deselect
       entry.selected = false;
-      entry.sprite.setSelected(false);
     } else if (selectedCount < getDiceSelectionMaxPicks(this.config)) {
       // Select
       entry.selected = true;
-      entry.sprite.setSelected(true);
     }
 
+    this.repositionDice(true);
     this.updatePicksText();
     const newCount = this.entries.filter((e) => e.selected).length;
     this.confirmBtn.setEnabled(isDiceSelectionReady(this.config, newCount));
+  }
+
+  private repositionDice(animated: boolean): void {
+    for (const entry of this.entries) {
+      const lift = entry.selected ? UI.DICE_LOCKED_LIFT_Y : 0;
+      entry.sprite.setDepth(entry.selected ? 15 : 10);
+      const targetY = this.diceRowY - lift;
+      if (animated) {
+        this.tweens.add({
+          targets: entry.sprite,
+          y: targetY,
+          duration: 200,
+          ease: 'Power2',
+        });
+      } else {
+        entry.sprite.y = targetY;
+      }
+    }
   }
 
   private updatePicksText(): void {
