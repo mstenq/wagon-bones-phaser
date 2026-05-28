@@ -7,6 +7,7 @@ import { GAMEPLAY, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { computeRoundReward, computeTargetMiles } from '../../game/runProgression';
 import { getRunState } from '../../game/store/runStore';
 import {
+  selectBlindSizeMultiplier,
   selectBossForLeg,
   selectBossPermitRerollLimit,
   selectSkipPreviewTagForRound,
@@ -49,8 +50,9 @@ export function targetMilesForRound(
   permitScoreReduction: number,
   difficulty: DifficultyLevel = 1,
 ): DecimalSource {
-  const boss = round === GAMEPLAY.ROUNDS_PER_LEG ? selectBossForLeg(getRunState(), leg) : null;
-  return computeTargetMiles(leg, round, permitScoreReduction, difficulty, boss);
+  const run = getRunState();
+  const boss = round === GAMEPLAY.ROUNDS_PER_LEG ? selectBossForLeg(run, leg) : null;
+  return computeTargetMiles(leg, round, permitScoreReduction, difficulty, boss, selectBlindSizeMultiplier(run));
 }
 
 export function getRoundColumnState(

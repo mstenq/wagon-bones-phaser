@@ -19,9 +19,13 @@ export function computeTargetMiles(
   permitScoreReduction: number,
   difficulty: DifficultyLevel,
   bossForLeg?: BossDef | null,
+  blindSizeMultiplier = 1,
 ): Decimal {
   const effectiveLeg = leg - permitScoreReduction;
-  const base = getBaseTargetMilesForLeg(effectiveLeg, difficulty);
+  let base = getBaseTargetMilesForLeg(effectiveLeg, difficulty);
+  if (blindSizeMultiplier !== 1) {
+    base = ceilScore(multiplyScore(base, blindSizeMultiplier));
+  }
   let multiplier = GAMEPLAY.ROUND_MULTIPLIERS[round - 1] ?? 1;
   if (round === GAMEPLAY.ROUNDS_PER_LEG && bossForLeg) {
     const bossMultiplier = getBossDistanceMultiplier(bossForLeg);

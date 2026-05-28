@@ -305,46 +305,6 @@ describe('ROUND_START_ADD_STONE vs Mystery Crate day-1 hand', () => {
   });
 });
 
-// ─── ENHANCED_SPENT_MILES_GAIN: Bone Collector ───
-
-describe.skip('ENHANCED_SPENT_MILES_GAIN: Bone Collector', () => {
-  test('starts at +0 miles', () => {
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
-      equipment: [item('bone_collector')],
-    });
-    // No accumulated miles → just base
-    expect(result.miles).toBeMiles(20); // (10+10)*1
-  });
-
-  test('gains +3 miles per enhanced die spent', () => {
-    const inst = item('bone_collector');
-    const enhancedDice = [die({ value: 5, enhancement: 'bone' }), die({ value: 3, enhancement: 'wooden' })];
-    processEquipmentOnDiceSpent([inst], enhancedDice);
-    expect(inst.state.miles).toBe(6); // 2 enhanced × 3
-  });
-
-  test('ignores non-enhanced dice', () => {
-    const inst = item('bone_collector');
-    const plainDice = [die({ value: 5 }), die({ value: 3 })];
-    processEquipmentOnDiceSpent([inst], plainDice);
-    expect(inst.state.miles).toBe(0);
-  });
-
-  test('accumulated miles applied during scoring', () => {
-    const inst = item('bone_collector');
-    inst.state.miles = 15; // simulate 5 enhanced dice spent
-
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
-      equipment: [inst],
-    });
-    // PAIR: baseMiles=10, totalValue=10, +15 bonusMiles
-    // finalMiles = (10 + 10 + 15) * 1 = 35
-    expect(result.miles).toBeMiles(35);
-  });
-});
-
 // ─── SCORED_RETRIGGER_FINAL_DAY: Last Stand ───
 
 describe('SCORED_RETRIGGER_FINAL_DAY: Last Stand', () => {

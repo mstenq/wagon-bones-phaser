@@ -189,9 +189,20 @@ export function selectCurrentBoss(state: RunState): BossDef | null {
   return selectBossForLeg(state, state.leg);
 }
 
+export function selectBlindSizeMultiplier(state: RunState): number {
+  return selectProfession(state)?.modifiers?.blindSizeMultiplier ?? 1;
+}
+
 export function selectTargetMiles(state: RunState) {
   const boss = state.round === GAMEPLAY.ROUNDS_PER_LEG ? selectBossForLeg(state, state.leg) : null;
-  return computeTargetMiles(state.leg, state.round, state.permitScoreReduction, state.difficulty, boss);
+  return computeTargetMiles(
+    state.leg,
+    state.round,
+    state.permitScoreReduction,
+    state.difficulty,
+    boss,
+    selectBlindSizeMultiplier(state),
+  );
 }
 
 export function selectJourneyComplete(state: RunState): boolean {

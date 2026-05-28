@@ -22,8 +22,8 @@ export const setupActions = {
     const prof = getProfessionById(professionId);
     if (!prof) return;
     const m = prof.modifiers as Record<string, unknown>;
-    const startingVouchers = Array.isArray(m.startingVouchers)
-      ? (m.startingVouchers as string[]).filter((id): id is string => typeof id === 'string' && id.length > 0)
+    const startingPermits = Array.isArray(m.startingPermits)
+      ? (m.startingPermits as string[]).filter((id): id is string => typeof id === 'string' && id.length > 0)
       : [];
 
     let dice =
@@ -60,7 +60,7 @@ export const setupActions = {
       maxEquipmentSlots,
       handSize,
       maxConsumableSlots,
-      purchasedPermits: [...new Set(startingVouchers)],
+      purchasedPermits: [...new Set(startingPermits)],
     });
 
     if (Array.isArray(m.startingSupplyCards)) {

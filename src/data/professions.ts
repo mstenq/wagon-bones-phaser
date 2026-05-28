@@ -27,7 +27,7 @@ export interface ProfessionModifiers {
   equipmentSlots?: number;
   handSize?: number;
   supplySlots?: number;
-  startingVouchers?: string[];
+  startingPermits?: string[];
   startingSupplyCards?: ProfessionStartingSupplyCard[];
   frontierInShop?: boolean;
   doubleTagOnBoss?: boolean;
@@ -118,9 +118,9 @@ const professions: ProfessionDef[] = [
     id: 'cook',
     title: 'Cook',
     name: 'Martha Delaney',
-    description: 'Starts with extra supplies voucher and 2 copies of second helpings supply card',
+    description: 'Starts with the Camp Merchant permit (Supply cards appear 2x more frequently in the shop) and 2 copies of second helpings supply card (Creates the last used supply or trail guide used and puts it in your inventory)',
     modifiers: {
-      startingVouchers: ['extra_supplies'],
+      startingPermits: ['camp_merchant'],
       startingSupplyCards: ['second_helpings', 'second_helpings'],
     },
     startingDice: ['bone', 'bone', 'wooden', 'wooden', 'stone'],
@@ -134,8 +134,8 @@ const professions: ProfessionDef[] = [
     id: 'scout',
     title: 'Scout',
     name: 'Caleb Winters',
-    description: 'Starts with binoculars voucher, -1 supply slot',
-    modifiers: { startingVouchers: ['binoculars'], supplySlots: -1 },
+    description: 'Starts with Binoculars permit (Trail guide packs always contain the trail guide for your most played hand), -1 supply slot',
+    modifiers: { startingPermits: ['binoculars'], supplySlots: -1 },
     startingDice: ['wooden', 'steel', 'lucky', 'stone', 'bone'],
     specialEquipment: {
       id: 'guide_lantern',
@@ -147,8 +147,8 @@ const professions: ProfessionDef[] = [
     id: 'demon_hunter',
     title: 'Demon Hunter',
     name: 'Isaac Granger',
-    description: 'Frontier Encounter cards appear in shop, start with a Priests Blessings card',
-    modifiers: { frontierInShop: true, startingSupplyCards: ['priests_blessings'] },
+    description: 'Frontier Encounter cards appear in shop, start with a Priests Blessing card (Add holy aura to random item, delete all others)',
+    modifiers: { frontierInShop: true, startingSupplyCards: ['priests_blessing'] },
     startingDice: ['steel', 'steel', 'steel', 'bone', 'bone'],
     specialEquipment: {
       id: 'marked',
@@ -160,9 +160,9 @@ const professions: ProfessionDef[] = [
     id: 'prospector',
     title: 'Prospector',
     name: 'Davis Holler',
-    description: 'Start with permits for extra supplies/trail guides/extra stock',
+    description: 'Start with permits for Camp Merchant/Trail Cartographer/Supply Wagon (2x supplies/2x trail guides and 1 extra card slot in shop)',
     modifiers: {
-      startingVouchers: ['extra_supplies', 'extra_trail_guides', 'extra_stock'],
+      startingPermits: ['camp_merchant', 'trail_cartographer', 'supply_wagon'],
     },
     startingDice: ['gold', 'gold', 'diamond', 'diamond', 'lucky'],
     specialEquipment: {
@@ -188,7 +188,7 @@ const professions: ProfessionDef[] = [
     id: 'hunter',
     title: 'Hunter',
     name: 'Nathan Cole',
-    description: 'After each boss gain a double tag',
+    description: 'After each boss gain a Twin Wagon tag (Doubles your next trail tag reward)',
     modifiers: { doubleTagOnBoss: true },
     startingDice: ['bone', 'bone', 'bone', 'steel', 'stone'],
     specialEquipment: {
@@ -234,7 +234,7 @@ const professions: ProfessionDef[] = [
     id: 'con_artist',
     title: 'Con Artist',
     name: 'Victor Hale',
-    description: '+2 re-rolls per day, -1 hand size',
+    description: '+2 re-rolls, -1 hand size',
     modifiers: { rerolls: 2, handSize: -1 },
     startingDice: ['loaded', 'loaded', 'loaded', 'gold', 'diamond'],
     specialEquipment: {
@@ -247,9 +247,9 @@ const professions: ProfessionDef[] = [
     id: 'occult_trader',
     title: 'Occult Trader',
     name: 'Vivian Crowe',
-    description: 'Starts with permits to make aura 4x more likely and 25% off all shop items',
+    description: 'Starts with permits for Spiritual Ritual,Sacred Ceremony, and Bargain Bin (Makes aura 4x more likely and 25% off all shop items)',
     modifiers: {
-      startingVouchers: ['spirit_ritual', 'sacred_ceremony', 'bargain_bin'],
+      startingPermits: ['spirit_ritual', 'sacred_ceremony', 'bargain_bin'],
     },
     startingDice: ['bone', 'bone', 'wooden', 'wooden', 'lucky'],
     specialEquipment: {
