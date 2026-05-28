@@ -196,6 +196,8 @@ export type PlayScoredDayAndEndOptions = {
   scoredCount?: number;
   /** Dice rolled this day (default min(5, hand size)). */
   rollCount?: number;
+  /** Exact dice to roll and score (overrides rollCount / scoredCount). */
+  rolledDice?: Die[];
   /** Options for roundActions.endDay (GameScene uses deferEquipmentDestructionAnimation: true). */
   endDay?: { deferEquipmentDestructionAnimation?: boolean };
   /** Set a very high target so scoring one hand does not win the leg. */
@@ -211,14 +213,20 @@ export function playScoredDayAndEnd(game: GameState, options: PlayScoredDayAndEn
     game.config.targetMiles = D(999_999);
   }
 
-  const hand = game.state.hand;
-  const rollCount = options.rollCount ?? Math.min(5, hand.length);
-  const rollIds = hand.slice(0, rollCount).map((d) => d.id);
-  game.selectForRoll(rollIds);
+  if (options.rolledDice) {
+    seedTestRoll(options.rolledDice);
+    game.selectForRoll(options.rolledDice.map((d) => d.id));
+    game.selectForScore(options.rolledDice.map((d) => d.id));
+  } else {
+    const hand = game.state.hand;
+    const rollCount = options.rollCount ?? Math.min(5, hand.length);
+    const rollIds = hand.slice(0, rollCount).map((d) => d.id);
+    game.selectForRoll(rollIds);
 
-  const scoredCount = options.scoredCount ?? 2;
-  const scoredIds = game.state.rolledDice.slice(0, scoredCount).map((d) => d.id);
-  game.selectForScore(scoredIds);
+    const scoredCount = options.scoredCount ?? 2;
+    const scoredIds = game.state.rolledDice.slice(0, scoredCount).map((d) => d.id);
+    game.selectForScore(scoredIds);
+  }
   const score = game.calculateScore();
   if (!score) throw new Error('playScoredDayAndEnd: calculateScore returned null');
 

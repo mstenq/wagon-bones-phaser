@@ -1,7 +1,7 @@
 import '../setup';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { resetPlayerState } from '../../__tests__/testRunPlayer';
-import { setupGame, diceWithValue } from '../testHelpers';
+import { setupGame, diceWithValue, item } from '../testHelpers';
 import { D } from '../../scoreMath';
 import { getRunRoundBackgroundIndex } from '../../roundBackgrounds';
 import {
@@ -107,6 +107,35 @@ describe('round store actions', () => {
     const heldCmd = runStore.getState().playbackQueue.find((c) => c.kind === 'score-events');
     expect(heldCmd).toMatchObject({ kind: 'score-events', label: 'round-end-held' });
     expect(heldCmd && heldCmd.kind === 'score-events' && heldCmd.events.length).toBeGreaterThan(0);
+  });
+
+  test('endDay on win pays held gold and steel as gold with alchemy kit', () => {
+    const goldHeld = die({ value: 4, enhancement: 'gold' });
+    const steelHeld = die({ value: 5, enhancement: 'steel' });
+    const scored = die({ value: 7 });
+    const filler = die({ value: 6 });
+    setupGame({
+      dice: [goldHeld, steelHeld, scored, filler],
+      equipment: [item('alchemy_kit')],
+      money: 10,
+    });
+    roundActions.startRound({ targetMiles: D(1) });
+    seedTestRoll([goldHeld, steelHeld, scored, filler]);
+    roundActions.selectForScore([scored.id]);
+    roundActions.calculateScore();
+    const result = roundActions.endDay();
+    expect(result.outcome).toBe('won');
+    expect(getRunState().balance).toBe(10 + GAMEPLAY.GOLD_DICE_HELD_MONEY * 2);
+    const heldCmd = runStore.getState().playbackQueue.find((c) => c.kind === 'score-events');
+    const moneyEvents =
+      heldCmd && heldCmd.kind === 'score-events' ? heldCmd.events.filter((e) => e.popupType === 'money') : [];
+    expect(moneyEvents).toHaveLength(2);
+    expect(moneyEvents).toContainEqual(
+      expect.objectContaining({ value: GAMEPLAY.GOLD_DICE_HELD_MONEY, dieId: goldHeld.id }),
+    );
+    expect(moneyEvents).toContainEqual(
+      expect.objectContaining({ value: GAMEPLAY.GOLD_DICE_HELD_MONEY, dieId: steelHeld.id }),
+    );
   });
 
   test('endDay advances day on next-day outcome', () => {

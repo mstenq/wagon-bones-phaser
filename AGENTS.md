@@ -294,6 +294,19 @@ Use **both** for stateful equipment (`equip.state`, `sellValue`, `perishableRoun
 
 **When adding tests for a new item:** read `effectType` in `items.ts` → pick file from table → append `describe()` at **end** of file.
 
+### New equipment (required)
+
+**Every new equipment definition in `src/data/items.ts` must ship with tests** before the task is done. Do not merge item-only data without coverage.
+
+| Requirement | Details |
+|-------------|---------|
+| **Minimum** | At least one test that exercises the item’s real effect path (not only `effectType` / `effectParams` metadata). |
+| **Stateful items** | Handler test **and** integration through the production action (`calculateTestScore`, `playScoredDayAndEnd`, `processEquipmentOnRoundStart`, etc.) when state must persist in the run store. |
+| **Timed “rounds”** | Items with `roundsRemaining` or “after each round” copy mean **leg rounds** (mile → ford → boss), not travel days. Use `processEndOfRound(..., { isLegRoundEnd: true })` in handler tests and `playScoredDayAndEnd` across multiple days for integration. `endDay` calls `processEndOfRound` every day but passes `isLegRoundEnd` only when the leg round actually ends. |
+| **File choice** | Same category table as above — never a `phaseN.test.ts` or `newEquipment.test.ts` catch-all. |
+
+**New batch reference (effect → test file):** `pack_mule`, `penny_pincher`, `potluck`, `pawn_broker`, `old_calendar`, `stew`, `sandwich`, `offering_bowl` → `nonScoring.test.ts`; `pioneer_spirit`, `fresh_trail`, `supply_caravan` → `conditionalEffects.test.ts`; `loaded_chamber`, `cursed_dice` → `loadedDice.test.ts`; `silver_reserve`, `split_trail`, `roulette_wheel`, `campfire_embers` → `xMult.test.ts`; `alchemy_kit` → `pipEffects.test.ts`.
+
 ## Game Design Documentation
 
 | Doc | Topic |

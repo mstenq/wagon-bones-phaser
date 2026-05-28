@@ -3,6 +3,7 @@
 import { effectRegistry } from '../registry';
 import { getRunState } from '../../store/runStore';
 import { addScore } from '../../scoreMath';
+import { HandType } from '../../types';
 import { selectHandStats } from '../../store/selectors/runSelectors';
 
 effectRegistry.registerAdditive('CONDITIONAL_MULT', (ctx, equip, index) => {
@@ -102,11 +103,14 @@ effectRegistry.registerAdditive('DICE_DESTROYED_MILES_GAIN', (ctx, equip, index)
 });
 
 effectRegistry.registerAdditive('PIONEER_SPIRIT', (ctx, equip, index) => {
-  if (!ctx.handType) return;
-  const stats = selectHandStats(getRunState(), ctx.handType);
-  const levelsAboveOne = Math.max(0, stats.level - 1);
-  if (levelsAboveOne <= 0) return;
   const value = (equip.def.effectParams as Record<string, unknown>).value as number;
+  const run = getRunState();
+  let levelsAboveOne = 0;
+  for (const handType of Object.values(HandType)) {
+    const stats = selectHandStats(run, handType);
+    levelsAboveOne += Math.max(0, stats.level - 1);
+  }
+  if (levelsAboveOne <= 0) return;
   const total = levelsAboveOne * value;
   ctx.bonusMiles = addScore(ctx.bonusMiles, total);
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: total });
@@ -114,9 +118,10 @@ effectRegistry.registerAdditive('PIONEER_SPIRIT', (ctx, equip, index) => {
 
 effectRegistry.registerAdditive('FRESH_TRAIL', (ctx, equip, index) => {
   if ((equip.state.freshActive ?? 0) <= 0) return;
-  const value = (equip.def.effectParams as Record<string, unknown>).value as number;
-  ctx.bonusMiles = addScore(ctx.bonusMiles, value);
-  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value });
+  const total = equip.state.miles ?? 0;
+  if (total <= 0) return;
+  ctx.bonusMiles = addScore(ctx.bonusMiles, total);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: total });
 });
 
 effectRegistry.registerAdditive('MARKED_NO_SIX_MULT', (ctx, equip, index) => {

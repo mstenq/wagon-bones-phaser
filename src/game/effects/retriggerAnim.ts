@@ -3,6 +3,7 @@ import type { EquipmentInstance } from '../ItemsSystem';
 import { resolveCopyTarget } from '../equipmentUtils';
 import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 import { dieMatchesPip, hasStackedDeck } from './helpers';
+import { enhancementHeldSteelXMult, hasAlchemyKit } from '../alchemyKit';
 
 export type RetriggerEquipSource = { equipIndex: number };
 
@@ -105,7 +106,7 @@ export function heldDieHasRetriggerableEffects(
   equipment: EquipmentInstance[],
   _scoredHandType?: HandType,
 ): boolean {
-  if (die.enhancement === 'steel') return true;
+  if (enhancementHeldSteelXMult(die.enhancement, hasAlchemyKit(equipment))) return true;
 
   const stackedDeck = hasStackedDeck(equipment);
   const maxCopyDepth = equipment.length;

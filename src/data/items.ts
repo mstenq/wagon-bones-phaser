@@ -2891,10 +2891,18 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'PIONEER_SPIRIT',
     effectParams: { value: 12 },
-    display: (_round, _player) => ({
-      hint: [[miles('+12')], [condition('per hand level above 1', 'sm')]],
-      tooltip: [[miles('+12'), text(' miles for each trail guide level above 1 on scored hand')]],
-    }),
+    display: (_round, player) => {
+      const perLevel = 12;
+      let levelsAboveOne = 0;
+      for (const stats of Object.values(player.handStats)) {
+        levelsAboveOne += Math.max(0, stats.level - 1);
+      }
+      const total = levelsAboveOne * perLevel;
+      return {
+        hint:[[miles(`+${total}`)], [condition('trail guide levels', 'sm')]],        
+        tooltip: [[miles('+12'), text(' miles for each trail guide level above 1 on every hand type')]],
+      };
+    },
   },
   {
     id: 'cursed_dice',
@@ -2976,7 +2984,7 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'campfire_embers');
       return {
-        hint: [[mult(`x${(equip?.state.xMult ?? 1).toFixed(1)}`)], [condition('grows on non-boss rounds', 'xs')]],
+        hint: [[mult(`x${(equip?.state.xMult ?? 1).toFixed(1)}`)]],
         tooltip: [[text('Gains '), mult('x0.2'), text(' at end of each non-boss round')]],
       };
     },
@@ -3002,11 +3010,18 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'FRESH_TRAIL',
     effectParams: { value: 5 },
-    initialState: { freshActive: 0 },
-    display: (_round, _player) => ({
-      hint: [[miles('+5')], [condition('new hand this round', 'sm')]],
-      tooltip: [[miles('+5'), text(' miles if played hand has not already been played this round')]],
-    }),
+    initialState: { freshActive: 0, miles: 0 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'fresh_trail');
+      const total = equip?.state.miles ?? 0;
+      const gain = (equip?.def.effectParams as { value?: number } | undefined)?.value ?? 5;
+      return {
+        hint: [[miles(`+${total}`)], [condition('unique hand type', 'sm')]],
+        tooltip: [
+          [miles(`+${gain}`), text(' miles per new hand type each round; bonus miles carry over between rounds')],
+        ],
+      };
+    },
   },
   {
     id: 'silver_reserve',

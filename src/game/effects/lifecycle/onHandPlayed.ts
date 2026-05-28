@@ -68,8 +68,14 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
     case 'FRESH_TRAIL': {
       const handKey = `round_hand_${handType as string}`;
       const seen = (equip.state[handKey] ?? 0) > 0;
-      equip.state.freshActive = seen ? 0 : 1;
-      equip.state[handKey] = (equip.state[handKey] ?? 0) + 1;
+      if (!seen) {
+        const gain = (equip.def.effectParams.value as number) ?? 5;
+        equip.state.miles = (equip.state.miles ?? 0) + gain;
+        equip.state.freshActive = 1;
+        equip.state[handKey] = 1;
+      } else {
+        equip.state.freshActive = 0;
+      }
       break;
     }
     case 'STEW':

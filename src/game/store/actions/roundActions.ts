@@ -15,6 +15,7 @@ import {
   applyEquipmentEffects,
   getConfigModifiers,
   processEndOfRound,
+  willEndLegRoundOnDayEnd,
   processHeldInHand,
   processEquipmentOnHandPlayed,
   processEquipmentAfterHandScored,
@@ -611,7 +612,8 @@ export const roundActions = {
     }
 
     const equipment = resolveEquipmentList();
-    const endEffects = processEndOfRound(equipment);
+    const isLegRoundEnd = willEndLegRoundOnDayEnd(round, getRunState(), equipment);
+    const endEffects = processEndOfRound(equipment, { isLegRoundEnd });
     const destroyedEquipment = endEffects.destroyedIndices.map((i) => equipment[i]?.def.name ?? '');
     const deferAnimation = options?.deferEquipmentDestructionAnimation ?? false;
     const deferredDestroyIndices = deferAnimation ? [...endEffects.destroyedIndices] : [];

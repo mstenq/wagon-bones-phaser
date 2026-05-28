@@ -118,7 +118,8 @@ const professions: ProfessionDef[] = [
     id: 'cook',
     title: 'Cook',
     name: 'Martha Delaney',
-    description: 'Starts with the Camp Merchant permit (Supply cards appear 2x more frequently in the shop) and 2 copies of second helpings supply card (Creates the last used supply or trail guide used and puts it in your inventory)',
+    description:
+      'Starts with the Camp Merchant permit (Supply cards appear 2x more frequently in the shop) and 2 copies of second helpings supply card',
     modifiers: {
       startingPermits: ['camp_merchant'],
       startingSupplyCards: ['second_helpings', 'second_helpings'],
@@ -134,7 +135,8 @@ const professions: ProfessionDef[] = [
     id: 'scout',
     title: 'Scout',
     name: 'Caleb Winters',
-    description: 'Starts with Binoculars permit (Trail guide packs always contain the trail guide for your most played hand), -1 supply slot',
+    description:
+      'Starts with Binoculars permit (Trail guide packs always contain the trail guide for your most played hand), -1 supply slot',
     modifiers: { startingPermits: ['binoculars'], supplySlots: -1 },
     startingDice: ['wooden', 'steel', 'lucky', 'stone', 'bone'],
     specialEquipment: {
@@ -147,7 +149,8 @@ const professions: ProfessionDef[] = [
     id: 'demon_hunter',
     title: 'Demon Hunter',
     name: 'Isaac Granger',
-    description: 'Frontier Encounter cards appear in shop, start with a Priests Blessing card (Add holy aura to random item, delete all others)',
+    description:
+      'Frontier Encounter cards appear in shop, start with a Priests Blessing card (Add holy aura to random item, delete all others)',
     modifiers: { frontierInShop: true, startingSupplyCards: ['priests_blessing'] },
     startingDice: ['steel', 'steel', 'steel', 'bone', 'bone'],
     specialEquipment: {
@@ -160,7 +163,8 @@ const professions: ProfessionDef[] = [
     id: 'prospector',
     title: 'Prospector',
     name: 'Davis Holler',
-    description: 'Start with permits for Camp Merchant/Trail Cartographer/Supply Wagon (2x supplies/2x trail guides and 1 extra card slot in shop)',
+    description:
+      'Start with permits for Camp Merchant/Trail Cartographer/Supply Wagon (2x supplies/2x trail guides and 1 extra card slot in shop)',
     modifiers: {
       startingPermits: ['camp_merchant', 'trail_cartographer', 'supply_wagon'],
     },
@@ -247,7 +251,8 @@ const professions: ProfessionDef[] = [
     id: 'occult_trader',
     title: 'Occult Trader',
     name: 'Vivian Crowe',
-    description: 'Starts with permits for Spiritual Ritual,Sacred Ceremony, and Bargain Bin (Makes aura 4x more likely and 25% off all shop items)',
+    description:
+      'Starts with permits for Spiritual Ritual,Sacred Ceremony, and Bargain Bin (Makes aura 4x more likely and 25% off all shop items)',
     modifiers: {
       startingPermits: ['spirit_ritual', 'sacred_ceremony', 'bargain_bin'],
     },

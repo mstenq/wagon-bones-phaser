@@ -25,6 +25,7 @@ import {
   multiplyCtxXMult,
 } from './effects/helpers';
 import { addScore, multiplyScore, balanceMilesAndMult, ZERO, ONE } from './scoreMath';
+import { enhancementHeldGoldPayout, enhancementHeldSteelXMult, hasAlchemyKit } from './alchemyKit';
 import type { Decimal } from './decimal';
 export { processEquipmentOnRoundStart, type AnimatedDestruction } from './effects/lifecycle/onRoundStart';
 
@@ -141,7 +142,7 @@ export function applyEquipmentEffects(
   };
 }
 
-export { processEndOfRound } from './effects/lifecycle/onRoundEnd';
+export { processEndOfRound, willEndLegRoundOnDayEnd } from './effects/lifecycle/onRoundEnd';
 
 // ─── Held-in-Hand Processing (Step 4) ───
 
@@ -223,6 +224,8 @@ export function processHeldInHand(
     `  [held] Held dice: ${heldDice.map((d) => `${d.id}(value:${d.value}, enh:${d.enhancement}, sticker:${d.sticker})`).join(', ') || 'none'}`,
   );
 
+  const alchemy = hasAlchemyKit(equipment);
+
   for (const die of heldDice) {
     const triggers = getHeldDieTriggerCount(die, doubleDownCount);
 
@@ -253,8 +256,8 @@ export function processHeldInHand(
         }
       }
 
-      // Steel enhancement: x1.5 mult per trigger
-      if (die.enhancement === 'steel') {
+      // Steel enhancement (or gold with Alchemy Kit): x1.5 mult per trigger
+      if (enhancementHeldSteelXMult(die.enhancement, alchemy)) {
         multiplyCtxXMult(heldCtx, 1.5);
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'xmult', value: 1.5 });
         console.log(`  [held] Die ${die.id}${triggerLabel}: STEEL x1.5 mult (xMult: ${heldCtx.xMult})`);
@@ -282,9 +285,10 @@ export function processGoldHeldAtRoundEnd(
   const animEvents: ScoreAnimEvent[] = [];
   let moneyEarned = 0;
   const perTrigger = GAMEPLAY.GOLD_DICE_HELD_MONEY;
+  const alchemy = hasAlchemyKit(equipment);
 
   for (const die of heldDice) {
-    if (die.enhancement !== 'gold') continue;
+    if (!enhancementHeldGoldPayout(die.enhancement, alchemy)) continue;
     const triggers = getHeldDieTriggerCount(die, doubleDownCount);
     for (let t = 0; t < triggers; t++) {
       pushRetriggerAgainEvent(animEvents, die, t, heldRetriggerSources);

@@ -15,6 +15,7 @@ import {
 import { getBossRoundConfigMods } from '../../BossEffectsSystem';
 import { computePayoutBreakdown } from '../../runProgression';
 import { getRunState, runActions } from '../../store/runStore';
+import { getRoundState } from '../../store/roundStore';
 import { buildShopFreeRerollPlan } from '../../store/selectors/runSelectors';
 import { progressionActions } from '../../store/actions/progressionActions';
 import { roundActions } from '../../store';
@@ -25,8 +26,8 @@ import {
   getScoredRetriggerCount,
   findDeathPrevention,
   processEquipmentOnDayEnd,
-  processEquipmentOnDiceSpent,
   processEquipmentAfterHandScored,
+  processEquipmentOnHandPlayed,
   processEquipmentOnReroll,
   processEquipmentOnPackOpened,
   processEquipmentOnBossDefeat,
@@ -1385,14 +1386,150 @@ describe('New utility equipment lifecycle effects', () => {
     expect(player.equipment[0]!.sellValue).toBe(before + 1);
   });
 
-  test('old calendar gains miles from days left and mult from rerolls left', () => {
+  test('old calendar gains miles from days left and mult from rerolls left at leg round end', () => {
     const calendar = item('old_calendar');
     const { game, player } = setupGame({ equipment: [calendar] });
     game.startRound();
-    processEndOfRound(player.equipment);
+    const round = getRoundState()!;
+    roundActions.patch({ rerollsRemaining: 3 });
+    processEndOfRound(player.equipment, { isLegRoundEnd: true });
     const inst = player.equipment.find((e) => e.def.id === 'old_calendar')!;
-    // Day 1 with no days played: maxDays - day + 1; full reroll bank at round start
-    expect(inst.state.miles).toBe(GAMEPLAY.MAX_DAYS);
-    expect(inst.state.mult).toBe(GAMEPLAY.MAX_REROLLS);
+    const daysLeft = round.config.maxDays - round.day + 1;
+    expect(inst.state.miles).toBe(daysLeft);
+    expect(inst.state.mult).toBe(3);
+  });
+
+  test('old calendar does not tick on mid-round day end', () => {
+    const calendar = item('old_calendar');
+    const { game, player } = setupGame({ equipment: [calendar] });
+    game.startRound();
+    processEndOfRound(player.equipment, { isLegRoundEnd: false });
+    const inst = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    expect(inst.state.miles).toBe(0);
+    expect(inst.state.mult).toBe(0);
+  });
+
+  test('old calendar ticks once per leg round through endDay', () => {
+    const calendar = item('old_calendar');
+    const { game, player } = setupGame({ equipment: [calendar] });
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    const maxDays = getRoundState()!.config.maxDays;
+    for (let day = 0; day < maxDays - 1; day++) {
+      playScoredDayAndEnd(game, { avoidWin: true });
+    }
+    const instMid = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    expect(instMid.state.miles ?? 0).toBe(0);
+    playScoredDayAndEnd(game, { avoidWin: true });
+    const instEnd = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    expect((instEnd.state.miles ?? 0) > 0).toBe(true);
+  });
+
+  test('offering bowl destroys a consumable and stores mult on round start', () => {
+    const bowl = item('offering_bowl');
+    const { player } = setupGame({ equipment: [bowl] });
+    const supplyDef = getRandomSupplyDef();
+    player.addConsumable(supplyDef);
+    player.addConsumable(getRandomSupplyDef());
+    expect(player.consumables.length).toBe(2);
+    processEquipmentOnRoundStart([bowl]);
+    expect(player.consumables.length).toBe(1);
+    expect(bowl.state.mult).toBe(4);
+  });
+
+  test('offering bowl skips when no consumables', () => {
+    const bowl = item('offering_bowl');
+    const { player } = setupGame({ equipment: [bowl] });
+    processEquipmentOnRoundStart([bowl]);
+    expect(player.consumables.length).toBe(0);
+    expect(bowl.state.mult ?? 0).toBe(0);
+  });
+});
+
+// ─── STEW / SANDWICH: timed rounds decay per leg round ───
+
+describe('STEW', () => {
+  test('rolls upgrade chance on first hand of day 1 only', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const stew = item('stew');
+      const { game } = setupGame({ equipment: [stew] });
+      game.startRound();
+      processEquipmentOnHandPlayed([stew], HandType.PAIR);
+      expect(stew.state.stewUpgradePending).toBe(1);
+
+      stew.state.stewUpgradePending = 0;
+      roundActions.patch({ day: 2 });
+      processEquipmentOnHandPlayed([stew], HandType.PAIR);
+      expect(stew.state.stewUpgradePending).toBe(0);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('upgrades trail guide level when pending after score', () => {
+    const stew = itemWithState('stew', { stewUpgradePending: 1, roundsRemaining: 5 });
+    const { player } = setupGame({ equipment: [stew] });
+    const levelBefore = player.getHandStats(HandType.PAIR).level;
+    processEquipmentAfterHandScored([stew], HandType.PAIR);
+    expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 1);
+    expect(stew.state.stewUpgradePending).toBe(0);
+  });
+});
+
+describe('STEW: rounds remaining', () => {
+  test('does not decay on mid-round day end', () => {
+    const stew = item('stew');
+    const { game, player } = setupGame({ equipment: [stew] });
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    const result = playScoredDayAndEnd(game, { avoidWin: true });
+    expect(result.outcome).toBe('next-day');
+    const inst = player.equipment.find((e) => e.def.id === 'stew')!;
+    expect(inst.state.roundsRemaining).toBe(5);
+  });
+
+  test('decays once after all days in a leg round', () => {
+    const stew = item('stew');
+    const { game, player } = setupGame({ equipment: [stew] });
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    const maxDays = getRoundState()!.config.maxDays;
+    for (let day = 0; day < maxDays; day++) {
+      playScoredDayAndEnd(game, { avoidWin: true });
+    }
+    const inst = player.equipment.find((e) => e.def.id === 'stew')!;
+    expect(inst.state.roundsRemaining).toBe(4);
+  });
+});
+
+describe('SANDWICH', () => {
+  test('grants a mega pack tag at leg round end', () => {
+    const sandwich = item('sandwich');
+    const before = getRunState().pendingTags.length;
+    processEndOfRound([sandwich], { isLegRoundEnd: true });
+    expect(getRunState().pendingTags.length).toBe(before + 1);
+    const added = getRunState().pendingTags[getRunState().pendingTags.length - 1]!;
+    expect(['tag_dice_mega', 'tag_supply_mega', 'tag_trail_guide_mega', 'tag_equipment_mega']).toContain(added.tagId);
+  });
+});
+
+describe('SANDWICH: rounds remaining', () => {
+  test('decays once per leg round, not per day', () => {
+    const sandwich = item('sandwich');
+    const { game, player } = setupGame({ equipment: [sandwich] });
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    const maxDays = getRoundState()!.config.maxDays;
+    for (let day = 0; day < maxDays - 1; day++) {
+      const result = playScoredDayAndEnd(game, { avoidWin: true });
+      expect(result.outcome).toBe('next-day');
+    }
+    const instMid = player.equipment.find((e) => e.def.id === 'sandwich')!;
+    expect(instMid.state.roundsRemaining).toBe(5);
+    playScoredDayAndEnd(game, { avoidWin: true });
+    const instEnd = player.equipment.find((e) => e.def.id === 'sandwich')!;
+    expect(instEnd.state.roundsRemaining).toBe(4);
   });
 });

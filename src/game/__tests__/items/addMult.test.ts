@@ -10,6 +10,8 @@ import {
   syncEquipmentInstances,
 } from '../testHelpers';
 import { processEndOfRound } from '../../EquipmentEffects';
+import { getRoundState } from '../../store/roundStore';
+import { D } from '../../scoreMath';
 
 beforeEach(() => resetDieIds());
 
@@ -187,30 +189,30 @@ describe('DECAYING_MULT: Fading Memory', () => {
     expect(result.mult).toBeMult(21);
   });
 
-  test('loses -4 mult per round end', () => {
+  test('loses -4 mult per leg round end', () => {
     const inst = item('fading_memory');
-    processEndOfRound([inst]);
+    processEndOfRound([inst], { isLegRoundEnd: true });
     expect(inst.state.mult).toBe(16);
     expect(inst.state.roundsPlayed).toBe(1);
 
-    processEndOfRound([inst]);
+    processEndOfRound([inst], { isLegRoundEnd: true });
     expect(inst.state.mult).toBe(12);
     expect(inst.state.roundsPlayed).toBe(2);
   });
 
-  test('marked for destruction after 5 round ends', () => {
+  test('marked for destruction after 5 leg round ends', () => {
     const inst = item('fading_memory');
     for (let i = 0; i < 4; i++) {
-      const result = processEndOfRound([inst]);
+      const result = processEndOfRound([inst], { isLegRoundEnd: true });
       expect(result.destroyedIndices).toEqual([]);
     }
-    const result = processEndOfRound([inst]);
+    const result = processEndOfRound([inst], { isLegRoundEnd: true });
     expect(result.destroyedIndices).toContain(0);
   });
 
-  test('mult value after 3 round ends then score', () => {
+  test('mult value after 3 leg round ends then score', () => {
     const inst = item('fading_memory');
-    for (let i = 0; i < 3; i++) processEndOfRound([inst]);
+    for (let i = 0; i < 3; i++) processEndOfRound([inst], { isLegRoundEnd: true });
     // 20 - 3*4 = 8
 
     const { result } = calculateTestScore({
@@ -220,30 +222,52 @@ describe('DECAYING_MULT: Fading Memory', () => {
     expect(result.mult).toBeMult(9); // baseMult=1 + 8
   });
 
-  test('decays after endDay in live round flow', () => {
+  test('does not decay on mid-round day end', () => {
     const { game, player } = setupGame({
       equipment: [item('fading_memory')],
       dice: diceWithValue(5, 50),
     });
 
     game.startRound();
+    game.config.targetMiles = D(999_999);
     playScoredDayAndEnd(game, { avoidWin: true });
+
+    expect(player.equipment[0]?.state.mult).toBe(20);
+    expect(player.equipment[0]?.state.roundsPlayed ?? 0).toBe(0);
+  });
+
+  test('decays after leg round ends through endDay', () => {
+    const { game, player } = setupGame({
+      equipment: [item('fading_memory')],
+      dice: diceWithValue(5, 50),
+    });
+
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    const maxDays = getRoundState()!.config.maxDays;
+    for (let day = 0; day < maxDays; day++) {
+      playScoredDayAndEnd(game, { avoidWin: true });
+    }
 
     expect(player.equipment[0]?.state.mult).toBe(16);
     expect(player.equipment[0]?.state.roundsPlayed).toBe(1);
   });
 
-  test('decays after endDay with deferred destruction (GameScene path)', () => {
+  test('decays after leg round end with deferred destruction (GameScene path)', () => {
     const { game, player } = setupGame({
       equipment: [item('fading_memory')],
       dice: diceWithValue(5, 50),
     });
 
     game.startRound();
-    playScoredDayAndEnd(game, {
-      avoidWin: true,
-      endDay: { deferEquipmentDestructionAnimation: true },
-    });
+    game.config.targetMiles = D(999_999);
+    const maxDays = getRoundState()!.config.maxDays;
+    for (let day = 0; day < maxDays; day++) {
+      playScoredDayAndEnd(game, {
+        avoidWin: true,
+        endDay: { deferEquipmentDestructionAnimation: true },
+      });
+    }
 
     expect(player.equipment[0]?.state.mult).toBe(16);
     expect(player.equipment[0]?.state.roundsPlayed).toBe(1);

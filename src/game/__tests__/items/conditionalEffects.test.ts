@@ -1,6 +1,37 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, calculateTestScore, setupGame, resetDieIds } from '../testHelpers';
+import {
+  die,
+  diceWithValue,
+  item,
+  itemWithState,
+  calculateTestScore,
+  setupGame,
+  resetDieIds,
+  playScoredDayAndEnd,
+} from '../testHelpers';
+import { GameState } from '../testGameState';
+import { HandType, type Die, type ScoreResult } from '../../types';
+import { processEquipmentOnHandPlayed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
+import { D } from '../../scoreMath';
+import { getRoundState } from '../../store/roundStore';
+import { roundActions } from '../../store';
+
+function freshTrailEquipMilesBonus(result: ScoreResult, equipIndex = 0): number {
+  return result.animEvents
+    .filter((e) => e.popupType === 'miles' && e.target.kind === 'equip' && e.target.equipIndex === equipIndex)
+    .reduce((sum, e) => sum + (typeof e.value === 'number' ? e.value : 0), 0);
+}
+
+function playDayAndGetScore(game: GameState, rolledDice: Die[], options?: { avoidWin?: boolean }): ScoreResult {
+  if (options?.avoidWin) {
+    game.config.targetMiles = D(999_999);
+  }
+  playScoredDayAndEnd(game, { rolledDice, avoidWin: options?.avoidWin });
+  const last = getRoundState()?.lastScoreResult;
+  if (!last) throw new Error('missing lastScoreResult after playScoredDayAndEnd');
+  return last;
+}
 
 beforeEach(() => resetDieIds());
 
@@ -225,6 +256,140 @@ describe('New conditional/additive mileage items', () => {
       equipment: [item('supply_caravan'), item('horseshoe')],
     });
     expect(result.miles).toBeMiles(260);
+  });
+
+  test('pioneer spirit adds miles from all hand types above level 1', () => {
+    const handLevels = { [HandType.PAIR]: 5, [HandType.FULL_HOUSE]: 2 };
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('pioneer_spirit')],
+      handLevels,
+    });
+    const pioneerMiles = result.animEvents.filter(
+      (e) => e.popupType === 'miles' && e.target.kind === 'equip' && e.target.equipIndex === 0,
+    );
+    // Pair L5 → 4×12, Full House L2 → 1×12, rest L1 → 0
+    expect(pioneerMiles.map((e) => e.value)).toEqual([60]);
+  });
+
+  test('pioneer spirit bonus does not depend on played hand', () => {
+    const handLevels = { [HandType.PAIR]: 5, [HandType.FULL_HOUSE]: 2 };
+    const pioneerBonus = (result: ScoreResult) =>
+      result.animEvents
+        .filter((e) => e.popupType === 'miles' && e.target.kind === 'equip' && e.target.equipIndex === 0)
+        .map((e) => e.value);
+
+    const pairHand = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('pioneer_spirit')],
+      handLevels,
+    });
+    const highHand = calculateTestScore({
+      scoredDice: [die({ value: 12 }), die({ value: 11 }), die({ value: 9 }), die({ value: 8 }), die({ value: 7 })],
+      equipment: [item('pioneer_spirit')],
+      handLevels,
+    });
+
+    expect(pairHand.result.handResult.type).toBe(HandType.PAIR);
+    expect(highHand.result.handResult.type).toBe(HandType.HIGH_VALUE);
+    expect(pioneerBonus(pairHand.result)).toEqual([60]);
+    expect(pioneerBonus(highHand.result)).toEqual([60]);
+  });
+
+  test('pioneer spirit adds nothing when every hand is level 1', () => {
+    const withSpirit = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('pioneer_spirit')],
+      handLevels: { [HandType.PAIR]: 1 },
+    }).result.miles;
+    const baseline = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [],
+      handLevels: { [HandType.PAIR]: 1 },
+    }).result.miles;
+    expect(withSpirit).toEqual(baseline);
+  });
+});
+
+describe('FRESH_TRAIL: Fresh Trail', () => {
+  test('marks first hand of the round as fresh and accumulates miles', () => {
+    const fresh = item('fresh_trail');
+    processEquipmentOnHandPlayed([fresh], HandType.PAIR);
+    expect(fresh.state.freshActive).toBe(1);
+    expect(fresh.state.miles).toBe(5);
+    processEquipmentOnHandPlayed([fresh], HandType.PAIR);
+    expect(fresh.state.freshActive).toBe(0);
+    expect(fresh.state.miles).toBe(5);
+    processEquipmentOnHandPlayed([fresh], HandType.TWO_PAIR);
+    expect(fresh.state.freshActive).toBe(1);
+    expect(fresh.state.miles).toBe(10);
+  });
+
+  test('tracks new hand types across days in the same leg round', () => {
+    const pairDice = diceWithValue(5, 2);
+    const twoPairDice = [...diceWithValue(3, 2), ...diceWithValue(8, 2)];
+    const { game, player } = setupGame({
+      equipment: [item('fresh_trail')],
+      dice: [...pairDice, ...twoPairDice, ...diceWithValue(1, 30)],
+    });
+
+    game.startRound();
+
+    const day1 = playDayAndGetScore(game, pairDice, { avoidWin: true });
+    expect(freshTrailEquipMilesBonus(day1)).toBe(5);
+    player.syncFromStore();
+    expect(player.equipment[0]?.state.miles).toBe(5);
+
+    const day2 = playDayAndGetScore(game, pairDice, { avoidWin: true });
+    expect(freshTrailEquipMilesBonus(day2)).toBe(0);
+    player.syncFromStore();
+    expect(player.equipment[0]?.state.miles).toBe(5);
+
+    const day3 = playDayAndGetScore(game, twoPairDice, { avoidWin: true });
+    expect(freshTrailEquipMilesBonus(day3)).toBe(10);
+    player.syncFromStore();
+    expect(player.equipment[0]?.state.miles).toBe(10);
+  });
+
+  test('accumulates miles across leg rounds', () => {
+    const pairDice = diceWithValue(5, 2);
+    const twoPairDice = [...diceWithValue(3, 2), ...diceWithValue(8, 2)];
+    const fullHouseDice = [...diceWithValue(4, 3), die({ value: 9 })];
+    const { game, player } = setupGame({
+      equipment: [item('fresh_trail')],
+      dice: [...pairDice, ...twoPairDice, ...fullHouseDice, ...diceWithValue(1, 40)],
+    });
+
+    game.startRound();
+
+    playDayAndGetScore(game, pairDice, { avoidWin: true });
+    playDayAndGetScore(game, twoPairDice, { avoidWin: true });
+    player.syncFromStore();
+    expect(player.equipment[0]?.state.miles).toBe(10);
+
+    const maxDays = getRoundState()!.config.maxDays;
+    while (getRoundState()!.day < maxDays) {
+      playScoredDayAndEnd(game, { avoidWin: true });
+    }
+
+    roundActions.clearRound();
+    game.startRound();
+
+    const nextRoundScore = playDayAndGetScore(game, fullHouseDice, { avoidWin: true });
+    expect(freshTrailEquipMilesBonus(nextRoundScore)).toBe(15);
+    player.syncFromStore();
+    expect(player.equipment[0]?.state.miles).toBe(15);
+    expect(player.equipment[0]?.state.round_hand_PAIR ?? 0).toBe(0);
+  });
+
+  test('clears per-round hand tracking on round start but keeps miles', () => {
+    const fresh = itemWithState('fresh_trail', { miles: 10, freshActive: 0, round_hand_PAIR: 1 });
+    processEquipmentOnRoundStart([fresh]);
+    expect(fresh.state.miles).toBe(10);
+    expect(fresh.state.round_hand_PAIR ?? 0).toBe(0);
+    processEquipmentOnHandPlayed([fresh], HandType.PAIR);
+    expect(fresh.state.freshActive).toBe(1);
+    expect(fresh.state.miles).toBe(15);
   });
 });
 

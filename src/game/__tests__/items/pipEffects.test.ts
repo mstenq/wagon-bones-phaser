@@ -11,8 +11,13 @@ import {
   pushEquipmentState,
   syncEquipmentInstances,
 } from '../testHelpers';
-import { processEquipmentOnDiceDestroyed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
+import {
+  processEquipmentOnDiceDestroyed,
+  processEquipmentOnRoundStart,
+  processGoldHeldAtRoundEnd,
+} from '../../EquipmentEffects';
 import { gt } from '../../scoreMath';
+import { GAMEPLAY } from '../../Constants';
 
 beforeEach(() => resetDieIds());
 
@@ -359,6 +364,80 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
     });
     // PAIR: baseMult=1+4(bone)=5, no iron spurs bonus
     expect(result.mult).toBeMult(5);
+  });
+});
+
+// ─── ALCHEMY_KIT: Alchemy Kit ───
+
+describe('ALCHEMY_KIT: Alchemy Kit', () => {
+  test('steel dice trigger iron spurs mult via gold swap', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'steel' }), die({ value: 5 })],
+      equipment: [item('iron_spurs'), item('alchemy_kit')],
+    });
+    expect(result.mult).toBeMult(8);
+  });
+
+  test('gold dice trigger gold tooth money via steel swap', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5 })],
+      equipment: [item('gold_tooth'), item('alchemy_kit')],
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(14);
+  });
+
+  test('gold dice do not earn gold tooth money without alchemy kit', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5 })],
+      equipment: [item('alchemy_kit')],
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(10);
+  });
+});
+
+describe('ALCHEMY_KIT: held in hand and round end', () => {
+  test('held gold applies steel x1.5 mult when scoring', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'gold' })],
+      equipment: [item('alchemy_kit')],
+    });
+    expect(result.mult).toBeMult(1.5);
+  });
+
+  test('held gold does not apply steel x1.5 without alchemy kit', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'gold' })],
+      equipment: [],
+    });
+    expect(result.mult).toBeMult(1);
+  });
+
+  test('held steel does not apply steel x1.5 with alchemy kit', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'steel' })],
+      equipment: [item('alchemy_kit')],
+    });
+    expect(result.mult).toBeMult(1);
+  });
+
+  test('held steel earns round-end gold payout with alchemy kit', () => {
+    const result = processGoldHeldAtRoundEnd([die({ value: 4, enhancement: 'steel' })], [item('alchemy_kit')]);
+    expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY);
+    expect(result.animEvents.filter((e) => e.popupType === 'money')).toHaveLength(1);
+  });
+
+  test('held gold and steel both earn round-end payout with alchemy kit', () => {
+    const result = processGoldHeldAtRoundEnd(
+      [die({ value: 4, enhancement: 'gold' }), die({ value: 5, enhancement: 'steel' })],
+      [item('alchemy_kit')],
+    );
+    expect(result.moneyEarned).toBe(GAMEPLAY.GOLD_DICE_HELD_MONEY * 2);
+    expect(result.animEvents.filter((e) => e.popupType === 'money')).toHaveLength(2);
   });
 });
 

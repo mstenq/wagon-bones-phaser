@@ -23,6 +23,8 @@ import {
   processEquipmentOnDiceAdded,
   processEquipmentOnDiamondDestroyed,
   processEquipmentOnDiceDestroyed,
+  processEndOfRound,
+  processEquipmentOnDayEnd,
 } from '../../EquipmentEffects';
 import {
   executeConsumableEffect,
@@ -298,6 +300,39 @@ describe('New xMult equipment', () => {
     expect(xm).toBeGreaterThanOrEqual(1.0);
     expect(xm).toBeLessThanOrEqual(4.0);
     expect(Number.isInteger(Math.round(xm * 10))).toBe(true);
+  });
+
+  test('campfire embers grows xMult at non-boss leg round end', () => {
+    const embers = item('campfire_embers');
+    processEndOfRound([embers], { isLegRoundEnd: true });
+    expect(embers.state.xMult).toBeCloseTo(1.2, 5);
+  });
+
+  test('campfire embers does not grow on boss leg round end', () => {
+    const embers = item('campfire_embers');
+    const { run } = setupGame({ equipment: [embers], bossId: 'the_marathon' });
+    expect(run.round).toBe(3);
+    processEndOfRound([embers], { isLegRoundEnd: true });
+    expect(embers.state.xMult ?? 1).toBe(1);
+  });
+
+  test('campfire embers applies stored xMult when scoring', () => {
+    const embers = itemWithState('campfire_embers', { xMult: 1.4 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [embers],
+    });
+    expect(result.mult).toBeMultCloseTo(1.4, 5);
+  });
+});
+
+describe('ROULETTE_WHEEL: day end', () => {
+  test('rerolls xMult on day end', () => {
+    const wheel = itemWithState('roulette_wheel', { xMult: 2.5 });
+    processEquipmentOnDayEnd([wheel]);
+    const xm = wheel.state.xMult ?? 1;
+    expect(xm).toBeGreaterThanOrEqual(1.0);
+    expect(xm).toBeLessThanOrEqual(4.0);
   });
 });
 
