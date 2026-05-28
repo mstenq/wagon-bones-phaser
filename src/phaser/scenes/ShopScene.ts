@@ -38,7 +38,7 @@ import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { createLayout } from '../ui/SceneLayout';
-import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
+import { handleStandardConsumableResult } from './consumableResult';
 import {
   PermitDef,
   generateShopPermit,
@@ -635,52 +635,11 @@ export class ShopScene extends Scene {
   }
 
   private handleConsumableResult(result: UseConsumableResult): void {
-    void this.handleConsumableResultAsync(result);
-  }
-
-  private async handleConsumableResultAsync(result: UseConsumableResult): Promise<void> {
-    if (!result.success && result.failReason) {
-      // Show popup at center of consumable bar area
-      const text = this.add
-        .text(this.consumableBar.x + this.consumableBar.width / 2, this.consumableBar.y, result.failReason, {
-          fontFamily: 'sans-serif',
-          fontSize: '24px',
-          color: '#fff',
-          stroke: '#000000',
-          strokeThickness: 3,
-        })
-        .setOrigin(0.5)
-        .setDepth(1000);
-      this.sound.play('sfx_cancel', { volume: 0.5 });
-      this.tweens.add({
-        targets: text,
-        y: text.y - 15,
-        alpha: 0,
-        duration: 2000,
-        ease: 'Power2',
-        onComplete: () => text.destroy(),
-      });
-    }
-
-    // If the consumable triggers a dice selection, launch it
-    if (result.diceSelection) {
-      this.scene.start('DiceSelection', {
-        config: result.diceSelection,
-        returnScene: 'Shop',
-        returnSceneData: {},
-      });
-    }
-
-    // Play hand upgrade animation for trail guides / Spiritual Journey
-    const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
-    if (upgrades.length > 0) {
-      playHandUpgradeAnimation({
-        scene: this,
-        sidebar: this.sidebar,
-        upgrades,
-        onComplete: () => {},
-      });
-    }
+    handleStandardConsumableResult(this, this.sidebar, result, 'Shop', {
+      x: this.consumableBar.x + this.consumableBar.width / 2,
+      y: this.consumableBar.y,
+      sound: () => this.sound.play('sfx_cancel', { volume: 0.5 }),
+    });
   }
 
   /** Show a brief floating text popup above a card with a cancel sound */

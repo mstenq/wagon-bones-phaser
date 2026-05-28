@@ -1,24 +1,13 @@
 // ─── after-hand-scored lifecycle handlers ───
 
-import { Die, HandDefinition, HandType, HandUpgradeInfo } from '../../types';
+import { Die, HandType, HandUpgradeInfo } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
-import { checkLoadedChance } from '../../equipmentUtils';
-import { forEachEquipmentResolved, resolveChance, resolveEffectParam } from '../helpers';
+import { forEachEquipmentResolved, resolveEffectParam } from '../helpers';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
-import hands from '../../../data/hands';
 import { getRunState } from '../../store/runStore';
-import { selectHandStats } from '../../store/selectors/runSelectors';
-import { progressionActions } from '../../store/actions/progressionActions';
 import { consumableActions } from '../../store/actions/consumableActions';
 
-const HAND_TABLE: HandDefinition[] = hands;
-
-function applyAfterHandScoredEffect(
-  equip: EquipmentInstance,
-  handType: HandType,
-  equipment: EquipmentInstance[],
-  upgrades: HandUpgradeInfo[],
-): void {
+function applyAfterHandScoredEffect(equip: EquipmentInstance, handType: HandType): void {
   const run = getRunState();
   switch (equip.def.effectType) {
     case 'STATEFUL_ADD_MILES': {
@@ -27,36 +16,6 @@ function applyAfterHandScoredEffect(
       const currentMiles =
         typeof equip.state.miles === 'number' && Number.isFinite(equip.state.miles) ? equip.state.miles : 0;
       equip.state.miles = Math.max(0, currentMiles - decay);
-      break;
-    }
-    case 'HAND_UPGRADE_CHANCE': {
-      const p = equip.def.effectParams as Record<string, unknown>;
-      const chance = resolveChance(p, run.professionId ?? undefined);
-      if (checkLoadedChance(chance, equipment)) {
-        const stats = selectHandStats(run, handType);
-        const handDef = HAND_TABLE.find((h) => h.type === handType)!;
-        const oldLevel = stats.level;
-        const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
-        const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
-
-        progressionActions.upgradeHandLevel(handType);
-
-        const newStats = selectHandStats(getRunState(), handType);
-        const newLevel = newStats.level;
-        const newBaseMiles = handDef.baseMiles + newStats.milesPerLevel * (newLevel - 1);
-        const newBaseMult = handDef.baseMult + newStats.multPerLevel * (newLevel - 1);
-
-        upgrades.push({
-          handType,
-          handName: handDef.name,
-          oldLevel,
-          newLevel,
-          oldBaseMiles,
-          newBaseMiles,
-          oldBaseMult,
-          newBaseMult,
-        });
-      }
       break;
     }
     case 'REPEAT_HAND_XMULT': {
@@ -72,31 +31,6 @@ function applyAfterHandScoredEffect(
       }
       break;
     }
-    case 'STEW': {
-      if ((equip.state.stewUpgradePending ?? 0) <= 0) break;
-      const stats = selectHandStats(run, handType);
-      const handDef = HAND_TABLE.find((h) => h.type === handType)!;
-      const oldLevel = stats.level;
-      const oldBaseMiles = handDef.baseMiles + stats.milesPerLevel * (oldLevel - 1);
-      const oldBaseMult = handDef.baseMult + stats.multPerLevel * (oldLevel - 1);
-      progressionActions.upgradeHandLevel(handType);
-      const newStats = selectHandStats(getRunState(), handType);
-      const newLevel = newStats.level;
-      const newBaseMiles = handDef.baseMiles + newStats.milesPerLevel * (newLevel - 1);
-      const newBaseMult = handDef.baseMult + newStats.multPerLevel * (newLevel - 1);
-      upgrades.push({
-        handType,
-        handName: handDef.name,
-        oldLevel,
-        newLevel,
-        oldBaseMiles,
-        newBaseMiles,
-        oldBaseMult,
-        newBaseMult,
-      });
-      equip.state.stewUpgradePending = 0;
-      break;
-    }
   }
 }
 
@@ -107,11 +41,7 @@ export function processEquipmentAfterHandScored(
 ): HandUpgradeInfo[] {
   const upgrades: HandUpgradeInfo[] = [];
 
-  forEachEquipmentResolved(
-    equipment,
-    (equip) => applyAfterHandScoredEffect(equip, handType, equipment, upgrades),
-    'skip',
-  );
+  forEachEquipmentResolved(equipment, (equip) => applyAfterHandScoredEffect(equip, handType), 'skip');
 
   return upgrades;
 }

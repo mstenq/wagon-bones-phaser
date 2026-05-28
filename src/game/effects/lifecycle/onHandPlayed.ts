@@ -6,10 +6,8 @@ import { replaceEquipmentList } from '../../store/resolve';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { dieMatchesPip, handTypeMatches, hasStackedDeck, resolveEffectParam } from '../helpers';
-import { checkLoadedChance } from '../../equipmentUtils';
 import { getMostPlayedHandTypes } from '../../handStatsHelpers';
 import { getRunState } from '../../store/runStore';
-import { getRoundState } from '../../store/roundStore';
 import { resolveEquipmentList } from '../../store/resolve';
 
 effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice) => {
@@ -78,16 +76,6 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       }
       break;
     }
-    case 'STEW':
-      if ((equip.state.roundsRemaining ?? 0) > 0 && (getRoundState()?.day ?? 1) === 1) {
-        const chance = (equip.def.effectParams.chance as [number, number]) ?? [1, 2];
-        if (checkLoadedChance(chance, equipment)) {
-          equip.state.stewUpgradePending = 1;
-        } else {
-          equip.state.stewUpgradePending = 0;
-        }
-      }
-      break;
   }
 });
 

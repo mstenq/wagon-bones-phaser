@@ -3,7 +3,7 @@ import '../setup';
 import { die, diceWithValue, item, itemWithState, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
 import {
   processEndOfRound,
-  processEquipmentAfterHandScored,
+  processPreScoreHandUpgrades,
   processEquipmentOnPackOpened,
   processEquipmentOnRoundStart,
 } from '../../EquipmentEffects';
@@ -436,7 +436,7 @@ describe("Loaded Dice + Surveyor's Transit (HAND_UPGRADE_CHANCE)", () => {
 
     for (let i = 0; i < runs; i++) {
       const equipment = [item('surveyors_transit'), item('loaded_dice')];
-      const upgrades = processEquipmentAfterHandScored(equipment, HandType.PAIR);
+      const upgrades = processPreScoreHandUpgrades(equipment, HandType.PAIR);
       if (upgrades.length > 0) upgraded++;
     }
 
@@ -452,7 +452,7 @@ describe("Loaded Dice + Surveyor's Transit (HAND_UPGRADE_CHANCE)", () => {
 
     for (let i = 0; i < runs; i++) {
       const equipment = [item('surveyors_transit')];
-      const upgrades = processEquipmentAfterHandScored(equipment, HandType.PAIR);
+      const upgrades = processPreScoreHandUpgrades(equipment, HandType.PAIR);
       if (upgrades.length > 0) upgraded++;
     }
 

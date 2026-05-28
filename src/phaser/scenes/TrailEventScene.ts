@@ -24,6 +24,7 @@ import { getRunState, runActions } from '../../game/store/runStore';
 import { flushAutoSave } from '../AutoSaveManager';
 import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
 import { ConsumableBar } from '../ui/ConsumableBar';
+import { handleStandardConsumableResult } from './consumableResult';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -922,26 +923,10 @@ export class TrailEventScene extends Scene {
   }
 
   private handleConsumableResult(result: UseConsumableResult): void {
-    if (!result.success && result.failReason) {
-      const text = this.add
-        .text(this.consumableBar.x + this.consumableBar.width / 2, this.consumableBar.y, result.failReason, {
-          fontFamily: 'sans-serif',
-          fontSize: '24px',
-          color: '#fff',
-          stroke: '#000000',
-          strokeThickness: 3,
-        })
-        .setOrigin(0.5)
-        .setDepth(1000);
-      this.safePlaySound('sfx_cancel', { volume: 0.5 });
-      this.tweens.add({
-        targets: text,
-        y: text.y - 15,
-        alpha: 0,
-        duration: 2000,
-        ease: 'Power2',
-        onComplete: () => text.destroy(),
-      });
-    }
+    handleStandardConsumableResult(this, this.sidebar, result, 'TrailEvent', {
+      x: this.consumableBar.x + this.consumableBar.width / 2,
+      y: this.consumableBar.y,
+      sound: () => this.safePlaySound('sfx_cancel', { volume: 0.5 }),
+    });
   }
 }

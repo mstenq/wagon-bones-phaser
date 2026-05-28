@@ -349,6 +349,7 @@ export function processBlueMoonHeldAtRoundEnd(
 
 export { processEquipmentOnHandPlayed } from './effects/lifecycle/onHandPlayed';
 export { processEquipmentAfterHandScored } from './effects/lifecycle/afterHandScored';
+export { processPreScoreHandUpgrades } from './effects/lifecycle/preScoreHandUpgrades';
 export { processEquipmentOnReroll } from './effects/lifecycle/onReroll';
 export { processEquipmentOnShopReroll } from './effects/lifecycle/onShopReroll';
 export { processEquipmentOnShopEnd } from './effects/lifecycle/onShopEnd';

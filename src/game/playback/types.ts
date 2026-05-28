@@ -31,7 +31,7 @@ export type PlaybackCommand =
   | { kind: 'score'; result: ScoreResult }
   /** Standalone score animation events (e.g. round-end held dice). */
   | { kind: 'score-events'; events: ScoreAnimEvent[]; label?: 'round-end-held' }
-  /** Hand level-up banners after scoring or tags. */
+  /** Hand level-up banners (queue before `score` when upgrades affect the scored hand). */
   | { kind: 'hand-upgrades'; upgrades: HandUpgradeInfo[] }
   /** Trail tag earned toast / fly-in. */
   | { kind: 'tag-earned'; tagId: string }

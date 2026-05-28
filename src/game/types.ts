@@ -109,7 +109,7 @@ export interface ScoreResult {
   // Animation event stack — populated by game logic during scoring
   animEvents: ScoreAnimEvent[];
   roundScoreBefore?: Decimal;
-  /** Hand upgrades that occurred during scoring (e.g. Surveyor's Transit) */
+  /** Hand upgrades from this score (pre-score: Surveyor's Transit, Stew day 1; post-score: Trickster) */
   handUpgrades?: HandUpgradeInfo[];
   /** Scoring mutations (deferred to applyScoringMutations) */
   mutations: ScoringMutations;

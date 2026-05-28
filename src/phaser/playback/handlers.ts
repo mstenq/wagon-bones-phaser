@@ -89,6 +89,10 @@ async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResul
 
   ctx.setAnimating(true);
 
+  if (result.handUpgrades && result.handUpgrades.length > 0) {
+    refreshScoreSidebarHandLevel(result);
+  }
+
   await new Promise<void>((resolve) => {
     playScoreAnimation({
       scene: ctx.scene,
@@ -103,17 +107,6 @@ async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResul
       },
     });
   });
-
-  if (result.handUpgrades && result.handUpgrades.length > 0) {
-    await new Promise<void>((resolve) => {
-      playHandUpgradeAnimation({
-        scene: ctx.scene,
-        sidebar: ctx.sidebar,
-        upgrades: result.handUpgrades!,
-        onComplete: () => resolve(),
-      });
-    });
-  }
 
   ctx.setAnimating(false);
   ctx.onScoreComplete();
@@ -138,14 +131,19 @@ function playHandUpgradesPlayback(
   upgrades: NonNullable<Extract<PlaybackCommand, { kind: 'hand-upgrades' }>['upgrades']>,
 ): Promise<void> {
   if (upgrades.length === 0) return Promise.resolve();
-  return new Promise((resolve) => {
-    playHandUpgradeAnimation({
-      scene: ctx.scene,
-      sidebar: ctx.sidebar,
-      upgrades,
-      onComplete: () => resolve(),
+  return (async () => {
+    if (ctx.scoreLayoutGate) {
+      await ctx.scoreLayoutGate.promise;
+    }
+    await new Promise<void>((resolve) => {
+      playHandUpgradeAnimation({
+        scene: ctx.scene,
+        sidebar: ctx.sidebar,
+        upgrades,
+        onComplete: () => resolve(),
+      });
     });
-  });
+  })();
 }
 
 function playModifierFeedbackPlayback(ctx: PlaybackHandlerContext, payload: ModifierFeedbackPayload): Promise<void> {
@@ -182,10 +180,22 @@ function playModifierFeedbackPlayback(ctx: PlaybackHandlerContext, payload: Modi
 export function prepareScoreSidebar(result: ScoreResult, roundScoreBefore: Decimal): void {
   const handType = result.handResult.type as HandType;
   const stats = selectHandStats(getRunState(), handType);
+  const matchingUpgrades = result.handUpgrades?.filter((u) => u.handType === handType) ?? [];
+  const handLevel = matchingUpgrades.length > 0 ? matchingUpgrades[0].oldLevel : stats.level;
+  roundActions.setSidebarOverlay({
+    title: 'SCORING',
+    handName: result.handResult.name,
+    handLevel,
+  });
+  result.roundScoreBefore = roundScoreBefore;
+}
+
+function refreshScoreSidebarHandLevel(result: ScoreResult): void {
+  const handType = result.handResult.type as HandType;
+  const stats = selectHandStats(getRunState(), handType);
   roundActions.setSidebarOverlay({
     title: 'SCORING',
     handName: result.handResult.name,
     handLevel: stats.level,
   });
-  result.roundScoreBefore = roundScoreBefore;
 }

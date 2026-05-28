@@ -26,8 +26,7 @@ import {
   getScoredRetriggerCount,
   findDeathPrevention,
   processEquipmentOnDayEnd,
-  processEquipmentAfterHandScored,
-  processEquipmentOnHandPlayed,
+  processPreScoreHandUpgrades,
   processEquipmentOnReroll,
   processEquipmentOnPackOpened,
   processEquipmentOnBossDefeat,
@@ -479,7 +478,7 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
     const { player } = setupGame({ equipment: [inst] });
     const initialLevel = player.getHandStats(HandType.PAIR).level;
     for (let i = 0; i < 100; i++) {
-      processEquipmentAfterHandScored([inst], HandType.PAIR);
+      processPreScoreHandUpgrades([inst], HandType.PAIR);
     }
     // After 100 attempts at 1 in 4, very likely at least one upgrade
     expect(player.getHandStats(HandType.PAIR).level).toBeGreaterThan(initialLevel);
@@ -498,7 +497,7 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
       const inst = item('surveyors_transit');
       const { player } = setupGame({ equipment: [inst] });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      processEquipmentAfterHandScored([inst], HandType.PAIR);
+      processPreScoreHandUpgrades([inst], HandType.PAIR);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore);
     } finally {
       Math.random = original;
@@ -512,7 +511,7 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
       const inst = item('surveyors_transit');
       const { player } = setupGame({ equipment: [inst], profession: 'surveyor' });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      processEquipmentAfterHandScored([inst], HandType.PAIR);
+      processPreScoreHandUpgrades([inst], HandType.PAIR);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 1);
     } finally {
       Math.random = original;
@@ -526,8 +525,31 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
       const inst = item('surveyors_transit');
       const { player } = setupGame({ equipment: [inst], profession: 'surveyor' });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      processEquipmentAfterHandScored([inst], HandType.PAIR);
+      processPreScoreHandUpgrades([inst], HandType.PAIR);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('upgrade applies before scoring so the hand gains level bonus miles', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const transit = item('surveyors_transit');
+      const { result: without } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [],
+        handLevels: { [HandType.PAIR]: 1 },
+      });
+      const { result: withUpgrade } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [transit],
+        handLevels: { [HandType.PAIR]: 1 },
+      });
+      expect(withUpgrade.handUpgrades?.length).toBe(1);
+      expect(gte(withUpgrade.miles, without.miles)).toBe(true);
+      expect(withUpgrade.miles.gt(without.miles)).toBe(true);
     } finally {
       Math.random = original;
     }
@@ -1467,32 +1489,40 @@ describe('New utility equipment lifecycle effects', () => {
 // ─── STEW / SANDWICH: timed rounds decay per leg round ───
 
 describe('STEW', () => {
-  test('rolls upgrade chance on first hand of day 1 only', () => {
+  test('rolls upgrade chance on day 1 only, before scoring', () => {
     const original = Math.random;
     Math.random = () => 0;
     try {
       const stew = item('stew');
       const { game } = setupGame({ equipment: [stew] });
       game.startRound();
-      processEquipmentOnHandPlayed([stew], HandType.PAIR);
-      expect(stew.state.stewUpgradePending).toBe(1);
+      const day1Upgrades = processPreScoreHandUpgrades([stew], HandType.PAIR);
+      expect(day1Upgrades.length).toBe(1);
 
-      stew.state.stewUpgradePending = 0;
       roundActions.patch({ day: 2 });
-      processEquipmentOnHandPlayed([stew], HandType.PAIR);
-      expect(stew.state.stewUpgradePending).toBe(0);
+      const day2Upgrades = processPreScoreHandUpgrades([stew], HandType.PAIR);
+      expect(day2Upgrades.length).toBe(0);
     } finally {
       Math.random = original;
     }
   });
 
-  test('upgrades trail guide level when pending after score', () => {
-    const stew = itemWithState('stew', { stewUpgradePending: 1, roundsRemaining: 5 });
-    const { player } = setupGame({ equipment: [stew] });
-    const levelBefore = player.getHandStats(HandType.PAIR).level;
-    processEquipmentAfterHandScored([stew], HandType.PAIR);
-    expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 1);
-    expect(stew.state.stewUpgradePending).toBe(0);
+  test('upgrade applies to scored hand miles on day 1', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const { result, player } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('stew')],
+        currentDay: 1,
+        handLevels: { [HandType.PAIR]: 1 },
+      });
+      expect(result.handUpgrades?.length).toBe(1);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(2);
+      expect(result.miles.gt(D(20))).toBe(true);
+    } finally {
+      Math.random = original;
+    }
   });
 });
 

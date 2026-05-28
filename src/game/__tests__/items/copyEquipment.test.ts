@@ -9,7 +9,7 @@ import {
   getScoredRetriggerCount,
   processEquipmentOnRoundStart,
   getConfigModifiers,
-  processEquipmentAfterHandScored,
+  processPreScoreHandUpgrades,
 } from '../../EquipmentEffects';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
@@ -505,7 +505,7 @@ describe("Copy item HAND_UPGRADE_CHANCE (Surveyor's Transit)", () => {
         equipment: [item('mirror_lake'), item('surveyors_transit')],
       });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      const upgrades = processEquipmentAfterHandScored([item('mirror_lake'), item('surveyors_transit')], HandType.PAIR);
+      const upgrades = processPreScoreHandUpgrades([item('mirror_lake'), item('surveyors_transit')], HandType.PAIR);
       // Mirror Lake copy + Surveyor's Transit each roll independently
       expect(upgrades.length).toBe(2);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 2);
@@ -522,10 +522,7 @@ describe("Copy item HAND_UPGRADE_CHANCE (Surveyor's Transit)", () => {
         equipment: [item('surveyors_transit'), item('echo_chamber')],
       });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      const upgrades = processEquipmentAfterHandScored(
-        [item('surveyors_transit'), item('echo_chamber')],
-        HandType.PAIR,
-      );
+      const upgrades = processPreScoreHandUpgrades([item('surveyors_transit'), item('echo_chamber')], HandType.PAIR);
       // Echo Chamber copy + Surveyor's Transit each roll independently
       expect(upgrades.length).toBe(2);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 2);
@@ -542,7 +539,7 @@ describe("Copy item HAND_UPGRADE_CHANCE (Surveyor's Transit)", () => {
     for (let i = 0; i < runs; i++) {
       const { player } = setupGame({ equipment });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      const upgrades = processEquipmentAfterHandScored(equipment, HandType.PAIR);
+      const upgrades = processPreScoreHandUpgrades(equipment, HandType.PAIR);
       if (upgrades.length > 0) upgraded++;
       expect(player.getHandStats(HandType.PAIR).level).toBeGreaterThanOrEqual(levelBefore);
     }

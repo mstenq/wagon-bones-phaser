@@ -16,6 +16,7 @@ import type { ImmediateTagResult, TrailTagInstance } from '../../game/facade/met
 import { resolveTagDescription } from '../../data/trail_tags';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { buildVictoryGameOverData } from './GameOver';
+import { handleStandardConsumableResult } from './consumableResult';
 import { getRunState } from '../../game/store';
 import { canAfford } from '../../game/store/economy';
 import {
@@ -308,27 +309,11 @@ export class RoundSelectScene extends Scene {
   }
 
   private handleConsumableResult(result: UseConsumableResult): void {
-    if (!result.success && result.failReason) {
-      const bar = this.layout.consumableBar;
-      const text = this.add
-        .text(bar.x + bar.width / 2, bar.y, result.failReason, {
-          fontFamily: 'sans-serif',
-          fontSize: '24px',
-          color: '#fff',
-          stroke: '#000000',
-          strokeThickness: 3,
-        })
-        .setOrigin(0.5)
-        .setDepth(1000);
-      this.sound.play('sfx_cancel', { volume: 0.5 });
-      this.tweens.add({
-        targets: text,
-        y: text.y - 15,
-        alpha: 0,
-        duration: 2000,
-        ease: 'Power2',
-        onComplete: () => text.destroy(),
-      });
-    }
+    const bar = this.layout.consumableBar;
+    handleStandardConsumableResult(this, this.layout.sidebar, result, 'RoundSelect', {
+      x: bar.x + bar.width / 2,
+      y: bar.y,
+      sound: () => this.sound.play('sfx_cancel', { volume: 0.5 }),
+    });
   }
 }

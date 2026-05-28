@@ -20,6 +20,7 @@ import {
   processHeldInHand,
   processEquipmentOnHandPlayed,
   processEquipmentAfterHandScored,
+  processPreScoreHandUpgrades,
   processEquipmentOnReroll,
   processEquipmentOnDiceSpent,
   processEquipmentOnRoundStart,
@@ -486,7 +487,8 @@ export const roundActions = {
     }
 
     const tricksterDowngrade = applyBossTricksterDowngrade(handType);
-    const stats = getBossAdjustedHandStats(handType, selectHandStats(run, handType));
+    const preScoreHandUpgrades = processPreScoreHandUpgrades(scoringEquipment, handType);
+    const stats = getBossAdjustedHandStats(handType, selectHandStats(getRunState(), handType));
     recordBossHandPlayed(handType);
     applyBossOnScore(handType, selectedDice);
 
@@ -545,12 +547,17 @@ export const roundActions = {
     progressionActions.recordHandPlayed(handType);
     applyBossAfterScore();
 
-    const handUpgrades = processEquipmentAfterHandScored(scoringEquipment, handType);
+    const postScoreHandUpgrades = processEquipmentAfterHandScored(scoringEquipment, handType);
     replaceEquipmentList(equipment);
 
-    const allHandUpgrades = [...(tricksterDowngrade ? [tricksterDowngrade] : []), ...handUpgrades];
+    const allHandUpgrades = [
+      ...(tricksterDowngrade ? [tricksterDowngrade] : []),
+      ...preScoreHandUpgrades,
+      ...postScoreHandUpgrades,
+    ];
     if (allHandUpgrades.length > 0) {
       finalResult.handUpgrades = allHandUpgrades;
+      runActions.enqueuePlayback({ kind: 'hand-upgrades', upgrades: allHandUpgrades });
     }
 
     runActions.patch({

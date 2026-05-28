@@ -2356,6 +2356,11 @@ export class GameScene extends Scene {
     }
     gameFacade.round.syncRolledDiceFromFaces(rolledDice);
 
+    // Parity bosses (Ghost Town / Undertaker) key off face value — refresh overlays after bumps
+    for (const sprite of this.rollSprites) {
+      sprite.setDisabled(gameFacade.boss.isDiceScoringDisabled(sprite.dieData));
+    }
+
     // Update play area sprites if in SELECT phase
     for (const sprite of this.playAreaSprites) {
       if (!affectedIds.has(sprite.dieData.id)) continue;

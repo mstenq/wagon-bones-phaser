@@ -2,6 +2,9 @@
 
 import { getHandByType } from '../data/hands';
 import type { HandStats, HandType, HandUpgradeInfo } from './types';
+import { getRunState } from './store/runStore';
+import { selectHandStats } from './store/selectors/runSelectors';
+import { progressionActions } from './store/actions/progressionActions';
 
 /** Build animation payload for a hand level change (trail guide, Surveyor's Mark, etc.). */
 export function buildHandUpgradeInfo(
@@ -22,6 +25,20 @@ export function buildHandUpgradeInfo(
     oldBaseMult: handDef.baseMult + stats.multPerLevel * (oldLevel - 1),
     newBaseMult: handDef.baseMult + stats.multPerLevel * (newLevel - 1),
   };
+}
+
+/** Upgrade a hand's trail guide level and return animation metadata. */
+export function applyHandLevelUpgrade(handType: HandType, amount: number = 1): HandUpgradeInfo {
+  const run = getRunState();
+  const stats = selectHandStats(run, handType);
+  const oldLevel = stats.level;
+  progressionActions.upgradeHandLevel(handType, amount);
+  const newStats = selectHandStats(getRunState(), handType);
+  const info = buildHandUpgradeInfo(handType, oldLevel, newStats.level, newStats);
+  if (!info) {
+    throw new Error(`applyHandLevelUpgrade: unknown hand type ${handType}`);
+  }
+  return info;
 }
 
 /** Hand types tied for the highest timesPlayed count. Empty when nothing has been played. */

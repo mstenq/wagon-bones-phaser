@@ -36,6 +36,7 @@ import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { createLayout } from '../ui/SceneLayout';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
+import { handleStandardConsumableResult } from './consumableResult';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import { bindPlaybackRunner } from '../playback/PlaybackRunner';
@@ -1425,27 +1426,11 @@ export class BoosterPackScene extends Scene {
     this.syncDiceLineupFromRun();
 
     if (!result.success && result.failReason) {
+      // Keep pack-specific failure styling while sharing follow-up flow.
       this.showFloatingText(result.failReason);
       this.sound.play('sfx_cancel', { volume: 0.5 });
     }
 
-    if (result.diceSelection) {
-      this.scene.start('DiceSelection', {
-        config: result.diceSelection,
-        returnScene: 'BoosterPack',
-        returnSceneData: {},
-      });
-    }
-
-    // Play hand upgrade animation for trail guides / Spiritual Journey
-    const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
-    if (upgrades.length > 0) {
-      playHandUpgradeAnimation({
-        scene: this,
-        sidebar: this.sidebar,
-        upgrades,
-        onComplete: () => {},
-      });
-    }
+    handleStandardConsumableResult(this, this.sidebar, result, 'BoosterPack');
   }
 }

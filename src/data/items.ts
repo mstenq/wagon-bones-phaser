@@ -1393,7 +1393,7 @@ const items: ItemDef[] = [
     effectParams: { chance: [1, 4], professionOverrides: { surveyor: { chance: [1, 2] } } },
     display: (_round, player) => {
       const p = { chance: [1, 4], professionOverrides: { surveyor: { chance: [1, 2] } } };
-      const hint = [[oddsDisplay(resolveChance(p, player.professionId), player), condition('upgrade hand')]];
+      const hint = [[oddsDisplay(resolveChance(p, player.professionId), player)], [condition('upgrade hand', 'sm')]];
       return {
         hint,
         tooltip: [
@@ -2245,7 +2245,7 @@ const items: ItemDef[] = [
       }
       const hint =
         idx >= 0 && target !== 'Nothing to copy' && target !== 'Incompatible'
-          ? [[text('Copying')], [active(target)]]
+          ? [[text('Copying')], [active(target, 'xs')]]
           : target === 'Incompatible'
             ? [[inactive('Incompatible')]]
             : [[inactive('Nothing to copy')]];
@@ -2867,7 +2867,7 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'STEW',
     effectParams: { chance: [1, 2], rounds: 5 },
-    initialState: { roundsRemaining: 5, stewUpgradePending: 0 },
+    initialState: { roundsRemaining: 5 },
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'stew');
       const rounds = equip?.state.roundsRemaining ?? 5;
@@ -2998,7 +2998,7 @@ const items: ItemDef[] = [
     effectType: 'POTLUCK',
     effectParams: {},
     display: (_round, _player) => ({
-      hint: [[active('Fill with Second Helpings')]],
+      hint: [[active('Second Helpings', 'sm')]],
       tooltip: [[text('After boss defeat, fill free consumable slots with '), condition('Second Helpings')]],
     }),
   },

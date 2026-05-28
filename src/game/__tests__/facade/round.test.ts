@@ -1,7 +1,7 @@
 import '../setup';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { gameFacade } from '../../facade';
-import { setupGame, diceWithValue, seedTestRoll, resetTestRun, die } from '../testHelpers';
+import { setupGame, diceWithValue, seedTestRoll, resetTestRun, die, item } from '../testHelpers';
 import { setupActions } from '../../store/actions';
 import { getRunState, runStore } from '../../store/runStore';
 import { getRoundState, roundStore } from '../../store/roundStore';
@@ -52,6 +52,28 @@ describe('gameFacade.round', () => {
     expect(getRoundState()!.phase).toBe('DAY_END');
     expect(getRoundState()!.totalMiles.gt(0)).toBe(true);
     expect(runStore.getState().playbackQueue).toEqual([{ kind: 'score', result: result! }]);
+  });
+
+  test('submitScore enqueues hand-upgrades before score when a proc upgrades the hand', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      setupGame({ dice: diceWithValue(5, 8), equipment: [item('surveyors_transit')] });
+      gameFacade.round.beginRoundSession();
+
+      const handIds = selectHandDice()
+        .slice(0, 2)
+        .map((d) => d.id);
+      gameFacade.round.selectDiceForRoll(handIds);
+
+      const result = gameFacade.round.submitScore(handIds);
+      expect(result?.handUpgrades?.length).toBe(1);
+      const queue = runStore.getState().playbackQueue;
+      expect(queue[0]).toMatchObject({ kind: 'hand-upgrades', upgrades: result!.handUpgrades });
+      expect(queue[1]).toMatchObject({ kind: 'score', result });
+    } finally {
+      Math.random = original;
+    }
   });
 
   test('submitScore returns null when selection invalid', () => {

@@ -741,18 +741,18 @@ export class ItemCard extends GameObjects.Container {
     switch (aura.id) {
       case 'fire':
         return [
-          { text: '+10', style: 'mult' },
-          { text: 'Fire', style: 'aura_fire' },
+          { text: '+10', style: 'mult', size: 'xs' },
+          { text: 'Fire', style: 'aura_fire', size: 'xs' },
         ];
       case 'icy':
         return [
-          { text: '+50', style: 'miles' },
-          { text: 'Icy', style: 'aura_icy' },
+          { text: '+50', style: 'miles', size: 'xs' },
+          { text: 'Icy', style: 'aura_icy', size: 'xs' },
         ];
       case 'holy':
         return [
-          { text: 'x1.5', style: 'xmult' },
-          { text: 'Holy', style: 'aura_holy' },
+          { text: 'x1.5', style: 'xmult', size: 'xs' },
+          { text: 'Holy', style: 'aura_holy', size: 'xs' },
         ];
       default:
         return null;
