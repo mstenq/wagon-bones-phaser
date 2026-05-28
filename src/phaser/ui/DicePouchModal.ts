@@ -6,12 +6,16 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { TEXT_COLORS, FONTS, UI, DICE } from '../../game/Constants';
-import { getRunState } from '../../game/store/runStore';
+import { getRunState, runStore } from '../../game/store/runStore';
 import { selectAvailableDice, selectSpentDice } from '../../game/store/selectors/runSelectors';
 import { Die } from '../../game/types';
 import { DiceSprite } from './DiceSprite';
 import { Button } from './Button';
 import { getDiceGroupDisplayLabel, getDiceGroupKey } from './diceGrouping';
+import { isDevMode } from '../../game/DevMode';
+import diceAuras from '../../data/dice_auras';
+import diceEnhancements from '../../data/dice_enhancements';
+import pipEnhancements from '../../data/pip_enhancements';
 
 type FilterMode = 'all' | 'available' | 'spent';
 
@@ -213,6 +217,23 @@ export class DicePouchModal extends GameObjects.Container {
         })
         .setOrigin(0.5);
       this.diceContainer.add(countLabel);
+
+      if (isDevMode()) {
+        const wrench = this.scene.add
+          .text(x, y - DICE.SIZE / 2 - 14, '🔧', {
+            fontSize: '14px',
+          })
+          .setOrigin(0.5)
+          .setDepth(550)
+          .setInteractive({ useHandCursor: true });
+        wrench.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          pointer.event.stopPropagation();
+          this.devEditDiceGroup(group);
+        });
+        wrench.on('pointerover', () => wrench.setScale(1.2));
+        wrench.on('pointerout', () => wrench.setScale(1));
+        this.diceContainer.add(wrench);
+      }
     }
 
     // Summary text
@@ -230,5 +251,71 @@ export class DicePouchModal extends GameObjects.Container {
       })
       .setOrigin(0.5);
     this.diceContainer.add(countText);
+  }
+
+  private devEditDiceGroup(group: DiceGroup): void {
+    const targetDie = group.dice[0];
+    if (!targetDie) return;
+
+    const auraIds = diceAuras.map((a) => a.id);
+    const enhancementIds = diceEnhancements.map((e) => e.id);
+    const stickerIds = pipEnhancements.map((s) => s.id);
+    const current = `aura=${targetDie.aura ?? 'none'}, enhancement=${targetDie.enhancement ?? 'none'}, sticker=${targetDie.sticker ?? 'none'}`;
+    const choice = window.prompt(
+      [
+        `Edit one die from this stack (${group.dice.length} dice)`,
+        `Current: ${current}`,
+        'Enter one of:',
+        `- aura <id|none> (${auraIds.join(', ')})`,
+        `- enhancement <id|none> (${enhancementIds.join(', ')})`,
+        `- sticker <id|none> (${stickerIds.join(', ')})`,
+      ].join('\n'),
+      targetDie.aura ?? targetDie.enhancement ?? targetDie.sticker ?? 'holy',
+    );
+    if (choice === null) return;
+
+    const normalized = choice.trim().toLowerCase().replace(/[:=]+/g, ' ');
+    const parts = normalized.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) {
+      window.alert('Use format: "aura holy", "enhancement steel", or "sticker red_bullet".');
+      return;
+    }
+
+    const field = parts[0];
+    const value = parts.slice(1).join('_');
+    const isNone = value === 'none' || value === 'null' || value === 'clear';
+    const state = getRunState();
+    let changed = false;
+    const nextDice = state.dice.map((die) => {
+      if (die.id !== targetDie.id) return die;
+      changed = true;
+      if (field === 'aura') {
+        if (!isNone && !auraIds.includes(value)) {
+          window.alert(`Unknown aura: ${value}`);
+          return die;
+        }
+        return { ...die, aura: isNone ? null : (value as Die['aura']) };
+      }
+      if (field === 'enhancement') {
+        if (!isNone && !enhancementIds.includes(value)) {
+          window.alert(`Unknown enhancement: ${value}`);
+          return die;
+        }
+        return { ...die, enhancement: isNone ? null : (value as Die['enhancement']) };
+      }
+      if (field === 'sticker') {
+        if (!isNone && !stickerIds.includes(value)) {
+          window.alert(`Unknown sticker: ${value}`);
+          return die;
+        }
+        return { ...die, sticker: isNone ? null : (value as Die['sticker']) };
+      }
+      window.alert('Unknown field. Use aura, enhancement, or sticker.');
+      return die;
+    });
+
+    if (!changed) return;
+    runStore.setState({ dice: nextDice });
+    this.renderDice();
   }
 }

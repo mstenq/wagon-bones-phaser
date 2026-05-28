@@ -34,6 +34,15 @@ function setStickerOrbitPosition(image: GameObjects.Image, angleRad: number): vo
   image.setPosition(Math.cos(angleRad) * r, Math.sin(angleRad) * r);
 }
 
+function setStickerOrbitOrientation(image: GameObjects.Image, stickerId: Die['sticker'], angleRad: number): void {
+  if (stickerId === 'red_bullet') {
+    // Keep the bullet tangent to the orbit path so it appears to "fly" around the die.
+    image.setRotation(angleRad + Math.PI / 2 + Phaser.Math.DegToRad(45));
+    return;
+  }
+  image.setRotation(0);
+}
+
 export type DiceScorePresentation = 'none' | 'filler';
 
 export class DiceSprite extends GameObjects.Container {
@@ -225,6 +234,7 @@ export class DiceSprite extends GameObjects.Container {
     const phase = this.stickerOrbitPhaseRad;
     this.stickerOrbitAngle.rad = phase;
     setStickerOrbitPosition(this.stickerImage, phase);
+    setStickerOrbitOrientation(this.stickerImage, this._dieData.sticker, phase);
 
     const endRad = phase + Math.PI * 2;
     this.stickerOrbitTween = this.scene.tweens.add({
@@ -236,6 +246,7 @@ export class DiceSprite extends GameObjects.Container {
       onUpdate: () => {
         if (this.stickerImage) {
           setStickerOrbitPosition(this.stickerImage, this.stickerOrbitAngle.rad);
+          setStickerOrbitOrientation(this.stickerImage, this._dieData.sticker, this.stickerOrbitAngle.rad);
         }
       },
     });
@@ -308,8 +319,10 @@ export class DiceSprite extends GameObjects.Container {
     // Phaser 4 glow filter on the die image
     const glowResult = applyAuraGlow(this.scene, this.dieImage as any, aura, {
       strength: 6,
-      pulseMin: 0.4,
-      pulseMax: 1,
+      pulseMin: 0.65,
+      pulseMax: 1.1,
+      quality: 5,
+      distance: 80,
     });
     this.auraTweens.push(...glowResult.tweens);
     this.auraGlowCleanup = glowResult.destroy;

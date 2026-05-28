@@ -8,10 +8,10 @@ import { Scene, GameObjects } from 'phaser';
 // ─── Shared Aura Color Palette ───
 export const AURA_COLORS: Record<string, { primary: number; secondary: number; glow: number; tints: number[] }> = {
   holy: {
-    primary: 0xffd700,
-    secondary: 0xfffacd,
-    glow: 0xffd700,
-    tints: [0xffd700, 0xfffacd, 0xfff8b0, 0xffec80],
+    primary: 0xff66cc,
+    secondary: 0x66ddff,
+    glow: 0xff66cc,
+    tints: [0xff3b30, 0xff9500, 0xffcc00, 0x34c759, 0x0a84ff, 0x5856d6, 0xff2d55],
   },
   fire: {
     primary: 0xff4500,
@@ -88,7 +88,14 @@ export function applyAuraGlow(
   scene: Scene,
   target: GameObjects.GameObject & { enableFilters?: () => void; filters?: any },
   auraId: string,
-  options?: { strength?: number; pulseDuration?: number; pulseMin?: number; pulseMax?: number },
+  options?: {
+    strength?: number;
+    pulseDuration?: number;
+    pulseMin?: number;
+    pulseMax?: number;
+    quality?: number;
+    distance?: number;
+  },
 ): { tweens: Phaser.Tweens.Tween[]; destroy: () => void } {
   const colors = AURA_COLORS[auraId];
   if (!colors || !target.enableFilters) return { tweens: [], destroy: () => {} };
@@ -97,9 +104,11 @@ export function applyAuraGlow(
   const pulseDuration = options?.pulseDuration ?? (auraId === 'fire' ? 400 : auraId === 'icy' ? 2500 : 1500);
   const pulseMin = options?.pulseMin ?? 0.5;
   const pulseMax = options?.pulseMax ?? 1;
+  const quality = options?.quality ?? 4;
+  const distance = options?.distance ?? 10;
 
   target.enableFilters();
-  const glow = target.filters.internal.addGlow(colors.glow, strength, 0, 1, false, 4, 10);
+  const glow = target.filters.internal.addGlow(colors.glow, strength, 0, 1, false, quality, distance);
 
   const tweens: Phaser.Tweens.Tween[] = [];
   tweens.push(
@@ -167,18 +176,18 @@ function createFireParticles(
     scene.add.particles(0, 0, 'aura_soft', {
       speed: { min: 20, max: 60 },
       angle: { min: -110, max: -70 },
-      scale: { start: 0.7, end: 0 },
-      alpha: { start: 0.9, end: 0 },
+      scale: { start: 0.62, end: 0 },
+      alpha: { start: 0.78, end: 0 },
       lifespan: { min: 500, max: 900 },
-      frequency: 25,
-      quantity: 2,
+      frequency: 32,
+      quantity: 1,
       tint: colors.tints,
       blendMode: 'ADD',
       emitZone: {
         type: 'random',
         source: new Phaser.Geom.Rectangle(-hw + 4, hh - 6, w - 8, 6),
       } as any,
-      maxAliveParticles: 30,
+      maxAliveParticles: 20,
     }),
   );
 
@@ -188,9 +197,9 @@ function createFireParticles(
       speed: { min: 40, max: 100 },
       angle: { min: -130, max: -50 },
       scale: { start: 0.4, end: 0 },
-      alpha: { start: 1, end: 0 },
+      alpha: { start: 0.85, end: 0 },
       lifespan: { min: 400, max: 700 },
-      frequency: 50,
+      frequency: 65,
       quantity: 1,
       tint: [0xffdd00, 0xff8800, 0xff4400],
       blendMode: 'ADD',
@@ -198,7 +207,7 @@ function createFireParticles(
         type: 'random',
         source: new Phaser.Geom.Rectangle(-hw - 2, hh - 12, w + 4, 12),
       } as any,
-      maxAliveParticles: 12,
+      maxAliveParticles: 8,
     }),
   );
 
@@ -208,9 +217,9 @@ function createFireParticles(
       speed: { min: 10, max: 30 },
       angle: { min: -100, max: -80 },
       scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.5, end: 0 },
+      alpha: { start: 0.4, end: 0 },
       lifespan: { min: 600, max: 1000 },
-      frequency: 80,
+      frequency: 95,
       quantity: 1,
       tint: [0xff6600, 0xff4400],
       blendMode: 'ADD',
@@ -219,7 +228,7 @@ function createFireParticles(
         type: 'random',
         source: new Phaser.Geom.Rectangle(-hw - 6, -hh, 6, h),
       } as any,
-      maxAliveParticles: 6,
+      maxAliveParticles: 4,
     }),
   );
 
@@ -229,9 +238,9 @@ function createFireParticles(
       speed: { min: 10, max: 30 },
       angle: { min: -100, max: -80 },
       scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.5, end: 0 },
+      alpha: { start: 0.4, end: 0 },
       lifespan: { min: 600, max: 1000 },
-      frequency: 80,
+      frequency: 95,
       quantity: 1,
       tint: [0xff6600, 0xff4400],
       blendMode: 'ADD',
@@ -240,7 +249,7 @@ function createFireParticles(
         type: 'random',
         source: new Phaser.Geom.Rectangle(hw, -hh, 6, h),
       } as any,
-      maxAliveParticles: 6,
+      maxAliveParticles: 4,
     }),
   );
 
@@ -332,55 +341,94 @@ function createHolyParticles(
   const w = hw * 2;
   const h = hh * 2;
 
-  // Rising golden sparkles — graceful upward drift
+  // Sacred pulse ring radiating outward from center (main holy signature)
   emitters.push(
     scene.add.particles(0, 0, 'aura_soft', {
-      speed: { min: 12, max: 35 },
-      angle: { min: -100, max: -80 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.9, end: 0 },
-      lifespan: { min: 900, max: 1600 },
-      frequency: 40,
+      speed: { min: 10, max: 24 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.14, end: 1.2 },
+      alpha: { start: 0.5, end: 0 },
+      lifespan: { min: 700, max: 1000 },
+      frequency: 210,
+      quantity: 3,
+      tint: [0xffffff, colors.primary, colors.secondary],
+      blendMode: 'ADD',
+      emitZone: {
+        type: 'edge',
+        source: new Phaser.Geom.Circle(0, 0, Math.max(6, Math.floor(Math.min(hw, hh) * 0.35))),
+        quantity: 14,
+      } as any,
+      maxAliveParticles: 28,
+    }),
+  );
+
+  // Very light center shimmer between pulses (kept centered, not above the die)
+  emitters.push(
+    scene.add.particles(0, 0, 'aura_soft', {
+      speed: { min: 1, max: 4 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.28, end: 0 },
+      alpha: { start: 0.16, end: 0 },
+      lifespan: { min: 900, max: 1400 },
+      frequency: 180,
       quantity: 1,
-      tint: colors.tints,
+      tint: [0xffffff, colors.secondary],
       blendMode: 'ADD',
       emitZone: {
         type: 'random',
-        source: new Phaser.Geom.Rectangle(-hw - 4, -hh, w + 8, h),
+        source: new Phaser.Geom.Rectangle(-hw * 0.4, -hh * 0.4, w * 0.8, h * 0.8),
       } as any,
-      maxAliveParticles: 20,
-    }),
-  );
-
-  // Halo ring above the die — soft pulsing light
-  emitters.push(
-    scene.add.particles(0, -hh - 6, 'aura_soft', {
-      speed: { min: 2, max: 8 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.6, end: 0 },
-      alpha: { start: 0.5, end: 0 },
-      lifespan: { min: 700, max: 1200 },
-      frequency: 80,
-      quantity: 1,
-      tint: 0xfffacd,
-      blendMode: 'ADD',
       maxAliveParticles: 8,
     }),
   );
 
-  // Occasional bright divine flash burst
+  // Subtle prism refraction sweep that drifts left-to-right across the die
+  const prismSweep = scene.add.particles(-hw - 12, 0, 'aura_streak', {
+    speedX: { min: 4, max: 10 },
+    speedY: { min: -2, max: 2 },
+    scale: { start: 0.42, end: 0 },
+    alpha: { start: 0.13, end: 0 },
+    lifespan: { min: 550, max: 850 },
+    frequency: 120,
+    quantity: 1,
+    tint: [0xff7adf, 0xff66cc, 0xffffff],
+    blendMode: 'ADD',
+    rotate: { min: -12, max: 12 },
+    emitZone: {
+      type: 'random',
+      source: new Phaser.Geom.Rectangle(0, -hh - 3, 4, h + 6),
+    } as any,
+    maxAliveParticles: 6,
+  });
+  emitters.push(prismSweep);
+  tweens.push(
+    scene.tweens.add({
+      targets: prismSweep,
+      x: hw + 12,
+      duration: 2500,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    }),
+  );
+
+  // Occasional tiny prism sparkle so sweep has a highlight peak
   emitters.push(
     scene.add.particles(0, 0, 'aura_spark', {
-      speed: { min: 30, max: 80 },
+      speed: { min: 18, max: 50 },
       angle: { min: 0, max: 360 },
-      scale: { start: 0.4, end: 0 },
-      alpha: { start: 1, end: 0 },
-      lifespan: { min: 200, max: 400 },
-      frequency: 1200,
-      quantity: 4,
-      tint: [0xffd700, 0xfffacd],
+      scale: { start: 0.32, end: 0 },
+      alpha: { start: 0.65, end: 0 },
+      lifespan: { min: 240, max: 420 },
+      frequency: 1250,
+      quantity: 2,
+      tint: [0xffffff, colors.primary, colors.secondary],
       blendMode: 'ADD',
-      maxAliveParticles: 8,
+      emitZone: {
+        type: 'random',
+        source: new Phaser.Geom.Rectangle(-hw, -hh, w, h),
+      } as any,
+      maxAliveParticles: 4,
     }),
   );
 
