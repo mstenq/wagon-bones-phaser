@@ -61,10 +61,7 @@ export function initBossRoundState(): void {
       equipment.map((_, i) => i),
     );
     // Ensure Land Slide always actually changes order when 2+ cards exist.
-    if (
-      shuffledIndices.length > 1 &&
-      shuffledIndices.every((value, idx) => value === idx)
-    ) {
+    if (shuffledIndices.length > 1 && shuffledIndices.every((value, idx) => value === idx)) {
       [shuffledIndices[0], shuffledIndices[1]] = [shuffledIndices[1], shuffledIndices[0]];
     }
     const shuffledEquipment = shuffledIndices
@@ -214,9 +211,9 @@ function getBossHandTypeWarning(handType: HandType): string | null {
   }
 
   if (boss.effectType === 'STRAIGHTS_ONLY') {
-    const straightTypes: HandType[] = [HandType.FOUR_STRAIGHT, HandType.FIVE_STRAIGHT];
-    if (!straightTypes.includes(handType)) {
-      return 'Only Straights can score this round.';
+    const allowedTypes: HandType[] = [HandType.FOUR_STRAIGHT, HandType.FIVE_STRAIGHT, HandType.HIGH_VALUE];
+    if (!allowedTypes.includes(handType)) {
+      return 'Only Straights or High Value can score this round.';
     }
   }
 

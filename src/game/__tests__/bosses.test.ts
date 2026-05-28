@@ -167,7 +167,7 @@ describe('STRAIGHTS_ONLY: The River', () => {
     const dice = diceFromValues([6, 6, 4, 3, 2]);
     const preview = previewBossScoreSelection(dice);
     expect(preview.handType).toBe(HandType.PAIR);
-    expect(preview.warning).toBe('Only Straights can score this round.');
+    expect(preview.warning).toBe('Only Straights or High Value can score this round.');
     expect(isBossScoreForfeit(preview)).toBe(true);
   });
 
@@ -176,6 +176,15 @@ describe('STRAIGHTS_ONLY: The River', () => {
     const dice = diceFromValues([1, 2, 3, 4, 5]);
     const preview = previewBossScoreSelection(dice);
     expect(preview.handType).toBe(HandType.FIVE_STRAIGHT);
+    expect(preview.warning).toBeNull();
+    expect(isBossScoreForfeit(preview)).toBe(false);
+  });
+
+  test('high value preview has no warning', () => {
+    setupGame({ bossId: 'the_river' });
+    const dice = diceFromValues([12, 9, 7, 5, 3]);
+    const preview = previewBossScoreSelection(dice);
+    expect(preview.handType).toBe(HandType.HIGH_VALUE);
     expect(preview.warning).toBeNull();
     expect(isBossScoreForfeit(preview)).toBe(false);
   });
@@ -197,6 +206,15 @@ describe('STRAIGHTS_ONLY: The River', () => {
       scoredDice: diceFromValues([1, 2, 3, 4, 5]),
     });
     expect(result.handResult.type).toBe(HandType.FIVE_STRAIGHT);
+    expect(gt(result.miles, 0)).toBe(true);
+  });
+
+  test('high value scores normally', () => {
+    const { result } = calculateTestScore({
+      bossId: 'the_river',
+      scoredDice: diceFromValues([12, 9, 7, 5, 3]),
+    });
+    expect(result.handResult.type).toBe(HandType.HIGH_VALUE);
     expect(gt(result.miles, 0)).toBe(true);
   });
 });

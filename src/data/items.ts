@@ -54,6 +54,7 @@ import { resolveEffectParam, resolveChance, savingsAccountEligibleBalance } from
 import {
   unlockAnyEnhanced,
   unlockByEnhancement,
+  unlockByAnyEnhancement,
   unlockDynamite,
   unlockNitro,
   unlockTwoEnhancedTypes,
@@ -2862,7 +2863,7 @@ const items: ItemDef[] = [
   {
     id: 'stew',
     name: 'Stew',
-    cardTemplate: 'white-text',
+    cardTemplate: 'black-text',
     cost: 6,
     rarity: 'common',
     effectType: 'STEW',
@@ -3123,6 +3124,7 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     effectType: 'ALCHEMY_KIT',
+    unlockCondition: unlockByAnyEnhancement('gold', 'steel'),
     effectParams: {},
     display: (_round, _player) => ({
       hint: [[active('Gold <-> Steel')]],

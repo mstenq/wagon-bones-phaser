@@ -438,5 +438,6 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'COPY_RIGHT', // Mirror Lake (prevent self-reference)
   'COPY_LEFTMOST', // Echo Chamber (prevent self-reference)
   'TRAIL_BACKPACK', // Trail Backpack,
-  'GAMBLERS_DICE_CUP', // Gambler's Dice Cup
+  'GAMBLERS_DICE_CUP', // Gambler's Dice Cup,
+  'ALCHEMY_KIT', // Alchemy Kit
 ]);

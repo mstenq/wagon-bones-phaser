@@ -109,7 +109,7 @@ const bosses: BossDef[] = [
   {
     id: 'the_river',
     name: 'The River',
-    description: 'Only straights count when scoring',
+    description: 'Only straights or high value count when scoring',
     effectType: 'STRAIGHTS_ONLY',
     effectParams: {},
     minimumLeg: 1,
