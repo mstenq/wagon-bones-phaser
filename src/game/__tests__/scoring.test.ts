@@ -246,6 +246,33 @@ describe('item auras', () => {
     expect(result.mult).toBeMult(15);
   });
 
+  test('fire aura anim plays before later-slot additive (bar order)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 2),
+      equipment: [
+        itemWithAura('antique_revolver', 'fire'),
+        itemWithState('old_calendar', { mult: 3, miles: 8 }),
+      ],
+    });
+    const fireIdx = result.animEvents.findIndex(
+      (e) =>
+        e.target.kind === 'equip' &&
+        e.target.equipIndex === 0 &&
+        e.popupType === 'mult' &&
+        e.value === 10,
+    );
+    const calendarMultIdx = result.animEvents.findIndex(
+      (e) =>
+        e.target.kind === 'equip' &&
+        e.target.equipIndex === 1 &&
+        e.popupType === 'mult' &&
+        e.value === 3,
+    );
+    expect(fireIdx).toBeGreaterThanOrEqual(0);
+    expect(calendarMultIdx).toBeGreaterThanOrEqual(0);
+    expect(fireIdx).toBeLessThan(calendarMultIdx);
+  });
+
   test('holy aura on equipment applies x1.5', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(4, 2),

@@ -17,7 +17,7 @@ import type { Die } from '../types';
 import { consumableActions, diceActions } from '../store';
 import { replaceEquipmentList, resolveEquipmentList } from '../store/resolve';
 import { getRunState, runActions } from '../store/runStore';
-import { enqueueConsumablePlayback } from '../store/uiEffectHelpers';
+import { enqueueConsumablePlayback, enqueueHandUpgrades } from '../store/uiEffectHelpers';
 import { gameConsumable } from './consumable';
 import type { ConsumableInstance } from './consumable';
 
@@ -92,7 +92,9 @@ export const gamePack = {
   },
 
   applyInstantEffect(effect: NonNullable<PackItem['instantEffect']>): ReturnType<typeof applyRunInstantEffect> {
-    return applyRunInstantEffect(effect);
+    const result = applyRunInstantEffect(effect);
+    enqueueHandUpgrades(result.handUpgrades);
+    return result;
   },
 
   useFromPouch(consumed: ConsumableInstance, context: UseConsumableContext = {}): UseConsumableResult {

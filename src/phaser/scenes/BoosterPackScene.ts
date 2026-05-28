@@ -19,7 +19,6 @@ import { getRunState } from '../../game/store';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
 import { selectEquipmentSlotsFree } from '../../game/store/selectors/runSelectors';
-import { applyConsumableAnimEvents } from '../animations/ConsumableAnimPlayback';
 import {
   getDiceSelectionMaxPicks,
   getDiceSelectionMinPicks,
@@ -35,11 +34,11 @@ import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { createLayout } from '../ui/SceneLayout';
-import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
+import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
+import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
 import { handleStandardConsumableResult } from './consumableResult';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
-import { bindPlaybackRunner } from '../playback/PlaybackRunner';
 import type { BoosterPackSceneState } from '../../game/store/types';
 import { rngShuffle } from '../../game/RunRng';
 
@@ -84,6 +83,7 @@ export class BoosterPackScene extends Scene {
   private sidebar: Sidebar;
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
+  private playbackRunner: PlaybackRunnerHandle | null = null;
 
   // Layout helpers
   private contentCX: number = 0;
@@ -208,17 +208,11 @@ export class BoosterPackScene extends Scene {
     this.equipBar.on('equipment-changed', () => this.updateEquipHints());
     this.consumableBar.on('consumable-changed', () => this.updateEquipHints());
 
-    bindPlaybackRunner(this, {
+    this.playbackRunner = bindScenePlaybackRunner(this, {
       scene: this,
       equipBar: this.equipBar,
       consumableBar: this.consumableBar,
       sidebar: this.sidebar,
-      getDiceSprites: () => [],
-      destroyDice: async () => {},
-      scoreLayoutGate: null,
-      setAnimating: () => {},
-      onDiceAdded: () => {},
-      onScoreComplete: () => {},
     });
 
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
@@ -1197,6 +1191,8 @@ export class BoosterPackScene extends Scene {
     let equipmentPopInCount = 0;
     const equipmentCountBefore = resolveEquipmentList(run).length;
 
+    let queuedPlayback = false;
+
     // If card needs dice selection, validate
     if (this.cardNeedsDiceSelection(item)) {
       const config = item.diceSelection!;
@@ -1221,17 +1217,9 @@ export class BoosterPackScene extends Scene {
       if (tg) {
         const def = createTrailGuideConsumableDef(tg);
         const result = gameFacade.pack.useConsumableDirectly(def);
+        queuedPlayback = true;
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
-        }
-        const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
-        if (upgrades.length > 0) {
-          playHandUpgradeAnimation({
-            scene: this,
-            sidebar: this.sidebar,
-            upgrades,
-            onComplete: () => {},
-          });
         }
       }
     } else if (item.category === 'supply' && item.supplyCardId) {
@@ -1239,6 +1227,7 @@ export class BoosterPackScene extends Scene {
       if (cardData) {
         const def = createSupplyConsumableDef(cardData);
         const result = gameFacade.pack.useConsumableDirectly(def);
+        queuedPlayback = true;
         if (!result.success && result.failReason) {
           this.showFloatingText(result.failReason);
         }
@@ -1250,20 +1239,19 @@ export class BoosterPackScene extends Scene {
         consumableResult = gameFacade.pack.useConsumableDirectly(def, {
           visibleDiceIds: this.lineupDice.map((d) => d.id),
         });
+        queuedPlayback = true;
         if (!consumableResult.success && consumableResult.failReason) {
           this.showFloatingText(consumableResult.failReason);
         }
       }
     } else if (item.instantEffect) {
       const instantResult = gameFacade.pack.applyInstantEffect(item.instantEffect);
-      if (instantResult.handUpgrades?.length) {
-        playHandUpgradeAnimation({
-          scene: this,
-          sidebar: this.sidebar,
-          upgrades: instantResult.handUpgrades,
-          onComplete: () => {},
-        });
-      }
+      queuedPlayback = Boolean(
+        instantResult.handUpgrades?.length ||
+        instantResult.handUpgrade ||
+        (instantResult.consumableAnimEvents?.length ?? 0) > 0 ||
+        (instantResult.equipmentCreatedCount ?? 0) > 0,
+      );
       equipmentPopInCount = Math.max(
         equipmentPopInCount,
         instantResult.equipmentCreatedCount ?? resolveEquipmentList().length - equipmentCountBefore,
@@ -1272,11 +1260,15 @@ export class BoosterPackScene extends Scene {
 
     const finishUse = () => this.finishUseCard(sprite, equipmentPopInCount);
 
-    const animEvents = consumableResult?.consumableAnimEvents;
-    if (animEvents && animEvents.length > 0) {
-      void applyConsumableAnimEvents(this, this.equipBar, animEvents, {
-        destroyDice: async () => {},
-      }).then(finishUse);
+    if (queuedPlayback) {
+      void this.playbackRunner
+        ?.drainMatching(
+          (cmd) =>
+            cmd.kind === 'consumable-playback' ||
+            cmd.kind === 'hand-upgrades' ||
+            cmd.kind === 'equipment-created-count',
+        )
+        .then(finishUse);
       return;
     }
 

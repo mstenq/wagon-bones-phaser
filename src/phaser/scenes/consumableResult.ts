@@ -1,7 +1,6 @@
 import type { Scene } from 'phaser';
 import type { Sidebar } from '../ui/Sidebar';
 import type { UseConsumableResult } from '../../game/facade/consumable';
-import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 
 type FailurePopupConfig = {
   x: number;
@@ -9,9 +8,10 @@ type FailurePopupConfig = {
   sound?: () => void;
 };
 
+/** Route consumable use results (dice selection redirect only — animations via playback queue). */
 export function handleStandardConsumableResult(
   scene: Scene,
-  sidebar: Sidebar,
+  _sidebar: Sidebar,
   result: UseConsumableResult,
   returnScene: string,
   failurePopup?: FailurePopupConfig,
@@ -25,16 +25,6 @@ export function handleStandardConsumableResult(
       config: result.diceSelection,
       returnScene,
       returnSceneData: {},
-    });
-  }
-
-  const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
-  if (upgrades.length > 0) {
-    playHandUpgradeAnimation({
-      scene,
-      sidebar,
-      upgrades,
-      onComplete: () => {},
     });
   }
 }

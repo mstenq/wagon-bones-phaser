@@ -204,8 +204,10 @@ Equipment cards show dynamic colored hints via `display(game, player)`. Segment 
 ### UI integration (post-refactor)
 
 - Phaser scenes call **`gameFacade`** for orchestration (`import { gameFacade } from '../game/facade'`).
-- **Animations:** logic enqueues `PlaybackCommand` via `enqueuePlayback` / `runActions.enqueuePlayback`; `PlaybackRunner` in `src/phaser/playback/` plays them.
-- **Consumables:** scenes using `ConsumableBar` should route `UseConsumableResult` through `src/phaser/scenes/consumableResult.ts` (`handleStandardConsumableResult`) so dice-selection routing and hand-upgrade animations stay in sync across scenes.
+- **Animations:** logic enqueues `PlaybackCommand` via `enqueuePlayback` / helpers in `src/game/store/playbackEnqueue.ts` (`enqueueHandUpgrades`, `enqueueConsumablePlayback`, …). `PlaybackRunner` in `src/phaser/playback/` drains the FIFO queue in order — **scenes must not call animation primitives directly for gameplay outcomes**.
+- **Scene binding:** any scene that can enqueue playback (Game, Shop, BoosterPack, Payout, TrailEvent, RoundSelect) binds `bindScenePlaybackRunner()` (or `bindScenePlaybackRunner` helper) in `create()`.
+- **Manual drains:** `day-end-destructions`, `score-events` (`round-end-held`), and scene-specific continuations use `playbackRunner.drainMatching(...)` after enqueueing — all drains serialize through one chain.
+- **Consumables:** scenes using `ConsumableBar` route `UseConsumableResult` through `handleStandardConsumableResult` for dice-selection redirects only; hand upgrades and consumable bar animations enqueue via `enqueueConsumablePlayback`.
 - **Round state:** reads via `selectHandDice`, `selectRolledDice`, etc.; writes via `roundActions`, `roundWrites`, or `gameFacade.round`.
 
 ### Scene Lifecycle

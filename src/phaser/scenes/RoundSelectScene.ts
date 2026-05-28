@@ -5,18 +5,20 @@ import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { runStore } from '../../game/store/runStore';
 import { bindStore } from '../store/subscribe';
-import { TEXT_COLORS, FONTS, TAG_STACK, GAMEPLAY } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
 import { createLayout, LayoutResult } from '../ui/SceneLayout';
 import { createLegRoundPanels } from '../ui/RoundInfo';
 import { TagTooltip } from '../ui/TagTooltip';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
 import { canUseConsumableInShop } from '../../game/facade/consumable';
-import type { ImmediateTagResult, TrailTagInstance } from '../../game/facade/meta';
+import type { ImmediateTagResult } from '../../game/facade/meta';
 import { resolveTagDescription } from '../../data/trail_tags';
-import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { buildVictoryGameOverData } from './GameOver';
 import { handleStandardConsumableResult } from './consumableResult';
+import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
+import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
+import { enqueueHandUpgrades, enqueueTagEarned } from '../../game/store/playbackEnqueue';
 import { getRunState } from '../../game/store';
 import { canAfford } from '../../game/store/economy';
 import {
@@ -33,17 +35,10 @@ import { sceneActions } from '../../game/store/sceneStore';
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
 
-const TAG_FLY_COLORS: Record<string, number> = {
-  shop: 0x44aa44,
-  shop_aura: 0x9966cc,
-  boss: 0xcc4444,
-  next_round: 0xcc8844,
-  meta: 0xcccccc,
-};
-
 export class RoundSelectScene extends Scene {
   private layout!: LayoutResult;
   private tagTooltip = new TagTooltip();
+  private playbackRunner: PlaybackRunnerHandle | null = null;
 
   constructor() {
     super('RoundSelect');
@@ -65,6 +60,15 @@ export class RoundSelectScene extends Scene {
     this.layout.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
     this.layout.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
       this.handleConsumableUsed(consumed);
+    });
+
+    this.playbackRunner = bindScenePlaybackRunner(this, {
+      scene: this,
+      equipBar: this.layout.equipBar,
+      consumableBar: this.layout.consumableBar,
+      sidebar: this.layout.sidebar,
+      getTagEarnedOrigin: (round) => this.getRoundColumnCenter(round),
+      getTagStackAnchor: () => this.layout.tagStack.getStackAnchor(),
     });
 
     gameFacade.meta.ensureRoundSkipPreviewTags();
@@ -167,7 +171,8 @@ export class RoundSelectScene extends Scene {
     const finishSkip = () => this.finishAfterSkip();
 
     if (!gameFacade.meta.isImmediateTag(tagInstance.def.category)) {
-      this.playTagEarnedAnimation(tagInstance, skippedRound, finishSkip);
+      enqueueTagEarned(tagInstance.def.id, tagInstance.def.category, skippedRound);
+      void this.playbackRunner?.drainMatching((cmd) => cmd.kind === 'tag-earned').then(finishSkip);
     } else {
       finishSkip();
     }
@@ -187,13 +192,11 @@ export class RoundSelectScene extends Scene {
       .map((r) => r.handUpgrade)
       .filter((u): u is NonNullable<typeof u> => u != null);
 
+    enqueueHandUpgrades(handUpgrades);
     if (handUpgrades.length > 0) {
-      playHandUpgradeAnimation({
-        scene: this,
-        sidebar: this.layout.sidebar,
-        upgrades: handUpgrades,
-        onComplete: () => this.continueAfterImmediateTags(),
-      });
+      void this.playbackRunner
+        ?.drainMatching((cmd) => cmd.kind === 'hand-upgrades')
+        .then(() => this.continueAfterImmediateTags());
       return;
     }
 
@@ -241,33 +244,6 @@ export class RoundSelectScene extends Scene {
     const colY = titleY + 44;
     const colH = contentBottom - colY - 14;
     return { x: colX + colW / 2, y: colY + colH / 2 };
-  }
-
-  private playTagEarnedAnimation(tag: TrailTagInstance, round: number, onComplete: () => void): void {
-    const { x: fromX, y: fromY } = this.getRoundColumnCenter(round);
-    const anchor = this.layout.tagStack.getStackAnchor();
-    const color = TAG_FLY_COLORS[tag.def.category] ?? 0x888888;
-    const half = TAG_STACK.BADGE_SIZE / 2;
-
-    const tempBadge = this.add.graphics();
-    tempBadge.fillStyle(color, 1);
-    tempBadge.fillRoundedRect(-half, -half, TAG_STACK.BADGE_SIZE, TAG_STACK.BADGE_SIZE, TAG_STACK.BADGE_RADIUS);
-    tempBadge.setPosition(fromX, fromY);
-    tempBadge.setDepth(TOOLTIP_DEPTH);
-
-    this.tweens.add({
-      targets: tempBadge,
-      x: anchor.x,
-      y: anchor.y,
-      scaleX: { from: 1.5, to: 1 },
-      scaleY: { from: 1.5, to: 1 },
-      duration: 600,
-      ease: 'Back.easeIn',
-      onComplete: () => {
-        tempBadge.destroy();
-        onComplete();
-      },
-    });
   }
 
   private showImmediateResult(result: ImmediateTagResult): void {

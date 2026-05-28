@@ -24,6 +24,7 @@ import { getRunState, runActions } from '../../game/store/runStore';
 import { flushAutoSave } from '../AutoSaveManager';
 import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
 import { ConsumableBar } from '../ui/ConsumableBar';
+import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
 import { handleStandardConsumableResult } from './consumableResult';
 
 // Category color mapping for event card border
@@ -127,6 +128,12 @@ export class TrailEventScene extends Scene {
     this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
       this.handleConsumableUsed(consumed);
+    });
+    bindScenePlaybackRunner(this, {
+      scene: this,
+      equipBar: layout.equipBar,
+      consumableBar: layout.consumableBar,
+      sidebar: layout.sidebar,
     });
 
     // Select / preview trail event (persist across resize restarts)

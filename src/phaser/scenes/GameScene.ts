@@ -19,8 +19,10 @@ import { getRoundHintContext } from '../../game/displayContext';
 import { getRunState } from '../../game/store/runStore';
 import { getRoundState } from '../../game/store/roundStore';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
-import { bindPlaybackRunner, type PlaybackRunnerHandle } from '../playback/PlaybackRunner';
+import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
+import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
 import { prepareScoreSidebar } from '../playback/handlers';
+import { enqueueDayEndDestructions } from '../../game/store/playbackEnqueue';
 import { Die, ScoreResult } from '../../game/types';
 import {
   selectHandDice,
@@ -43,9 +45,7 @@ import { createLayout } from '../ui/SceneLayout';
 import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
-import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
-import { animateEquipmentFireDestruction } from '../animations/EquipmentFireDestroyAnimation';
 import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
@@ -229,7 +229,7 @@ export class GameScene extends Scene {
       this.applyBossRollDiceState();
     });
 
-    this.playbackRunner = bindPlaybackRunner(this, {
+    this.playbackRunner = bindScenePlaybackRunner(this, {
       scene: this,
       equipBar: this.equipBar,
       consumableBar: this.consumableBar,
@@ -252,6 +252,7 @@ export class GameScene extends Scene {
         this.sidebar.clearHandDisplay();
         this.time.delayedCall(600, () => this.onContinue());
       },
+      showFloatingText: (message, color) => this.showFloatingText(message, color),
     });
 
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
@@ -955,21 +956,14 @@ export class GameScene extends Scene {
 
     if (deferredDestroyIndices.length > 0) {
       this.animating = true;
-      this.animateEndOfRoundSelfDestructs(deferredDestroyIndices, () => {
-        for (const name of destroyedEquipment) {
-          this.showFloatingText(`💥 ${name} destroyed!`, 0xff4444);
-        }
-        const proceed = () => {
+      const holdMs = outcome === 'won' || outcome === 'lost' ? ANIM.EQUIP_FIRE_DESTROY_ROUND_END_HOLD_MS : 0;
+      enqueueDayEndDestructions(deferredDestroyIndices, destroyedEquipment, holdMs);
+      void this.playbackRunner
+        ?.drainMatching((cmd) => cmd.kind === 'day-end-destructions')
+        .then(() => {
           this.animating = false;
           afterDestroyedEquipmentFeedback();
-        };
-        const holdMs = outcome === 'won' || outcome === 'lost' ? ANIM.EQUIP_FIRE_DESTROY_ROUND_END_HOLD_MS : 0;
-        if (holdMs > 0) {
-          this.time.delayedCall(holdMs, proceed);
-        } else {
-          proceed();
-        }
-      });
+        });
       return;
     }
 
@@ -984,33 +978,11 @@ export class GameScene extends Scene {
 
   private finishDayEndAfterEquipmentDestroyed(outcome: 'won' | 'lost'): void {
     void this.playbackRunner?.drainRoundEndHeld().then(() => {
-      this.runRoundEndModifierFeedback(() => this.transitionAfterRoundEnd(outcome));
+      gameFacade.equipment.enqueueModifierFeedbackEndOfRound({ applyDestruction: true });
+      void this.playbackRunner
+        ?.drainMatching((cmd) => cmd.kind === 'modifier-feedback')
+        .then(() => this.transitionAfterRoundEnd(outcome));
     });
-  }
-
-  private runRoundEndModifierFeedback(onComplete: () => void): void {
-    const modifierResult = gameFacade.equipment.processModifiersEndOfRound({ applyDestruction: false });
-    const hasDestroy = modifierResult.perished.length > 0 || modifierResult.leaseDefaulted.length > 0;
-
-    const showModifierFeedback = () => {
-      for (const { equipmentName, cost } of modifierResult.leasePaid) {
-        this.showFloatingText(`-$${cost} lease: ${equipmentName}`, COLORS.GOLD);
-      }
-      this.equipBar.flashLeasedUpkeepPaid(modifierResult.leasePaid.map((p) => p.index));
-
-      if (!hasDestroy) {
-        gameFacade.equipment.applyModifierDestructions(modifierResult);
-      }
-      this.equipBar.setHintRound(getRoundHintContext());
-      this.equipBar.flashPerishableWarnings();
-      onComplete();
-    };
-
-    if (hasDestroy) {
-      this.equipBar.animateModifierDestructions(modifierResult, showModifierFeedback);
-    } else {
-      showModifierFeedback();
-    }
   }
 
   private transitionAfterRoundEnd(outcome: 'won' | 'lost'): void {
@@ -1585,29 +1557,6 @@ export class GameScene extends Scene {
     this.activeEquipDestroySounds = [];
   }
 
-  /** Animate an equipment card being destroyed by fire (used by Funeral Pyre, Haunted Totem, etc.) */
-  private animateEquipmentFireDestruction(sourceIndex: number, victimIndex: number, onComplete?: () => void): void {
-    animateEquipmentFireDestruction(this, this.equipBar, sourceIndex, victimIndex, onComplete);
-  }
-
-  /** Animate end-of-round self-destructs (Dynamite, Nitro) using the same fire burst as Haunted Totem. */
-  private animateEndOfRoundSelfDestructs(indices: number[], onComplete: () => void): void {
-    const sorted = [...indices].sort((a, b) => a - b);
-    if (sorted.length === 0) {
-      onComplete();
-      return;
-    }
-
-    const idx = sorted[0];
-    const remaining = sorted.slice(1).map((i) => (i > idx ? i - 1 : i));
-
-    this.animateEquipmentFireDestruction(idx, idx, () => {
-      this.time.delayedCall(200, () => {
-        this.animateEndOfRoundSelfDestructs(remaining, onComplete);
-      });
-    });
-  }
-
   /** Calculate X positions for dice in the play area */
   private getPlayAreaXPositions(count: number): number[] {
     if (count === 0) return [];
@@ -1857,20 +1806,6 @@ export class GameScene extends Scene {
 
     if (result.diceSelection) {
       this.enterConsumableTargeting(result.diceSelection);
-    }
-
-    // Play hand upgrade animation for trail guides / Spiritual Journey
-    const upgrades = result.handUpgrades ?? (result.handUpgrade ? [result.handUpgrade] : []);
-    if (upgrades.length > 0) {
-      this.animating = true;
-      playHandUpgradeAnimation({
-        scene: this,
-        sidebar: this.sidebar,
-        upgrades,
-        onComplete: () => {
-          this.animating = false;
-        },
-      });
     }
   }
 

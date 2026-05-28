@@ -13,13 +13,15 @@ export interface PlaybackRunnerHandle {
   setScoreLayoutGate: (gate: { promise: Promise<void> } | null) => void;
   /** Drain round-end held score-events before leg-end modifier feedback. */
   drainRoundEndHeld: () => Promise<void>;
+  /** Drain all commands matching predicate (FIFO, awaited sequentially). */
+  drainMatching: (predicate: (command: PlaybackCommand) => boolean) => Promise<void>;
   /** Process any commands already in the queue (e.g. round-start before first draw). */
   drainInitialSync: () => void;
 }
 
 export function bindPlaybackRunner(scene: Scene, ctx: PlaybackRunnerContext): PlaybackRunnerHandle {
-  let draining = false;
   let scoreLayoutGate: { promise: Promise<void> } | null = ctx.scoreLayoutGate;
+  let drainChain: Promise<void> = Promise.resolve();
 
   const handlerCtx: PlaybackHandlerContext = {
     ...ctx,
@@ -29,26 +31,25 @@ export function bindPlaybackRunner(scene: Scene, ctx: PlaybackRunnerContext): Pl
   };
 
   async function drainQueue(predicate: (command: PlaybackCommand) => boolean): Promise<void> {
-    if (draining) return;
-    draining = true;
-    try {
-      while (true) {
-        const batch = runActions.takePlayback(predicate);
-        if (batch.length === 0) break;
-        for (const command of batch) {
-          await playPlaybackCommand(handlerCtx, command);
-        }
+    while (true) {
+      const batch = runActions.takePlayback(predicate);
+      if (batch.length === 0) break;
+      for (const command of batch) {
+        await playPlaybackCommand(handlerCtx, command);
       }
-    } finally {
-      draining = false;
-      const remaining = getRunState().playbackQueue;
-      if (remaining.some(predicate)) {
-        void drainQueue(predicate);
-      }
+    }
+
+    const remaining = getRunState().playbackQueue;
+    if (remaining.some(predicate)) {
+      await drainQueue(predicate);
     }
   }
 
-  const drainAuto = () => drainQueue((cmd) => isAutoDrainCommand(cmd));
+  function scheduleDrain(predicate: (command: PlaybackCommand) => boolean): Promise<void> {
+    const run = drainChain.then(() => drainQueue(predicate));
+    drainChain = run.catch(() => {});
+    return run;
+  }
 
   const unbind = bindStore(
     scene,
@@ -56,7 +57,7 @@ export function bindPlaybackRunner(scene: Scene, ctx: PlaybackRunnerContext): Pl
     (state) => state.playbackQueue.length,
     (length, prevLength) => {
       if (length > 0 && length !== prevLength) {
-        void drainAuto();
+        void scheduleDrain((cmd) => isAutoDrainCommand(cmd));
       }
     },
     { fireImmediately: false, equalityFn: (a, b) => a === b },
@@ -67,12 +68,10 @@ export function bindPlaybackRunner(scene: Scene, ctx: PlaybackRunnerContext): Pl
     setScoreLayoutGate(gate) {
       scoreLayoutGate = gate;
     },
-    drainRoundEndHeld: () => drainQueue((cmd) => cmd.kind === 'score-events' && cmd.label === 'round-end-held'),
+    drainRoundEndHeld: () => scheduleDrain((cmd) => cmd.kind === 'score-events' && cmd.label === 'round-end-held'),
+    drainMatching: (predicate) => scheduleDrain(predicate),
     drainInitialSync() {
-      const taken = runActions.takePlayback(() => true);
-      for (const command of taken) {
-        void playPlaybackCommand(handlerCtx, command);
-      }
+      void scheduleDrain(() => true);
     },
   };
 }

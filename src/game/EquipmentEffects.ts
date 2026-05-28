@@ -18,7 +18,7 @@ import { effectRegistry, type ScoringPipelineContext } from './effects';
 import { createEmptyScoringMutations, mergeMutations } from './effects/applyMutations';
 import type { ScoringMutations } from './effects/types';
 import {
-  applyEquipmentAuras,
+  applyEquipmentAuraForSlot,
   applyHolyAuraXMult,
   forEachEquipmentResolved,
   hasStackedDeck,
@@ -87,11 +87,11 @@ export function applyEquipmentEffects(
   console.log('[SCORE] Step 5 — Equipment pass (additive → auras → xMult → final miles)');
   const ctx = createEquipmentScoringContext(baseResult, equipment, context, animEvents);
 
-  console.log('  [equip] Additive pass (bar order)');
+  console.log('  [equip] Additive pass (bar order, fire/icy per slot)');
   forEachEquipmentResolved(equipment, (equip, _original, i) => {
     effectRegistry.dispatchAdditive(equip.def.effectType, ctx, equip, i);
+    applyEquipmentAuraForSlot(equipment, i, ctx);
   });
-  applyEquipmentAuras(equipment, ctx);
 
   console.log(`  [equip] After additive + auras: bonusMiles ${ctx.bonusMiles}, bonusMult ${ctx.bonusMult}`);
 

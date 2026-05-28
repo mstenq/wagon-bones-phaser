@@ -43,25 +43,34 @@ export function forEachEquipmentResolved(
   }
 }
 
-/** Apply fire/icy equipment auras (always from the original slot, not copy target). */
+/** Fire/icy on one bar slot (original card, not copy target). Called right after that slot's additive pass. */
+export function applyEquipmentAuraForSlot(
+  equipment: EquipmentInstance[],
+  slotIndex: number,
+  ctx: ScoringPipelineContext,
+): void {
+  if (isEquipmentDisabledByBoss(slotIndex)) return;
+  const originalEquip = equipment[slotIndex];
+  if (!originalEquip.def.aura) return;
+
+  switch (originalEquip.def.aura.id) {
+    case 'fire':
+      ctx.bonusMult = addScore(ctx.bonusMult, 10);
+      ctx.animEvents.push({ target: { kind: 'equip', equipIndex: slotIndex }, popupType: 'mult', value: 10 });
+      console.log(`  [equip] ${originalEquip.def.name} FIRE aura: +10 mult (bonusMult: ${ctx.bonusMult})`);
+      break;
+    case 'icy':
+      ctx.bonusMiles = addScore(ctx.bonusMiles, 50);
+      ctx.animEvents.push({ target: { kind: 'equip', equipIndex: slotIndex }, popupType: 'miles', value: 50 });
+      console.log(`  [equip] ${originalEquip.def.name} ICY aura: +50 miles (bonusMiles: ${ctx.bonusMiles})`);
+      break;
+  }
+}
+
+/** Apply fire/icy for every slot (bar order). Prefer per-slot calls from the additive loop. */
 export function applyEquipmentAuras(equipment: EquipmentInstance[], ctx: ScoringPipelineContext): void {
   for (let i = 0; i < equipment.length; i++) {
-    if (isEquipmentDisabledByBoss(i)) continue;
-    const originalEquip = equipment[i];
-    if (!originalEquip.def.aura) continue;
-
-    switch (originalEquip.def.aura.id) {
-      case 'fire':
-        ctx.bonusMult = addScore(ctx.bonusMult, 10);
-        ctx.animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'mult', value: 10 });
-        console.log(`  [equip] ${originalEquip.def.name} FIRE aura: +10 mult (bonusMult: ${ctx.bonusMult})`);
-        break;
-      case 'icy':
-        ctx.bonusMiles = addScore(ctx.bonusMiles, 50);
-        ctx.animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'miles', value: 50 });
-        console.log(`  [equip] ${originalEquip.def.name} ICY aura: +50 miles (bonusMiles: ${ctx.bonusMiles})`);
-        break;
-    }
+    applyEquipmentAuraForSlot(equipment, i, ctx);
   }
 }
 

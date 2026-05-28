@@ -6,6 +6,7 @@ import {
   type EquipmentModifierRoundResult,
 } from '../EquipmentModifiers';
 import { isEquipmentLeased, type EquipmentInstance } from '../ItemsSystem';
+import { enqueueModifierFeedbackFromRoundResult } from '../store/playbackEnqueue';
 import { resolveEquipmentList } from '../store/resolve';
 
 export type { EquipmentModifierRoundResult };
@@ -25,5 +26,12 @@ export const gameEquipment = {
 
   findEffectIndex(effectType: string): number {
     return resolveEquipmentList().findIndex((e) => e.def.effectType === effectType);
+  },
+
+  /** Queue leased/perishable modifier feedback for the playback runner. */
+  enqueueModifierFeedbackEndOfRound(options?: { applyDestruction?: boolean }): EquipmentModifierRoundResult {
+    const result = processEquipmentModifiersEndOfRound({ applyDestruction: false });
+    enqueueModifierFeedbackFromRoundResult(result, options);
+    return result;
   },
 };

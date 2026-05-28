@@ -3,6 +3,7 @@
 import type { Scene } from 'phaser';
 import type { ModifierFeedbackPayload, PlaybackCommand } from '../../game/playback/types';
 import type { Decimal } from '../../game/decimal';
+import { COLORS } from '../../game/Constants';
 import type { HandType, ScoreResult } from '../../game/types';
 import type { ScoreAnimEvent } from '../../game/types';
 import { applyEquipmentModifierDestructions } from '../../game/EquipmentModifiers';
@@ -19,6 +20,7 @@ import { animateEquipmentPopIn } from '../animations/EquipmentPopInAnimation';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
 import { playCenterToast } from '../animations/ToastAnimation';
+import { playTagEarnedFlyIn } from './tagEarnedPlayback';
 import type { ConsumableBar } from '../ui/ConsumableBar';
 import type { DiceSprite } from '../ui/DiceSprite';
 import type { EquipmentBar } from '../ui/EquipmentBar';
@@ -36,10 +38,14 @@ export interface PlaybackHandlerContext {
   setAnimating: (value: boolean) => void;
   onDiceAdded: (dieIds: string[]) => void;
   onScoreComplete: () => void;
+  showFloatingText?: (message: string, color: number) => void;
+  getTagEarnedOrigin?: (round: number) => { x: number; y: number };
+  getTagStackAnchor?: () => { x: number; y: number };
 }
 
 export function isAutoDrainCommand(command: PlaybackCommand): boolean {
   if (command.kind === 'score-events' && command.label === 'round-end-held') return false;
+  if (command.kind === 'day-end-destructions') return false;
   return true;
 }
 
@@ -49,8 +55,7 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
       ctx.onDiceAdded(command.dieIds);
       return Promise.resolve();
     case 'round-start-destructions':
-      animateEquipmentFireDestructionSequence(ctx.scene, ctx.equipBar, command.entries);
-      return Promise.resolve();
+      return playRoundStartDestructions(ctx, command.entries);
     case 'round-start-equipment-created':
       return animateEquipmentPopIn(ctx.scene, ctx.equipBar, command.count);
     case 'equipment-created':
@@ -71,15 +76,27 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
       return playScoreEventsPlayback(ctx, command.events);
     case 'hand-upgrades':
       return playHandUpgradesPlayback(ctx, command.upgrades);
+    case 'day-end-destructions':
+      return playDayEndDestructionsPlayback(ctx, command.indices, command.destroyedNames, command.holdMs);
     case 'tag-earned':
-      return Promise.resolve();
+      return playTagEarnedPlayback(ctx, command.category, command.round);
     case 'modifier-feedback':
-      return playModifierFeedbackPlayback(ctx, command.payload);
+      return playModifierFeedbackPlayback(ctx, command.payload, command.applyDestruction);
     case 'toast':
       return playCenterToast(ctx.scene, command.message, command.tone);
     default:
       return Promise.resolve();
   }
+}
+
+function playRoundStartDestructions(
+  ctx: PlaybackHandlerContext,
+  entries: { sourceIdx: number; victimIdx: number }[],
+): Promise<void> {
+  if (entries.length === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    animateEquipmentFireDestructionSequence(ctx.scene, ctx.equipBar, entries, resolve);
+  });
 }
 
 async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResult): Promise<void> {
@@ -146,7 +163,58 @@ function playHandUpgradesPlayback(
   })();
 }
 
-function playModifierFeedbackPlayback(ctx: PlaybackHandlerContext, payload: ModifierFeedbackPayload): Promise<void> {
+function playDayEndDestructionsPlayback(
+  ctx: PlaybackHandlerContext,
+  indices: number[],
+  destroyedNames: string[],
+  holdMs: number,
+): Promise<void> {
+  if (indices.length === 0) return Promise.resolve();
+
+  const sorted = [...indices].sort((a, b) => a - b);
+
+  return new Promise((resolve) => {
+    const playNext = (remaining: number[]) => {
+      if (remaining.length === 0) {
+        for (const name of destroyedNames) {
+          ctx.showFloatingText?.(`💥 ${name} destroyed!`, 0xff4444);
+        }
+        if (holdMs > 0) {
+          ctx.scene.time.delayedCall(holdMs, () => resolve());
+        } else {
+          resolve();
+        }
+        return;
+      }
+
+      const idx = remaining[0];
+      const rest = remaining.slice(1).map((i) => (i > idx ? i - 1 : i));
+
+      animateEquipmentFireDestruction(ctx.scene, ctx.equipBar, idx, idx, () => {
+        roundActions.applyEndOfRoundDestructions([idx]);
+        ctx.scene.time.delayedCall(200, () => playNext(rest));
+      });
+    };
+
+    playNext(sorted);
+  });
+}
+
+function playTagEarnedPlayback(ctx: PlaybackHandlerContext, category: string, round: number): Promise<void> {
+  const origin = ctx.getTagEarnedOrigin?.(round);
+  const anchor = ctx.getTagStackAnchor?.();
+  if (!origin || !anchor) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    playTagEarnedFlyIn(ctx.scene, category, origin.x, origin.y, anchor.x, anchor.y, resolve);
+  });
+}
+
+function playModifierFeedbackPlayback(
+  ctx: PlaybackHandlerContext,
+  payload: ModifierFeedbackPayload,
+  _applyDestruction = true,
+): Promise<void> {
   const { leasePaid, perished, leaseDefaulted } = payload;
   const hasDestroy = perished.length > 0 || leaseDefaulted.length > 0;
   const modifierResult = {
@@ -158,6 +226,9 @@ function playModifierFeedbackPlayback(ctx: PlaybackHandlerContext, payload: Modi
 
   return new Promise((resolve) => {
     const showModifierFeedback = () => {
+      for (const { equipmentName, cost } of leasePaid) {
+        ctx.showFloatingText?.(`-$${cost} lease: ${equipmentName}`, COLORS.GOLD);
+      }
       ctx.equipBar.flashLeasedUpkeepPaid(leasePaid.map((p) => p.index));
 
       if (!hasDestroy) {

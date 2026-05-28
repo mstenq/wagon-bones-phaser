@@ -49,10 +49,12 @@ describe('scene lifecycle actions', () => {
 
   test('takePlayback removes only matching commands', () => {
     runActions.enqueuePlayback({ kind: 'dice-added', dieIds: ['die_1'] });
-    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 2 });
     const taken = runActions.takePlayback((cmd) => cmd.kind === 'dice-added');
     expect(taken).toEqual([{ kind: 'dice-added', dieIds: ['die_1'] }]);
-    expect(runStore.getState().playbackQueue).toEqual([{ kind: 'tag-earned', tagId: 'tag_uncommon' }]);
+    expect(runStore.getState().playbackQueue).toEqual([
+      { kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 2 },
+    ]);
   });
 
   test('leaveScene clears slices', () => {

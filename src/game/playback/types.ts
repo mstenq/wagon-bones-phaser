@@ -33,10 +33,16 @@ export type PlaybackCommand =
   | { kind: 'score-events'; events: ScoreAnimEvent[]; label?: 'round-end-held' }
   /** Hand level-up banners (queue before `score` when upgrades affect the scored hand). */
   | { kind: 'hand-upgrades'; upgrades: HandUpgradeInfo[] }
-  /** Trail tag earned toast / fly-in. */
-  | { kind: 'tag-earned'; tagId: string }
+  /** End-of-day equipment self-destruct (Dynamite, Nitro) before continue. */
+  | { kind: 'day-end-destructions'; indices: number[]; destroyedNames: string[]; holdMs: number }
+  /** Trail tag fly-in to the tag stack (Round Select). */
+  | { kind: 'tag-earned'; tagId: string; category: string; round: number }
   /** Leased upkeep paid, perishable expired, lease defaulted — before destruction anim. */
-  | { kind: 'modifier-feedback'; payload: ModifierFeedbackPayload }
+  | {
+      kind: 'modifier-feedback';
+      payload: ModifierFeedbackPayload;
+      applyDestruction?: boolean;
+    }
   /** Center-screen toast (e.g. Fool's Gold, Bless). */
   | { kind: 'toast'; message: string; tone: ToastTone };
 
@@ -51,6 +57,7 @@ const PLAYBACK_COMMAND_KINDS = new Set<PlaybackCommand['kind']>([
   'score',
   'score-events',
   'hand-upgrades',
+  'day-end-destructions',
   'tag-earned',
   'modifier-feedback',
   'toast',

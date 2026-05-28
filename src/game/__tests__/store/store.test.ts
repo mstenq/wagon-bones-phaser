@@ -142,10 +142,10 @@ describe('game stores', () => {
 
   test('playback queue enqueue preserves order', () => {
     runActions.enqueuePlayback({ kind: 'dice-added', dieIds: ['die_1'] });
-    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 1 });
     expect(runStore.getState().playbackQueue).toEqual([
       { kind: 'dice-added', dieIds: ['die_1'] },
-      { kind: 'tag-earned', tagId: 'tag_uncommon' },
+      { kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 1 },
     ]);
     runActions.clearPlayback();
     expect(runStore.getState().playbackQueue).toEqual([]);
@@ -153,17 +153,21 @@ describe('game stores', () => {
 
   test('takePlayback removes only matching commands', () => {
     runActions.enqueuePlayback({ kind: 'dice-added', dieIds: ['die_1'] });
-    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 1 });
     const taken = runActions.takePlayback((cmd) => cmd.kind === 'dice-added');
     expect(taken).toEqual([{ kind: 'dice-added', dieIds: ['die_1'] }]);
-    expect(runStore.getState().playbackQueue).toEqual([{ kind: 'tag-earned', tagId: 'tag_uncommon' }]);
+    expect(runStore.getState().playbackQueue).toEqual([
+      { kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 1 },
+    ]);
   });
 
   test('takePlayback is atomic when nothing matches', () => {
-    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon' });
+    runActions.enqueuePlayback({ kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 1 });
     const taken = runActions.takePlayback((cmd) => cmd.kind === 'dice-added');
     expect(taken).toEqual([]);
-    expect(runStore.getState().playbackQueue).toEqual([{ kind: 'tag-earned', tagId: 'tag_uncommon' }]);
+    expect(runStore.getState().playbackQueue).toEqual([
+      { kind: 'tag-earned', tagId: 'tag_uncommon', category: 'shop', round: 1 },
+    ]);
   });
 
   test('shopBuyActions.buyConsumable does not spend when consumable slots are full', () => {

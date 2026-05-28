@@ -56,7 +56,7 @@ import { getRunState, runActions, runStore } from '../../game/store/runStore';
 import { sceneStore } from '../../game/store/sceneStore';
 import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../game/store/selectors/sceneSelectors';
 import { bindStore } from '../store/subscribe';
-import { bindPlaybackRunner } from '../playback/PlaybackRunner';
+import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
 import type { ShopSceneState } from '../../game/store/types';
 import { rngFloat } from '../../game/RunRng';
 import { generateShopDie } from '../../game/store/shopStock';
@@ -240,17 +240,11 @@ export class ShopScene extends Scene {
       this.updateEquipHints();
     });
 
-    bindPlaybackRunner(this, {
+    bindScenePlaybackRunner(this, {
       scene: this,
       equipBar: this.equipBar,
       consumableBar: this.consumableBar,
       sidebar: this.sidebar,
-      getDiceSprites: () => [],
-      destroyDice: async () => {},
-      scoreLayoutGate: null,
-      setAnimating: () => {},
-      onDiceAdded: () => {},
-      onScoreComplete: () => {},
     });
 
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {

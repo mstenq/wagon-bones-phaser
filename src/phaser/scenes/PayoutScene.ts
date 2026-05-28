@@ -22,6 +22,7 @@ import type { DecimalSource } from '../../game/decimal';
 import type { PayoutBreakdown, PayoutPresentationState } from '../../game/store/types';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { Sidebar } from '../ui/Sidebar';
+import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
 import { handleStandardConsumableResult } from './consumableResult';
 
 export interface PayoutData {
@@ -76,6 +77,12 @@ export class PayoutScene extends Scene {
     this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
     this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
       this.handleConsumableUsed(consumed);
+    });
+    bindScenePlaybackRunner(this, {
+      scene: this,
+      equipBar: layout.equipBar,
+      consumableBar: layout.consumableBar,
+      sidebar: layout.sidebar,
     });
     this.buildPayoutPanel(layout, payout, data, investmentBonus);
 

@@ -6,6 +6,7 @@ export {
   findDeathPrevention,
   forEachEquipmentResolved,
   applyEquipmentAuras,
+  applyEquipmentAuraForSlot,
   applyHolyAuraXMult,
   dieMatchesPip,
   dieMatchesParity,
