@@ -2759,9 +2759,12 @@ const items: ItemDef[] = [
             text(' of interest for every '),
             money('$5'),
             text(
-              ' you have at end of round. Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped).',
+              ' you have at end of round.',
             ),
           ],
+          [
+            text('Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped).')
+          ]
         ],
       };
     },

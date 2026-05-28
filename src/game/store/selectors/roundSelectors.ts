@@ -3,6 +3,7 @@
 
 import type { Die, GameConfig, HandType, PhaseState } from '../../types';
 import { DEFAULT_CONFIG } from '../../types';
+import { detectBestHand } from '../../DiceSystem';
 import { getRoundState } from '../roundStore';
 import type { RoundRuntimeState } from '../types';
 import { resolveDiceByIds, rolledRefsToDice } from '../roundResolve';
@@ -73,14 +74,17 @@ export function selectRoundSidebarModel(state: RoundRuntimeState | null = getRou
 
 export function selectEquipmentHintRoundContext(state: RoundRuntimeState | null = getRoundState()) {
   if (!state) return null;
+  const selectedForScore = selectSelectedForScore(state);
+  // In ROLL phase, hints should reflect the currently selected scoring hand preview.
+  const currentHandType = selectedForScore.length > 0 ? detectBestHand(selectedForScore).type : state.currentHandType;
   return {
     phase: state.phase,
     day: state.day,
     maxDays: state.config.maxDays,
     rerollsRemaining: state.rerollsRemaining,
-    currentHandType: state.currentHandType,
+    currentHandType,
     handHistory: state.handHistory,
     rolledDice: selectRolledDice(state),
-    selectedForScore: selectSelectedForScore(state),
+    selectedForScore,
   };
 }

@@ -5,21 +5,19 @@
 -Golden Spike shouldn't work on disabled dice (the_undertaker and other bosses)
 -follow_traveler trail event, you shouldn't be able to trade back the same item you got from the trade, thats weird.
 -binoculars permit - while it now guarantees my most played hand it also is allowing for duplicates. Dupes should only be allowed if you have counterfeit_goods.
-
-## the_landslide boss issues
-    - should disable aura cause it makes it too easy to tell
-    - the cards get shuffled while in shop when you can still see the order (Should shuffle after hiding)
-    - you should still be able to reorder the cards. This is important so you can play one hand and try to figure out what each card is based on the animation events so you can reorder them into a better order on the second day, etc.
-    - equipment modifier stickers should be hidden when equipment is showings backs.
-    - the equipment appears to execute scoring in its original order, not the new shuffled order kind of defeating the point of this boss.
-
-[+250, rand, +20, x2]
-1,3,2,4
+- the_river - instead of only high value and straights, how about we set anything that is not a straight or high value to level 1 during that round
 
 ## New Feature Ideas
 - new permits for luck:
     - Good Omens - Stage 1 — Positive trail events are 2x more likely
     - Manifest Destiny - Stage 2 — Positive trail events are 4x more likely
+- new equipment
+    - xxx - $8 - rare - x1 mult per day travelled. Resets every round.
+    - Blackjack - $7 - Gives x3 mult when the ranks of all played dice is exactly 21. Gives x0.5 mult less for every point below 21. [21=3x, 20=2.5x, 19=2x, 18=2x, 17=1.5x]
+    - xxx - $6 - uncommon - x1 mult. Gains x0.1 mult per 10 dice scored.
+    - Horse Thief - common - $5 - Choose one additional item when opening any booster pack.
+    - 
+
 
 ## new item ideas
 ### Oracle Deck - $8 - Uncommon
