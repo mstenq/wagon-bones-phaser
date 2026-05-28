@@ -13,6 +13,9 @@
     - equipment modifier stickers should be hidden when equipment is showings backs.
     - the equipment appears to execute scoring in its original order, not the new shuffled order kind of defeating the point of this boss.
 
+[+250, rand, +20, x2]
+1,3,2,4
+
 ## New Feature Ideas
 - new permits for luck:
     - Good Omens - Stage 1 — Positive trail events are 2x more likely

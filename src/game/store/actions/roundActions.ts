@@ -33,6 +33,7 @@ import { rngPick } from '../../RunRng';
 import { createEmptyModifiers, trailRoundEffectsFromModifiers } from '../../TrailEventsSystem';
 import {
   getBossRoundConfigMods,
+  getBossEquipmentDisplayOrder,
   initBossRoundState,
   resetBossRoundState,
   applyBossOnDayStart,
@@ -261,7 +262,8 @@ export const roundActions = {
 
     applyBossOnDayStart(1);
 
-    const roundStartEffects = processEquipmentOnRoundStart(equipment, selectIsBossRound(getRunState()));
+    const roundStartEquipment = resolveEquipmentList();
+    const roundStartEffects = processEquipmentOnRoundStart(roundStartEquipment, selectIsBossRound(getRunState()));
     removeEquipmentAtIndices([...roundStartEffects.destroyedIndices].sort((a, b) => b - a));
 
     const splicedIndices = roundStartEffects.destroyedIndices.sort((a, b) => a - b);
@@ -471,6 +473,11 @@ export const roundActions = {
     }
 
     const equipment = resolveEquipmentList();
+    const displayOrder = getBossEquipmentDisplayOrder();
+    const scoringEquipment =
+      displayOrder && displayOrder.length === equipment.length
+        ? displayOrder.map((index) => equipment[index]).filter((e): e is (typeof equipment)[number] => Boolean(e))
+        : equipment;
     const hasOpenPalm = equipment.some((e) => e.def.effectType === 'ALL_DICE_SCORE');
     let scoringHandResult = handResult;
     if (hasOpenPalm) {
@@ -489,9 +496,9 @@ export const roundActions = {
       baseMult: addScore(scoringHandResult.baseMult, D(stats.multPerLevel * levelBonus)),
     };
 
-    processEquipmentOnHandPlayed(equipment, handType, selectedDice);
+    processEquipmentOnHandPlayed(scoringEquipment, handType, selectedDice);
 
-    const baseResult = scoreHand(leveledResult, equipment, {
+    const baseResult = scoreHand(leveledResult, scoringEquipment, {
       currentDay: round.day,
       maxDays: round.config.maxDays,
       allDice: run.dice,
@@ -501,7 +508,7 @@ export const roundActions = {
     const rolledAsDice = rolledRefsToDice(round.rolledDice, round);
     const heldDice = rolledAsDice.filter((d) => !scoredIds.has(d.id));
 
-    const heldResult = processHeldInHand(heldDice, equipment, handType);
+    const heldResult = processHeldInHand(heldDice, scoringEquipment, handType);
     const heldMult = multiplyScore(addScore(baseResult.mult, heldResult.bonusMult), heldResult.xMult);
     const mergedMutations = createEmptyScoringMutations();
     mergeMutations(mergedMutations, baseResult.mutations);
@@ -515,7 +522,7 @@ export const roundActions = {
       mutations: mergedMutations,
     };
 
-    const finalResult = applyEquipmentEffects(afterHeldResult, equipment, {
+    const finalResult = applyEquipmentEffects(afterHeldResult, scoringEquipment, {
       handResult: leveledResult,
       scoringDice: selectedDice,
       heldDice,
@@ -537,7 +544,7 @@ export const roundActions = {
     progressionActions.recordHandPlayed(handType);
     applyBossAfterScore();
 
-    const handUpgrades = processEquipmentAfterHandScored(equipment, handType);
+    const handUpgrades = processEquipmentAfterHandScored(scoringEquipment, handType);
     replaceEquipmentList(equipment);
 
     const allHandUpgrades = [...(tricksterDowngrade ? [tricksterDowngrade] : []), ...handUpgrades];

@@ -119,6 +119,7 @@ export class ItemCard extends GameObjects.Container {
   private auraGlowCleanup: (() => void) | null = null;
   private ghostTintOverlay: GameObjects.Graphics | null = null;
   private auraImageFilterCleanup: (() => void) | null = null;
+  private auraSuppressed: boolean = false;
   private hintObjects: GameObjects.GameObject[] = [];
   private actionTabs: ActionTabInstance[] = [];
   private _tabsVisible: boolean = false;
@@ -343,7 +344,7 @@ export class ItemCard extends GameObjects.Container {
       this.faceDownCover.destroy();
       this.faceDownCover = null;
     }
-    if (this.cardImage) this.cardImage.setVisible(!this._faceDown);
+    this.applyFaceDownSuppression();
     if (!this._faceDown) return;
 
     const hw = this._cardW / 2;
@@ -360,6 +361,25 @@ export class ItemCard extends GameObjects.Container {
     this.faceDownCover = g;
     this.add(g);
     this.bringToTop(g);
+  }
+
+  private applyFaceDownSuppression(): void {
+    if (this.cardImage) this.cardImage.setVisible(!this._faceDown);
+    for (const c of this.modifierBadgeContainers) c.setVisible(!this._faceDown);
+    if (this.professionSpecialBadgeContainer) this.professionSpecialBadgeContainer.setVisible(!this._faceDown);
+    if (this.perishableBadgeContainer) this.perishableBadgeContainer.setVisible(!this._faceDown);
+    if (this.leasedBadgeContainer) this.leasedBadgeContainer.setVisible(!this._faceDown);
+    this.setAuraSuppressed(this._faceDown);
+  }
+
+  private setAuraSuppressed(suppressed: boolean): void {
+    if (this.auraSuppressed === suppressed) return;
+    this.auraSuppressed = suppressed;
+    if (suppressed) {
+      this.clearAuraVFX();
+      return;
+    }
+    if (this._def.aura) this.setupAuraVFX();
   }
 
   // ─── Drawing ───
@@ -606,6 +626,7 @@ export class ItemCard extends GameObjects.Container {
     this.clearEquipmentBadges();
     this.renderModifierBadges();
     this.renderProfessionSpecialBadge();
+    this.applyFaceDownSuppression();
   }
 
   private renderModifierBadges(): void {

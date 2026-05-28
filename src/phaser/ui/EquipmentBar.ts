@@ -157,10 +157,6 @@ export class EquipmentBar extends CardBar {
     return this.cards.find((c) => (c.getData('equipIndex') as number) === equipIndex) ?? null;
   }
 
-  protected isDragReorderEnabled(): boolean {
-    return !isBossEquipmentHidden();
-  }
-
   private addDevIconsIfNeeded(): void {
     if (!isDevMode()) return;
     const equipment = resolveEquipmentList();

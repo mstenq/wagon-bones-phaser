@@ -11,7 +11,7 @@ import { getSupplyDefById, getTrailGuideDefById, getFrontierDefById, ConsumableD
 import { applyPermitEffectToRun, getPermitById, PermitDef } from './PermitsSystem';
 import itemAuras from '../data/item_auras';
 import { getPackDefById, type PackDefinition } from './BoosterPackSystem';
-import { bossActions, getRunState, permitActions, runActions } from './store';
+import { bossActions, getRunState, permitActions, roundActions, runActions } from './store';
 import { selectProfession } from './store/selectors/runSelectors';
 
 let urlDevModeEnabled = false;
@@ -116,6 +116,10 @@ export function devGetAllBosses(): BossDef[] {
 export function devStartBossRound(bossId: string): BossDef | null {
   const boss = devGetAllBosses().find((b) => b.id === bossId);
   if (!boss) return null;
+
+  // Force a fresh boss-round bootstrap when GameScene is started from a dev modal.
+  // Without this, stale roundStore state can trigger "restored round" path and skip boss init hooks.
+  roundActions.clearRound();
 
   runActions.patch({
     round: GAMEPLAY.ROUNDS_PER_LEG,

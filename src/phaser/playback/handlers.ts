@@ -4,7 +4,6 @@ import type { Scene } from 'phaser';
 import type { ModifierFeedbackPayload, PlaybackCommand } from '../../game/playback/types';
 import type { Decimal } from '../../game/decimal';
 import type { HandType, ScoreResult } from '../../game/types';
-import { gameFacade } from '../../game/facade';
 import type { ScoreAnimEvent } from '../../game/types';
 import { applyEquipmentModifierDestructions } from '../../game/EquipmentModifiers';
 import { getRoundHintContext } from '../../game/displayContext';
@@ -99,7 +98,6 @@ async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResul
       equipBar: ctx.equipBar,
       consumableBar: ctx.consumableBar,
       onComplete: () => {
-        gameFacade.boss.revealLandSlideHints();
         ctx.equipBar.setHintRound(getRoundHintContext());
         resolve();
       },

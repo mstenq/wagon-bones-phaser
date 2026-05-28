@@ -9,7 +9,7 @@ import { detectBestHand } from './DiceSystem';
 import { getHandByType } from '../data/hands';
 import { rngFloat, rngShuffle } from './RunRng';
 import { getRunState } from './store/runStore';
-import { resolveEquipmentList } from './store/resolve';
+import { replaceEquipmentList, resolveEquipmentList } from './store/resolve';
 import {
   getBossRoundState,
   patchBossRoundState,
@@ -56,11 +56,24 @@ export function initBossRoundState(): void {
 
   if (boss.effectType === 'HIDE_EQUIPMENT') {
     const equipment = resolveEquipmentList();
+    let shuffledIndices = rngShuffle(
+      'boss',
+      equipment.map((_, i) => i),
+    );
+    // Ensure Land Slide always actually changes order when 2+ cards exist.
+    if (
+      shuffledIndices.length > 1 &&
+      shuffledIndices.every((value, idx) => value === idx)
+    ) {
+      [shuffledIndices[0], shuffledIndices[1]] = [shuffledIndices[1], shuffledIndices[0]];
+    }
+    const shuffledEquipment = shuffledIndices
+      .map((index) => equipment[index])
+      .filter((entry): entry is (typeof equipment)[number] => Boolean(entry));
+    replaceEquipmentList(shuffledEquipment);
     patchBossRoundState({
-      equipmentDisplayOrder: rngShuffle(
-        'boss',
-        equipment.map((_, i) => i),
-      ),
+      // Keep null so the real equipment list order drives both visuals and scoring.
+      equipmentDisplayOrder: null,
       equipmentHidden: true,
       landSlideRevealed: false,
     });
@@ -335,6 +348,8 @@ export function getBossEquipmentDisplayOrder(): number[] | null {
 export function syncEquipmentDisplayOrder(): void {
   const boss = getActiveBoss();
   if (!boss || boss.effectType !== 'HIDE_EQUIPMENT') return;
+  const state = getBossRoundState();
+  if (state.equipmentDisplayOrder === null) return;
 
   const count = resolveEquipmentList().length;
   if (count === 0) {
@@ -412,15 +427,18 @@ export function remapDisabledEquipmentIndicesAfterRemove(removedIndex: number): 
 }
 
 export function isBossEquipmentHidden(): boolean {
+  const boss = getActiveBoss();
+  if (!boss || boss.effectType !== 'HIDE_EQUIPMENT') return false;
   const state = getBossRoundState();
-  return state.equipmentHidden && !state.landSlideRevealed;
+  return state.equipmentHidden;
 }
 
 /** Hints/tooltips hidden during Land Slide until first hand scored */
 export function isBossEquipmentHintsHidden(): boolean {
+  const boss = getActiveBoss();
+  if (!boss || boss.effectType !== 'HIDE_EQUIPMENT') return false;
   const state = getBossRoundState();
-  if (!state.equipmentHidden) return false;
-  return !state.landSlideRevealed;
+  return state.equipmentHidden;
 }
 
 /** Mark first score animation complete — enables hints while faces stay hidden */

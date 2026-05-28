@@ -23,9 +23,9 @@ import {
   isBossScoreForfeit,
   getInspectorRollSizeForDay,
   isBossEquipmentHintsHidden,
-  revealLandSlideHints,
   remapEquipmentDisplayOrderAfterReorder,
   remapEquipmentDisplayOrderAfterRemove,
+  isBossEquipmentHidden,
 } from '../BossEffectsSystem';
 import { bossActions, consumableActions, equipmentActions, progressionActions } from '../store/actions';
 import { runActions } from '../store';
@@ -532,21 +532,21 @@ describe('Boss assignment uniqueness', () => {
 });
 
 describe('HIDE_EQUIPMENT: Land Slide', () => {
-  test('shuffles display order and hides hints until reveal', () => {
+  test('shuffles underlying equipment order and keeps hints hidden', () => {
     setupGame({
       bossId: 'the_land_slide',
-      equipment: [item('horseshoe'), item('dynamite')],
+      equipment: [item('express_train'), item('deadeye'), item('wild_card'), item('worn_deck')],
     });
+    const before = getRunState().equipment.map((e) => e.defId);
     resetBossRoundState();
     initBossRoundState();
     const state = getBossRoundState();
-    expect(state.equipmentDisplayOrder).not.toBeNull();
-    expect(state.equipmentDisplayOrder!.length).toBe(2);
-    expect([...state.equipmentDisplayOrder!].sort()).toEqual([0, 1]);
+    const after = getRunState().equipment.map((e) => e.defId);
+    expect(after).not.toEqual(before);
+    expect(state.equipmentDisplayOrder).toBeNull();
     expect(isBossEquipmentHintsHidden()).toBe(true);
-    revealLandSlideHints();
-    expect(isBossEquipmentHintsHidden()).toBe(false);
     expect(state.equipmentHidden).toBe(true);
+    expect(isBossEquipmentHidden()).toBe(true);
   });
 
   test('remaps display order when equipment is reordered or sold', () => {
@@ -564,6 +564,35 @@ describe('HIDE_EQUIPMENT: Land Slide', () => {
 
     remapEquipmentDisplayOrderAfterRemove(1);
     expect(state.equipmentDisplayOrder).toEqual([1, 0]);
+  });
+
+  test('does not keep equipment hidden outside active Land Slide boss round', () => {
+    setupGame({
+      bossId: 'the_land_slide',
+      equipment: [item('horseshoe')],
+    });
+    resetBossRoundState();
+    initBossRoundState();
+    expect(isBossEquipmentHidden()).toBe(true);
+    runActions.patch({ round: 1 });
+    expect(isBossEquipmentHidden()).toBe(false);
+  });
+
+  test('scores using shuffled display order', () => {
+    const { game } = setupGame({
+      bossId: 'the_land_slide',
+      equipment: [item('quick_draw'), item('mirror_lake')],
+    });
+    game.startRound();
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = diceFromValues([5, 5]);
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    const shuffledOrderResult = game.calculateScore()!;
+
+    const order = getRunState().equipment.map((e) => e.defId);
+    const expectedTotal = order[0] === 'quick_draw' ? 20 : 30;
+    expect(shuffledOrderResult.totalValue).toBe(expectedTotal);
   });
 });
 
