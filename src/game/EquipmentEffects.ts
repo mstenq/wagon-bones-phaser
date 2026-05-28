@@ -84,19 +84,22 @@ export function applyEquipmentEffects(
   context: ScoringContext,
   animEvents: ScoreAnimEvent[] = [],
 ): ScoreResult {
+  console.log('[SCORE] Step 5 — Equipment pass (additive → auras → xMult → final miles)');
   const ctx = createEquipmentScoringContext(baseResult, equipment, context, animEvents);
 
+  console.log('  [equip] Additive pass (bar order)');
   forEachEquipmentResolved(equipment, (equip, _original, i) => {
     effectRegistry.dispatchAdditive(equip.def.effectType, ctx, equip, i);
   });
   applyEquipmentAuras(equipment, ctx);
 
-  console.log(`  [equip] Step 4 totals: bonusMiles: ${ctx.bonusMiles}, bonusMult: ${ctx.bonusMult}`);
+  console.log(`  [equip] After additive + auras: bonusMiles ${ctx.bonusMiles}, bonusMult ${ctx.bonusMult}`);
 
   const totalValue = baseResult.totalValue;
   const baseMiles = baseResult.handResult.baseMiles;
   let finalMult = applyHolyAuraXMult(addScore(baseResult.mult, ctx.bonusMult), equipment, ctx);
 
+  console.log('  [equip] xMult pass (bar order)');
   ctx.xMult = ONE;
   forEachEquipmentResolved(
     equipment,
@@ -106,6 +109,7 @@ export function applyEquipmentEffects(
     'skip',
   );
   finalMult = multiplyScore(finalMult, ctx.xMult);
+  console.log(`  [equip] After xMult: equipment xMult ${ctx.xMult}, merged mult ${finalMult}`);
 
   const milesComponent = addScore(addScore(baseMiles, totalValue), ctx.bonusMiles);
   const run = getRunState();
@@ -124,11 +128,11 @@ export function applyEquipmentEffects(
       decimalValue: balanced,
     });
     console.log(
-      `  [equip] Accountant balance: (${milesComponent} mi, ${preBalanceMult} mult) → ${balanced} × ${balanced} = ${finalMiles} miles`,
+      `  [equip] Accountant balance: (${milesComponent} mi, ${preBalanceMult} mult) → ${balanced} × ${balanced} = ${finalMiles} mi`,
     );
   } else {
     console.log(
-      `  [equip] Final: (${baseMiles} base + ${totalValue} value + ${ctx.bonusMiles} bonusMiles) * ${finalMult} = ${finalMiles} miles`,
+      `[SCORE] Final: (${baseMiles} baseMiles + ${totalValue} value + ${ctx.bonusMiles} bonusMiles) × ${finalMult} mult = ${finalMiles} mi`,
     );
   }
 
@@ -144,7 +148,7 @@ export function applyEquipmentEffects(
 
 export { processEndOfRound, willEndLegRoundOnDayEnd } from './effects/lifecycle/onRoundEnd';
 
-// ─── Held-in-Hand Processing (Step 4) ───
+// ─── Held-in-Hand Processing (SCORE Step 4) ───
 
 function countHeldDoubleDownRetriggers(equipment: EquipmentInstance[]): number {
   const maxCopyDepthHeld = equipment.length;
@@ -219,9 +223,9 @@ export function processHeldInHand(
     mutations: createEmptyScoringMutations(),
   };
 
-  console.log('[SCORE] Step 4: Held-in-hand abilities');
+  console.log(`[SCORE] Step 4 — Held-in-hand (${heldDice.length} dice, left → right)`);
   console.log(
-    `  [held] Held dice: ${heldDice.map((d) => `${d.id}(value:${d.value}, enh:${d.enhancement}, sticker:${d.sticker})`).join(', ') || 'none'}`,
+    `  [held] Dice: ${heldDice.map((d) => `${d.id}(v${d.value} enh:${d.enhancement ?? '—'} sticker:${d.sticker ?? '—'})`).join(', ') || 'none'}`,
   );
 
   const alchemy = hasAlchemyKit(equipment);
@@ -360,7 +364,8 @@ export { processEquipmentPreScoring } from './effects/lifecycle/onPreScoring';
 
 export { processEquipmentOnDayEnd } from './effects/lifecycle/misc';
 
-export { getConfigModifiers, findDeathPrevention, getScoredRetriggerCount } from './effects/helpers';
+export { getConfigModifiers, findDeathPrevention } from './effects/helpers';
+export { getGlobalScoredRetriggerCount as getScoredRetriggerCount } from './effects/scoredRetrigger';
 
 export {
   processEquipmentOnDiceAdded,

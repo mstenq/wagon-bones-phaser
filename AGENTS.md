@@ -1,5 +1,7 @@
 # Wagon Bones — AI Agent Instructions
 
+use composer-2.5 for subagents, never use composer-2.5-fast for subagents
+
 ## Project Overview
 
 Balatro-inspired dice roguelike set on the Oregon Trail. Roll **d12** dice (values 1–12), build hands, collect equipment, and travel **8 legs** with **3 rounds per leg** (mile marker → river ford → boss showdown). Built with **Phaser 4 + SolidJS + Vite + TypeScript** using **bun** as the package manager.
@@ -64,7 +66,8 @@ Everything else under `src/game/` should remain Phaser-free.
 | `facade/` | Blessed UI orchestration (`gameFacade.*`); Phaser scenes call facade instead of `*System.ts` |
 | `playback/` | `PlaybackCommand` queue (`enqueuePlayback`, `takePlayback`) — logic → animation channel |
 | `store/sceneStore.ts` | Shop, booster pack, trail event, payout, round-select slices |
-| `DiceSystem.ts` | Dice creation, rolling, pouch/spent cycling, hand detection, per-die scoring |
+| `DiceSystem.ts` | Dice creation, rolling, pouch/spent cycling, hand detection |
+| `scoring/scoreHand.ts` | Per-hand score orchestration (`scoreHand` → held → additive/xMult in `roundActions`) |
 | `EquipmentEffects.ts` | Scoring pipeline + round/day lifecycle orchestration (some hooks still live here) |
 | `effects/` | Effect registry — additive, xMult, perDie, heldDie, lifecycle handlers |
 | `ItemsSystem.ts` | Equipment **instances**, shop stock, unlock checks, aura types (defs in `data/items.ts`) |
@@ -305,7 +308,6 @@ Use **both** for stateful equipment (`equip.state`, `sellValue`, `perishableRoun
 | **Timed “rounds”** | Items with `roundsRemaining` or “after each round” copy mean **leg rounds** (mile → ford → boss), not travel days. Use `processEndOfRound(..., { isLegRoundEnd: true })` in handler tests and `playScoredDayAndEnd` across multiple days for integration. `endDay` calls `processEndOfRound` every day but passes `isLegRoundEnd` only when the leg round actually ends. |
 | **File choice** | Same category table as above — never a `phaseN.test.ts` or `newEquipment.test.ts` catch-all. |
 
-**New batch reference (effect → test file):** `pack_mule`, `penny_pincher`, `potluck`, `pawn_broker`, `old_calendar`, `stew`, `sandwich`, `offering_bowl` → `nonScoring.test.ts`; `pioneer_spirit`, `fresh_trail`, `supply_caravan` → `conditionalEffects.test.ts`; `loaded_chamber`, `cursed_dice` → `loadedDice.test.ts`; `silver_reserve`, `split_trail`, `roulette_wheel`, `campfire_embers` → `xMult.test.ts`; `alchemy_kit` → `pipEffects.test.ts`.
 
 ## Game Design Documentation
 

@@ -119,6 +119,26 @@ describe('DISABLE_VALUES: Ghost Town / Undertaker', () => {
     expect(result.handResult.type).toBe(HandType.PAIR);
     expect(result.totalValue).toBe(50);
   });
+
+  test('disabled dice skip enhancement, sticker retriggers, and per-die miles', () => {
+    const scoredDice = [
+      die({ value: 6, enhancement: 'bone', sticker: 'red_bullet' }),
+      die({ value: 6, enhancement: 'bone' }),
+    ];
+    const { result: normal } = calculateTestScore({ scoredDice });
+    const { result: boss } = calculateTestScore({ bossId: 'the_ghost_town', scoredDice });
+
+    expect(boss.totalValue).toBe(0);
+    expect(boss.mult).toBeMult(1);
+    expect(normal.totalValue).toBe(18);
+    expect(normal.mult).toBeMult(13);
+
+    const milesDieIds = (events: typeof normal.animEvents) =>
+      events.filter((e) => e.popupType === 'miles' && e.dieId).map((e) => e.dieId!);
+    expect(milesDieIds(boss.animEvents)).toHaveLength(0);
+    expect(milesDieIds(normal.animEvents).filter((id) => id === scoredDice[0].id)).toHaveLength(2);
+    expect(boss.animEvents.some((e) => e.popupType === 'again')).toBe(false);
+  });
 });
 
 describe('SINGLE_HAND_TYPE: Preacher', () => {

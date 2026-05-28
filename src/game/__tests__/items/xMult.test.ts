@@ -69,6 +69,19 @@ describe("LUCKY_TRIGGER_XMULT: Rabbit's Foot", () => {
     // 1 + 4*0.25 = 2.0
     expect(inst.state.xMult).toBeCloseTo(2.0, 5);
   });
+
+  test('lucky mult proc updates state through calculateScore (not manual lifecycle dispatch)', () => {
+    const rabbits = item('rabbits_foot');
+    const { result, player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'lucky' })],
+      equipment: [rabbits],
+      runSeed: 'lucky-score-0',
+    });
+    const live = player.equipment.find((e) => e.def.id === 'rabbits_foot')!;
+    expect(live.state.xMult).toBeCloseTo(1.25, 5);
+    // scoreHand mult 21 (lucky +20) * rabbits x1.25
+    expect(result.mult).toBeMultCloseTo(26.25, 5);
+  });
 });
 
 // ─── UNCOMMON_EQUIP_XMULT: Collector's Case ───
@@ -683,6 +696,23 @@ describe('DIAMOND_DESTROYED_XMULT: Diamond Coffin', () => {
     // PAIR: baseMult=1, x2.5
     expect(result.mult).toBeMultCloseTo(2.5, 5);
   });
+
+  test('diamond crack during scoreHand updates coffin before equipment xMult pass', () => {
+    const diamond = die({ value: 8, enhancement: 'diamond' });
+    const coffin = item('diamond_coffin');
+    const { result, player } = calculateTestScore({
+      scoredDice: [diamond],
+      equipment: [coffin, item('loaded_dice'), item('loaded_dice'), item('loaded_dice')],
+      runSeed: 'diamond-score-0',
+    });
+    expect(player.dice.some((d) => d.id === diamond.id)).toBe(false);
+    const live = player.equipment.find((e) => e.def.id === 'diamond_coffin')!;
+    expect(live.state.xMult).toBeCloseTo(1.75, 5);
+    // scoreHand mult 2 (diamond x2) * coffin x1.75
+    expect(result.mult).toBeMultCloseTo(3.5, 5);
+    expect(result.miles).toBeMilesCloseTo(45.5, 5);
+    expect(result.animEvents.some((e) => e.popupType === 'crack')).toBe(true);
+  });
 });
 
 // ─── RAINBOW_TRAIL_XMULT: Rainbow Trail ───
@@ -993,6 +1023,50 @@ describe('GRAVEROBBER_XMULT: Graverobber', () => {
     });
     // PAIR: baseMult=1, x2.0 from graverobber
     expect(result.mult).toBeMultCloseTo(2.0, 5);
+  });
+
+  test('golden_spike before graverobber: graverobber strips gold and gains extra xMult', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const spikeFirst = item('graverobber');
+      const graveFirst = item('graverobber');
+
+      calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('golden_spike'), spikeFirst],
+      });
+      calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [graveFirst, item('golden_spike')],
+      });
+
+      expect(spikeFirst.state.xMult).toBeCloseTo(1.2, 5);
+      expect(graveFirst.state.xMult).toBe(1);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('echo_chamber after graverobber can re-gold dice stripped in bar order', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const d0 = die({ value: 5 });
+      const d1 = die({ value: 5 });
+      const graverobber = item('graverobber');
+      const { result } = calculateTestScore({
+        scoredDice: [d0, d1],
+        equipment: [item('golden_spike'), graverobber, item('echo_chamber')],
+      });
+
+      expect(graverobber.state.xMult).toBeCloseTo(1.2, 5);
+      expect(d0.enhancement).toBe('gold');
+      expect(d1.enhancement).toBe('gold');
+      expect(result.mult).toBeMultCloseTo(1.2, 5);
+    } finally {
+      Math.random = original;
+    }
   });
 });
 

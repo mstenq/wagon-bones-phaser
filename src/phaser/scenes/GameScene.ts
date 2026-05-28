@@ -1741,8 +1741,7 @@ export class GameScene extends Scene {
         for (let i = 0; i < list.length; i++) {
           if (list[i] === this.draggingSprite) continue;
           const arc = this.getArcOffset(i, list.length);
-          const targetY =
-            list === this.rollSprites ? this.getRollDieY(i, list[i]) : rowY + arc.y;
+          const targetY = list === this.rollSprites ? this.getRollDieY(i, list[i]) : rowY + arc.y;
           this.tweens.add({
             targets: list[i],
             x: positions[i],

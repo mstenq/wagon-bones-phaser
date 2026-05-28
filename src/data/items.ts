@@ -893,8 +893,8 @@ const items: ItemDef[] = [
       return {
         hint,
         tooltip: [
+          [text('View from the spyglass before the next trail event. ')],
           [
-            text('View from the spyglass before the next trail event. ')],[
             text('Avoid to skip it, or investigate for '),
             miles(`+${investigateMiles}`),
             text(' stored miles and face the full event.'),
@@ -1494,7 +1494,7 @@ const items: ItemDef[] = [
         round && round.day === 1
           ? [[condition('First hand'), active('Ready')]]
           : [[condition('First hand'), inactive('Inactive')]],
-      tooltip: [[text('If first hand of round is an enhanced 6, destroy it and gain a Frontier Encounter card')]],
+      tooltip: [[text('If first hand of round is a single enhanced 6, destroy it and gain a Frontier Encounter card')]],
     }),
     unlockCondition: unlockAnyEnhanced,
   },
@@ -2758,13 +2758,9 @@ const items: ItemDef[] = [
             money('$1'),
             text(' of interest for every '),
             money('$5'),
-            text(
-              ' you have at end of round.',
-            ),
+            text(' you have at end of round.'),
           ],
-          [
-            text('Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped).')
-          ]
+          [text('Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped).')],
         ],
       };
     },
@@ -2901,11 +2897,10 @@ const items: ItemDef[] = [
       const total = levelsAboveOne * perLevel;
       return {
         hint: [[miles(`+${total}`)], [condition('trail guide levels', 'sm')]],
-        tooltip: [[miles('+12'), text(' miles for each trail guide level above 1 on every hand type')], [
-          text('Currently: '),
-          miles(`+${total}`),
-          text(' miles'),
-        ]],
+        tooltip: [
+          [miles('+12'), text(' miles for each trail guide level above 1 on every hand type')],
+          [text('Currently: '), miles(`+${total}`), text(' miles')],
+        ],
       };
     },
   },

@@ -59,7 +59,7 @@ export interface ScoringMutations {
 
 /**
  * Handler for an equipment effect during the "independent equipment pass"
- * (Step 5 of scoring: after per-die scoring and held-in-hand, before xMult).
+ * (SCORE Step 5 additive pass: after scoreHand + held-in-hand, before equipment xMult).
  */
 export interface AdditiveEffectHandler {
   (ctx: ScoringPipelineContext, equip: EquipmentInstance, equipIndex: number): void;

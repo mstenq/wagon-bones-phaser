@@ -24,7 +24,8 @@ function applyAfterHandScoredEffect(
     case 'STATEFUL_ADD_MILES': {
       const decayRaw = (equip.def.effectParams as Record<string, unknown>).decayPerHand;
       const decay = typeof decayRaw === 'number' && Number.isFinite(decayRaw) ? decayRaw : 0;
-      const currentMiles = typeof equip.state.miles === 'number' && Number.isFinite(equip.state.miles) ? equip.state.miles : 0;
+      const currentMiles =
+        typeof equip.state.miles === 'number' && Number.isFinite(equip.state.miles) ? equip.state.miles : 0;
       equip.state.miles = Math.max(0, currentMiles - decay);
       break;
     }

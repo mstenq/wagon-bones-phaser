@@ -10,6 +10,7 @@ import {
   resetDieIds,
 } from './testHelpers';
 import type { ScoreAnimEvent } from '../types';
+import { computeScoredDieRetriggers, getGlobalScoredRetriggerCount } from '../effects/scoredRetrigger';
 
 /** Per-die miles popup sequence (excludes again/equip-only events). */
 function milesDieIds(events: ScoreAnimEvent[]): string[] {
@@ -378,6 +379,27 @@ describe('animEvents: enhance popup', () => {
     }
   });
 
+  test('pre-score enhance/strip follows equipment bar order (golden_spike → graverobber → echo)', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const d0 = die({ value: 5 });
+      const d1 = die({ value: 5 });
+      const { result } = calculateTestScore({
+        scoredDice: [d0, d1],
+        equipment: [item('golden_spike'), item('graverobber'), item('echo_chamber')],
+      });
+
+      const firstMilesIdx = result.animEvents.findIndex((e) => e.popupType === 'miles');
+      const preScore = firstMilesIdx === -1 ? result.animEvents : result.animEvents.slice(0, firstMilesIdx);
+      const popupTypes = preScore.map((e) => e.popupType);
+
+      expect(popupTypes).toEqual(['enhance', 'enhance', 'strip', 'xmult', 'strip', 'xmult', 'enhance', 'enhance']);
+    } finally {
+      Math.random = original;
+    }
+  });
+
   test('lucky_find enhances solo stone die on day 1', () => {
     const original = Math.random;
     Math.random = () => 0;
@@ -394,5 +416,125 @@ describe('animEvents: enhance popup', () => {
     } finally {
       Math.random = original;
     }
+  });
+});
+
+// ─── Retrigger parity (SCORE_CALC phase 1) ───
+
+describe('retrigger parity contract', () => {
+  test('quick_draw + red_bullet: first die scores four times with again events', () => {
+    const dice = [die({ value: 4, sticker: 'red_bullet' }), die({ value: 4 })];
+    const { result } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [item('quick_draw')],
+    });
+    expect(milesDieIds(result.animEvents).filter((id) => id === dice[0].id)).toHaveLength(4);
+    expect(result.animEvents.filter((e) => e.popupType === 'again').length).toBe(2);
+  });
+
+  test('echo_of_the_damned + red_bullet adds one extra trigger on stickered die', () => {
+    const dice = [die({ value: 6, sticker: 'red_bullet' }), die({ value: 6 })];
+    const { result: baseline } = calculateTestScore({ scoredDice: dice });
+    const { result: withEcho } = calculateTestScore({
+      scoredDice: dice,
+      echoOfTheDamnedStacks: 1,
+    });
+    expect(milesDieIds(baseline.animEvents).filter((id) => id === dice[0].id)).toHaveLength(2);
+    expect(milesDieIds(withEcho.animEvents).filter((id) => id === dice[0].id)).toHaveLength(3);
+  });
+
+  test('last_stand + war_drums on final day: three triggers per scored die', () => {
+    const dice = diceWithValue(5, 2);
+    const { result } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [item('last_stand'), item('war_drums')],
+      currentDay: 5,
+      maxDays: 5,
+    });
+    expect(milesDieIds(result.animEvents)).toEqual([
+      dice[0].id,
+      dice[0].id,
+      dice[0].id,
+      dice[1].id,
+      dice[1].id,
+      dice[1].id,
+    ]);
+    expect(result.animEvents.filter((e) => e.popupType === 'again').length).toBeGreaterThanOrEqual(4);
+  });
+
+  test('seventh_trumpet + red_bullet stacks global and sticker retriggers', () => {
+    const dice = [die({ value: 4, sticker: 'red_bullet' }), die({ value: 4 })];
+    const { result } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [item('seventh_trumpet')],
+    });
+    // die0: base + sticker + ALL_RETRIGGER = 3; die1: base + ALL_RETRIGGER = 2
+    expect(milesDieIds(result.animEvents)).toEqual([dice[0].id, dice[0].id, dice[0].id, dice[1].id, dice[1].id]);
+  });
+
+  test('computeScoredDieRetriggers trigger count matches scoreHand per die', () => {
+    const dice = [die({ value: 4, sticker: 'red_bullet' }), die({ value: 4 })];
+    const equipment = [item('war_drums'), item('quick_draw')];
+    const { result } = calculateTestScore({ scoredDice: dice, equipment });
+    const firstDieId = dice[0].id;
+    const lastDieId = dice[1].id;
+
+    for (const d of dice) {
+      const milesCount = milesDieIds(result.animEvents).filter((id) => id === d.id).length;
+      const { triggerCount } = computeScoredDieRetriggers({
+        die: d,
+        equipment,
+        firstDieId,
+        lastDieId,
+        isEnhanced: false,
+        isLucky: false,
+      });
+      expect(triggerCount).toBe(milesCount);
+    }
+  });
+
+  test('loaded chamber adds retrigger count without equip source entry', () => {
+    const lucky = die({ value: 5, enhancement: 'lucky' });
+    const { triggerCount, equipSources } = computeScoredDieRetriggers({
+      die: lucky,
+      equipment: [item('loaded_chamber')],
+      firstDieId: lucky.id,
+      lastDieId: lucky.id,
+      isEnhanced: true,
+      isLucky: true,
+    });
+    expect(triggerCount).toBe(2);
+    expect(equipSources).toHaveLength(0);
+  });
+
+  test('getGlobalScoredRetriggerCount matches global equip source entries', () => {
+    const equipment = [item('war_drums'), item('last_stand')];
+    const d = die({ value: 5 });
+    const globalCount = getGlobalScoredRetriggerCount(equipment, { currentDay: 5, maxDays: 5 });
+    const { equipSources } = computeScoredDieRetriggers({
+      die: d,
+      equipment,
+      firstDieId: d.id,
+      lastDieId: d.id,
+      scoreContext: { currentDay: 5, maxDays: 5 },
+      isEnhanced: false,
+      isLucky: false,
+    });
+    expect(globalCount).toBe(2);
+    expect(equipSources).toHaveLength(2);
+  });
+
+  test('equip source order: per-die retriggers before global (quick_draw + war_drums)', () => {
+    const d = die({ value: 5 });
+    const equipment = [item('quick_draw'), item('war_drums')];
+    const { equipSources } = computeScoredDieRetriggers({
+      die: d,
+      equipment,
+      firstDieId: d.id,
+      lastDieId: d.id,
+      isEnhanced: false,
+      isLucky: false,
+    });
+    expect(equipSources.map((s) => s.equipIndex)).toEqual([0, 0, 1]);
   });
 });

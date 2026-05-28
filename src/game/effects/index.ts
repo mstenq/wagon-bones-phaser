@@ -4,7 +4,6 @@ export { effectRegistry, EffectRegistry } from './registry';
 export {
   getConfigModifiers,
   findDeathPrevention,
-  getScoredRetriggerCount,
   forEachEquipmentResolved,
   applyEquipmentAuras,
   applyHolyAuraXMult,
@@ -13,6 +12,14 @@ export {
   hasStackedDeck,
   isBossEffectNegated,
 } from './helpers';
+export {
+  computeScoredDieRetriggers,
+  getGlobalScoredRetriggerCount,
+  getGlobalScoredRetriggerCount as getScoredRetriggerCount,
+  type ScoredDieRetriggerOptions,
+  type ScoredDieRetriggerResult,
+  type ScoredRetriggerScoreContext,
+} from './scoredRetrigger';
 export { applyScoringMutations, createEmptyScoringMutations, mergeMutations } from './applyMutations';
 export type {
   ScoringPipelineContext,

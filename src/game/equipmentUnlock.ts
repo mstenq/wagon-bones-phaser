@@ -28,9 +28,7 @@ export function unlockByEnhancement(enhancement: NonNullable<DiceEnhancement>): 
   return (_round, player) => playerHasDiceEnhancement(player, enhancement);
 }
 
-export function unlockByAnyEnhancement(
-  ...enhancements: NonNullable<DiceEnhancement>[]
-): EquipmentUnlockCondition {
+export function unlockByAnyEnhancement(...enhancements: NonNullable<DiceEnhancement>[]): EquipmentUnlockCondition {
   return (_round, player) => enhancements.some((enhancement) => playerHasDiceEnhancement(player, enhancement));
 }
 

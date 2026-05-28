@@ -430,10 +430,10 @@ describe('FIRST_DAY_SOLO_COPY: Bloodline', () => {
 // ─── FIRST_HAND_ENHANCED_SIX: Hellfire Round ───
 
 describe('FIRST_HAND_ENHANCED_SIX: Hellfire Round', () => {
-  test('destroys enhanced 6 on first day and grants frontier card', () => {
+  test('destroys solo enhanced 6 on first day and grants frontier card', () => {
     const enhanced6 = die({ value: 6, enhancement: 'bone' });
     const { player } = calculateTestScore({
-      scoredDice: [enhanced6, die({ value: 6 })],
+      scoredDice: [enhanced6],
       equipment: [item('hellfire_round')],
       currentDay: 1,
     });
@@ -441,6 +441,19 @@ describe('FIRST_HAND_ENHANCED_SIX: Hellfire Round', () => {
     expect(remaining.length).toBe(0);
     const frontier = player.consumables.filter((c) => c.def.category === 'frontier');
     expect(frontier.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('does not trigger when enhanced 6 is part of a multi-die hand', () => {
+    const enhanced6 = die({ value: 6, enhancement: 'bone' });
+    const { player } = calculateTestScore({
+      scoredDice: [enhanced6, die({ value: 6 })],
+      equipment: [item('hellfire_round')],
+      currentDay: 1,
+    });
+    const remaining = player.dice.filter((d) => d.id === enhanced6.id);
+    expect(remaining.length).toBe(1);
+    const frontier = player.consumables.filter((c) => c.def.category === 'frontier');
+    expect(frontier.length).toBe(0);
   });
 
   test('does not trigger if no enhanced 6', () => {

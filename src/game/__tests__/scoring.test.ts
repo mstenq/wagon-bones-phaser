@@ -6,13 +6,14 @@ import {
   diceWithValue,
   item,
   itemWithAura,
+  itemWithState,
   calculateTestScore,
   setupGame,
   resetDieIds,
 } from './testHelpers';
 import { HandType } from '../types';
 import { eq, gt, balanceMilesAndMult } from '../scoreMath';
-import { resolveScoreDestroyChance } from '../DiceSystem';
+import { resolveScoreDestroyChance } from '../scoring/scoreHand';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
 import { resetPlayerState } from '../__tests__/testRunPlayer';
@@ -622,6 +623,44 @@ describe('Stone dice', () => {
     const d = die({ value: 8, enhancement: 'wooden' });
     setDieEnhancement(d, 'gold');
     expect(d.value).toBe(8);
+  });
+});
+
+// ─── Score pipeline phase order (SCORE_CALC phase 1) ───
+
+describe('score pipeline phase order (characterization)', () => {
+  test('scoreHand per-die mult feeds held merge, then additive equipment', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'steel' })],
+      equipment: [item('horseshoe')],
+    });
+    // scoreHand: PAIR baseMult=1 → mult=1
+    // held: (1 + 0) * 1.5 = 1.5
+    // horseshoe ADD_MULT: +4 → 5.5
+    // miles: (10 base + 10 value) * 5.5 = 110
+    expect(result.mult).toBeMult(5.5);
+    expect(result.miles).toBeMiles(110);
+  });
+
+  test('equipment xMult applies after held merge on afterHeld mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'steel' })],
+      equipment: [itemWithState('worn_deck', { xMult: 2 })],
+    });
+    // scoreHand mult=1 → held *1.5=1.5 → worn_deck x2 = 3
+    expect(result.mult).toBeMult(3);
+  });
+
+  test('additive equipment runs after scoreHand; miles use final composition', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' })],
+      equipment: [item('horseshoe')],
+    });
+    // HIGH_VALUE: scoreHand (1+4)=5 mult, horseshoe +4 → 9; miles (5+5)*9=90
+    expect(result.mult).toBeMult(9);
+    expect(result.miles).toBeMiles(90);
   });
 });
 

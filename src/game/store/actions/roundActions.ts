@@ -9,7 +9,8 @@ import {
   type RoundState,
   type ScoreResult,
 } from '../../types';
-import { rollDice, rollDie, detectBestHand, scoreHand, createDie, drawFromPouch } from '../../DiceSystem';
+import { rollDice, rollDie, detectBestHand, createDie, drawFromPouch } from '../../DiceSystem';
+import { scoreHand } from '../../scoring/scoreHand';
 import { multiplyScore, addScore, D, ZERO, floorScore, ceilScore, gte } from '../../scoreMath';
 import {
   applyEquipmentEffects,

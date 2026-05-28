@@ -147,34 +147,6 @@ export function findDeathPrevention(
   return -1;
 }
 
-export function getScoredRetriggerCount(
-  equipment: EquipmentInstance[],
-  context?: { currentDay: number; maxDays: number },
-): number {
-  let count = 0;
-  const maxCopyDepth = equipment.length;
-  for (let i = 0; i < equipment.length; i++) {
-    if (isEquipmentDisabledByBoss(i)) continue;
-    let equip = equipment[i];
-    // Resolve copy items
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
-      if (!resolved) continue;
-      equip = resolved;
-    }
-    if (equip.def.effectType === 'SCORED_RETRIGGER_TIMED' && (equip.state.daysRemaining ?? 0) > 0) {
-      count++;
-    }
-    if (equip.def.effectType === 'SCORED_RETRIGGER_FINAL_DAY' && context && context.currentDay >= context.maxDays) {
-      count++;
-    }
-    if (equip.def.effectType === 'ALL_RETRIGGER') {
-      count += (equip.def.effectParams.value as number) ?? 1;
-    }
-  }
-  return count;
-}
-
 /** Whether Stacked Deck is equipped (loaded dice count as all pip values for equipment). */
 export function hasStackedDeck(equipment: EquipmentInstance[]): boolean {
   return equipment.some((e) => e.def.effectType === 'STACKED_DECK');

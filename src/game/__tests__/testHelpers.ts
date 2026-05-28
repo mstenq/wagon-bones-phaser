@@ -6,7 +6,7 @@ import { Die, HandType, BossDef, DifficultyLevel, EquipmentModifier } from '../t
 import { getBossById } from '../../data/bosses';
 import { GameState } from './testGameState';
 import { getPlayerState, type PlayerState } from './testRunPlayer';
-import { resetRunRng } from '../RunRng';
+import { initRunRng, resetRunRng } from '../RunRng';
 import {
   bossActions,
   economyActions,
@@ -361,6 +361,8 @@ export interface ScoreTestOptions {
   maxDays?: number;
   /** Echo of the Damned retrigger stacks before scoring */
   echoOfTheDamnedStacks?: number;
+  /** Re-seed run RNG after setupGame (setup resets RNG) for deterministic lucky/diamond rolls */
+  runSeed?: string;
 }
 
 /**
@@ -412,6 +414,10 @@ export function calculateTestScore(options: ScoreTestOptions) {
   });
 
   game.selectForScore(scoredIds);
+
+  if (options.runSeed !== undefined) {
+    initRunRng(options.runSeed);
+  }
 
   const result = game.calculateScore();
   if (!result) throw new Error('calculateScore returned null');
