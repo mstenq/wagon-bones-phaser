@@ -1,0 +1,24 @@
+---
+description: Avoid nested ternaries for branching logic
+alwaysApply: true
+---
+
+# Avoid Nested Ternaries
+
+- Do not use nested ternaries for non-trivial branching.
+- Prefer `if/else`, `switch`, or a small named helper function.
+- Keep ternaries to simple single-condition value selection only.
+
+## Examples
+
+```ts
+// ❌ Avoid
+const textureKey = category === 'supply' ? 'supplies' : category === 'frontier' ? 'frontier_encounters' : 'trail_guides';
+
+// ✅ Prefer
+function getConsumableAtlasKey(category: ConsumableCategory): string {
+  if (category === 'supply') return 'supplies';
+  if (category === 'frontier') return 'frontier_encounters';
+  return 'trail_guides';
+}
+```

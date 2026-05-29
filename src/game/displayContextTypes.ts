@@ -33,6 +33,7 @@ export interface ItemDisplayContext {
   usedEquipmentSlots: number;
   startingDiceCount: number;
   interestCap: number;
+  supplyCardsUsed: number;
   getHandStats(handType: HandType): HandStats;
 }
 

@@ -369,7 +369,7 @@ describe('FRESH_TRAIL: Fresh Trail', () => {
 
     const maxDays = getRoundState()!.config.maxDays;
     while (getRoundState()!.day < maxDays) {
-      playScoredDayAndEnd(game, { avoidWin: true });
+      playScoredDayAndEnd(game, { avoidWin: true, rolledDice: pairDice });
     }
 
     roundActions.clearRound();

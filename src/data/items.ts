@@ -1256,9 +1256,9 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && round.day === 1 && round.selectedForScore?.length === 1
-          ? [[active('Enhancing!')]]
+          ? [[active('Lucky roll!')]]
           : [[condition('first day 1 die')], [inactive('Inactive', 'sm')]],
-      tooltip: [[text('If one die is scored alone on first day, add a random enhancement')]],
+      tooltip: [[text('If one die is scored alone on day 1, give it a random enhancement, aura, and sticker')]],
     }),
   },
   {
@@ -1789,12 +1789,14 @@ const items: ItemDef[] = [
     effectType: 'SUPPLY_USED_MULT',
     effectParams: { value: 1 },
     display: (_round, player) => {
-      const equip = findOwnedEquip(player, 'campfire_stories');
-      const m = equip?.state.mult ?? 0;
-      const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+1'), condition('per supply used')]];
+      const m = player.supplyCardsUsed;
+      const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+1')],[condition('per supply used', 'xs')]];
       return {
         hint,
-        tooltip: [[mult('+1'), text(' mult per supply card used this journey')]],
+        tooltip: [
+          [mult('+1'), text(' mult per supply card used this journey')],
+          [text('Currently: '), mult(`+${m}`)],
+        ],
       };
     },
   },
@@ -2728,7 +2730,10 @@ const items: ItemDef[] = [
           : [[mult('+10'), condition('per missing die')], [inactive('Full herd')]];
       return {
         hint,
-        tooltip: [[mult('+10'), text(" mult for each dice below the collection's starting size")]],
+        tooltip: [
+          [mult('+10'), text(" mult for each dice below the collection's starting size")],
+          [text('Currently: '), mult(`+${missing * 10}`)],
+        ],
       };
     },
   },
@@ -2868,6 +2873,7 @@ const items: ItemDef[] = [
     effectType: 'STEW',
     effectParams: { chance: [1, 2], rounds: 5 },
     initialState: { roundsRemaining: 5 },
+    modifierImmunity: ['cursed'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'stew');
       const rounds = equip?.state.roundsRemaining ?? 5;
@@ -2933,6 +2939,7 @@ const items: ItemDef[] = [
     effectType: 'OLD_CALENDAR',
     effectParams: {},
     initialState: { mult: 0, miles: 0 },
+    modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'old_calendar');
       return {
@@ -2944,12 +2951,13 @@ const items: ItemDef[] = [
   {
     id: 'sandwich',
     name: 'Sandwich',
-    cardTemplate: 'white-text',
+    cardTemplate: 'black-text-white-outline',
     cost: 8,
     rarity: 'uncommon',
     effectType: 'SANDWICH',
     effectParams: { rounds: 5 },
     initialState: { roundsRemaining: 5 },
+    modifierImmunity: ['cursed'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'sandwich');
       const rounds = equip?.state.roundsRemaining ?? 5;
@@ -2981,6 +2989,7 @@ const items: ItemDef[] = [
     effectType: 'CAMPFIRE_EMBERS',
     effectParams: { value: 0.2 },
     initialState: { xMult: 1 },
+    modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'campfire_embers');
       return {
@@ -3011,6 +3020,7 @@ const items: ItemDef[] = [
     effectType: 'FRESH_TRAIL',
     effectParams: { value: 5 },
     initialState: { freshActive: 0, miles: 0 },
+    modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'fresh_trail');
       const total = equip?.state.miles ?? 0;
@@ -3061,6 +3071,7 @@ const items: ItemDef[] = [
     effectType: 'OFFERING_BOWL',
     effectParams: { value: 4 },
     initialState: { mult: 0 },
+    modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'offering_bowl');
       return {
@@ -3093,6 +3104,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'SPLIT_TRAIL',
     effectParams: { value: 2.5 },
+    modifierImmunity: ['perishable'],
     display: (_round, _player) => ({
       hint: [[mult('x2.5')], [condition('if odd + even scored', 'sm')]],
       tooltip: [[text('Gain '), mult('x2.5'), text(' if scored hand contains both odd and even values')]],
@@ -3106,6 +3118,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'PAWN_BROKER',
     effectParams: { value: 1 },
+    modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'pawn_broker');
       const sv = equip?.sellValue ?? 1;

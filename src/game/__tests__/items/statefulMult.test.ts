@@ -18,6 +18,7 @@ import {
   processEquipmentOnSupplyUsed,
 } from '../../EquipmentEffects';
 import { executeConsumableEffect, getRandomTrailGuideDef, getSupplyDefById } from '../../ConsumablesSystem';
+import { getRunState, runActions } from '../../store/runStore';
 import { HandType } from '../../types';
 
 beforeEach(() => resetDieIds());
@@ -354,30 +355,29 @@ describe('HAND_MILES_GAIN: Manifest Destiny', () => {
 // ─── SUPPLY_USED_MULT: Campfire Stories ───
 
 describe('SUPPLY_USED_MULT: Campfire Stories', () => {
-  test('starts at 0 mult', () => {
-    const inst = item('campfire_stories');
-    expect(inst.state.mult).toBeUndefined();
+  test('starts with 0 supplies used on the run', () => {
+    setupGame({ equipment: [item('campfire_stories')] });
+    expect(getRunState().supplyCardsUsed).toBe(0);
   });
 
-  test('gains +1 mult when processEquipmentOnSupplyUsed is called', () => {
-    const inst = item('campfire_stories');
-    processEquipmentOnSupplyUsed([inst]);
-    expect(inst.state.mult).toBe(1);
+  test('increments run supplyCardsUsed when processEquipmentOnSupplyUsed is called', () => {
+    processEquipmentOnSupplyUsed([]);
+    expect(getRunState().supplyCardsUsed).toBe(1);
   });
 
-  test('accumulates across multiple supply uses', () => {
-    const inst = item('campfire_stories');
-    processEquipmentOnSupplyUsed([inst]);
-    processEquipmentOnSupplyUsed([inst]);
-    processEquipmentOnSupplyUsed([inst]);
-    expect(inst.state.mult).toBe(3);
+  test('accumulates supplyCardsUsed across multiple supply uses', () => {
+    runActions.patch({ supplyCardsUsed: 0 });
+    processEquipmentOnSupplyUsed([]);
+    processEquipmentOnSupplyUsed([]);
+    processEquipmentOnSupplyUsed([]);
+    expect(getRunState().supplyCardsUsed).toBe(3);
   });
 
-  test('accumulated mult applies during scoring', () => {
-    const inst = itemWithState('campfire_stories', { mult: 5 });
+  test('run supply count applies as mult during scoring', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
-      equipment: [inst],
+      equipment: [item('campfire_stories')],
+      supplyCardsUsed: 5,
     });
     // PAIR: baseMult=1, +5 from campfire stories = 6
     expect(result.mult).toBeMult(6);
@@ -387,7 +387,7 @@ describe('SUPPLY_USED_MULT: Campfire Stories', () => {
 // ─── Campfire Stories: supply card use integration ───
 
 describe('Campfire Stories: supply card use integration', () => {
-  test('gains +1 mult when a supply card is used via executeConsumableEffect', () => {
+  test('increments run supplyCardsUsed when a supply card is used via executeConsumableEffect', () => {
     const campfire = item('campfire_stories');
     const { player } = setupGame({ equipment: [campfire] });
     const stableSupply = getSupplyDefById('firewood');
@@ -396,12 +396,11 @@ describe('Campfire Stories: supply card use integration', () => {
     player.addConsumable(stableSupply!);
     const consumed = player.useConsumable(0)!;
     executeConsumableEffect(consumed);
-    syncEquipmentInstances(campfire);
 
-    expect(campfire.state.mult).toBe(1);
+    expect(player.supplyCardsUsed).toBe(1);
   });
 
-  test('does NOT gain mult when a trail guide is used', () => {
+  test('does NOT increment supplyCardsUsed when a trail guide is used', () => {
     const campfire = item('campfire_stories');
     const { player } = setupGame({ equipment: [campfire] });
 
@@ -410,11 +409,10 @@ describe('Campfire Stories: supply card use integration', () => {
     const consumed = player.useConsumable(0)!;
     executeConsumableEffect(consumed);
 
-    // Trail guides are NOT supply cards
-    expect(campfire.state.mult ?? 0).toBe(0);
+    expect(player.supplyCardsUsed).toBe(0);
   });
 
-  test('accumulates mult across multiple supply uses', () => {
+  test('accumulates supplyCardsUsed across multiple supply uses', () => {
     const campfire = item('campfire_stories');
     const { player } = setupGame({ equipment: [campfire] });
     const stableSupply = getSupplyDefById('firewood');
@@ -425,8 +423,29 @@ describe('Campfire Stories: supply card use integration', () => {
       const consumed = player.useConsumable(0)!;
       executeConsumableEffect(consumed);
     }
-    syncEquipmentInstances(campfire);
 
-    expect(campfire.state.mult).toBe(3);
+    expect(player.supplyCardsUsed).toBe(3);
+  });
+
+  test('counts supplies used before acquiring Campfire Stories', () => {
+    const { game, player } = setupGame();
+    const stableSupply = getSupplyDefById('firewood');
+    expect(stableSupply).not.toBeNull();
+
+    player.addConsumable(stableSupply!);
+    executeConsumableEffect(player.useConsumable(0)!);
+    expect(player.supplyCardsUsed).toBe(1);
+
+    const campfire = item('campfire_stories');
+    player.equipment = [campfire];
+
+    const scored = diceWithValue(5, 2);
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scored;
+    game.state.selectedForRoll = scored;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scored.map((d) => d.id));
+    expect(game.calculateScore()!.mult).toBeMult(2);
   });
 });

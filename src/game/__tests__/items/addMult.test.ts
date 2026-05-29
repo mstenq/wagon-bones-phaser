@@ -11,6 +11,7 @@ import {
 } from '../testHelpers';
 import { processEndOfRound } from '../../EquipmentEffects';
 import { getRoundState } from '../../store/roundStore';
+import { roundActions } from '../../store/actions/roundActions';
 import { D } from '../../scoreMath';
 
 beforeEach(() => resetDieIds());
@@ -82,6 +83,30 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
       const equip = [item('horseshoe'), item('dynamite')];
       const result = processEndOfRound(equip);
       expect(result.destroyedIndices).toEqual([]);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('deferred endDay removes only dynamite when a neighbor is to the right', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const { game, player } = setupGame({
+        equipment: [item('horseshoe'), item('dynamite'), item('campfire_stories')],
+        dice: diceWithValue(5, 50),
+      });
+      game.startRound();
+      const { deferredDestroyIndices } = playScoredDayAndEnd(game, {
+        avoidWin: true,
+        endDay: { deferEquipmentDestructionAnimation: true },
+      });
+      expect(deferredDestroyIndices).toEqual([1]);
+      expect(player.equipment).toHaveLength(3);
+      roundActions.applyEndOfRoundDestructions(deferredDestroyIndices);
+      player.syncFromStore();
+      expect(player.equipment.map((e) => e.def.id)).toEqual(['horseshoe', 'campfire_stories']);
+      expect(player.dynamiteSelfDestructed).toBe(true);
     } finally {
       Math.random = original;
     }

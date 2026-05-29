@@ -1,13 +1,5 @@
 import { Scene } from 'phaser';
 import allItems from '../../data/items';
-import allTrailGuides from '../../data/trail_guides';
-import allSupplyCards from '../../data/supply_cards';
-import allFrontierEncounters from '../../data/frontier_encounters';
-import packsData from '../../data/packs';
-import permitsData from '../../data/permits';
-import professionsData from '../../data/professions';
-import bosses from '../../data/bosses';
-import { getConsumableTexturePrefix } from '../../game/facade/consumable';
 import pipEnhancements from '../../data/pip_enhancements';
 import diceEnhancements from '../../data/dice_enhancements';
 import * as Phaser from 'phaser';
@@ -54,15 +46,11 @@ export class Preloader extends Scene {
       this.load.image(`dice_${enh.id}`, `assets/dice/${enh.id}.png`);
     }
 
-    // Load pack images
-    for (const pack of packsData) {
-      this.load.image(`pack_${pack.id}`, `assets/packs/${pack.id}.png`);
-    }
+    // Load packs from TexturePacker single-atlas JSON
+    this.load.atlas('packs', 'assets/packs/packs.png', 'assets/packs/packs.json');
 
-    // Load item images
-    for (const item of allItems) {
-      this.load.image(`item_${item.id}`, `assets/items/${item.id}.png`);
-    }
+    // Load item cards from TexturePacker single-atlas JSON
+    this.load.atlas('items', 'assets/items/items.png', 'assets/items/items.json');
 
     // Load card template overlays (dynamic — derived from items that use cardTemplate)
     const templateIds = new Set(allItems.map((i) => i.cardTemplate).filter(Boolean));
@@ -70,38 +58,27 @@ export class Preloader extends Scene {
       this.load.image(`card_template_${tpl}`, `assets/card-templates/${tpl}.png`);
     }
 
-    // Load trail guide images (ids already include 'tg_' prefix)
-    const tgPrefix = getConsumableTexturePrefix('trail_guide');
-    for (const tg of allTrailGuides) {
-      this.load.image(`${tgPrefix}${tg.id}`, `assets/trail-guides/${tg.id}.png`);
-    }
+    // Load trail guides from TexturePacker single-atlas JSON
+    this.load.atlas('trail_guides', 'assets/trail-guides/trail_guides.png', 'assets/trail-guides/trail_guides.json');
 
-    // Load supply card images
-    const supplyPrefix = getConsumableTexturePrefix('supply');
-    for (const sc of allSupplyCards) {
-      this.load.image(`${supplyPrefix}${sc.id}`, `assets/supplies/${sc.id}.png`);
-    }
+    // Load supply cards from TexturePacker single-atlas JSON
+    this.load.atlas('supplies', 'assets/supplies/supplies.png', 'assets/supplies/supplies.json');
 
-    // Load frontier encounter images
-    const fePrefix = getConsumableTexturePrefix('frontier');
-    for (const fe of allFrontierEncounters) {
-      this.load.image(`${fePrefix}${fe.id}`, `assets/trail-encounters/${fe.id}.png`);
-    }
+    // Load frontier encounters from TexturePacker single-atlas JSON
+    this.load.atlas(
+      'frontier_encounters',
+      'assets/frontier-encounters/frontier_encounters.png',
+      'assets/frontier-encounters/frontier_encounters.json',
+    );
 
-    // Load permit images
-    for (const permit of permitsData) {
-      this.load.image(`permit_${permit.id}`, `assets/permits/${permit.id}.png`);
-    }
+    // Load permits from TexturePacker single-atlas JSON
+    this.load.atlas('permits', 'assets/permits/permits.png', 'assets/permits/permits.json');
 
-    // Load profession images
-    for (const prof of professionsData) {
-      this.load.image(`prof_${prof.id}`, `assets/professions/${prof.id}.png`);
-    }
+    // Load professions from TexturePacker single-atlas JSON
+    this.load.atlas('professions', 'assets/professions/professions.png', 'assets/professions/professions.json');
 
-    // Load boss images (square portraits in /public/assets/bosses)
-    for (const boss of bosses) {
-      this.load.image(`boss_${boss.id}`, `assets/bosses/${boss.id}.png`);
-    }
+    // Load boss portraits from TexturePacker single-atlas JSON
+    this.load.atlas('bosses', 'assets/bosses/bosses.png', 'assets/bosses/bosses.json');
 
     // Load difficulty stake icons
     for (let level = 1; level <= 8; level++) {

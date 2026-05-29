@@ -452,18 +452,24 @@ describe('SOLO_FIRST_DAY_ENHANCE: Lucky Find', () => {
     expect(inst.def.effectType).toBe('SOLO_FIRST_DAY_ENHANCE');
   });
 
-  test('replaces existing enhancement when solo scoring on day 1', () => {
+  test('applies enhancement, aura, and sticker when solo scoring on day 1', () => {
     const original = Math.random;
     Math.random = () => 0;
     try {
-      const steelDie = die({ value: 7, enhancement: 'steel' });
+      const steelDie = die({ value: 7, enhancement: 'steel', aura: 'fire', sticker: 'blue_moon' });
       const { result } = calculateTestScore({
         scoredDice: [steelDie],
         equipment: [item('lucky_find')],
         currentDay: 1,
       });
-      expect(result.handResult.scoringDice[0].enhancement).toBe('bone');
-      expect(steelDie.enhancement).toBe('bone');
+      const scored = result.handResult.scoringDice[0];
+      expect(scored.enhancement).toBe('bone');
+      expect(scored.aura).toBe('holy');
+      expect(scored.sticker).toBe('purple_flower');
+      const runDie = getRunState().dice.find((d) => d.id === steelDie.id)!;
+      expect(runDie.enhancement).toBe('bone');
+      expect(runDie.aura).toBe('holy');
+      expect(runDie.sticker).toBe('purple_flower');
     } finally {
       Math.random = original;
     }

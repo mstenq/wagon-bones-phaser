@@ -7,12 +7,11 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableInstance, PackDefinition, PackItem, UseConsumableResult } from '../../game/facade/pack';
-import { isSecondHelpingsCloneTarget } from '../../game/facade/consumable';
+import { getConsumableAtlasKey, isSecondHelpingsCloneTarget } from '../../game/facade/consumable';
 import {
   createFrontierConsumableDef,
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
-  getConsumableTexturePrefix,
   getPackDefById,
 } from '../../game/facade/pack';
 import { getRunState } from '../../game/store';
@@ -72,6 +71,7 @@ interface CardSprite {
 export class BoosterPackScene extends Scene {
   private packDef!: PackDefinition;
   private returnScene = 'Shop';
+  private queuedPackDefIds: string[] = [];
   private contents: PackItem[];
   private cardSprites: CardSprite[] = [];
   private picksRemaining: number;
@@ -125,6 +125,7 @@ export class BoosterPackScene extends Scene {
       packDefId?: string;
       returnScene?: string;
       free?: boolean;
+      queuedPackDefIds?: string[];
       restorePack?: BoosterPackSaveData;
     } = {},
   ) {
@@ -134,9 +135,11 @@ export class BoosterPackScene extends Scene {
       if (!def) throw new Error(`Unknown pack id: ${scenePack.packDefId}`);
       this.packDef = def;
       this.returnScene = scenePack.returnScene;
+      this.queuedPackDefIds = [...scenePack.queuedPackDefIds];
     } else if (data.packDef) {
       this.packDef = data.packDef;
       this.returnScene = data.returnScene ?? 'Shop';
+      this.queuedPackDefIds = [...(data.queuedPackDefIds ?? [])];
     } else if (data.packDefId) {
       const def = getPackDefById(data.packDefId);
       if (!def) {
@@ -144,6 +147,7 @@ export class BoosterPackScene extends Scene {
       }
       this.packDef = def;
       this.returnScene = data.returnScene ?? 'Shop';
+      this.queuedPackDefIds = [...(data.queuedPackDefIds ?? [])];
     }
   }
 
@@ -151,6 +155,7 @@ export class BoosterPackScene extends Scene {
     return {
       packDefId: this.packDef.id,
       returnScene: this.returnScene,
+      queuedPackDefIds: [...this.queuedPackDefIds],
       contents: this.contents.map(serializePackItem),
       picksRemaining: this.picksRemaining,
       usedCardIndices: this.cardSprites.filter((s) => s.used).map((s) => s.index),
@@ -710,7 +715,7 @@ export class BoosterPackScene extends Scene {
           };
       itemCard = new ItemCard(this, 0, 0, trailGuideDef, {
         mode: 'inventory',
-        texturePrefix: getConsumableTexturePrefix('trail_guide'),
+        textureKey: getConsumableAtlasKey('trail_guide'),
       });
       itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
@@ -725,7 +730,7 @@ export class BoosterPackScene extends Scene {
           };
       itemCard = new ItemCard(this, 0, 0, supplyDef, {
         mode: 'inventory',
-        texturePrefix: getConsumableTexturePrefix('supply'),
+        textureKey: getConsumableAtlasKey('supply'),
       });
       itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
@@ -740,7 +745,7 @@ export class BoosterPackScene extends Scene {
           };
       itemCard = new ItemCard(this, 0, 0, frontierDef, {
         mode: 'inventory',
-        texturePrefix: getConsumableTexturePrefix('frontier'),
+        textureKey: getConsumableAtlasKey('frontier'),
       });
       itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
@@ -1290,10 +1295,7 @@ export class BoosterPackScene extends Scene {
 
     if (this.picksRemaining <= 0) {
       this.clearDiceLineup();
-      this.time.delayedCall(800, () => {
-        sceneActions.clearBoosterPack();
-        this.scene.start(this.returnScene, {});
-      });
+      this.time.delayedCall(800, () => this.exitBoosterPackFlow());
     } else {
       if (this.hasDiceSelectionLineup) {
         this.syncDiceLineupFromRun();
@@ -1376,8 +1378,29 @@ export class BoosterPackScene extends Scene {
 
   private onSkip(): void {
     gameFacade.pack.skipPack();
+    this.exitBoosterPackFlow();
+  }
+
+  private exitBoosterPackFlow(): void {
+    const returnScene = this.returnScene;
+    const queued = [...this.queuedPackDefIds];
     sceneActions.clearBoosterPack();
-    this.scene.start(this.returnScene, {});
+
+    if (queued.length > 0) {
+      const nextId = queued[0]!;
+      const packDef = getPackDefById(nextId);
+      if (packDef) {
+        this.scene.start('BoosterPack', {
+          packDef,
+          returnScene,
+          free: true,
+          queuedPackDefIds: queued.slice(1),
+        });
+        return;
+      }
+    }
+
+    this.scene.start(returnScene, {});
   }
 
   private onResize(): void {
@@ -1386,6 +1409,8 @@ export class BoosterPackScene extends Scene {
       this.contents = stored.contents.map(deserializePackItem);
       this.picksRemaining = stored.picksRemaining;
       this.pendingUsedCardIndices = [...stored.usedCardIndices];
+      this.queuedPackDefIds = [...stored.queuedPackDefIds];
+      this.returnScene = stored.returnScene;
     }
     this.cardSprites = [];
     this.activeTabCard = null;

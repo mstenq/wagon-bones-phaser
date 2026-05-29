@@ -131,6 +131,8 @@ export interface RunState {
   seenTrailEventIds: string[];
   skipNextShop: boolean;
   trailGuidesUsed: number;
+  /** Supply cards consumed this run (for Campfire Stories and similar). */
+  supplyCardsUsed: number;
   startingDiceCount: number;
   bossEffectDisabled: boolean;
   bossRoundState: BossRoundState;
@@ -238,6 +240,8 @@ export interface StoredPackItem {
 export interface BoosterPackSceneState {
   packDefId: string;
   returnScene: string;
+  /** Remaining free tag packs to open after this one (Twin Wagon / multiple tags). */
+  queuedPackDefIds: string[];
   contents: StoredPackItem[];
   picksRemaining: number;
   usedCardIndices: number[];

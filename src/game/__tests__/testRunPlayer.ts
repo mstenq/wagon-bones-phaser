@@ -457,6 +457,13 @@ export class PlayerState {
     patchRun({ trailGuidesUsed: v });
   }
 
+  get supplyCardsUsed(): number {
+    return this.s().supplyCardsUsed;
+  }
+  set supplyCardsUsed(v: number) {
+    patchRun({ supplyCardsUsed: v });
+  }
+
   get startingDiceCount(): number {
     return this.s().startingDiceCount;
   }

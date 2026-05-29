@@ -1,0 +1,268 @@
+{"frames": [
+
+{
+	"filename": "bargain_bin.png",
+	"frame": {"x":0,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "binoculars.png",
+	"frame": {"x":179,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "bottomless_satchel.png",
+	"frame": {"x":358,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "bounty_board.png",
+	"frame": {"x":537,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "camp_merchant.png",
+	"frame": {"x":716,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "devils_eye.png",
+	"frame": {"x":895,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "devils_luck.png",
+	"frame": {"x":1074,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "dice_carver.png",
+	"frame": {"x":1253,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "estate_auction.png",
+	"frame": {"x":1432,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "extra_rations.png",
+	"frame": {"x":1611,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "freight_caravan.png",
+	"frame": {"x":1790,"y":0,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "frontier_pathfinder.png",
+	"frame": {"x":0,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "hidden_pass.png",
+	"frame": {"x":179,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "infernal_vision.png",
+	"frame": {"x":358,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "lucky_streak.png",
+	"frame": {"x":537,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "master_engraver.png",
+	"frame": {"x":716,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "pack_mule.png",
+	"frame": {"x":895,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "railroad_investment.png",
+	"frame": {"x":1074,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "sacred_ceremony.png",
+	"frame": {"x":1253,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "savings_bond.png",
+	"frame": {"x":1432,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "second_chance.png",
+	"frame": {"x":1611,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "shortcut_trail.png",
+	"frame": {"x":1790,"y":301,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "spirit_ritual.png",
+	"frame": {"x":0,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "strange_coin.png",
+	"frame": {"x":179,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "supply_baron.png",
+	"frame": {"x":358,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "supply_cache.png",
+	"frame": {"x":537,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "supply_pouch.png",
+	"frame": {"x":716,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "supply_wagon.png",
+	"frame": {"x":895,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "surveyors_scope.png",
+	"frame": {"x":1074,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "third_times_charm.png",
+	"frame": {"x":1253,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "trail_cartographer.png",
+	"frame": {"x":1432,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+},
+{
+	"filename": "wanted_dead_or_alive.png",
+	"frame": {"x":1611,"y":602,"w":179,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":179,"h":301},
+	"sourceSize": {"w":179,"h":301}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "permits.png",
+	"format": "RGBA8888",
+	"size": {"w":1969,"h":903},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:816a2de8d5d0fdc02ccf0ca5a5b6b613:51745f1015ddf351ca8c440a924c3e47:35add3c1b31a7e2d830baf418fefaaa1$"
+}
+}

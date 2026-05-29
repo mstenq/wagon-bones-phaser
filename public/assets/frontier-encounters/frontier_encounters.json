@@ -1,0 +1,132 @@
+{"frames": [
+
+{
+	"filename": "all_in.png",
+	"frame": {"x":0,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "blood_moon.png",
+	"frame": {"x":202,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "deputize.png",
+	"frame": {"x":404,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "echo_of_the_damned.png",
+	"frame": {"x":606,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "gold_rush.png",
+	"frame": {"x":808,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "magic_beans.png",
+	"frame": {"x":0,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "pandoras_box.png",
+	"frame": {"x":202,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "priests_blessing.png",
+	"frame": {"x":404,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "raid.png",
+	"frame": {"x":606,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "seeing_double.png",
+	"frame": {"x":808,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "skin_walker.png",
+	"frame": {"x":0,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "snake_oil_salesman.png",
+	"frame": {"x":202,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "spirit_guide.png",
+	"frame": {"x":404,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "spirit_shaman.png",
+	"frame": {"x":606,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "spiritual_journey.png",
+	"frame": {"x":808,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "frontier_encounters.png",
+	"format": "RGBA8888",
+	"size": {"w":1010,"h":903},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:eaa5cde8649f6c6481135fa02feb84d2:b4d9cc2ae83b7c7fd49a487128072bca:b86d9de05426e8e5348400a5d07d9620$"
+}
+}

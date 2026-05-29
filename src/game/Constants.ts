@@ -14,8 +14,8 @@ export const GAME = {
 
 // ─── Gameplay Defaults ───
 export const GAMEPLAY = {
-  MAX_DAYS: 3,
-  MAX_REROLLS: 5,
+  MAX_DAYS: 4,
+  MAX_REROLLS: 4,
   ROLL_SIZE: 8,
   SCORE_SIZE: 5,
   STARTING_DICE: 50,
@@ -102,7 +102,13 @@ export const DIFFICULTIES: DifficultyDef[] = [
     name: 'Deadly Frontier',
     description: 'Mile targets become brutal.',
     color: 0xaa44ff,
-    effects: ['No reward for Round 1', 'Brutal mile targets', 'Cursed equipment', '-1 Reroll', 'Mile targets become brutal'],
+    effects: [
+      'No reward for Round 1',
+      'Brutal mile targets',
+      'Cursed equipment',
+      '-1 Reroll',
+      'Mile targets become brutal',
+    ],
   },
   {
     level: 7,
@@ -440,4 +446,5 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'TRAIL_BACKPACK', // Trail Backpack,
   'GAMBLERS_DICE_CUP', // Gambler's Dice Cup,
   'ALCHEMY_KIT', // Alchemy Kit
+  'SOLO_FIRST_DAY_ENHANCE', // Lucky Find
 ]);

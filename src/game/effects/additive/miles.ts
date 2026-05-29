@@ -2,6 +2,7 @@
 
 import { effectRegistry } from '../registry';
 import { addScore } from '../../scoreMath';
+import { getRunState } from '../../store/runStore';
 
 effectRegistry.registerAdditive('MILES_PER_UNUSED_REROLL', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
@@ -35,8 +36,10 @@ effectRegistry.registerAdditive('EXACT_DICE_COUNT_MILES', (ctx, equip, index) =>
 });
 
 effectRegistry.registerAdditive('SUPPLY_USED_MULT', (ctx, equip, index) => {
-  // Campfire Stories: accumulated mult applies during scoring
-  const val = equip.state.mult ?? 0;
+  // Campfire Stories: +mult per supply card used this journey (run-wide counter)
+  const p = equip.def.effectParams as Record<string, unknown>;
+  const perUse = (p.value as number) ?? 1;
+  const val = getRunState().supplyCardsUsed * perUse;
   if (val > 0) {
     ctx.bonusMult = addScore(ctx.bonusMult, val);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: val });

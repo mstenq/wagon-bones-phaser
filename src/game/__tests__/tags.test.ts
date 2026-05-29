@@ -10,6 +10,7 @@ import {
   processJunkPileTag,
   processBossPayoutTags,
   processChangeOfGuardTags,
+  expandImmediatePackTagsToPackDefIds,
 } from '../TagSystem';
 import {
   createEquipmentInstance,
@@ -94,6 +95,24 @@ describe('TagSystem', () => {
 
       player.addTag(ALL_TAGS.find((t) => t.id === 'tag_shortcut')!);
       expect(player.pendingTags[0].copies).toBe(4);
+    });
+  });
+
+  describe('expandImmediatePackTagsToPackDefIds', () => {
+    it('expands Twin Wagon copies into multiple pack opens', () => {
+      const mega = getTrailTagById('tag_dice_mega')!;
+      const expanded = expandImmediatePackTagsToPackDefIds([{ def: mega, copies: 2 }]);
+      expect(expanded).toEqual(['dice_mega', 'dice_mega']);
+    });
+
+    it('flattens multiple pending immediate pack tags in order', () => {
+      const dice = getTrailTagById('tag_dice_mega')!;
+      const supply = getTrailTagById('tag_supply_mega')!;
+      const expanded = expandImmediatePackTagsToPackDefIds([
+        { def: dice, copies: 1 },
+        { def: supply, copies: 2 },
+      ]);
+      expect(expanded).toEqual(['dice_mega', 'supply_mega', 'supply_mega']);
     });
   });
 

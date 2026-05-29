@@ -227,6 +227,8 @@ Colors, fonts, sizing, gameplay values — **`Constants.ts` only**. Import from 
 - IO + boot restore: `phaser/AutoSaveManager.ts`, `phaser/SaveLoadIO.ts`
 - Key: `GAMEPLAY.AUTOSAVE_STORAGE_KEY` in `localStorage`
 
+**Active development — no legacy save support.** The game is not launched; do not add migration helpers, equipment-state inference, or other backward-compatibility shims when renaming or adding run fields. On load, default missing fields with `?? 0`, `?? []`, `?? null`, etc. in `deserializeRunState` (or the v3 `playerSaveToRunState` path only when that path still exists). Do not bump `SAVE_VERSION` for field additions alone. Remove dead legacy code when you touch it rather than extending it.
+
 ## Testing
 
 - Framework: **bun:test** (Jest-compatible API)

@@ -330,9 +330,13 @@ describe('animEvents: enhance popup', () => {
           popupType: 'enhance',
           dieId: scoredDie.id,
           enhancement: 'bone',
+          aura: 'holy',
+          sticker: 'purple_flower',
         }),
       );
       expect(result.handResult.scoringDice[0].enhancement).toBe('bone');
+      expect(result.handResult.scoringDice[0].aura).toBe('holy');
+      expect(result.handResult.scoringDice[0].sticker).toBe('purple_flower');
     } finally {
       Math.random = original;
     }
@@ -355,8 +359,8 @@ describe('animEvents: enhance popup', () => {
           enhancement: 'gold',
         }),
       );
-      // Enhancement is applied directly (pre-scoring pass), not via mutations
-      expect(scoredDie.enhancement).toBe('gold');
+      const scored = result.handResult.scoringDice.find((d) => d.id === scoredDie.id)!;
+      expect(scored.enhancement).toBe('gold');
     } finally {
       Math.random = original;
     }
@@ -367,13 +371,14 @@ describe('animEvents: enhance popup', () => {
     Math.random = () => 0;
     try {
       const stoneDie = die({ value: 0, enhancement: 'stone' });
-      calculateTestScore({
+      const { result } = calculateTestScore({
         scoredDice: [stoneDie, die({ value: 5 })],
         equipment: [item('stacked_deck'), item('golden_spike')],
       });
-      expect(stoneDie.enhancement).toBe('gold');
-      expect(stoneDie.value).toBeGreaterThanOrEqual(1);
-      expect(stoneDie.value).toBeLessThanOrEqual(12);
+      const scored = result.handResult.scoringDice.find((d) => d.id === stoneDie.id)!;
+      expect(scored.enhancement).toBe('gold');
+      expect(scored.value).toBeGreaterThanOrEqual(1);
+      expect(scored.value).toBeLessThanOrEqual(12);
     } finally {
       Math.random = original;
     }
@@ -410,9 +415,12 @@ describe('animEvents: enhance popup', () => {
         equipment: [item('lucky_find')],
         currentDay: 1,
       });
-      expect(result.handResult.scoringDice[0].enhancement).toBe('bone');
-      expect(stoneDie.value).toBeGreaterThanOrEqual(1);
-      expect(stoneDie.value).toBeLessThanOrEqual(12);
+      const scored = result.handResult.scoringDice[0];
+      expect(scored.enhancement).toBe('bone');
+      expect(scored.aura).toBe('holy');
+      expect(scored.sticker).toBe('purple_flower');
+      expect(scored.value).toBeGreaterThanOrEqual(1);
+      expect(scored.value).toBeLessThanOrEqual(12);
     } finally {
       Math.random = original;
     }

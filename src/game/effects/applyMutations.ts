@@ -67,12 +67,20 @@ export function applyDiceEnhancementMutations(mutations: ScoringMutations, scori
   const dice = [...run.dice];
   let changed = false;
 
-  for (const { id, enhancement } of mutations.diceEnhanced) {
-    const scored = scoringDice.find((d) => d.id === id);
-    if (scored) setDieEnhancement(scored, enhancement);
-    const idx = dice.findIndex((d) => d.id === id);
+  for (const patch of mutations.diceEnhanced) {
+    const scored = scoringDice.find((d) => d.id === patch.id);
+    if (scored) {
+      if (patch.enhancement !== undefined) setDieEnhancement(scored, patch.enhancement);
+      if (patch.aura !== undefined) scored.aura = patch.aura;
+      if (patch.sticker !== undefined) scored.sticker = patch.sticker;
+    }
+    const idx = dice.findIndex((d) => d.id === patch.id);
     if (idx >= 0) {
-      setDieEnhancement(dice[idx], enhancement);
+      const next = { ...dice[idx] };
+      if (patch.enhancement !== undefined) setDieEnhancement(next, patch.enhancement);
+      if (patch.aura !== undefined) next.aura = patch.aura;
+      if (patch.sticker !== undefined) next.sticker = patch.sticker;
+      dice[idx] = next;
       changed = true;
     }
   }
@@ -119,7 +127,9 @@ export function applyScoringMutations(
       const patch = mutations.diceEnhanced.find((e) => e.id === d.id);
       if (!patch) return d;
       const next = { ...d };
-      setDieEnhancement(next, patch.enhancement);
+      if (patch.enhancement !== undefined) setDieEnhancement(next, patch.enhancement);
+      if (patch.aura !== undefined) next.aura = patch.aura;
+      if (patch.sticker !== undefined) next.sticker = patch.sticker;
       return next;
     });
     runStore.setState({ dice });

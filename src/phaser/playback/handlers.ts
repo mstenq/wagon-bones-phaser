@@ -190,10 +190,17 @@ function playDayEndDestructionsPlayback(
       const idx = remaining[0];
       const rest = remaining.slice(1).map((i) => (i > idx ? i - 1 : i));
 
-      animateEquipmentFireDestruction(ctx.scene, ctx.equipBar, idx, idx, () => {
-        roundActions.applyEndOfRoundDestructions([idx]);
-        ctx.scene.time.delayedCall(200, () => playNext(rest));
-      });
+      animateEquipmentFireDestruction(
+        ctx.scene,
+        ctx.equipBar,
+        idx,
+        idx,
+        () => {
+          roundActions.applyEndOfRoundDestructions([idx]);
+          ctx.scene.time.delayedCall(200, () => playNext(rest));
+        },
+        { deferStateUpdate: true },
+      );
     };
 
     playNext(sorted);

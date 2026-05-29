@@ -18,6 +18,7 @@ import {
   selectAvailableDice,
   selectPendingTags,
 } from '../../store';
+import { initRunRng } from '../../RunRng';
 
 describe('run store actions', () => {
   const initialBalance = createInitialRunState().balance;
@@ -48,6 +49,7 @@ describe('run store actions', () => {
   });
 
   test('occult trader + junk dealer creates common/uncommon/rare at expected rates across round starts', () => {
+    initRunRng('occult-junk-dealer-rates');
     setupActions.applyProfession('occult_trader');
     setupActions.finalizeRunSetup();
     runActions.patch({ maxEquipmentSlots: 99 });

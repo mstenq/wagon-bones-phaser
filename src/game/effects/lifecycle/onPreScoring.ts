@@ -9,9 +9,11 @@ import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 import { forEachEquipmentResolved } from '../helpers';
 import { checkLoadedChance } from '../../equipmentUtils';
+import { pickDiceAuraWeighted } from '../../auraRng';
+import { pickRandomSticker } from '../../BoosterPackSystem';
 import { rngPick } from '../../RunRng';
 import { setDieEnhancement } from '../../DiceSystem';
-import { getRunState, runStore } from '../../store/runStore';
+import { getRunState } from '../../store/runStore';
 
 interface PreScoringContext {
   scoringDice: Die[];
@@ -22,32 +24,42 @@ interface PreScoringContext {
   animEvents: ScoreAnimEvent[];
 }
 
-/** Apply one enhancement patch to scored dice and run collection immediately (also records mutation). */
-function applyPreScoringEnhancementImmediate(
+type DieScoringPatch = {
+  enhancement?: Die['enhancement'];
+  aura?: Die['aura'];
+  sticker?: Die['sticker'];
+};
+
+/** Apply die patches to scored dice and run collection immediately (also records mutation). */
+function applyPreScoringDiePatchImmediate(
   scoringDice: Die[],
   mutations: ScoringMutations,
   dieId: string,
-  enhancement: Die['enhancement'],
+  patch: DieScoringPatch,
 ): void {
   const existing = mutations.diceEnhanced.find((e) => e.id === dieId);
   if (!existing) {
-    mutations.diceEnhanced.push({ id: dieId, enhancement });
+    mutations.diceEnhanced.push({ id: dieId, ...patch });
   } else {
-    existing.enhancement = enhancement;
+    if (patch.enhancement !== undefined) existing.enhancement = patch.enhancement;
+    if (patch.aura !== undefined) existing.aura = patch.aura;
+    if (patch.sticker !== undefined) existing.sticker = patch.sticker;
   }
 
   const scored = scoringDice.find((d) => d.id === dieId);
-  if (scored) setDieEnhancement(scored, enhancement);
+  if (scored) {
+    if (patch.enhancement !== undefined) setDieEnhancement(scored, patch.enhancement);
+    if (patch.aura !== undefined) scored.aura = patch.aura;
+    if (patch.sticker !== undefined) scored.sticker = patch.sticker;
+  }
 
   const run = getRunState();
-  const dice = [...run.dice];
-  let changed = false;
-  const idx = dice.findIndex((d) => d.id === dieId);
-  if (idx >= 0) {
-    setDieEnhancement(dice[idx], enhancement);
-    changed = true;
+  const pouchDie = run.dice.find((d) => d.id === dieId);
+  if (pouchDie && pouchDie !== scored) {
+    if (patch.enhancement !== undefined) setDieEnhancement(pouchDie, patch.enhancement);
+    if (patch.aura !== undefined) pouchDie.aura = patch.aura;
+    if (patch.sticker !== undefined) pouchDie.sticker = patch.sticker;
   }
-  if (changed) runStore.setState({ dice });
 }
 
 /** Strip enhancement from scored die and run collection immediately. */
@@ -72,7 +84,7 @@ effectRegistry.registerLifecycle('on-pre-scoring', (equip, ctx, equipIndex) => {
       for (const die of scoringDice) {
         if (die.enhancement === 'gold') continue;
         if (checkLoadedChance(goldChance, equipment)) {
-          applyPreScoringEnhancementImmediate(scoringDice, mutations, die.id, 'gold');
+          applyPreScoringDiePatchImmediate(scoringDice, mutations, die.id, { enhancement: 'gold' });
           animEvents.push({
             target: { kind: 'both', dieId: die.id, equipIndex: eIdx },
             popupType: 'enhance',
@@ -90,15 +102,21 @@ effectRegistry.registerLifecycle('on-pre-scoring', (equip, ctx, equipIndex) => {
       const target = scoringDice[0];
       const enhancements: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded', 'diamond'];
       const enhancement = rngPick('equipment', enhancements);
-      applyPreScoringEnhancementImmediate(scoringDice, mutations, target.id, enhancement);
+      const aura = pickDiceAuraWeighted(1, 'equipment');
+      const sticker = pickRandomSticker('equipment');
+      applyPreScoringDiePatchImmediate(scoringDice, mutations, target.id, { enhancement, aura, sticker });
       animEvents.push({
         target: { kind: 'both', dieId: target.id, equipIndex: eIdx },
         popupType: 'enhance',
         value: 0,
         dieId: target.id,
         enhancement,
+        aura,
+        sticker,
       });
-      console.log(`  [preScoring] ${equip.def.name}: die ${target.id} → ${enhancement}`);
+      console.log(
+        `  [preScoring] ${equip.def.name}: die ${target.id} → ${enhancement}, ${aura} aura, ${sticker} sticker`,
+      );
       break;
     }
     case 'GRAVEROBBER_XMULT': {

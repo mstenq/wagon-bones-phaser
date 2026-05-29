@@ -31,11 +31,16 @@ const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
 
 const ALL_STICKERS: DiceSticker[] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
 
+/** Uniform random sticker (always applies). */
+export function pickRandomSticker(stream: RngStream = 'sticker'): DiceSticker {
+  return rngPick(stream, ALL_STICKERS);
+}
+
 /** Randomly apply a sticker to a die (small chance) */
 export function applyRandomSticker(die: Die): void {
   if (die.sticker) return; // already has one
   if (rngFloat('sticker') >= DICE_STICKER_CHANCE) return;
-  die.sticker = rngPick('sticker', ALL_STICKERS);
+  die.sticker = pickRandomSticker('sticker');
 }
 
 // ─── Types ───

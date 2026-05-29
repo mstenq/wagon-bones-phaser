@@ -274,6 +274,8 @@ export interface GameSetupOptions {
   maxEquipmentSlots?: number;
   /** Boss id for current leg (sets round to 3) */
   bossId?: string;
+  /** Supply cards consumed this run (Campfire Stories, etc.) */
+  supplyCardsUsed?: number;
 }
 
 export interface GameSetupResult {
@@ -305,6 +307,7 @@ export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
   setupActions.finalizeRunSetup();
   if (options.handSize !== undefined) runActions.patch({ handSize: options.handSize });
   if (options.maxEquipmentSlots !== undefined) runActions.patch({ maxEquipmentSlots: options.maxEquipmentSlots });
+  if (options.supplyCardsUsed !== undefined) runActions.patch({ supplyCardsUsed: options.supplyCardsUsed });
 
   if (options.handLevels) {
     for (const [handType, level] of Object.entries(options.handLevels)) {
@@ -363,6 +366,8 @@ export interface ScoreTestOptions {
   echoOfTheDamnedStacks?: number;
   /** Re-seed run RNG after setupGame (setup resets RNG) for deterministic lucky/diamond rolls */
   runSeed?: string;
+  /** Supply cards consumed this run (Campfire Stories, etc.) */
+  supplyCardsUsed?: number;
 }
 
 /**
@@ -379,6 +384,7 @@ export function calculateTestScore(options: ScoreTestOptions) {
     profession: options.profession,
     handLevels: options.handLevels,
     bossId: options.bossId,
+    supplyCardsUsed: options.supplyCardsUsed,
   });
 
   if (options.echoOfTheDamnedStacks !== undefined) {

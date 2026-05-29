@@ -1,12 +1,8 @@
 // ─── Aura spawn RNG (No Phaser imports) ───
 // Sequential independent rolls per aura type; permit multiplier scales holy/fire/icy only.
 
-import itemAuras, {
-  DICE_AURA_ORDER,
-  EQUIPMENT_AURA_ORDER,
-  getItemAuraDefById,
-  type ItemAura,
-} from '../data/item_auras';
+import { DICE_AURA_ORDER, getDiceAuraById } from '../data/dice_auras';
+import itemAuras, { EQUIPMENT_AURA_ORDER, getItemAuraDefById, type ItemAura } from '../data/item_auras';
 import type { DiceAura } from './types';
 import { rngFloat, type RngStream } from './RunRng';
 
@@ -41,14 +37,19 @@ export function rollEquipmentAura(auraMultiplier: number = 1, stream: RngStream 
 
 /** Roll dice aura (holy → fire → icy). Returns null when no type succeeds. */
 export function rollDiceAura(auraMultiplier: number = 1, stream: RngStream = 'shop'): DiceAura | null {
-  const rolled = rollSequentialAuras(DICE_AURA_ORDER, (a) => a.diceChance, auraMultiplier, stream);
-  return rolled ? (rolled.id as DiceAura) : null;
+  for (const id of DICE_AURA_ORDER) {
+    const aura = getDiceAuraById(id);
+    if (!aura) continue;
+    const scaledChance = scaleAuraChance(aura.diceChance, auraMultiplier);
+    if (rngFloat(stream) < scaledChance) return aura.id as DiceAura;
+  }
+  return null;
 }
 
-/** Weighted dice aura for guaranteed-aura effects (e.g. Spirit Shaman). */
+/** Weighted dice aura for guaranteed-aura effects (e.g. Spirit Shaman, Lucky Find). */
 export function pickDiceAuraWeighted(auraMultiplier: number = 1, stream: RngStream = 'consumables'): DiceAura {
-  const candidates = DICE_AURA_ORDER.map((id) => getItemAuraDefById(id)!);
-  const weights = candidates.map((a) => scaleAuraChance(a.diceChance ?? 0, auraMultiplier));
+  const candidates = DICE_AURA_ORDER.map((id) => getDiceAuraById(id)!);
+  const weights = candidates.map((a) => scaleAuraChance(a.diceChance, auraMultiplier));
   const total = weights.reduce((sum, w) => sum + w, 0);
   if (total <= 0) return 'icy';
 

@@ -18,6 +18,7 @@ export type {
 export {
   canBuyAndUseConsumableInShop,
   canUseConsumableInShop,
+  getConsumableAtlasKey,
   getConsumableDefById,
   getConsumableTexturePrefix,
   getRandomSupplyDef,

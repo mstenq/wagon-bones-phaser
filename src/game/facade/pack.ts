@@ -35,6 +35,7 @@ export {
   createFrontierConsumableDef,
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
+  getConsumableAtlasKey,
   getConsumableTexturePrefix,
 } from '../ConsumablesSystem';
 

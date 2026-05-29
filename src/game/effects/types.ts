@@ -51,7 +51,12 @@ export interface ScoringMutations {
   burnBarrelTriggered: boolean;
   supplyCardsToAdd: number;
   diceDestroyed: string[];
-  diceEnhanced: { id: string; enhancement: Die['enhancement'] }[];
+  diceEnhanced: {
+    id: string;
+    enhancement?: Die['enhancement'];
+    aura?: Die['aura'];
+    sticker?: Die['sticker'];
+  }[];
   consumablesGranted: string[]; // consumable def IDs
   diceCopied: Partial<Die>[];
   dieBonusMilesAdded: { id: string; amount: number }[];

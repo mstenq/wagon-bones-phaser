@@ -1,0 +1,132 @@
+{"frames": [
+
+{
+	"filename": "dice_jumbo.png",
+	"frame": {"x":0,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "dice_mega.png",
+	"frame": {"x":202,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "dice_standard.png",
+	"frame": {"x":404,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "equipment_jumbo.png",
+	"frame": {"x":606,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "equipment_mega.png",
+	"frame": {"x":808,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "equipment_standard.png",
+	"frame": {"x":0,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "frontier_jumbo.png",
+	"frame": {"x":202,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "frontier_mega.png",
+	"frame": {"x":404,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "frontier_standard.png",
+	"frame": {"x":606,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "supply_jumbo.png",
+	"frame": {"x":808,"y":301,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "supply_mega.png",
+	"frame": {"x":0,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "supply_standard.png",
+	"frame": {"x":202,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "trail_guide_jumbo.png",
+	"frame": {"x":404,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "trail_guide_mega.png",
+	"frame": {"x":606,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "trail_guide_standard.png",
+	"frame": {"x":808,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "packs.png",
+	"format": "RGBA8888",
+	"size": {"w":1010,"h":903},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:fe68f2f2fcf2c63d280126be8abb1540:b8386539d139b463e96d226b7ecbc710:7122770be8fbe9050a5557aca03ac5fd$"
+}
+}

@@ -396,11 +396,12 @@ export class RoundInfoPanel extends GameObjects.Container {
   }
 
   private addBossPortrait(cx: number, cy: number, bossId: string, size: number): void {
-    const imgKey = `boss_${bossId}`;
-    if (this.scene.textures.exists(imgKey)) {
-      const img = this.scene.add.image(cx, cy, imgKey);
-      const tex = img.texture.getSourceImage();
-      img.setScale(size / Math.max(tex.width, tex.height));
+    const atlasFrame = `${bossId}.png`;
+    const bossTexture = this.scene.textures.get('bosses');
+    const canUseAtlas = this.scene.textures.exists('bosses') && bossTexture.has(atlasFrame);
+    if (canUseAtlas) {
+      const img = this.scene.add.image(cx, cy, 'bosses', atlasFrame);
+      img.setScale(size / Math.max(img.width, img.height));
       this.add(img);
       return;
     }

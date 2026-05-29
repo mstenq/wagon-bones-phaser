@@ -44,9 +44,9 @@ export class BoosterPackCard extends GameObjects.Container {
     this._pack = pack;
 
     // Pack image
-    const texKey = `pack_${pack.def.id}`;
-    if (scene.textures.exists(texKey)) {
-      this.packImage = scene.add.image(0, 0, texKey);
+    const atlasFrame = `${pack.def.id}.png`;
+    if (scene.textures.getFrame('packs', atlasFrame)) {
+      this.packImage = scene.add.image(0, 0, 'packs', atlasFrame);
       // Scale to fit within display height, maintaining aspect ratio
       const imgScale = PACK_DISPLAY_H / this.packImage.height;
       this.packImage.setScale(imgScale);

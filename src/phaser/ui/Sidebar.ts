@@ -253,11 +253,12 @@ export class Sidebar extends GameObjects.Container {
       profBg.strokeRoundedRect(pad, y, w - pad * 2, profH, 6);
       this.professionContainer.add(profBg);
 
-      const imgKey = `prof_${prof.id}`;
-      if (scene.textures.exists(imgKey)) {
-        const profImg = scene.add.image(pad + 6 + profImgSize / 2, y + profH / 2, imgKey);
-        const tex = profImg.texture.getSourceImage();
-        const imgScale = profImgSize / Math.max(tex.width, tex.height);
+      const atlasFrame = `${prof.id}.png`;
+      const profTexture = scene.textures.get('professions');
+      const canUseAtlas = scene.textures.exists('professions') && profTexture.has(atlasFrame);
+      if (canUseAtlas) {
+        const profImg = scene.add.image(pad + 6 + profImgSize / 2, y + profH / 2, 'professions', atlasFrame);
+        const imgScale = profImgSize / Math.max(profImg.width, profImg.height);
         profImg.setScale(imgScale);
         this.professionContainer.add(profImg);
       }
@@ -803,16 +804,17 @@ export class Sidebar extends GameObjects.Container {
     const pad = UI.SIDEBAR_PADDING;
     const bossImgSize = 72;
     const bossH = 100;
-    const imgKey = `boss_${boss.id}`;
+    const atlasFrame = `${boss.id}.png`;
+    const bossTexture = this.scene.textures.get('bosses');
+    const canUseAtlas = this.scene.textures.exists('bosses') && bossTexture.has(atlasFrame);
 
     // Remove previous boss image if any
     const prevImg = this.bossContainer.getData('bossImg') as GameObjects.Image | undefined;
     if (prevImg) prevImg.destroy();
 
-    if (this.scene.textures.exists(imgKey)) {
-      const profImg = this.scene.add.image(pad + 8 + bossImgSize / 2, bossH / 2, imgKey);
-      const tex = profImg.texture.getSourceImage();
-      const imgScale = bossImgSize / Math.max(tex.width, tex.height);
+    if (canUseAtlas) {
+      const profImg = this.scene.add.image(pad + 8 + bossImgSize / 2, bossH / 2, 'bosses', atlasFrame);
+      const imgScale = bossImgSize / Math.max(profImg.width, profImg.height);
       profImg.setScale(imgScale);
       this.bossContainer.add(profImg);
       this.bossContainer.setData('bossImg', profImg);

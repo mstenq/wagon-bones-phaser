@@ -6,7 +6,7 @@
 import { Scene } from 'phaser';
 import { DiceSprite } from '../ui/DiceSprite';
 import { ScoreAnimEvent, ScoreResult, ScoreAnimPopupType } from '../../game/types';
-import { ConsumableDef, getConsumableDefById, getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
+import { ConsumableDef, getConsumableAtlasKey, getConsumableDefById } from '../../game/ConsumablesSystem';
 import diceEnhancements from '../../data/dice_enhancements';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
@@ -133,16 +133,15 @@ function animateGrantToConsumableBar(
   consumableBar: ConsumableBar,
   onComplete: () => void,
 ): void {
-  const prefix = getConsumableTexturePrefix(def.category);
-  const textureKey = `${prefix}${def.id}`;
-  if (!scene.textures.exists(textureKey)) {
+  const textureSource = { key: getConsumableAtlasKey(def.category), frame: `${def.id}.png` };
+  if (!scene.textures.getFrame(textureSource.key, textureSource.frame)) {
     onComplete();
     return;
   }
 
   const targetX = consumableBar.x + consumableBar.width / 2;
   const targetY = consumableBar.y + consumableBar.height / 2;
-  const ghost = scene.add.image(fromX, fromY, textureKey).setDepth(180).setScale(0.35);
+  const ghost = scene.add.image(fromX, fromY, textureSource.key, textureSource.frame).setDepth(180).setScale(0.35);
 
   scene.tweens.add({
     targets: ghost,
@@ -492,7 +491,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             const label = enhancement ? (ENHANCEMENT_NAMES.get(enhancement) ?? enhancement) : 'Enhanced';
             floatingText(scene, sprite.x, sprite.y, `+${label}`, POPUP_ENHANCE_COLOR, 'up');
             scene.time.delayedCall(120, () => {
-              sprite.setDieData({ ...sprite.dieData, enhancement });
+              sprite.setDieData({
+                ...sprite.dieData,
+                enhancement,
+                ...(evt.aura !== undefined ? { aura: evt.aura } : {}),
+                ...(evt.sticker !== undefined ? { sticker: evt.sticker } : {}),
+              });
             });
           }
         }

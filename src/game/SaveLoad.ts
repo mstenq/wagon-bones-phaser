@@ -94,6 +94,7 @@ export interface PlayerSaveData {
   seenTrailEventIds: string[];
   skipNextShop: boolean;
   trailGuidesUsed: number;
+  supplyCardsUsed?: number;
   startingDiceCount: number;
   bossEffectDisabled: boolean;
   bossRoundState: import('./store/types').BossRoundState;
@@ -174,6 +175,7 @@ export interface SerializedPackItem {
 export interface BoosterPackSaveData {
   packDefId: string;
   returnScene: string;
+  queuedPackDefIds?: string[];
   contents: SerializedPackItem[];
   picksRemaining: number;
   usedCardIndices: number[];
@@ -279,6 +281,7 @@ function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
     seenTrailEventIds: [...data.seenTrailEventIds],
     skipNextShop: data.skipNextShop,
     trailGuidesUsed: data.trailGuidesUsed,
+    supplyCardsUsed: data.supplyCardsUsed ?? 0,
     startingDiceCount: data.startingDiceCount,
     bossEffectDisabled: data.bossEffectDisabled,
     bossRoundState: {
@@ -358,6 +361,7 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
         boosterPack: {
           packDefId: data.packDefId,
           returnScene: data.returnScene,
+          queuedPackDefIds: [...(data.queuedPackDefIds ?? [])],
           contents: data.contents as StoredPackItem[],
           picksRemaining: data.picksRemaining,
           usedCardIndices: [...data.usedCardIndices],
@@ -581,6 +585,7 @@ export function boosterPackSceneStateToSaveData(pack: BoosterPackSceneState): Bo
   return {
     packDefId: pack.packDefId,
     returnScene: pack.returnScene,
+    ...(pack.queuedPackDefIds.length > 0 ? { queuedPackDefIds: [...pack.queuedPackDefIds] } : {}),
     contents: pack.contents as SerializedPackItem[],
     picksRemaining: pack.picksRemaining,
     usedCardIndices: [...pack.usedCardIndices],

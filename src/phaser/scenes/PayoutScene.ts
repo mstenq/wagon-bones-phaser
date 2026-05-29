@@ -24,6 +24,7 @@ import { ConsumableBar } from '../ui/ConsumableBar';
 import { Sidebar } from '../ui/Sidebar';
 import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
 import { handleStandardConsumableResult } from './consumableResult';
+import { consumeAndStartImmediatePackOpens } from './immediatePackFlow';
 
 export interface PayoutData {
   totalMiles: DecimalSource;
@@ -190,6 +191,10 @@ export class PayoutScene extends Scene {
 
       sceneActions.clearPayout();
 
+      if (this.processImmediateTagFlowAfterPayout(journeyDone)) {
+        return;
+      }
+
       if (journeyDone) {
         const run = getRunState();
         if (selectStoryVictoryOffered(run) && run.professionId) {
@@ -200,6 +205,22 @@ export class PayoutScene extends Scene {
         this.scene.start('TrailEvent', {});
       }
     });
+  }
+
+  private processImmediateTagFlowAfterPayout(journeyDone: boolean): boolean {
+    gameFacade.meta.processChangeOfGuardTags();
+    gameFacade.meta.processImmediateTags();
+
+    if (consumeAndStartImmediatePackOpens(this, journeyDone ? 'RoundSelect' : 'TrailEvent')) {
+      return true;
+    }
+
+    const equipTags = gameFacade.meta.consumeTagsByCategory('immediate_equipment');
+    for (const tag of equipTags) {
+      gameFacade.meta.processJunkPileTag(tag);
+    }
+
+    return false;
   }
 
   private buildPayoutRows(

@@ -86,6 +86,10 @@ export interface ScoreAnimEvent {
   dieId?: string;
   /** Enhancement applied (for enhance popup) */
   enhancement?: DiceEnhancement;
+  /** Aura applied with enhance popup (e.g. Lucky Find) */
+  aura?: DiceAura;
+  /** Sticker applied with enhance popup (e.g. Lucky Find) */
+  sticker?: DiceSticker;
   /** Consumable def id when granting supply/trail guide (for bar fly-in animation) */
   consumableId?: string;
 }

@@ -35,6 +35,18 @@ export function getConsumableTexturePrefix(category: ConsumableCategory): string
   }
 }
 
+/** Returns the atlas texture key used for consumable card art by category. */
+export function getConsumableAtlasKey(category: ConsumableCategory): string {
+  switch (category) {
+    case 'trail_guide':
+      return 'trail_guides';
+    case 'supply':
+      return 'supplies';
+    case 'frontier':
+      return 'frontier_encounters';
+  }
+}
+
 export interface ConsumableDef {
   id: string;
   name: string;
@@ -414,16 +426,8 @@ export function executeConsumableEffect(
   const run = getRunState();
   const professionId = selectProfession(run)?.id;
 
-  // Update Campfire Stories: +mult per supply card used
   if (def.category === 'supply') {
-    const equipment = resolveEquipmentList();
-    for (const equip of equipment) {
-      if (equip.def.effectType === 'SUPPLY_USED_MULT') {
-        equip.state.mult =
-          (equip.state.mult ?? 0) + ((equip.def.effectParams as Record<string, unknown>).value as number);
-      }
-    }
-    writeEquipment(equipment);
+    runActions.patch({ supplyCardsUsed: run.supplyCardsUsed + 1 });
   }
 
   // ─── Trail guide → upgrade hand level ───

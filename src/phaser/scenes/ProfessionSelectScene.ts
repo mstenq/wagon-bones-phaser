@@ -211,11 +211,12 @@ export class ProfessionSelectScene extends Scene {
 
     this.addBeatIndicatorDot(container, prof.id, beatDotX, beatDotY);
 
-    const imgKey = `prof_${prof.id}`;
-    if (this.textures.exists(imgKey)) {
-      const img = this.add.image(0, -GRID_CARD_H / 2 + 10 + GRID_IMAGE_SIZE / 2, imgKey);
-      const tex = img.texture.getSourceImage();
-      const scale = GRID_IMAGE_SIZE / Math.max(tex.width, tex.height);
+    const atlasFrame = `${prof.id}.png`;
+    const professionTexture = this.textures.get('professions');
+    const canUseAtlas = this.textures.exists('professions') && professionTexture.has(atlasFrame);
+    if (canUseAtlas) {
+      const img = this.add.image(0, -GRID_CARD_H / 2 + 10 + GRID_IMAGE_SIZE / 2, 'professions', atlasFrame);
+      const scale = GRID_IMAGE_SIZE / Math.max(img.width, img.height);
       img.setScale(scale);
       container.add(img);
     }
@@ -341,11 +342,12 @@ export class ProfessionSelectScene extends Scene {
 
     let y = 100;
 
-    const imgKey = `prof_${prof.id}`;
-    if (this.textures.exists(imgKey)) {
-      const img = this.add.image(centerX, y + DETAIL_IMAGE_SIZE / 2, imgKey);
-      const tex = img.texture.getSourceImage();
-      const scale = DETAIL_IMAGE_SIZE / Math.max(tex.width, tex.height);
+    const atlasFrame = `${prof.id}.png`;
+    const professionTexture = this.textures.get('professions');
+    const canUseAtlas = this.textures.exists('professions') && professionTexture.has(atlasFrame);
+    if (canUseAtlas) {
+      const img = this.add.image(centerX, y + DETAIL_IMAGE_SIZE / 2, 'professions', atlasFrame);
+      const scale = DETAIL_IMAGE_SIZE / Math.max(img.width, img.height);
       img.setScale(scale);
       this.detailContainer.add(img);
       y += DETAIL_IMAGE_SIZE + 12;

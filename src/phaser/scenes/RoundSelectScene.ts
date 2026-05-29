@@ -32,6 +32,7 @@ import {
   selectTargetMiles,
 } from '../../game/store/selectors/runSelectors';
 import { sceneActions } from '../../game/store/sceneStore';
+import { consumeAndStartImmediatePackOpens } from './immediatePackFlow';
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
 
@@ -168,7 +169,7 @@ export class RoundSelectScene extends Scene {
     const tagInstance = gameFacade.meta.grantTag(tagDef, previewMeta);
     gameFacade.meta.advanceRound(true);
 
-    const finishSkip = () => this.finishAfterSkip();
+    const finishSkip = () => this.processImmediateTagFlow(true);
 
     if (!gameFacade.meta.isImmediateTag(tagInstance.def.category)) {
       enqueueTagEarned(tagInstance.def.id, tagInstance.def.category, skippedRound);
@@ -178,7 +179,7 @@ export class RoundSelectScene extends Scene {
     }
   }
 
-  private finishAfterSkip(): void {
+  private processImmediateTagFlow(restartWhenDone: boolean): boolean {
     gameFacade.meta.processChangeOfGuardTags();
 
     const immediateResults = gameFacade.meta.processImmediateTags();
@@ -196,27 +197,16 @@ export class RoundSelectScene extends Scene {
     if (handUpgrades.length > 0) {
       void this.playbackRunner
         ?.drainMatching((cmd) => cmd.kind === 'hand-upgrades')
-        .then(() => this.continueAfterImmediateTags());
-      return;
+        .then(() => this.continueAfterImmediateTags(restartWhenDone));
+      return true;
     }
 
-    this.continueAfterImmediateTags();
+    return this.continueAfterImmediateTags(restartWhenDone);
   }
 
-  private continueAfterImmediateTags(): void {
-    const packTags = gameFacade.meta.consumeTagsByCategory('immediate_pack');
-    if (packTags.length > 0) {
-      const packTag = packTags[0];
-      const packDefId = gameFacade.meta.getPackDefIdForTag(packTag.def.id);
-      const packDef = packDefId ? gameFacade.meta.getPackDefById(packDefId) : undefined;
-      if (packDef) {
-        this.scene.start('BoosterPack', {
-          packDef,
-          returnScene: 'RoundSelect',
-          free: true,
-        });
-        return;
-      }
+  private continueAfterImmediateTags(restartWhenDone: boolean): boolean {
+    if (consumeAndStartImmediatePackOpens(this, 'RoundSelect')) {
+      return true;
     }
 
     const equipTags = gameFacade.meta.consumeTagsByCategory('immediate_equipment');
@@ -227,10 +217,15 @@ export class RoundSelectScene extends Scene {
     const run = getRunState();
     if (selectJourneyComplete(run)) {
       this.scene.start('GameOver', buildVictoryGameOverData(0, selectTargetMiles(run)));
-      return;
+      return true;
     }
 
-    this.scene.restart();
+    if (restartWhenDone || equipTags.length > 0) {
+      this.scene.restart();
+      return true;
+    }
+
+    return false;
   }
 
   private getRoundColumnCenter(round: number): { x: number; y: number } {

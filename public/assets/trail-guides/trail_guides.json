@@ -1,0 +1,84 @@
+{"frames": [
+
+{
+	"filename": "tg_five_kind.png",
+	"frame": {"x":0,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_five_straight.png",
+	"frame": {"x":202,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_four_kind.png",
+	"frame": {"x":404,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_four_straight.png",
+	"frame": {"x":606,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_full_house.png",
+	"frame": {"x":808,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_high_value.png",
+	"frame": {"x":1010,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_pair.png",
+	"frame": {"x":1212,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_three_kind.png",
+	"frame": {"x":1414,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "tg_two_pair.png",
+	"frame": {"x":1616,"y":0,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "trail_guides.png",
+	"format": "RGBA8888",
+	"size": {"w":1818,"h":301},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:46877c7adc588fb94626254fa0678e34:4cedbc5cccd1103cf7645be968409fd8:56ea4919f60e13b29d619c30ecc6c501$"
+}
+}

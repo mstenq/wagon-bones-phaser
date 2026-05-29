@@ -10,7 +10,7 @@ import type { ConsumableDef, ConsumableInstance, UseConsumableResult } from '../
 import {
   canBuyAndUseConsumableInShop,
   canUseConsumableInShop,
-  getConsumableTexturePrefix,
+  getConsumableAtlasKey,
   getRandomSupplyDef,
   getRandomTrailGuideDef,
   getShopRandomFrontierDef,
@@ -803,8 +803,7 @@ export class ShopScene extends Scene {
 
     for (let i = 0; i < this.stockItems.length; i++) {
       const shopItem = this.stockItems[i];
-      const texturePrefix =
-        shopItem.type === 'consumable' ? getConsumableTexturePrefix(shopItem.def.category) : undefined;
+      const consumableTextureKey = shopItem.type === 'consumable' ? getConsumableAtlasKey(shopItem.def.category) : undefined;
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
       const isTrailGuideFree =
         shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && trailGuidesFree;
@@ -827,7 +826,7 @@ export class ShopScene extends Scene {
         mode: 'shop',
         showCost: true,
         ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
-        ...(texturePrefix != null ? { texturePrefix } : {}),
+        ...(consumableTextureKey != null ? { textureKey: consumableTextureKey } : {}),
       });
       if (shopItem.type === 'dice') {
         addDiceCardVisual(this, card, shopItem.die, {
@@ -1117,7 +1116,7 @@ export class ShopScene extends Scene {
       const permitItemCard = new ItemCard(this, voucherX, voucherY, permitDisplayDef, {
         mode: 'shop',
         showCost: true,
-        texturePrefix: 'permit_',
+        textureKey: 'permits',
         transparentBg: true,
         cardScale: 1.2,
         tabAnchorX: 45,

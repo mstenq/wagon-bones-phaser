@@ -1,0 +1,140 @@
+{"frames": [
+
+{
+	"filename": "accountant.png",
+	"frame": {"x":0,"y":0,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "banker.png",
+	"frame": {"x":205,"y":0,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "con_artist.png",
+	"frame": {"x":410,"y":0,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "cook.png",
+	"frame": {"x":615,"y":0,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "demon_hunter.png",
+	"frame": {"x":0,"y":205,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "developer.png",
+	"frame": {"x":205,"y":205,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "doctor.png",
+	"frame": {"x":410,"y":205,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "farmer.png",
+	"frame": {"x":615,"y":205,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "gambler.png",
+	"frame": {"x":0,"y":410,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "hunter.png",
+	"frame": {"x":205,"y":410,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "merchant.png",
+	"frame": {"x":410,"y":410,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "occult_trader.png",
+	"frame": {"x":615,"y":410,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "outlaw.png",
+	"frame": {"x":0,"y":615,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "prospector.png",
+	"frame": {"x":205,"y":615,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "scout.png",
+	"frame": {"x":410,"y":615,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+},
+{
+	"filename": "surveyor.png",
+	"frame": {"x":615,"y":615,"w":205,"h":205},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":205,"h":205},
+	"sourceSize": {"w":205,"h":205}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "professions.png",
+	"format": "RGBA8888",
+	"size": {"w":820,"h":820},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:d0237aa40578110ae9cc32cf824cbc50:4e9aeeaf43b613e9f41433cfe7500bd5:012645fa326581b1b63ecb5855e1fd3d$"
+}
+}

@@ -5,7 +5,7 @@
 import { Scene } from 'phaser';
 import { UI } from '../../game/Constants';
 import { getItemDisplayContext } from '../../game/displayContext';
-import { ConsumableDef, getConsumableTexturePrefix } from '../../game/ConsumablesSystem';
+import { ConsumableDef, getConsumableAtlasKey } from '../../game/ConsumablesSystem';
 import { consumableActions } from '../../game/store/actions/consumableActions';
 import { resolveConsumableList } from '../../game/store/resolve';
 import { runStore } from '../../game/store/runStore';
@@ -64,11 +64,11 @@ export class ConsumableBar extends CardBar {
 
   protected createCardForItem(x: number, y: number, index: number): ItemCard {
     const consumable = resolveConsumableList()[index]!;
-    const texturePrefix = getConsumableTexturePrefix(consumable.def.category);
+    const textureKey = getConsumableAtlasKey(consumable.def.category);
     const card = new ItemCard(this.scene, x, y, consumable.def, {
       mode: 'compact',
       cardScale: UI.CONSUMABLE_CARD_SCALE,
-      texturePrefix,
+      textureKey,
     });
     card.setTooltipContext(null, getItemDisplayContext());
     return card;

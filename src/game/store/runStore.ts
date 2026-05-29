@@ -48,6 +48,7 @@ export function createInitialRunState(): RunState {
     seenTrailEventIds: [],
     skipNextShop: false,
     trailGuidesUsed: 0,
+    supplyCardsUsed: 0,
     startingDiceCount: GAMEPLAY.STARTING_DICE,
     bossEffectDisabled: false,
     bossRoundState: { ...EMPTY_BOSS_ROUND_STATE },

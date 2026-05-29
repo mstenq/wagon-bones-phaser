@@ -1,5 +1,6 @@
 import './setup';
 import { describe, test, expect, afterEach } from 'bun:test';
+import diceAuras, { DICE_AURA_ORDER } from '../../data/dice_auras';
 import itemAuras, { DICE_STICKER_CHANCE } from '../../data/item_auras';
 import { pickEquipmentAuraWeighted, rollDiceAura, rollEquipmentAura, scaleAuraChance } from '../auraRng';
 import { rollRandomItemAura } from '../ItemsSystem';
@@ -125,12 +126,10 @@ describe('dice aura marginals (Monte Carlo)', () => {
       const aura = rollDiceAura(1, 'pack');
       if (aura) rates[aura]!++;
     }
-    const holy = itemAuras.find((a) => a.id === 'holy')!;
-    const fire = itemAuras.find((a) => a.id === 'fire')!;
-    const icy = itemAuras.find((a) => a.id === 'icy')!;
-    expectRate(rates.holy! / TRIALS, holy.diceChance!, 'holy');
-    expectRate(rates.fire! / TRIALS, fire.diceChance!, 'fire');
-    expectRate(rates.icy! / TRIALS, icy.diceChance!, 'icy');
+    for (const id of DICE_AURA_ORDER) {
+      const def = diceAuras.find((a) => a.id === id)!;
+      expectRate(rates[id]! / TRIALS, def.diceChance, id);
+    }
   });
 
   test('4x permit multiplier on dice', () => {

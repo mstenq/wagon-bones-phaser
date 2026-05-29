@@ -38,8 +38,12 @@ export interface ItemCardOptions {
   sellValue?: number;
   /** Scale multiplier (default 1) */
   cardScale?: number;
-  /** Texture key prefix (default 'item_'). The texture key is `${prefix}${id}` */
+  /** Legacy texture key prefix. When provided, texture key is `${prefix}${id}` with no frame. */
   texturePrefix?: string;
+  /** Texture key for atlas/non-atlas lookup (default 'items' when texturePrefix is unset). */
+  textureKey?: string;
+  /** Frame suffix when using atlas mode (default '.png'). */
+  textureFrameSuffix?: string;
   /** Image fit mode for non-transparent cards */
   imageFit?: 'cover' | 'contain';
   /** If true, no card background is drawn and image is displayed as-is (contain-fit) */
@@ -81,6 +85,11 @@ interface SegmentRenderMetrics {
   fontSize: number;
   padX: number;
   padY: number;
+}
+
+interface CardTextureSource {
+  key: string;
+  frame?: string;
 }
 
 const RARITY_LABELS: Record<string, string> = {
@@ -473,6 +482,19 @@ export class ItemCard extends GameObjects.Container {
     this.auraTweens.push(...particleResult.tweens);
   }
 
+  private resolveCardTextureSource(): CardTextureSource {
+    if (this._options.texturePrefix) {
+      return { key: `${this._options.texturePrefix}${this._def.id}` };
+    }
+    const textureKey = this._options.textureKey ?? 'items';
+    const frameSuffix = this._options.textureFrameSuffix ?? '.png';
+    return { key: textureKey, frame: `${this._def.id}${frameSuffix}` };
+  }
+
+  private getCardTextureFrame(source: CardTextureSource): Phaser.Textures.Frame | null {
+    return this.scene.textures.getFrame(source.key, source.frame);
+  }
+
   private addContent(scale: number): void {
     const w = this._cardW;
     const h = this._cardH;
@@ -481,32 +503,32 @@ export class ItemCard extends GameObjects.Container {
     const radius = CARD_RADIUS * scale;
 
     // Item image — bake rounded corners into a CanvasTexture
-    const prefix = this._options.texturePrefix ?? 'item_';
-    const srcKey = `${prefix}${this._def.id}`;
-    if (this.scene.textures.exists(srcKey)) {
+    const source = this.resolveCardTextureSource();
+    const sourceFrame = this.getCardTextureFrame(source);
+    if (sourceFrame) {
       if (this._options.transparentBg) {
         // Transparent mode: display image as-is, contain-fit within card bounds
-        const img = this.scene.add.image(0, 0, srcKey);
-        const srcImg = this.scene.textures.get(srcKey).getSourceImage() as HTMLImageElement;
-        const containScale = Math.min(w / srcImg.width, h / srcImg.height) * 0.85;
+        const img = this.scene.add.image(0, 0, source.key, source.frame);
+        const containScale = Math.min(w / sourceFrame.cutWidth, h / sourceFrame.cutHeight) * 0.85;
         img.setScale(containScale);
         this.cardImage = img;
         this.add(img);
       } else {
         const imageFit = this._options.imageFit ?? 'cover';
         if (imageFit === 'contain') {
-          const img = this.scene.add.image(0, 0, srcKey);
-          const srcImg = this.scene.textures.get(srcKey).getSourceImage() as HTMLImageElement;
-          const containScale = Math.min((w * 0.82) / srcImg.width, (h * 0.82) / srcImg.height);
+          const img = this.scene.add.image(0, 0, source.key, source.frame);
+          const containScale = Math.min((w * 0.82) / sourceFrame.cutWidth, (h * 0.82) / sourceFrame.cutHeight);
           img.setScale(containScale);
           this.cardImage = img;
           this.add(img);
         } else {
-          const roundedKey = `${srcKey}_rounded_${Math.round(w)}x${Math.round(h)}`;
+          const roundedKey = `${source.key}_${source.frame ?? '__BASE'}_rounded_${Math.round(w)}x${Math.round(h)}`;
 
           if (!this.scene.textures.exists(roundedKey)) {
-            // Get source image
-            const srcImg = this.scene.textures.get(srcKey).getSourceImage() as HTMLImageElement;
+            // Draw the specific frame region so atlas-backed cards render correctly.
+            const sourceImage = sourceFrame.source.image as CanvasImageSource;
+            const srcW = sourceFrame.cutWidth;
+            const srcH = sourceFrame.cutHeight;
 
             // Create canvas texture at card dimensions
             const canvasTex = this.scene.textures.createCanvas(roundedKey, w, h)!;
@@ -527,12 +549,22 @@ export class ItemCard extends GameObjects.Container {
             ctx.clip();
 
             // Draw source image cover-filling the card area
-            const imgScale = Math.max(w / srcImg.width, h / srcImg.height);
-            const drawW = srcImg.width * imgScale;
-            const drawH = srcImg.height * imgScale;
+            const imgScale = Math.max(w / srcW, h / srcH);
+            const drawW = srcW * imgScale;
+            const drawH = srcH * imgScale;
             const dx = (w - drawW) / 2;
             const dy = (h - drawH) / 2;
-            ctx.drawImage(srcImg, dx, dy, drawW, drawH);
+            ctx.drawImage(
+              sourceImage,
+              sourceFrame.cutX,
+              sourceFrame.cutY,
+              srcW,
+              srcH,
+              dx,
+              dy,
+              drawW,
+              drawH,
+            );
 
             canvasTex.refresh();
           }

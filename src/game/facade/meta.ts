@@ -4,6 +4,7 @@ import { createDie } from '../DiceSystem';
 import { getPackDefById } from '../BoosterPackSystem';
 import {
   ensureRoundSkipPreviewTags,
+  expandImmediatePackTagsToPackDefIds,
   getPackDefIdForTag,
   grantTag,
   isImmediateTag,
@@ -64,6 +65,7 @@ export const gameMeta = {
   processChangeOfGuardTags,
   processImmediateTags,
   processJunkPileTag,
+  expandImmediatePackTagsToPackDefIds,
   getPackDefIdForTag,
   isImmediateTag,
   consumeTagsByCategory: tagActions.consumeTagsByCategory,

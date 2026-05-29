@@ -28,6 +28,7 @@ export function getItemDisplayContext(state = getRunState()): ItemDisplayContext
     usedEquipmentSlots: selectUsedEquipmentSlots(state),
     startingDiceCount: state.startingDiceCount,
     interestCap: state.interestCap,
+    supplyCardsUsed: state.supplyCardsUsed,
     getHandStats: (handType: HandType) => selectHandStats(state, handType),
   };
 }

@@ -202,6 +202,19 @@ function processImmediateUpgradeTag(tag: TrailTagInstance): ImmediateTagResult |
   };
 }
 
+/** Flatten consumed immediate_pack tags into pack opens (honors Twin Wagon copies). */
+export function expandImmediatePackTagsToPackDefIds(tags: TrailTagInstance[]): string[] {
+  const packDefIds: string[] = [];
+  for (const tag of tags) {
+    const packDefId = getPackDefIdForTag(tag.def.id);
+    if (!packDefId) continue;
+    for (let c = 0; c < tag.copies; c++) {
+      packDefIds.push(packDefId);
+    }
+  }
+  return packDefIds;
+}
+
 /** Get the pack definition ID for a pack tag */
 export function getPackDefIdForTag(tagId: string): string | null {
   switch (tagId) {

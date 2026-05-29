@@ -1,0 +1,174 @@
+{"frames": [
+
+{
+	"filename": "the_bank_lien.png",
+	"frame": {"x":0,"y":0,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_banker.png",
+	"frame": {"x":307,"y":0,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_bottle.png",
+	"frame": {"x":614,"y":0,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_bounty.png",
+	"frame": {"x":921,"y":0,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_call_girl.png",
+	"frame": {"x":1228,"y":0,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_chain_gang.png",
+	"frame": {"x":1535,"y":0,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_finish_line.png",
+	"frame": {"x":0,"y":307,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_ghost_town.png",
+	"frame": {"x":307,"y":307,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_inspector.png",
+	"frame": {"x":614,"y":307,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_jinx.png",
+	"frame": {"x":921,"y":307,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_land_slide.png",
+	"frame": {"x":1228,"y":307,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_marathon.png",
+	"frame": {"x":1535,"y":307,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_preacher.png",
+	"frame": {"x":0,"y":614,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_river.png",
+	"frame": {"x":307,"y":614,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_standoff.png",
+	"frame": {"x":614,"y":614,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_tax_man.png",
+	"frame": {"x":921,"y":614,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_trickster.png",
+	"frame": {"x":1228,"y":614,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "the_undertaker.png",
+	"frame": {"x":1535,"y":614,"w":307,"h":307},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":307,"h":307},
+	"sourceSize": {"w":307,"h":307},
+	"pivot": {"x":0.5,"y":0.5}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "bosses.png",
+	"format": "RGBA8888",
+	"size": {"w":1842,"h":921},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:9b90a05aa89c730bafff39fa2a2aab13:fd62ad779243dc96d12cb0c0a5ef6b33:480445fcc1ef53c0fb2c08da4c212c2f$"
+}
+}

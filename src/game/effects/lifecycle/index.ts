@@ -11,7 +11,6 @@ import './onDiceDestroyed';
 import './onRoundStart';
 import './onDayEnd';
 import './onDiceAdded';
-import './onSupplyUsed';
 import './onPackSkipped';
 import './onPackOpened';
 import './onRoundEnd';
