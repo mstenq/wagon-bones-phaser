@@ -803,7 +803,8 @@ export class ShopScene extends Scene {
 
     for (let i = 0; i < this.stockItems.length; i++) {
       const shopItem = this.stockItems[i];
-      const consumableTextureKey = shopItem.type === 'consumable' ? getConsumableAtlasKey(shopItem.def.category) : undefined;
+      const consumableTextureKey =
+        shopItem.type === 'consumable' ? getConsumableAtlasKey(shopItem.def.category) : undefined;
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
       const isTrailGuideFree =
         shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && trailGuidesFree;

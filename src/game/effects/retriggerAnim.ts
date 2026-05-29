@@ -2,7 +2,7 @@ import type { Die, HandType, ScoreAnimEvent } from '../types';
 import type { EquipmentInstance } from '../ItemsSystem';
 import { resolveCopyTarget } from '../equipmentUtils';
 import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
-import { dieMatchesPip, hasStackedDeck } from './helpers';
+import { dieMatchesPip, hasStackedDeck, isLowestHeldDieTarget } from './helpers';
 import { enhancementHeldSteelXMult, hasAlchemyKit } from '../alchemyKit';
 
 export type RetriggerEquipSource = { equipIndex: number };
@@ -53,11 +53,8 @@ export function heldDieHasRetriggerableEffects(
       equip = resolved;
     }
 
-    if (equip.def.effectType === 'HELD_LOWEST_MULT') {
-      const lowestValue = Math.min(...heldDice.map((d) => d.value));
-      if (die.value === lowestValue && die === heldDice.find((d) => d.value === lowestValue)) {
-        return true;
-      }
+    if (equip.def.effectType === 'HELD_LOWEST_MULT' && isLowestHeldDieTarget(die, heldDice)) {
+      return true;
     }
     if (equip.def.effectType === 'HELD_PIP_XMULT' || equip.def.effectType === 'HELD_PIP_MULT') {
       const pip = equip.def.effectParams.pip as number;

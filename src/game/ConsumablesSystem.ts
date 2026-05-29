@@ -16,6 +16,7 @@ import { checkLoadedChance } from './equipmentUtils';
 import { resolveEffectParam } from './effects/helpers';
 import { pickEquipmentAuraWeighted } from './auraRng';
 import { rngFloat, rngPick, rngShuffle } from './RunRng';
+import { pickWeightedSupplyCard } from './supplyCardWeights';
 import { enqueueToastFeedback } from './playback/feedback';
 
 const HAND_TABLE: HandDefinition[] = hands;
@@ -189,7 +190,9 @@ export function getRandomSupplyDef(aura?: ItemAura | null, excludeIds?: string[]
     pool = pool.filter((c) => !excluded.has(c.id));
   }
   if (pool.length === 0) pool = SUPPLY_CARDS; // fallback if all excluded
-  const card = rngPick('consumables', pool);
+  const card = pickWeightedSupplyCard(pool, 'consumables', {
+    equipment: resolveEquipmentList(),
+  });
   return createSupplyConsumableDef(card, aura);
 }
 

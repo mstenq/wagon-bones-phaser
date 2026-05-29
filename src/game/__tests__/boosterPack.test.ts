@@ -13,7 +13,8 @@ import { generateShopStock, getAllEquipment } from '../ItemsSystem';
 import { CHANCES } from '../Constants';
 import { resetPlayerState, getPlayerState } from './testRunPlayer';
 import { getRunState } from '../store/runStore';
-import { item } from './testHelpers';
+import { item, setupGame } from './testHelpers';
+import { initRunRng } from '../RunRng';
 import { HandType } from '../types';
 import {
   createConsumableInstance,
@@ -183,6 +184,32 @@ describe('consumable pack duplicate filtering', () => {
         expect(packItem.supplyCardId).not.toBe('coffee_tin');
       }
     }
+  });
+
+  test('stacked_deck increases loaded supply cards in supply packs', () => {
+    function countLoadedInPacks(runs: number): number {
+      let loaded = 0;
+      let total = 0;
+      for (let i = 0; i < runs; i++) {
+        const items = generatePackContents(supplyPack);
+        for (const packItem of items) {
+          if (!packItem.supplyCardId) continue;
+          total++;
+          if (packItem.supplyCardId === 'loaded') loaded++;
+        }
+      }
+      return total > 0 ? loaded / total : 0;
+    }
+
+    initRunRng('pack-loaded-base');
+    resetPlayerState();
+    const baseline = countLoadedInPacks(400);
+
+    initRunRng('pack-loaded-weighted');
+    setupGame({ equipment: [item('stacked_deck')] });
+    const weighted = countLoadedInPacks(400);
+
+    expect(weighted).toBeGreaterThan(baseline * 1.35);
   });
 
   test('frontier packs exclude encounters already in the consumable bar', () => {

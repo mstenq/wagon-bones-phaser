@@ -65,11 +65,12 @@ describe('ConsumableDef creation', () => {
   test('two-die enhance supply cards require only one selection', () => {
     const card = supplyCardsData.find((c) => c.id === 'buzzards')!;
     const def = createSupplyConsumableDef(card);
-    expect(def.diceSelection!.pickCount).toBe(2);
+    expect(def.diceSelection!.pickCount).toBe(3);
     expect(def.diceSelection!.minPickCount).toBe(1);
     expect(isDiceSelectionReady(def.diceSelection!, 1)).toBe(true);
     expect(isDiceSelectionReady(def.diceSelection!, 0)).toBe(false);
     expect(isDiceSelectionReady(def.diceSelection!, 2)).toBe(true);
+    expect(isDiceSelectionReady(def.diceSelection!, 3)).toBe(true);
   });
 
   test('createTrailGuideConsumableDef creates a valid def', () => {

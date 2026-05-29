@@ -1,5 +1,21 @@
 // ─── Effect param resolution (no ItemsSystem imports — safe for data/items.ts) ───
 
+/** Equipment bias for specific supply card ids in shop / packs / Supply Cache rolls. */
+export type SupplyCardWeightEntry = { supplyId: string; multiplier: number };
+
+function isSupplyCardWeightEntry(value: unknown): value is SupplyCardWeightEntry {
+  if (!value || typeof value !== 'object') return false;
+  const entry = value as Record<string, unknown>;
+  return typeof entry.supplyId === 'string' && typeof entry.multiplier === 'number' && entry.multiplier > 0;
+}
+
+/** Parse `effectParams.weightSupply` — always an array in data; non-arrays return []. */
+export function parseWeightSupplyFromParams(params: Record<string, unknown>): SupplyCardWeightEntry[] {
+  const raw = params.weightSupply;
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  return raw.filter(isSupplyCardWeightEntry);
+}
+
 /** Resolve an effect param, using profession-specific overrides when present. */
 export function resolveEffectParam<T>(params: Record<string, unknown>, key: string, professionId?: string | null): T {
   const overrides = params.professionOverrides as Record<string, Record<string, unknown>> | undefined;

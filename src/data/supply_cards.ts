@@ -52,10 +52,10 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'coffee_tin',
     name: 'Coffee Tin',
-    description: 'Make 1 dice steel',
+    description: 'Make 2 steel dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 1,
+      pickCount: 2,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'steel' },
     },
@@ -63,10 +63,10 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'buzzards',
     name: 'Buzzards',
-    description: 'Make 2 dice bone',
+    description: 'Make 3 bone dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 2,
+      pickCount: 3,
       minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'bone' },
@@ -75,10 +75,10 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'rabbits_foot',
     name: "Rabbit's Foot",
-    description: 'Make 2 dice lucky',
+    description: 'Make 3 lucky dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 2,
+      pickCount: 3,
       minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'lucky' },
@@ -87,10 +87,10 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'firewood',
     name: 'Firewood',
-    description: 'Make 2 dice wooden',
+    description: 'Make 3 wooden dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 2,
+      pickCount: 3,
       minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'wooden' },
@@ -99,10 +99,10 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'loaded',
     name: 'Loaded',
-    description: 'Make two dice loaded',
+    description: 'Make 3 loaded dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 2,
+      pickCount: 3,
       minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'loaded' },
@@ -111,10 +111,11 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'pick_axe',
     name: 'Pick Axe',
-    description: 'Make one dice diamond',
+    description: 'Make 2 diamond dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 1,
+      pickCount: 2,
+      minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'diamond' },
     },
@@ -122,12 +123,25 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'pan_for_gold',
     name: 'Pan for Gold',
-    description: 'Make 1 dice golden',
+    description: 'Make 2 golden dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 1,
+      pickCount: 2,
+      minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'gold' },
+    },
+  },
+  {
+    id: 'chisel',
+    name: 'Chisel',
+    description: 'Make 2 stone dice',
+    diceSelection: {
+      drawCount: 0,
+      pickCount: 2,
+      minPickCount: 1,
+      effectType: 'ENHANCE',
+      effectParams: { enhancement: 'stone' },
     },
   },
   {

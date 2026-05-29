@@ -4,6 +4,8 @@ import { effectRegistry } from '../registry';
 import { getRunState } from '../../store/runStore';
 import { selectUsedEquipmentSlots } from '../../store/selectors/runSelectors';
 import { multiplyCtxXMult } from '../helpers';
+import { enhancementMatchesTarget, hasAlchemyKit } from '../../alchemyKit';
+import type { DiceEnhancement } from '../../types';
 
 effectRegistry.registerXMult('XMULT_RISKY', (ctx, equip, index) => {
   const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
@@ -35,9 +37,10 @@ effectRegistry.registerXMult('UNCOMMON_EQUIP_XMULT', (ctx, equip, index) => {
 
 effectRegistry.registerXMult('ENHANCEMENT_COUNT_XMULT', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
-  const enhancement = p.enhancement as string;
+  const enhancement = p.enhancement as DiceEnhancement;
   const perValue = p.value as number;
-  const enhCount = ctx.allDice.filter((d) => d.enhancement === enhancement).length;
+  const alchemy = hasAlchemyKit(ctx.equipment);
+  const enhCount = ctx.allDice.filter((d) => enhancementMatchesTarget(d.enhancement, enhancement, alchemy)).length;
   if (enhCount > 0) {
     const xVal = 1 + enhCount * perValue;
     multiplyCtxXMult(ctx, xVal);

@@ -60,6 +60,7 @@ import {
   unlockTwoEnhancedTypes,
   type EquipmentUnlockCondition,
 } from '../game/equipmentUnlock';
+import { enhancementMatchesTarget, hasAlchemyKit } from '../game/alchemyKit';
 
 /** Equipment definition shape (static data + optional `display` for live hints) */
 export interface ItemDef {
@@ -411,9 +412,10 @@ const items: ItemDef[] = [
     effectParams: {},
     display: (round, _player) => {
       const held = round?.rolledDice?.filter((d) => !round.selectedForScore.some((s) => s.id === d.id)) ?? [];
+      const ranked = held.filter((d) => d.enhancement !== 'stone');
       const hint =
-        held.length > 0
-          ? [[mult(`+${Math.min(...held.map((d) => d.value)) * 2}`)]]
+        ranked.length > 0
+          ? [[mult(`+${Math.min(...ranked.map((d) => d.value)) * 2}`)]]
           : [[condition('Add double the rank', 'xs')], [text('of lowest held die', 'xs')]];
       return {
         hint,
@@ -496,14 +498,17 @@ const items: ItemDef[] = [
     modifierImmunity: ['perishable'],
     unlockCondition: unlockByEnhancement('lucky'),
     effectType: 'LUCKY_TRIGGER_XMULT',
-    effectParams: { value: 0.25 },
+    effectParams: { value: 0.25, weightSupply: [{ supplyId: 'rabbits_foot', multiplier: 2 }] },
     initialState: { xMult: 1 },
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'rabbits_foot');
       const xm = equip?.state.xMult ?? 1;
       return {
         hint: [[mult(`x${xm.toFixed(2)}`)]],
-        tooltip: [[text('Item gains'), mult('x0.25 mult'), text('for every lucky dice trigger')]],
+        tooltip: [
+          [text('Item gains'), mult('x0.25 mult'), text('for every lucky dice trigger')],
+          [text("Also makes Rabbit's Foot supply cards 2 times more likely")],
+        ],
       };
     },
   },
@@ -745,10 +750,13 @@ const items: ItemDef[] = [
     cost: 4,
     rarity: 'common',
     effectType: 'GOLD_DICE_MONEY',
-    effectParams: { value: 4 },
+    effectParams: { value: 4, weightSupply: [{ supplyId: 'pan_for_gold', multiplier: 2 }] },
     display: (_round, _player) => ({
       hint: [[money('+$4'), condition('per gold')]],
-      tooltip: [[text('Played gold dice earn '), money('$4')]],
+      tooltip: [
+        [text('Played gold dice earn '), money('$4')],
+        [text('Also makes Pan for Gold supply cards 2 times more likely')],
+      ],
     }),
     unlockCondition: unlockByEnhancement('gold'),
   },
@@ -1268,16 +1276,24 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     effectType: 'ENHANCEMENT_COUNT_XMULT',
-    effectParams: { enhancement: 'steel', value: 0.2 },
+    effectParams: {
+      enhancement: 'steel',
+      value: 0.2,
+      weightSupply: [{ supplyId: 'coffee_tin', multiplier: 2 }],
+    },
     display: (_round, player) => {
-      const count = player.dice.filter((d) => d.enhancement === 'steel').length;
+      const alchemy = hasAlchemyKit(player.equipment);
+      const count = player.dice.filter((d) => enhancementMatchesTarget(d.enhancement, 'steel', alchemy)).length;
       const xm = 1 + count * 0.2;
       const steelLabel = count === 1 ? 'steel die' : 'steel dice';
       const hint = [[mult(`x${xm.toFixed(1)}`)], [condition(`${count} ${steelLabel}`, 'sm')]];
 
       return {
         hint,
-        tooltip: [[mult('x0.2'), text(' mult for each steel die in collection')]],
+        tooltip: [
+          [mult('x0.2'), text(' mult for each steel die in collection')],
+          [text('Also makes Coffee Tin supply cards 2 times more likely')],
+        ],
       };
     },
     unlockCondition: unlockByEnhancement('steel'),
@@ -1790,7 +1806,7 @@ const items: ItemDef[] = [
     effectParams: { value: 1 },
     display: (_round, player) => {
       const m = player.supplyCardsUsed;
-      const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+1')],[condition('per supply used', 'xs')]];
+      const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+1')], [condition('per supply used', 'xs')]];
       return {
         hint,
         tooltip: [
@@ -1815,7 +1831,10 @@ const items: ItemDef[] = [
       const hint = [[miles(`+${total}`)], [condition(`${count} ${stoneLabel}`, 'sm')]];
       return {
         hint,
-        tooltip: [[miles('+25'), text('miles for each stone die in collection')]],
+        tooltip: [
+          [miles('+25'), text('miles for each stone die in collection')],
+          [text('Also makes Chisel supply cards 2 times more likely')],
+        ],
       };
     },
     unlockCondition: unlockByEnhancement('stone'),
@@ -1935,7 +1954,11 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     modifierImmunity: ['perishable'],
     effectType: 'ENHANCEMENT_SCORED_MILES',
-    effectParams: { enhancement: 'wooden', value: 12 },
+    effectParams: {
+      enhancement: 'wooden',
+      value: 12,
+      weightSupply: [{ supplyId: 'firewood', multiplier: 2 }],
+    },
     initialState: { miles: 0 },
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'covered_wagon');
@@ -1946,7 +1969,10 @@ const items: ItemDef[] = [
           : [[miles('+12')], [condition('per wooden scored', 'xs')]];
       return {
         hint,
-        tooltip: [[text('Gains '), miles('+12'), text('miles for every Wood die scored')]],
+        tooltip: [
+          [text('Gains '), miles('+12'), text('miles for every Wood die scored')],
+          [text('Also makes Firewood supply cards 2 times more likely')],
+        ],
       };
     },
     unlockCondition: unlockByEnhancement('wooden'),
@@ -2061,7 +2087,7 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     effectType: 'BONE_DICE_XMULT_CHANCE',
-    effectParams: { chance: [1, 2], value: 1.5 },
+    effectParams: { chance: [1, 2], value: 1.5, weightSupply: [{ supplyId: 'buzzards', multiplier: 2 }] },
     display: (_round, player) => ({
       hint: [[mult('x1.5'), oddsDisplay([1, 2], player), condition('per bone')]],
       tooltip: [
@@ -2072,6 +2098,7 @@ const items: ItemDef[] = [
           mult('x1.5'),
           text(' mult'),
         ],
+        [text('Also makes Buzzards supply cards 2 times more likely')],
       ],
     }),
     unlockCondition: unlockByEnhancement('bone'),
@@ -2083,10 +2110,13 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     effectType: 'WOODEN_DICE_MILES',
-    effectParams: { value: 50 },
+    effectParams: { value: 50, weightSupply: [{ supplyId: 'firewood', multiplier: 2 }] },
     display: (_round, _player) => ({
       hint: [[miles('+50'), condition('per wooden')]],
-      tooltip: [[text('Played wooden dice give '), miles('+50'), text(' miles when scored')]],
+      tooltip: [
+        [text('Played wooden dice give '), miles('+50'), text(' miles when scored')],
+        [text('Also makes Firewood supply cards 2 times more likely')],
+      ],
     }),
     unlockCondition: unlockByEnhancement('wooden'),
   },
@@ -2097,10 +2127,13 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     effectType: 'IRON_DICE_MULT',
-    effectParams: { value: 7 },
+    effectParams: { value: 7, weightSupply: [{ supplyId: 'coffee_tin', multiplier: 2 }] },
     display: (_round, _player) => ({
       hint: [[mult('+7'), condition('per steel')]],
-      tooltip: [[text('Played iron dice give '), mult('+7'), text(' mult when scored')]],
+      tooltip: [
+        [text('Played iron dice give '), mult('+7'), text(' mult when scored')],
+        [text('Also makes Coffee Tin supply cards 2 times more likely')],
+      ],
     }),
     unlockCondition: unlockByEnhancement('steel'),
   },
@@ -2112,7 +2145,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     modifierImmunity: ['perishable'],
     effectType: 'DIAMOND_DESTROYED_XMULT',
-    effectParams: { value: 0.75 },
+    effectParams: { value: 0.75, weightSupply: [{ supplyId: 'pick_axe', multiplier: 2 }] },
     initialState: { xMult: 1 },
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'diamond_coffin');
@@ -2121,7 +2154,10 @@ const items: ItemDef[] = [
         xm > 1 ? [[mult(`x${xm.toFixed(2)}`)]] : [[mult('x0.75')], [condition('per diamond destroyed', 'xs')]];
       return {
         hint,
-        tooltip: [[text('Item gains '), mult('x0.75'), text(' mult for every diamond die that is destroyed')]],
+        tooltip: [
+          [text('Item gains '), mult('x0.75'), text(' mult for every diamond die that is destroyed')],
+          [text('Also makes Pick Axe supply cards 2 times more likely')],
+        ],
       };
     },
     unlockCondition: unlockByEnhancement('diamond'),
@@ -2830,10 +2866,13 @@ const items: ItemDef[] = [
     cost: 10,
     rarity: 'rare',
     effectType: 'STACKED_DECK',
-    effectParams: {},
+    effectParams: { weightSupply: [{ supplyId: 'loaded', multiplier: 2 }] },
     display: (_round, _player) => ({
       hint: [[active('Loaded = all pips')]],
-      tooltip: [[text('Loaded dice are considered all pip values for equipment effects')]],
+      tooltip: [
+        [text('Loaded dice are considered all pip values for equipment effects')],
+        [text('Also makes Loaded supply cards 2 times more likely')],
+      ],
     }),
     unlockCondition: unlockByEnhancement('loaded'),
   },
@@ -2858,10 +2897,13 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'LOADED_CHAMBER',
     unlockCondition: unlockByEnhancement('lucky'),
-    effectParams: { value: 1 },
+    effectParams: { value: 1, weightSupply: [{ supplyId: 'rabbits_foot', multiplier: 2 }] },
     display: (_round, _player) => ({
       hint: [[retrigger('Lucky retrigger')]],
-      tooltip: [[text('Retrigger all scored '), condition('lucky'), text(' dice')]],
+      tooltip: [
+        [text('Retrigger all scored '), condition('lucky'), text(' dice')],
+        [text("Also makes Rabbit's Foot supply cards 2 times more likely")],
+      ],
     }),
   },
   {
@@ -2917,7 +2959,7 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     effectType: 'CURSED_DICE',
-    effectParams: { chance: [1, 7] },
+    effectParams: { chance: [1, 7], weightSupply: [{ supplyId: 'loaded', multiplier: 2 }] },
     unlockCondition: unlockByEnhancement('loaded'),
     display: (_round, player) => ({
       hint: [[oddsDisplay([1, 7], player)], [condition('loaded die shatters', 'sm')]],
@@ -2927,6 +2969,7 @@ const items: ItemDef[] = [
           oddsDisplay([1, 7], player),
           text(' to be destroyed and grant a frontier card'),
         ],
+        [text('Also makes Loaded supply cards 2 times more likely')],
       ],
     }),
   },
@@ -3092,7 +3135,10 @@ const items: ItemDef[] = [
       const total = player.equipment.length * 16;
       return {
         hint: [[miles(`+${total}`)], [condition('per equipment', 'sm')]],
-        tooltip: [[miles('+16'), text(' miles for each equipment card owned')]],
+        tooltip: [
+          [miles('+16'), text(' miles for each equipment card owned')],
+          [text('Currently: '), miles(`+${total}`)],
+        ],
       };
     },
   },
@@ -3136,10 +3182,18 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ALCHEMY_KIT',
     unlockCondition: unlockByAnyEnhancement('gold', 'steel'),
-    effectParams: {},
+    effectParams: {
+      weightSupply: [
+        { supplyId: 'coffee_tin', multiplier: 2 },
+        { supplyId: 'pan_for_gold', multiplier: 2 },
+      ],
+    },
     display: (_round, _player) => ({
       hint: [[active('Gold <-> Steel')]],
-      tooltip: [[text('Gold dice also count as steel, and steel dice also count as gold')]],
+      tooltip: [
+        [text('Gold dice also count as steel, and steel dice also count as gold')],
+        [text('Also makes Coffee Tin and Pan for Gold supply cards 2 times more likely')],
+      ],
     }),
   },
 ];

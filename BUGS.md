@@ -6,6 +6,7 @@
 -follow_traveler trail event, you shouldn't be able to trade back the same item you got from the trade, thats weird.
 -binoculars permit - while it now guarantees my most played hand it also is allowing for duplicates. Dupes should only be allowed if you have counterfeit_goods.
 - the_river - instead of only high value and straights, how about we set anything that is not a straight or high value to level 1 during that round
+- disabled dice should not count when held in hand (steel dice that are disabled by boss should not trigger)
 
 ## New Feature Ideas
 - new permits for luck:
@@ -16,7 +17,7 @@
     - Blackjack - $7 - Gives x3 mult when the ranks of all played dice is exactly 21. Gives x0.5 mult less for every point below 21. [21=3x, 20=2.5x, 19=2x, 18=2x, 17=1.5x]
     - xxx - $6 - uncommon - x1 mult. Gains x0.1 mult per 10 dice scored.
     - Horse Thief - common - $5 - Choose one additional item when opening any booster pack.
-    - 
+
 
 
 ## new item ideas

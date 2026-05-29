@@ -162,6 +162,19 @@ export function hasStackedDeck(equipment: EquipmentInstance[]): boolean {
 }
 
 /** True if die matches a pip for equipment effects (Stacked Deck: loaded = all pips). */
+/** Leftmost held die with the lowest rank, excluding stone dice (value 0). */
+export function findLowestHeldDieTarget(heldDice: Die[]): Die | undefined {
+  const ranked = heldDice.filter((d) => d.enhancement !== 'stone');
+  if (ranked.length === 0) return undefined;
+  const lowestValue = Math.min(...ranked.map((d) => d.value));
+  return heldDice.find((d) => d.enhancement !== 'stone' && d.value === lowestValue);
+}
+
+export function isLowestHeldDieTarget(die: Die, heldDice: Die[]): boolean {
+  const target = findLowestHeldDieTarget(heldDice);
+  return target !== undefined && die === target;
+}
+
 export function dieMatchesPip(die: Die, pip: number, equipment: EquipmentInstance[], stackedDeck?: boolean): boolean {
   if (die.value === pip) return true;
   if ((stackedDeck ?? hasStackedDeck(equipment)) && die.enhancement === 'loaded') return true;

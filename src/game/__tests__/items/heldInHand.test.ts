@@ -93,6 +93,25 @@ describe('HELD_LOWEST_MULT: Bottom Dollar', () => {
     expect(result.mult).toBeMult(1);
   });
 
+  test('ignores stone dice and targets lowest ranked die above 0', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 0, enhancement: 'stone' }), die({ value: 4 }), die({ value: 9 })],
+      equipment: [item('bottom_dollar')],
+    });
+    // Lowest non-stone held = 4 → +8
+    expect(result.mult).toBeMult(9);
+  });
+
+  test('no effect when only held dice are stone', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 0, enhancement: 'stone' }), die({ value: 0, enhancement: 'stone' })],
+      equipment: [item('bottom_dollar')],
+    });
+    expect(result.mult).toBeMult(1);
+  });
+
   test('mirror lake copies bottom dollar', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),

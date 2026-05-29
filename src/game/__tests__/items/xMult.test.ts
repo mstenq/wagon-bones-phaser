@@ -451,6 +451,47 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
     // 5 steel dice in collection → x(1 + 5*0.2) = x2.0
     expect(result.mult).toBeMultCloseTo(2.0);
   });
+
+  test('counts gold dice as steel in collection with alchemy kit', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const goldInCollection = [die({ value: 3, enhancement: 'gold' }), die({ value: 4, enhancement: 'gold' })];
+
+    const { game } = setupGame({
+      equipment: [item('iron_furnace'), item('alchemy_kit')],
+      dice: [...scoredDice, ...goldInCollection, ...diceWithValue(1, 50)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    // 2 gold dice count as steel → x(1 + 2*0.2) = x1.4
+    expect(result.mult).toBeMultCloseTo(1.4);
+  });
+
+  test('does not count gold dice without alchemy kit', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const goldInCollection = [die({ value: 3, enhancement: 'gold' })];
+
+    const { game } = setupGame({
+      equipment: [item('iron_furnace')],
+      dice: [...scoredDice, ...goldInCollection, ...diceWithValue(1, 50)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    expect(result.mult).toBeMult(1);
+  });
 });
 
 // ─── TRAIL_GUIDE_XMULT: Guide Lantern ───

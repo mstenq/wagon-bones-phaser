@@ -23,6 +23,7 @@ import frontierEncountersData, { type FrontierEncounterDef } from '../data/front
 import diceEnhancements from '../data/dice_enhancements';
 import pipEnhancements from '../data/pip_enhancements';
 import { nextRunId, rngFloat, rngPick, rngShuffle, type RngStream } from './RunRng';
+import { pickWeightedSupplyCardsWithoutReplacement } from './supplyCardWeights';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
 const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
@@ -333,7 +334,11 @@ function generateSupplyPackContents(count: number): PackItem[] {
     SUPPLY_CARDS.filter((s) => !PACK_EXCLUDED_SUPPLY_IDS.includes(s.id)),
     excludeIds,
   );
-  const normalCards = pickRandom(supplyPool, count, 'supplyPack');
+  const equipment = resolveEquipmentList(run);
+  const normalCards = pickWeightedSupplyCardsWithoutReplacement(supplyPool, count, 'supplyPack', {
+    excludeIds,
+    equipment,
+  });
   let normalIdx = 0;
 
   for (let i = 0; i < count; i++) {

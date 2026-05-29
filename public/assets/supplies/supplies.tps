@@ -177,6 +177,7 @@
         <map type="IndividualSpriteSettingsMap">
             <key type="filename">bless.png</key>
             <key type="filename">buzzards.png</key>
+            <key type="filename">chisel.png</key>
             <key type="filename">coffee_tin.png</key>
             <key type="filename">compass.png</key>
             <key type="filename">doctor.png</key>
@@ -242,6 +243,7 @@
                     <filename>trading_post.png</filename>
                     <filename>treasure_map.png</filename>
                     <filename>whisky_goggles.png</filename>
+                    <filename>chisel.png</filename>
                 </array>
             </struct>
         </map>

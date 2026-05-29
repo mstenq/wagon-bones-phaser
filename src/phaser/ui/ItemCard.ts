@@ -554,17 +554,7 @@ export class ItemCard extends GameObjects.Container {
             const drawH = srcH * imgScale;
             const dx = (w - drawW) / 2;
             const dy = (h - drawH) / 2;
-            ctx.drawImage(
-              sourceImage,
-              sourceFrame.cutX,
-              sourceFrame.cutY,
-              srcW,
-              srcH,
-              dx,
-              dy,
-              drawW,
-              drawH,
-            );
+            ctx.drawImage(sourceImage, sourceFrame.cutX, sourceFrame.cutY, srcW, srcH, dx, dy, drawW, drawH);
 
             canvasTex.refresh();
           }

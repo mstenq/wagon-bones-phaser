@@ -17,7 +17,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "coffee_tin.png",
+	"filename": "chisel.png",
 	"frame": {"x":404,"y":0,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -25,7 +25,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "compass.png",
+	"filename": "coffee_tin.png",
 	"frame": {"x":606,"y":0,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -33,7 +33,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "doctor.png",
+	"filename": "compass.png",
 	"frame": {"x":808,"y":0,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -41,7 +41,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "firewood.png",
+	"filename": "doctor.png",
 	"frame": {"x":0,"y":301,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -49,7 +49,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "fools_gold.png",
+	"filename": "firewood.png",
 	"frame": {"x":202,"y":301,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -57,7 +57,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "ingenuity.png",
+	"filename": "fools_gold.png",
 	"frame": {"x":404,"y":301,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -65,7 +65,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "loaded.png",
+	"filename": "ingenuity.png",
 	"frame": {"x":606,"y":301,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -73,7 +73,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "medicine.png",
+	"filename": "loaded.png",
 	"frame": {"x":808,"y":301,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -81,7 +81,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "mirage.png",
+	"filename": "medicine.png",
 	"frame": {"x":0,"y":602,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -89,7 +89,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "omen_stone.png",
+	"filename": "mirage.png",
 	"frame": {"x":202,"y":602,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -97,7 +97,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "pan_for_gold.png",
+	"filename": "omen_stone.png",
 	"frame": {"x":404,"y":602,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -105,7 +105,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "pick_axe.png",
+	"filename": "pan_for_gold.png",
 	"frame": {"x":606,"y":602,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -113,7 +113,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "rabbits_foot.png",
+	"filename": "pick_axe.png",
 	"frame": {"x":808,"y":602,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -121,7 +121,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "second_helpings.png",
+	"filename": "rabbits_foot.png",
 	"frame": {"x":0,"y":903,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -129,7 +129,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "shallow_grave.png",
+	"filename": "second_helpings.png",
 	"frame": {"x":202,"y":903,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -137,7 +137,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "shop_pass.png",
+	"filename": "shallow_grave.png",
 	"frame": {"x":404,"y":903,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -145,7 +145,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "supply_cache.png",
+	"filename": "shop_pass.png",
 	"frame": {"x":606,"y":903,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -153,7 +153,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "trade.png",
+	"filename": "supply_cache.png",
 	"frame": {"x":808,"y":903,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -161,7 +161,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "trading_post.png",
+	"filename": "trade.png",
 	"frame": {"x":0,"y":1204,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -169,7 +169,7 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "treasure_map.png",
+	"filename": "trading_post.png",
 	"frame": {"x":202,"y":1204,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
@@ -177,8 +177,16 @@
 	"sourceSize": {"w":202,"h":301}
 },
 {
-	"filename": "whisky_goggles.png",
+	"filename": "treasure_map.png",
 	"frame": {"x":404,"y":1204,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "whisky_goggles.png",
+	"frame": {"x":606,"y":1204,"w":202,"h":301},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
@@ -191,6 +199,6 @@
 	"format": "RGBA8888",
 	"size": {"w":1010,"h":1505},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:9874ee273b8f74b4b29065b8cdcbec7f:ac5b69ec32650b0b6f67297985080660:e71f6e5ad62dd923b5c254f49fb08c56$"
+	"smartupdate": "$TexturePacker:SmartUpdate:db47029c8e7f98d192910e11bf875869:31c13df307588320d5ef6eba2b9fe508:e71f6e5ad62dd923b5c254f49fb08c56$"
 }
 }

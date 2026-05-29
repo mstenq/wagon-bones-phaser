@@ -370,12 +370,28 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
 // ─── ALCHEMY_KIT: Alchemy Kit ───
 
 describe('ALCHEMY_KIT: Alchemy Kit', () => {
-  test('steel dice trigger iron spurs mult via gold swap', () => {
+  test('steel dice trigger iron spurs mult with or without alchemy kit', () => {
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'steel' }), die({ value: 5 })],
       equipment: [item('iron_spurs'), item('alchemy_kit')],
     });
     expect(result.mult).toBeMult(8);
+  });
+
+  test('gold dice trigger iron spurs mult with alchemy kit', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5 })],
+      equipment: [item('iron_spurs'), item('alchemy_kit')],
+    });
+    expect(result.mult).toBeMult(8);
+  });
+
+  test('gold dice do not trigger iron spurs mult without alchemy kit', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5 })],
+      equipment: [item('iron_spurs')],
+    });
+    expect(result.mult).toBeMult(1);
   });
 
   test('gold dice trigger gold tooth money via steel swap', () => {

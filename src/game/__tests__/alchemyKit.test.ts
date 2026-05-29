@@ -4,6 +4,7 @@ import {
   enhancementCountsAsSteel,
   enhancementHeldGoldPayout,
   enhancementHeldSteelXMult,
+  enhancementMatchesTarget,
 } from '../alchemyKit';
 
 describe('alchemyKit helpers', () => {
@@ -27,5 +28,12 @@ describe('alchemyKit helpers', () => {
     expect(enhancementHeldSteelXMult('steel', true)).toBe(true);
     expect(enhancementHeldGoldPayout('steel', true)).toBe(true);
     expect(enhancementHeldGoldPayout('gold', true)).toBe(true);
+  });
+
+  test('enhancementMatchesTarget for collection counts', () => {
+    expect(enhancementMatchesTarget('steel', 'steel', false)).toBe(true);
+    expect(enhancementMatchesTarget('gold', 'steel', false)).toBe(false);
+    expect(enhancementMatchesTarget('gold', 'steel', true)).toBe(true);
+    expect(enhancementMatchesTarget('steel', 'gold', true)).toBe(true);
   });
 });

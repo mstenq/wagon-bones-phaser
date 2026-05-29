@@ -27,3 +27,14 @@ export function enhancementHeldSteelXMult(enhancement: DiceEnhancement | null, a
 export function enhancementHeldGoldPayout(enhancement: DiceEnhancement | null, alchemy: boolean): boolean {
   return enhancementCountsAsGold(enhancement, alchemy);
 }
+
+/** Collection counts: die matches a target enhancement (with alchemy gold ↔ steel swap). */
+export function enhancementMatchesTarget(
+  enhancement: DiceEnhancement | null,
+  target: DiceEnhancement,
+  alchemy: boolean,
+): boolean {
+  if (target === 'steel') return enhancementCountsAsSteel(enhancement, alchemy);
+  if (target === 'gold') return enhancementCountsAsGold(enhancement, alchemy);
+  return enhancement === target;
+}
