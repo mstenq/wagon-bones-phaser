@@ -73,7 +73,7 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
     case 'score':
       return playScorePlayback(ctx, command.result);
     case 'score-events':
-      return playScoreEventsPlayback(ctx, command.events);
+      return playScoreEventsPlayback(ctx, command.events, command.label);
     case 'hand-upgrades':
       return playHandUpgradesPlayback(ctx, command.upgrades);
     case 'day-end-destructions':
@@ -129,7 +129,11 @@ async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResul
   ctx.onScoreComplete();
 }
 
-function playScoreEventsPlayback(ctx: PlaybackHandlerContext, events: ScoreAnimEvent[]): Promise<void> {
+function playScoreEventsPlayback(
+  ctx: PlaybackHandlerContext,
+  events: ScoreAnimEvent[],
+  label?: 'round-end-held',
+): Promise<void> {
   if (events.length === 0) return Promise.resolve();
   return new Promise((resolve) => {
     playDieAnimEvents({
@@ -138,6 +142,7 @@ function playScoreEventsPlayback(ctx: PlaybackHandlerContext, events: ScoreAnimE
       events,
       consumableBar: ctx.consumableBar,
       equipBar: ctx.equipBar,
+      endSession: label === 'round-end-held',
       onComplete: () => resolve(),
     });
   });

@@ -381,6 +381,18 @@ export const ANIM = {
   SCORE_SUBSTEP_DELAY: 200, // ms between sub-events on the same die (miles → mult → etc)
   SCORE_FINAL_FLASH_DELAY: 300,
   SCORE_COMPLETE_DELAY: 400,
+  /** Score events below this count: normal 1× pacing. */
+  SCORE_ACCEL_MIN_EVENTS: 20,
+  /** Event count at which gap compression reaches SCORE_ACCEL_MAX. */
+  SCORE_ACCEL_FULL_AT: 90,
+  /** Max gap compression (2 = half the wait between steps). Single knob for top speed. */
+  SCORE_ACCEL_MAX: 3,
+  /** Minimum compressed gap between steps (ms). */
+  SCORE_ACCEL_MIN_GAP_MS: 56,
+  /** Pause before animating a newly targeted die (at 1× pacing). */
+  SCORE_ACCEL_DIE_PREAMBLE_MS: 400,
+  /** Wait after retrigger "Again!" before the next event (at 1× pacing). */
+  SCORE_ACCEL_AGAIN_DELAY: 400,
   HOVER_DURATION: 100,
   CARD_HOVER_SCALE: 1.05,
 

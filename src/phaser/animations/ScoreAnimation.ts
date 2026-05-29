@@ -14,6 +14,7 @@ import { ConsumableBar } from '../ui/ConsumableBar';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { ANIM } from '../../game/Constants';
 import { formatScore } from '../../game/formatScore';
+import { endScoreAnimSession, pacingForFollowUp, pacingForHandScore, type ScoreAnimPacing } from './scoreAnimPacing';
 import { addScore, multiplyScore, D } from '../../game/scoreMath';
 import { milesToSave } from '../../game/scoreMath';
 import { roundActions } from '../../game/store/actions/roundActions';
@@ -318,7 +319,26 @@ function shakeDieSprite(scene: Scene, sprite: DiceSprite): void {
   });
 }
 
-/** Get the sound to play for a given popup type */
+function playAgainRetrigger(
+  scene: Scene,
+  equipBar: EquipmentBar,
+  equipIndex: number,
+  value: number,
+  stepIdx: number,
+  pacing: ScoreAnimPacing,
+  done: () => void,
+): void {
+  if (pacing.trimFx) {
+    wiggleEquipCard(scene, equipBar, equipIndex);
+  } else {
+    shakeEquipCardAgain(scene, equipBar, equipIndex);
+  }
+  popupForEquip(scene, equipBar, equipIndex, 'again', value);
+  const sfx = getSoundForType('again', stepIdx);
+  scene.sound.play(sfx.key, sfx.config);
+  pacing.wait(scene, ANIM.SCORE_ACCEL_AGAIN_DELAY, done);
+}
+
 function getSoundForType(type: string, stepIdx: number): { key: string; config: object } {
   switch (type) {
     case 'mult':
@@ -421,6 +441,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
     // Play all events sequentially in the exact order they were scored
     const events = result.animEvents;
+    const pacing = pacingForHandScore(events.length);
     let eventIdx = 0;
     let lastDieId: string | null = null;
 
@@ -437,19 +458,25 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
       const finishEvent = () => {
         eventIdx++;
-        scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
+        pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
       };
 
-      // Shake die when we encounter a new die target
+      const runEvent = () => animateEvent(evt, eventIdx, finishEvent);
+
+      // Shake die when we encounter a new die target (skip preamble when compressed)
       if (dieId && dieId !== lastDieId) {
         lastDieId = dieId;
-        const sprite = dieSpriteMap.get(dieId);
-        if (sprite) {
-          shakeDieSprite(scene, sprite);
+        if (!pacing.trimFx) {
+          const sprite = dieSpriteMap.get(dieId);
+          if (sprite) {
+            shakeDieSprite(scene, sprite);
+          }
+          pacing.wait(scene, ANIM.SCORE_ACCEL_DIE_PREAMBLE_MS, runEvent);
+        } else {
+          runEvent();
         }
-        scene.time.delayedCall(420, () => animateEvent(evt, eventIdx, finishEvent));
       } else {
-        animateEvent(evt, eventIdx, finishEvent);
+        runEvent();
       }
     }
 
@@ -477,7 +504,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
           }
         }
         scene.sound.play('sfx_chips1', { volume: 0.2, detune: -200 });
-        scene.time.delayedCall(120, done);
+        pacing.wait(scene, 120, done);
         return;
       }
 
@@ -490,7 +517,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             const enhancement = evt.enhancement ?? null;
             const label = enhancement ? (ENHANCEMENT_NAMES.get(enhancement) ?? enhancement) : 'Enhanced';
             floatingText(scene, sprite.x, sprite.y, `+${label}`, POPUP_ENHANCE_COLOR, 'up');
-            scene.time.delayedCall(120, () => {
+            pacing.wait(scene, 120, () => {
               sprite.setDieData({
                 ...sprite.dieData,
                 enhancement,
@@ -505,7 +532,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         }
         const sfx = getSoundForType('enhance', stepIdx);
         scene.sound.play(sfx.key, sfx.config);
-        scene.time.delayedCall(200, done);
+        pacing.wait(scene, 200, done);
         return;
       }
 
@@ -584,12 +611,10 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       // Retrigger equipment: "Again!" on the causing card (no sidebar update)
       if (popupType === 'again') {
         if (target.kind === 'equip') {
-          shakeEquipCardAgain(scene, equipBar, target.equipIndex);
-          popupForEquip(scene, equipBar, target.equipIndex, 'again', value);
+          playAgainRetrigger(scene, equipBar, target.equipIndex, value, stepIdx, pacing, done);
+        } else {
+          done();
         }
-        const sfx = getSoundForType('again', stepIdx);
-        scene.sound.play(sfx.key, sfx.config);
-        scene.time.delayedCall(450, done);
         return;
       }
 
@@ -602,14 +627,14 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         const midY = (milesPos.y + multPos.y) / 2;
         floatingText(scene, midX, midY, 'Balance!', POPUP_BALANCE_COLOR, 'up');
         scene.sound.play('sfx_multhit1', { volume: 0.45, detune: -50 });
-        scene.time.delayedCall(180, () => {
+        pacing.wait(scene, 180, () => {
           sidebar.setMilesAnimated(balanced);
           sidebar.setMultAnimated(balanced);
           sidebar.shakeMilesPill();
           sidebar.shakeMultPill(true);
           currentMiles = balanced;
           currentMult = balanced;
-          scene.time.delayedCall(450, done);
+          pacing.wait(scene, 450, done);
         });
         return;
       }
@@ -653,16 +678,16 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     // ─── Finish ───
 
     function finishScoring() {
-      scene.time.delayedCall(ANIM.SCORE_FINAL_FLASH_DELAY, () => {
+      pacing.wait(scene, ANIM.SCORE_FINAL_FLASH_DELAY, () => {
         roundActions.setSidebarOverlay({ milesBaseSave: milesToSave(0), multSave: milesToSave(0) });
         sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));
         scene.sound.play('sfx_timpani', { volume: 0.5 });
-        scene.time.delayedCall(ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);
+        pacing.wait(scene, ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);
       });
     }
 
     // Start scoring
-    scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, processNextEvent);
+    scene.time.delayedCall(pacing.gapMs(ANIM.SCORE_STEP_DELAY), processNextEvent);
   }
 }
 
@@ -672,16 +697,26 @@ export interface DieAnimEventsConfig {
   events: ScoreAnimEvent[];
   consumableBar?: ConsumableBar;
   equipBar?: EquipmentBar;
+  /** Clear the hand score session after this playback (round-end held payout). */
+  endSession?: boolean;
   onComplete: () => void;
 }
 
 /** Play die-target popups (money, trail guide fly-in, retrigger "Again!", …) — e.g. round-end held rewards. */
 export function playDieAnimEvents(config: DieAnimEventsConfig): void {
-  const { scene, diceSprites, events, consumableBar, equipBar, onComplete } = config;
+  const { scene, diceSprites, events, consumableBar, equipBar, endSession, onComplete } = config;
   if (events.length === 0) {
+    if (endSession) endScoreAnimSession();
     onComplete();
     return;
   }
+
+  const finish = () => {
+    if (endSession) endScoreAnimSession();
+    onComplete();
+  };
+
+  const pacing = pacingForFollowUp(events.length);
 
   const dieSpriteMap = new Map<string, DiceSprite>();
   for (const s of diceSprites) dieSpriteMap.set(s.dieData.id, s);
@@ -691,7 +726,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
 
   const finishEvent = () => {
     eventIdx++;
-    scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
+    pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
   };
 
   const animateEvent = (evt: ScoreAnimEvent, stepIdx: number, done: () => void): void => {
@@ -712,7 +747,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
         });
       } else {
         applyConsumableGrant(evt.consumableId);
-        scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, done);
+        pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, done);
       }
       return;
     }
@@ -741,19 +776,17 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
         });
       } else {
         applyConsumableGrant(evt.consumableId);
-        scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, done);
+        pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, done);
       }
       return;
     }
 
     if (popupType === 'again') {
       if (equipBar && target.kind === 'equip') {
-        shakeEquipCardAgain(scene, equipBar, target.equipIndex);
-        popupForEquip(scene, equipBar, target.equipIndex, 'again', value);
+        playAgainRetrigger(scene, equipBar, target.equipIndex, value, stepIdx, pacing, done);
+      } else {
+        done();
       }
-      const sfx = getSoundForType('again', stepIdx);
-      scene.sound.play(sfx.key, sfx.config);
-      scene.time.delayedCall(450, done);
       return;
     }
 
@@ -771,7 +804,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
 
   const processNextEvent = () => {
     if (eventIdx >= events.length) {
-      scene.time.delayedCall(ANIM.SCORE_SUBSTEP_DELAY, onComplete);
+      pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, finish);
       return;
     }
 
@@ -784,13 +817,17 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
 
     if (dieId && dieId !== lastDieId) {
       lastDieId = dieId;
-      const sprite = dieSpriteMap.get(dieId);
-      if (sprite) shakeDieSprite(scene, sprite);
-      scene.time.delayedCall(420, runEvent);
+      if (!pacing.trimFx) {
+        const sprite = dieSpriteMap.get(dieId);
+        if (sprite) shakeDieSprite(scene, sprite);
+        pacing.wait(scene, ANIM.SCORE_ACCEL_DIE_PREAMBLE_MS, runEvent);
+      } else {
+        runEvent();
+      }
     } else {
       runEvent();
     }
   };
 
-  scene.time.delayedCall(ANIM.SCORE_STEP_DELAY, processNextEvent);
+  scene.time.delayedCall(pacing.gapMs(ANIM.SCORE_STEP_DELAY), processNextEvent);
 }
