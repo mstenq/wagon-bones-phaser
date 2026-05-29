@@ -17,6 +17,7 @@ import {
 import { getRunState } from '../../game/store';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
+import { getBonusPackPicks } from '../../game/effects/helpers';
 import { selectEquipmentSlotsFree } from '../../game/store/selectors/runSelectors';
 import {
   getDiceSelectionMaxPicks,
@@ -75,6 +76,7 @@ export class BoosterPackScene extends Scene {
   private contents: PackItem[];
   private cardSprites: CardSprite[] = [];
   private picksRemaining: number;
+  private effectivePickCount: number;
   private skipBtn: Button;
   private picksText: Phaser.GameObjects.Text;
   private instructionText: Phaser.GameObjects.Text;
@@ -158,6 +160,7 @@ export class BoosterPackScene extends Scene {
       queuedPackDefIds: [...this.queuedPackDefIds],
       contents: this.contents.map(serializePackItem),
       picksRemaining: this.picksRemaining,
+      effectivePickCount: this.effectivePickCount,
       usedCardIndices: this.cardSprites.filter((s) => s.used).map((s) => s.index),
     };
   }
@@ -176,6 +179,10 @@ export class BoosterPackScene extends Scene {
     if (storedPack) {
       this.contents = storedPack.contents.map(deserializePackItem);
       this.picksRemaining = storedPack.picksRemaining;
+      this.effectivePickCount =
+        (storedPack.effectivePickCount ?? 0) > 0
+          ? storedPack.effectivePickCount!
+          : this.packDef.pickCount + getBonusPackPicks(resolveEquipmentList());
       this.pendingUsedCardIndices = [...storedPack.usedCardIndices];
       this.syncPackToStore();
       sceneActions.enterScene('BoosterPack');
@@ -183,6 +190,7 @@ export class BoosterPackScene extends Scene {
       const opened = gameFacade.pack.openPack(this.packDef);
       this.contents = opened.contents;
       this.picksRemaining = opened.picksRemaining;
+      this.effectivePickCount = opened.effectivePickCount;
       this.syncPackToStore();
       sceneActions.enterScene('BoosterPack');
     }
@@ -1370,7 +1378,7 @@ export class BoosterPackScene extends Scene {
     if (this.picksRemaining <= 0) {
       this.picksText.setText('All picks used!');
     } else {
-      const total = this.packDef.pickCount;
+      const total = this.effectivePickCount;
       const used = total - this.picksRemaining;
       this.picksText.setText(`Use ${this.picksRemaining} more (${used}/${total} used)`);
     }
@@ -1408,6 +1416,10 @@ export class BoosterPackScene extends Scene {
     if (stored) {
       this.contents = stored.contents.map(deserializePackItem);
       this.picksRemaining = stored.picksRemaining;
+      this.effectivePickCount =
+        (stored.effectivePickCount ?? 0) > 0
+          ? stored.effectivePickCount!
+          : this.packDef.pickCount + getBonusPackPicks(resolveEquipmentList());
       this.pendingUsedCardIndices = [...stored.usedCardIndices];
       this.queuedPackDefIds = [...stored.queuedPackDefIds];
       this.returnScene = stored.returnScene;

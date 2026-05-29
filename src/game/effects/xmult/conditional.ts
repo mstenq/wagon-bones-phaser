@@ -95,6 +95,27 @@ effectRegistry.registerXMult('SILVER_RESERVE', (ctx, equip, index) => {
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
 });
 
+effectRegistry.registerXMult('DAY_XMULT', (ctx, equip, index) => {
+  const xVal = ctx.currentDay;
+  if (xVal <= 1) return;
+  multiplyCtxXMult(ctx, xVal);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
+  console.log(`  [xmult] ${equip.def.name}: x${xVal} (day ${ctx.currentDay}) (xMult: ${ctx.xMult})`);
+});
+
+effectRegistry.registerXMult('DICE_SUM_XMULT', (ctx, equip, index) => {
+  const p = equip.def.effectParams as Record<string, unknown>;
+  const peak = (p.peak as number) ?? 21;
+  const peakMult = (p.peakMult as number) ?? 3;
+  const step = (p.step as number) ?? 0.5;
+  const sum = ctx.scoringDice.reduce((s, d) => s + d.value, 0);
+  const xVal = sum <= peak ? peakMult - step * (peak - sum) : ((p.bustMult as number) ?? 1);
+  if (xVal <= 1) return;
+  multiplyCtxXMult(ctx, xVal);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });
+  console.log(`  [xmult] ${equip.def.name}: x${xVal} (dice sum ${sum}) (xMult: ${ctx.xMult})`);
+});
+
 effectRegistry.registerXMult('SPLIT_TRAIL', (ctx, equip, index) => {
   if (
     ctx.handResult.type !== HandType.FOUR_STRAIGHT &&

@@ -178,6 +178,7 @@ export interface BoosterPackSaveData {
   queuedPackDefIds?: string[];
   contents: SerializedPackItem[];
   picksRemaining: number;
+  effectivePickCount?: number;
   usedCardIndices: number[];
 }
 
@@ -364,6 +365,7 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
           queuedPackDefIds: [...(data.queuedPackDefIds ?? [])],
           contents: data.contents as StoredPackItem[],
           picksRemaining: data.picksRemaining,
+          effectivePickCount: data.effectivePickCount ?? 0,
           usedCardIndices: [...data.usedCardIndices],
         },
         trailEvent: null,
@@ -588,6 +590,7 @@ export function boosterPackSceneStateToSaveData(pack: BoosterPackSceneState): Bo
     ...(pack.queuedPackDefIds.length > 0 ? { queuedPackDefIds: [...pack.queuedPackDefIds] } : {}),
     contents: pack.contents as SerializedPackItem[],
     picksRemaining: pack.picksRemaining,
+    effectivePickCount: pack.effectivePickCount,
     usedCardIndices: [...pack.usedCardIndices],
   };
 }

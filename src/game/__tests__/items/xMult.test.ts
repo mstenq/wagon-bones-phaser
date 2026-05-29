@@ -1283,3 +1283,118 @@ describe('CHANCE_HAND_XMULT_MONEY: One Armed Bandit', () => {
     }
   });
 });
+
+// ─── DAY_XMULT: Dust Trail ───
+
+describe('DAY_XMULT: Dust Trail', () => {
+  test('has correct definition', () => {
+    const inst = item('dust_trail');
+    expect(inst.def.effectType).toBe('DAY_XMULT');
+    expect(inst.def.cost).toBe(8);
+    expect(inst.def.rarity).toBe('rare');
+  });
+
+  test('no bonus on day 1', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('dust_trail')],
+      currentDay: 1,
+      maxDays: 4,
+    });
+    expect(result.mult).toBeMult(1);
+  });
+
+  test('xMult equals current day on later days', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('dust_trail')],
+      currentDay: 3,
+      maxDays: 4,
+    });
+    expect(result.mult).toBeMult(3);
+  });
+});
+
+// ─── DICE_SUM_XMULT: Blackjack ───
+
+describe('DICE_SUM_XMULT: Blackjack', () => {
+  test('has correct definition', () => {
+    const inst = item('blackjack');
+    expect(inst.def.effectType).toBe('DICE_SUM_XMULT');
+    expect(inst.def.cost).toBe(7);
+    expect(inst.def.rarity).toBe('rare');
+  });
+
+  test('x3 mult when dice sum to 21', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([1, 2, 3, 7, 8]),
+      equipment: [item('blackjack')],
+    });
+    expect(result.mult).toBeMult(3);
+  });
+
+  test('x2.5 mult when dice sum to 20', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([1, 2, 3, 6, 8]),
+      equipment: [item('blackjack')],
+    });
+    expect(result.mult).toBeMultCloseTo(2.5, 5);
+  });
+
+  test('x2 mult when dice sum to 19', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([1, 2, 3, 5, 8]),
+      equipment: [item('blackjack')],
+    });
+    expect(result.mult).toBeMult(2);
+  });
+
+  test('x1.5 mult when dice sum to 18', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([1, 2, 3, 5, 7]),
+      equipment: [item('blackjack')],
+    });
+    expect(result.mult).toBeMultCloseTo(1.5, 5);
+  });
+
+  test('no bonus when dice sum exceeds 21', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([2, 3, 4, 6, 7]),
+      equipment: [item('blackjack')],
+    });
+    expect(result.mult).toBeMult(1);
+  });
+});
+
+// ─── DICE_SCORED_COUNT_XMULT: Sharpening Stone ───
+
+describe('DICE_SCORED_COUNT_XMULT: Sharpening Stone', () => {
+  test('gains x0.1 mult every 10 dice scored', () => {
+    const inst = item('sharpening_stone');
+    const hand = diceWithValue(5, 2);
+    for (let i = 0; i < 5; i++) {
+      processEquipmentOnHandPlayed([inst], HandType.PAIR, hand);
+    }
+    expect(inst.state.diceScoredTotal).toBe(10);
+    expect(inst.state.xMult).toBeCloseTo(1.1, 5);
+
+    for (let i = 0; i < 5; i++) {
+      processEquipmentOnHandPlayed([inst], HandType.PAIR, hand);
+    }
+    expect(inst.state.diceScoredTotal).toBe(20);
+    expect(inst.state.xMult).toBeCloseTo(1.2, 5);
+  });
+
+  test('applies accumulated xMult when scoring', () => {
+    const inst = item('sharpening_stone');
+    const hand = diceWithValue(5, 2);
+    for (let i = 0; i < 10; i++) {
+      processEquipmentOnHandPlayed([inst], HandType.PAIR, hand);
+    }
+    const { result } = calculateTestScore({
+      scoredDice: hand,
+      equipment: [inst],
+    });
+    expect(result.mult).toBeMultCloseTo(1.2, 5);
+  });
+});

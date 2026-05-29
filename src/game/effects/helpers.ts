@@ -139,6 +139,19 @@ export function getConfigModifiers(equipment: EquipmentInstance[]): {
   return { rerollsBonus, rollSizeBonus, freeShopRerolls, daysPenalty };
 }
 
+/** Bonus pack picks from equipment (e.g. Rustler). */
+export function getBonusPackPicks(equipment: EquipmentInstance[]): number {
+  let bonus = 0;
+  for (let i = 0; i < equipment.length; i++) {
+    if (isEquipmentDisabledByBoss(i)) continue;
+    const { effectType, effectParams } = equipment[i].def;
+    if (effectType === 'EXTRA_PACK_PICK') {
+      bonus += ((effectParams as Record<string, unknown>).value as number) ?? 1;
+    }
+  }
+  return bonus;
+}
+
 /** Check if any equipment prevents death. Returns the index of the first one found, or -1. */
 export function findDeathPrevention(
   equipment: EquipmentInstance[],

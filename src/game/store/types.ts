@@ -244,6 +244,8 @@ export interface BoosterPackSceneState {
   queuedPackDefIds: string[];
   contents: StoredPackItem[];
   picksRemaining: number;
+  /** Total picks allowed this open (base pickCount + equipment bonus). */
+  effectivePickCount: number;
   usedCardIndices: number[];
 }
 

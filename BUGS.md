@@ -13,10 +13,10 @@
     - Good Omens - Stage 1 — Positive trail events are 2x more likely
     - Manifest Destiny - Stage 2 — Positive trail events are 4x more likely
 - new equipment
-    - xxx - $8 - rare - x1 mult per day travelled. Resets every round.
-    - Blackjack - $7 - Gives x3 mult when the ranks of all played dice is exactly 21. Gives x0.5 mult less for every point below 21. [21=3x, 20=2.5x, 19=2x, 18=2x, 17=1.5x]
-    - xxx - $6 - uncommon - x1 mult. Gains x0.1 mult per 10 dice scored.
-    - Horse Thief - common - $5 - Choose one additional item when opening any booster pack.
+    - Long Haul - $8 - rare - x1 mult per day travelled. Resets every round.
+    - Blackjack - $7 - rare - Gives x3 mult when the ranks of all played dice is exactly 21. Gives x0.5 mult less for every point below 21. [21=3x, 20=2.5x, 19=2x, 18=2x, 17=1.5x]
+    - Sharpening Stone - $6 - uncommon - x1 mult. Gains x0.1 mult per 10 dice scored.
+    - Rustler - common - $5 - Choose one additional item when opening any booster pack.
 
 
 

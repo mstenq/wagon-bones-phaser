@@ -76,6 +76,20 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
       }
       break;
     }
+    case 'DICE_SCORED_COUNT_XMULT': {
+      const p = equip.def.effectParams as Record<string, unknown>;
+      const threshold = (p.threshold as number) ?? 10;
+      const gain = (p.value as number) ?? 0.1;
+      const prevTotal = equip.state.diceScoredTotal ?? 0;
+      const newTotal = prevTotal + ((scoringDice as Die[])?.length ?? 0);
+      equip.state.diceScoredTotal = newTotal;
+      const prevSteps = Math.floor(prevTotal / threshold);
+      const newSteps = Math.floor(newTotal / threshold);
+      if (newSteps > prevSteps) {
+        equip.state.xMult = (equip.state.xMult ?? 1) + gain * (newSteps - prevSteps);
+      }
+      break;
+    }
   }
 });
 

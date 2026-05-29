@@ -97,6 +97,15 @@ effectRegistry.registerXMult('REROLL_COUNT_XMULT', (ctx, equip, index) => {
   }
 });
 
+effectRegistry.registerXMult('DICE_SCORED_COUNT_XMULT', (ctx, equip, index) => {
+  const xm = equip.state.xMult ?? 1;
+  if (xm > 1) {
+    multiplyCtxXMult(ctx, xm);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
+    console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
+  }
+});
+
 effectRegistry.registerXMult('CAMPFIRE_EMBERS', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {

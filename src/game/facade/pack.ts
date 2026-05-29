@@ -12,6 +12,7 @@ import {
 import { applyDiceSelectionEffect, type DiceSelectionConfig } from '../DiceSelectionSystem';
 import { acquireEquipmentInstance } from '../EquipmentModifiers';
 import { processEquipmentOnPackOpened, processEquipmentOnPackSkipped } from '../EquipmentEffects';
+import { getBonusPackPicks } from '../effects/helpers';
 import type { EquipmentDef, EquipmentInstance } from '../ItemsSystem';
 import type { Die } from '../types';
 import { consumableActions, diceActions } from '../store';
@@ -44,6 +45,7 @@ export { getPackDefById };
 export type PackOpenResult = {
   contents: PackItem[];
   picksRemaining: number;
+  effectivePickCount: number;
 };
 
 export const gamePack = {
@@ -60,7 +62,8 @@ export const gamePack = {
     if (grantSupply) {
       consumableActions.addConsumable(getRandomSupplyDef());
     }
-    return { contents, picksRemaining: packDef.pickCount };
+    const effectivePickCount = packDef.pickCount + getBonusPackPicks(equipment);
+    return { contents, picksRemaining: effectivePickCount, effectivePickCount };
   },
 
   skipPack(): void {

@@ -986,6 +986,34 @@ const items: ItemDef[] = [
     },
   },
   {
+    id: 'sharpening_stone',
+    name: 'Sharpening Stone',
+    cardTemplate: 'white-text-black-outline',
+    cost: 6,
+    rarity: 'uncommon',
+    effectType: 'DICE_SCORED_COUNT_XMULT',
+    effectParams: { threshold: 10, value: 0.1 },
+    initialState: { xMult: 1, diceScoredTotal: 0 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'sharpening_stone');
+      const xm = equip?.state.xMult ?? 1;
+      const total = equip?.state.diceScoredTotal ?? 0;
+      return {
+        hint: [[mult(`x${xm.toFixed(1)}`)], [text(`${total % 10}/10`)]],
+        tooltip: [
+          [
+            mult('x1'),
+            text(' mult. Gains '),
+            mult('x0.1'),
+            text(' mult for every '),
+            condition('10'),
+            text(' dice scored'),
+          ],
+        ],
+      };
+    },
+  },
+  {
     id: 'ghost_lantern',
     name: 'Ghost Lantern',
     cardTemplate: 'white-text-noborder',
@@ -1795,6 +1823,19 @@ const items: ItemDef[] = [
         ],
       };
     },
+  },
+  {
+    id: 'rustler',
+    name: 'Rustler',
+    cardTemplate: 'white-text-black-outline',
+    cost: 5,
+    rarity: 'common',
+    effectType: 'EXTRA_PACK_PICK',
+    effectParams: { value: 1 },
+    display: (_round, _player) => ({
+      hint: [[text('+1 pick'), condition('booster pack', 'sm')]],
+      tooltip: [[text('Choose 1 additional item when opening any booster pack')]],
+    }),
   },
   {
     id: 'campfire_stories',
@@ -3089,6 +3130,58 @@ const items: ItemDef[] = [
       return {
         hint: [[mult(`x${(1 + chunks * 0.4).toFixed(1)}`)], [condition('per $25 held', 'sm')]],
         tooltip: [[text('Gain '), mult('x0.4'), text(' mult for every '), money('$25'), text(' you have')]],
+      };
+    },
+  },
+  {
+    id: 'dust_trail',
+    name: 'Dust Trail',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'rare',
+    effectType: 'DAY_XMULT',
+    effectParams: {},
+    display: (round, _player) => {
+      const day = round?.day ?? 1;
+      const hint =
+        day > 1
+          ? [[mult(`x${day}`)], [condition('per day travelled', 'sm')]]
+          : [[mult('x1'), condition('per day travelled', 'xs')], [inactive('Inactive', 'sm')]];
+      return {
+        hint,
+        tooltip: [[mult('x1'), text(' mult per day travelled. Resets every round')]],
+      };
+    },
+  },
+  {
+    id: 'blackjack',
+    name: 'Blackjack',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'rare',
+    effectType: 'DICE_SUM_XMULT',
+    effectParams: { peak: 21, peakMult: 3, step: 0.5, bustMult: 1 },
+    display: (round, _player) => {
+      const sum = round && round.selectedForScore.length > 0 ? round.selectedForScore.reduce((s, d) => s + d.value, 0) : 0;
+      const xVal = Math.max(3 - 0.5 * (21 - sum), 1);
+      const xLabel = Number.isInteger(xVal) ? `x${xVal}` : `x${xVal.toFixed(1)}`;
+      return {
+        hint: [[sum > 21 ? mult('bust') : mult(xLabel)], [sum <= 21 ? active(String(sum)) : inactive(String(sum))]],
+        tooltip: [
+          [
+            mult('x3'),
+            text(' mult when played dice sum to '),
+            condition('21'),
+            text('. '),
+            mult('-0.5'),
+            text(' mult per point below '),
+            condition('21'),
+            text('. Over '),
+            condition('21'),
+            text(' is '),
+            inactive('bust'),
+          ],
+        ],
       };
     },
   },

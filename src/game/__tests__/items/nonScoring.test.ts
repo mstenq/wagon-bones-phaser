@@ -654,6 +654,47 @@ describe('PACK_OPEN_SUPPLY_CHANCE: Leftovers', () => {
   });
 });
 
+// ─── EXTRA_PACK_PICK: Rustler ───
+
+describe('EXTRA_PACK_PICK: Rustler', () => {
+  test('has correct definition', () => {
+    const inst = item('rustler');
+    expect(inst.def.effectType).toBe('EXTRA_PACK_PICK');
+    expect(inst.def.cost).toBe(5);
+    expect(inst.def.rarity).toBe('common');
+  });
+
+  test('getBonusPackPicks returns 1 with Rustler equipped', async () => {
+    const { getBonusPackPicks } = await import('../../effects/helpers');
+    expect(getBonusPackPicks([item('rustler')])).toBe(1);
+    expect(getBonusPackPicks([item('horseshoe')])).toBe(0);
+  });
+
+  test('openPack grants one extra pick with Rustler', async () => {
+    const { gameFacade } = await import('../../facade');
+    const { getPackDefById } = await import('../../BoosterPackSystem');
+    setupGame({ equipment: [item('rustler')] });
+
+    const standard = getPackDefById('equipment_standard');
+    expect(standard).toBeDefined();
+    const opened = gameFacade.pack.openPack(standard!);
+    expect(opened.picksRemaining).toBe(2);
+    expect(opened.effectivePickCount).toBe(2);
+  });
+
+  test('openPack grants two extra picks with two Rustlers', async () => {
+    const { gameFacade } = await import('../../facade');
+    const { getPackDefById } = await import('../../BoosterPackSystem');
+    setupGame({ equipment: [item('rustler'), item('rustler')] });
+
+    const mega = getPackDefById('equipment_mega');
+    expect(mega).toBeDefined();
+    const opened = gameFacade.pack.openPack(mega!);
+    expect(opened.picksRemaining).toBe(4);
+    expect(opened.effectivePickCount).toBe(4);
+  });
+});
+
 // ─── END_ROUND_MONEY_SCALING: Railroad Bonds ───
 
 describe('END_ROUND_MONEY_SCALING: Railroad Bonds', () => {

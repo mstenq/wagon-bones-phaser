@@ -185,6 +185,7 @@
             <key type="filename">bone_charm.png</key>
             <key type="filename">bone_collector.png</key>
             <key type="filename">book_of_the_dead.png</key>
+            <key type="filename">blackjack.png</key>
             <key type="filename">bottom_dollar.png</key>
             <key type="filename">bounty_contract.png</key>
             <key type="filename">buffalo_stampede.png</key>
@@ -209,6 +210,7 @@
             <key type="filename">double_deuces.png</key>
             <key type="filename">double_down.png</key>
             <key type="filename">dynamite.png</key>
+            <key type="filename">dust_trail.png</key>
             <key type="filename">echo_chamber.png</key>
             <key type="filename">eight_second_ride.png</key>
             <key type="filename">eleventh_crossing.png</key>
@@ -290,12 +292,14 @@
             <key type="filename">rainy_day_fund.png</key>
             <key type="filename">repeat_offender.png</key>
             <key type="filename">roulette_wheel.png</key>
+            <key type="filename">rustler.png</key>
             <key type="filename">saint_elmos_shield.png</key>
             <key type="filename">sandwich.png</key>
             <key type="filename">savings_account.png</key>
             <key type="filename">scouts_spyglass.png</key>
             <key type="filename">seventh_trumpet.png</key>
             <key type="filename">sheriffs_badge.png</key>
+            <key type="filename">sharpening_stone.png</key>
             <key type="filename">shortcut_trail.png</key>
             <key type="filename">silver_bullets.png</key>
             <key type="filename">silver_reserve.png</key>
@@ -385,6 +389,7 @@
                     <filename>bone_charm.png</filename>
                     <filename>bone_collector.png</filename>
                     <filename>book_of_the_dead.png</filename>
+                    <filename>blackjack.png</filename>
                     <filename>bottom_dollar.png</filename>
                     <filename>bounty_contract.png</filename>
                     <filename>buffalo_stampede.png</filename>
@@ -409,6 +414,7 @@
                     <filename>double_deuces.png</filename>
                     <filename>double_down.png</filename>
                     <filename>dynamite.png</filename>
+                    <filename>dust_trail.png</filename>
                     <filename>echo_chamber.png</filename>
                     <filename>eight_second_ride.png</filename>
                     <filename>eleventh_crossing.png</filename>
@@ -492,12 +498,14 @@
                     <filename>rainy_day_fund.png</filename>
                     <filename>repeat_offender.png</filename>
                     <filename>roulette_wheel.png</filename>
+                    <filename>rustler.png</filename>
                     <filename>saint_elmos_shield.png</filename>
                     <filename>sandwich.png</filename>
                     <filename>savings_account.png</filename>
                     <filename>scouts_spyglass.png</filename>
                     <filename>seventh_trumpet.png</filename>
                     <filename>sheriffs_badge.png</filename>
+                    <filename>sharpening_stone.png</filename>
                     <filename>shortcut_trail.png</filename>
                     <filename>silver_bullets.png</filename>
                     <filename>silver_reserve.png</filename>
