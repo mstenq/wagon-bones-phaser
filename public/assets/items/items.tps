@@ -313,7 +313,6 @@
             <key type="filename">split_trail.png</key>
             <key type="filename">square_dance.png</key>
             <key type="filename">stacked_deck.png</key>
-            <key type="filename">stagecoach.png</key>
             <key type="filename">steam_engine.png</key>
             <key type="filename">stew.png</key>
             <key type="filename">stubborn_mule.png</key>
@@ -519,7 +518,6 @@
                     <filename>split_trail.png</filename>
                     <filename>square_dance.png</filename>
                     <filename>stacked_deck.png</filename>
-                    <filename>stagecoach.png</filename>
                     <filename>steam_engine.png</filename>
                     <filename>stew.png</filename>
                     <filename>stubborn_mule.png</filename>

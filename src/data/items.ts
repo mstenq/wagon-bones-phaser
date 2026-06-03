@@ -821,19 +821,6 @@ const items: ItemDef[] = [
     },
   },
   {
-    id: 'stagecoach',
-    name: 'Stagecoach',
-    cardTemplate: 'white-text-black-outline',
-    cost: 6,
-    rarity: 'deprecated',
-    effectType: 'NONE',
-    effectParams: {},
-    display: (_round, _player) => ({
-      hint: [[inactive('Deprecated')]],
-      tooltip: [[text('Deprecated: removed with auto-draw round flow.')]],
-    }),
-  },
-  {
     id: 'mystery_crate',
     name: 'Mystery Crate',
     cardTemplate: 'white-text-black-outline',

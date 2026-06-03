@@ -21,7 +21,6 @@ Trail Boss - $4 - sixes add +30 miles when scored - not worth it (Already have o
 Spare Parts - $5 - +2 miles per each remaining dice in collection (doesn't work as well without discards)
 Crooked Trail - $7 - allow straights to have a gap of 1 in rank (1,3,4,6,8) - (straights are too easy already)
 Extra Saddlebag - deprecated (refresh mechanic removed)
-Stagecoach - deprecated (refresh mechanic removed)
 
 ## Equipment Basic List
 Horseshoe - $2 - +4 mult

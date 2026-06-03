@@ -34,7 +34,6 @@ Also makes Pan for Gold supply cards 2 times more likely"
 guardian_totem,Guardian Totem,5,uncommon,Prevents death if miles travelled is at least  25%  of required distance. Card is destroyed if used.
 high_noon,High Noon,6,uncommon,x3  mult on  final day  of round
 desperado,Desperado,4,common,Add the sell value of all other owned equipment as  mult
-stagecoach,Stagecoach,6,deprecated,Deprecated: removed with auto-draw round flow.
 mystery_crate,Mystery Crate,6,uncommon,Add a dice at the start of each round with a random sticker
 trail_repair_kit,Trail Repair Kit,5,uncommon,Negates negative trail event penalties. Gains  x0.25  mult each time it prevents a penalty.
 scouts_spyglass,Scout's Spyglass,6,uncommon,"View from the spyglass before the next trail event. 

@@ -183,20 +183,6 @@ describe('BANK_NOTE: Bank Note', () => {
   });
 });
 
-// ─── Deprecated: Stagecoach ───
-
-describe('Deprecated items', () => {
-  test('stagecoach is deprecated and inert', () => {
-    const equip = item('stagecoach');
-    expect(equip.def.effectType).toBe('NONE');
-    expect(equip.def.rarity).toBe('deprecated');
-  });
-
-  test('Mirror Lake does not change score vs stagecoach alone', () => {
-    expectMirrorLakeDoesNotChangeScore('stagecoach');
-  });
-});
-
 // ─── SCORED_RETRIGGER_TIMED: War Drums ───
 
 describe('SCORED_RETRIGGER_TIMED: War Drums', () => {
