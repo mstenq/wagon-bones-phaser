@@ -258,6 +258,17 @@ describe('FINAL_DAY_XMULT: High Noon', () => {
     });
     expect(result.mult).toBeMult(3);
   });
+
+  test('Mirror Lake doubles xMult on final day', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('high_noon')],
+      currentDay: 4,
+      maxDays: 4,
+    });
+    // PAIR baseMult=1, x3 from mirror copying high_noon, x3 from high_noon = x9
+    expect(result.mult).toBeMult(9);
+  });
 });
 
 describe('New xMult equipment', () => {
@@ -268,6 +279,15 @@ describe('New xMult equipment', () => {
       money: 50,
     });
     expect(result.mult).toBeMultCloseTo(1.8, 5);
+  });
+
+  test('Mirror Lake doubles xMult from money chunks', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('silver_reserve')],
+      money: 50,
+    });
+    expect(result.mult).toBeMultCloseTo(3.24, 5);
   });
 
   test('split trail requires odd and even scored values', () => {
@@ -282,6 +302,15 @@ describe('New xMult equipment', () => {
     // 1-2-3-4 is FOUR_STRAIGHT (base mult 2), then Split Trail applies x2.5 => 5
     expect(active.mult).toBeMultCloseTo(5, 5);
     expect(inactive.mult).toBeMult(1);
+  });
+
+  test('Mirror Lake doubles xMult when odd and even scored values', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 1 }), die({ value: 2 }), die({ value: 3 }), die({ value: 4 })],
+      equipment: [item('mirror_lake'), item('split_trail')],
+    });
+    // FOUR_STRAIGHT baseMult=2, x2.5 from mirror copy + x2.5 from split trail = x6.25 → 12.5
+    expect(result.mult).toBeMultCloseTo(12.5, 5);
   });
 
   test('split trail does not activate for [1,2] because only high value scores', () => {
@@ -313,6 +342,24 @@ describe('New xMult equipment', () => {
     expect(xm).toBeGreaterThanOrEqual(1.0);
     expect(xm).toBeLessThanOrEqual(4.0);
     expect(Number.isInteger(Math.round(xm * 10))).toBe(true);
+  });
+
+  test('Mirror Lake doubles rolled xMult when scoring', () => {
+    const wheel = itemWithState('roulette_wheel', { xMult: 2 });
+    const scoredDice = diceWithValue(5, 2);
+    const { game } = setupGame({
+      equipment: [item('mirror_lake'), wheel],
+      dice: [...scoredDice, ...diceWithValue(1, 50)],
+    });
+    game.startRound();
+    wheel.state.xMult = 2;
+    pushEquipmentState(wheel);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.selectForScore(scoredDice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    expect(result.mult).toBeMult(4);
   });
 
   test('campfire embers grows xMult at non-boss leg round end', () => {
@@ -372,6 +419,15 @@ describe('EVERY_NTH_HAND_XMULT: Six Shooter', () => {
     expect(result.mult).toBeMult(4);
   });
 
+  test('Mirror Lake doubles xMult on 6th hand', () => {
+    const sixShooter = itemWithState('six_shooter', { handsPlayed: 5 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), sixShooter],
+    });
+    expect(result.mult).toBeMult(16);
+  });
+
   test('triggers x4 at 12 hands played', () => {
     const sixShooter = itemWithState('six_shooter', { handsPlayed: 11 });
     const { result } = calculateTestScore({
@@ -419,6 +475,30 @@ describe('ENHANCEMENT_COUNT_XMULT: Iron Furnace', () => {
     // PAIR: baseMult=1
     // 3 steel dice in collection → x(1 + 3*0.2) = x1.6
     expect(result.mult).toBeMultCloseTo(1.6);
+  });
+
+  test('Mirror Lake doubles xMult from steel dice count', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const steelInCollection = [
+      die({ value: 3, enhancement: 'steel' }),
+      die({ value: 4, enhancement: 'steel' }),
+      die({ value: 6, enhancement: 'steel' }),
+    ];
+
+    const { game } = setupGame({
+      equipment: [item('mirror_lake'), item('iron_furnace')],
+      dice: [...scoredDice, ...steelInCollection, ...diceWithValue(1, 50)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    expect(result.mult).toBeMultCloseTo(2.56, 5);
   });
 
   test('no xMult when no steel dice in collection', () => {
@@ -525,6 +605,16 @@ describe('TRAIL_GUIDE_XMULT: Guide Lantern', () => {
     expect(result.mult).toBeMultCloseTo(1.3, 5);
   });
 
+  test('Mirror Lake doubles accumulated xMult when scoring', () => {
+    const inst = item('guide_lantern');
+    inst.state.xMult = 1.3;
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), inst],
+    });
+    expect(result.mult).toBeMultCloseTo(1.69, 5);
+  });
+
   test('scout gains x0.2 per trail guide used', () => {
     const { player } = setupGame({ equipment: [item('guide_lantern')], profession: 'scout' });
     const tgDef = createTrailGuideConsumableDef(trailGuidesData[0]);
@@ -555,6 +645,14 @@ describe('XMULT_RISKY: Nitro', () => {
     });
     // PAIR: baseMult=1, +4 from horseshoe = 5, x3 from nitro = 15
     expect(result.mult).toBeMult(15);
+  });
+
+  test('Mirror Lake doubles xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('nitro')],
+    });
+    expect(result.mult).toBeMult(9);
   });
 });
 
@@ -589,6 +687,24 @@ describe('REPEAT_HAND_XMULT: Repeat Offender', () => {
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, x3 from repeat offender = 3
     expect(result.mult).toBeMult(3);
+  });
+
+  test('Mirror Lake doubles xMult on repeated hand', () => {
+    const inst = item('repeat_offender');
+    const { game } = setupGame({ equipment: [item('mirror_lake'), inst] });
+
+    game.startRound();
+    inst.state['round_PAIR'] = 1;
+    pushEquipmentState(inst);
+
+    game.state.phase = 'ROLL';
+    const dice = diceWithValue(5, 2);
+    game.state.rolledDice = dice;
+    game.state.selectedForRoll = dice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(dice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    expect(result.mult).toBeMult(9);
   });
 
   test('does NOT activate for different hand types', () => {
@@ -678,6 +794,15 @@ describe('EMPTY_SLOT_XMULT: One-Man Posse', () => {
     expect(result.mult).toBeMult(5);
   });
 
+  test('Mirror Lake doubles xMult per empty slot', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('one_man_posse')],
+    });
+    // 3 empty slots with mirror+posse → x4 each = x16
+    expect(result.mult).toBeMult(16);
+  });
+
   test('no bonus when all slots full', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
@@ -709,6 +834,15 @@ describe('ROUNDS_SKIPPED_XMULT: Shortcut Trail', () => {
     });
     // PAIR: baseMult=1, x(1+2*0.25)=x1.5
     expect(result.mult).toBeMultCloseTo(1.5, 5);
+  });
+
+  test('Mirror Lake doubles xMult from rounds skipped', () => {
+    const inst = itemWithState('shortcut_trail', { roundsSkipped: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), inst],
+    });
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
   });
 });
 
@@ -768,6 +902,14 @@ describe('RAINBOW_TRAIL_XMULT: Rainbow Trail', () => {
     expect(result.mult).toBeMult(10);
   });
 
+  test('Mirror Lake doubles xMult with two enhancement types', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'wooden' })],
+      equipment: [item('mirror_lake'), item('rainbow_trail')],
+    });
+    expect(result.mult).toBeMult(20);
+  });
+
   test('x3 with 3 different enhancement types scored', () => {
     const { result } = calculateTestScore({
       scoredDice: [
@@ -812,6 +954,15 @@ describe('HAND_CONTAINS_XMULT: Hitched Pair (pair, x2)', () => {
     expect(result.mult).toBeMult(2);
   });
 
+  test('Mirror Lake doubles xMult on pair', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(6, 2),
+      equipment: [item('mirror_lake'), item('hitched_pair')],
+    });
+    // PAIR: baseMult=1, x2 from mirror copy + x2 from hitched_pair = x4
+    expect(result.mult).toBeMult(4);
+  });
+
   test('activates on full house (contains pair)', () => {
     const { result } = calculateTestScore({
       scoredDice: [...diceWithValue(3, 3), ...diceWithValue(7, 2)],
@@ -841,6 +992,15 @@ describe('HAND_CONTAINS_XMULT: Hat Trick (3oak, x3)', () => {
     });
     // THREE_OF_A_KIND: baseMult=3, x3 = 9
     expect(result.mult).toBeMult(9);
+  });
+
+  test('Mirror Lake doubles xMult on three of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 3),
+      equipment: [item('mirror_lake'), item('hat_trick')],
+    });
+    // THREE_OF_A_KIND: baseMult=3, x3 × x3 = x9 → 27
+    expect(result.mult).toBeMult(27);
   });
 
   test('activates on four of a kind (contains 3oak)', () => {
@@ -874,6 +1034,15 @@ describe('HAND_CONTAINS_XMULT: Posse Wagon (4oak, x4)', () => {
     expect(result.mult).toBeMult(20);
   });
 
+  test('Mirror Lake doubles xMult on four of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 4),
+      equipment: [item('mirror_lake'), item('posse_wagon')],
+    });
+    // FOUR_OF_A_KIND: baseMult=5, x4 × x4 = x16 → 80
+    expect(result.mult).toBeMult(80);
+  });
+
   test('does not activate on three of a kind', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(4, 3),
@@ -896,6 +1065,15 @@ describe('HAND_CONTAINS_XMULT: Five Finger Fillet (5oak, x5)', () => {
     expect(result.mult).toBeMult(30);
   });
 
+  test('Mirror Lake doubles xMult on five of a kind', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 5),
+      equipment: [item('mirror_lake'), item('five_finger_fillet')],
+    });
+    // FIVE_OF_A_KIND: baseMult=6, x5 × x5 = x25 → 150
+    expect(result.mult).toBeMult(150);
+  });
+
   test('does not activate on four of a kind', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(4, 4),
@@ -916,6 +1094,15 @@ describe('HAND_CONTAINS_XMULT: Snake River (5 straight, x3)', () => {
     });
     // FIVE_STRAIGHT: baseMult=4, x3 = 12
     expect(result.mult).toBeMult(12);
+  });
+
+  test('Mirror Lake doubles xMult on 5 straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6, 7]),
+      equipment: [item('mirror_lake'), item('snake_river')],
+    });
+    // FIVE_STRAIGHT: baseMult=4, x3 × x3 = x9 → 36
+    expect(result.mult).toBeMult(36);
   });
 
   test('does not activate on 4 straight', () => {
@@ -950,6 +1137,26 @@ describe('ENHANCED_DICE_COUNT_XMULT: Blessed Herd', () => {
     const result = game.calculateScore()!;
     // PAIR: baseMult=1, x3 from blessed herd
     expect(result.mult).toBeMult(3);
+  });
+
+  test('Mirror Lake doubles xMult with 16+ enhanced dice', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const enhancedDice = Array.from({ length: 16 }, (_, i) => die({ value: (i % 12) + 1, enhancement: 'wooden' }));
+
+    const { game } = setupGame({
+      equipment: [item('mirror_lake'), item('blessed_herd')],
+      dice: [...scoredDice, ...enhancedDice, ...diceWithValue(1, 10)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scoredDice;
+    game.state.selectedForRoll = scoredDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scoredDice.map((d) => d.id));
+
+    const result = game.calculateScore()!;
+    expect(result.mult).toBeMult(9);
   });
 
   test('does not activate when fewer than 16 enhanced dice', () => {
@@ -1179,6 +1386,16 @@ describe('ENHANCED_DESTROYED_XMULT: Book of the Dead', () => {
     expect(result.mult).toBeMultCloseTo(2, 5);
   });
 
+  test('Mirror Lake doubles accumulated xMult when scoring', () => {
+    const inst = item('book_of_the_dead');
+    processEquipmentOnDiceDestroyed([inst], 1, 1);
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), inst],
+    });
+    expect(result.mult).toBeMultCloseTo(4, 5);
+  });
+
   test('does not gain xMult from standard die destruction', () => {
     const inst = item('book_of_the_dead');
     processEquipmentOnDiceDestroyed([inst], 1, 0);
@@ -1196,6 +1413,14 @@ describe("PIP_XMULT: The Devil's Hand", () => {
     });
     // PAIR: baseMult=1, two scored 6s → x2 * x2 = x4
     expect(result.mult).toBeMultCloseTo(4, 5);
+  });
+
+  test('Mirror Lake doubles xMult per scored 6', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 6 }), die({ value: 6 }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('devils_hand')],
+    });
+    expect(result.mult).toBeMultCloseTo(16, 5);
   });
 });
 
@@ -1222,6 +1447,16 @@ describe('REROLL_COUNT_XMULT: The 23rd Psalm', () => {
     });
     expect(result.mult).toBeMultCloseTo(3, 5);
   });
+
+  test('Mirror Lake doubles accumulated xMult when scoring', () => {
+    const inst = item('twenty_third_psalm');
+    processEquipmentOnReroll([inst], 46);
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), inst],
+    });
+    expect(result.mult).toBeMultCloseTo(9, 5);
+  });
 });
 
 // ─── CHANCE_HAND_XMULT_MONEY: One Armed Bandit ───
@@ -1246,6 +1481,22 @@ describe('CHANCE_HAND_XMULT_MONEY: One Armed Bandit', () => {
       });
       expect(result.mult).toBeMult(4);
       expect(result.mutations.moneyEarned).toBe(10);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('Mirror Lake doubles xMult on successful roll', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+
+    try {
+      const { result } = calculateTestScore({
+        scoredDice: diceWithValue(5, 2),
+        equipment: [item('mirror_lake'), item('one_armed_bandit')],
+      });
+      expect(result.mult).toBeMult(16);
+      expect(result.mutations.moneyEarned).toBe(20);
     } finally {
       Math.random = original;
     }
@@ -1313,6 +1564,16 @@ describe('DAY_XMULT: Dust Trail', () => {
     });
     expect(result.mult).toBeMult(3);
   });
+
+  test('Mirror Lake doubles day xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('dust_trail')],
+      currentDay: 3,
+      maxDays: 4,
+    });
+    expect(result.mult).toBeMult(9);
+  });
 });
 
 // ─── DICE_SUM_XMULT: Blackjack ───
@@ -1331,6 +1592,14 @@ describe('DICE_SUM_XMULT: Blackjack', () => {
       equipment: [item('blackjack')],
     });
     expect(result.mult).toBeMult(3);
+  });
+
+  test('Mirror Lake doubles xMult when dice sum to 21', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([1, 2, 3, 7, 8]),
+      equipment: [item('mirror_lake'), item('blackjack')],
+    });
+    expect(result.mult).toBeMult(9);
   });
 
   test('x2.5 mult when dice sum to 20', () => {
@@ -1396,5 +1665,175 @@ describe('DICE_SCORED_COUNT_XMULT: Sharpening Stone', () => {
       equipment: [inst],
     });
     expect(result.mult).toBeMultCloseTo(1.2, 5);
+  });
+
+  test('Mirror Lake doubles accumulated xMult when scoring', () => {
+    const inst = item('sharpening_stone');
+    const hand = diceWithValue(5, 2);
+    for (let i = 0; i < 10; i++) {
+      processEquipmentOnHandPlayed([inst], HandType.PAIR, hand);
+    }
+    const { result } = calculateTestScore({
+      scoredDice: hand,
+      equipment: [item('mirror_lake'), inst],
+    });
+    expect(result.mult).toBeMultCloseTo(1.44, 5);
+  });
+});
+
+// ─── Mirror Lake copies xMult equipment ───
+
+describe('Mirror Lake copies xMult equipment', () => {
+  test('Mirror Lake copies Worn Deck stored xMult', () => {
+    const wornDeck = itemWithState('worn_deck', { xMult: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), wornDeck],
+    });
+    // PAIR baseMult=1, x2 mirror + x2 worn deck = x4
+    expect(result.mult).toBeMult(4);
+  });
+
+  test('Mirror Lake copying Worn Deck does not decay mirror state on reroll', () => {
+    const mirrorLake = item('mirror_lake');
+    const wornDeck = itemWithState('worn_deck', { xMult: 2 });
+    const equipment = [mirrorLake, wornDeck];
+
+    processEquipmentOnReroll(equipment, 3);
+    expect(mirrorLake.state.xMult).toBeUndefined();
+    expect(wornDeck.state.xMult).toBeCloseTo(1.97, 5);
+  });
+
+  test('Mirror Lake copies Snake Oil Ledger stored xMult', () => {
+    const ledger = itemWithState('snake_oil_ledger', { xMult: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), ledger],
+    });
+    expect(result.mult).toBeMult(4);
+  });
+
+  test('Mirror Lake copying Snake Oil Ledger does not gain xMult on sell', () => {
+    const mirrorLake = item('mirror_lake');
+    const ledger = item('snake_oil_ledger');
+    const equipment = [mirrorLake, ledger];
+
+    processEquipmentOnSell(equipment);
+    expect(mirrorLake.state.xMult).toBeUndefined();
+    expect(ledger.state.xMult).toBeCloseTo(1.25, 5);
+  });
+
+  test('Mirror Lake copies Trail Repair Kit stored xMult', () => {
+    const kit = itemWithState('trail_repair_kit', { xMult: 1.75 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), kit],
+    });
+    // PAIR baseMult=1; mirror x1.75 × kit x1.75
+    expect(result.mult).toBeMult(3.06);
+  });
+
+  test('Mirror Lake copies New Blood stored xMult', () => {
+    const newBlood = itemWithState('new_blood', { xMult: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), newBlood],
+    });
+    expect(result.mult).toBeMult(4);
+  });
+
+  test('Mirror Lake copying New Blood does not gain xMult when dice are added', () => {
+    const mirrorLake = item('mirror_lake');
+    const newBlood = item('new_blood');
+    const equipment = [mirrorLake, newBlood];
+
+    processEquipmentOnDiceAdded(equipment);
+    expect(mirrorLake.state.xMult).toBeUndefined();
+    expect(newBlood.state.xMult).toBeCloseTo(1.25, 5);
+  });
+
+  test('Mirror Lake copies Diamond Coffin stored xMult', () => {
+    const coffin = itemWithState('diamond_coffin', { xMult: 2.5 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), coffin],
+    });
+    expect(result.mult).toBeMultCloseTo(6.25, 5);
+  });
+
+  test('Mirror Lake copying Diamond Coffin does not gain xMult on diamond destroyed', () => {
+    const mirrorLake = item('mirror_lake');
+    const coffin = item('diamond_coffin');
+    const equipment = [mirrorLake, coffin];
+
+    processEquipmentOnDiamondDestroyed(equipment);
+    expect(mirrorLake.state.xMult).toBeUndefined();
+    expect(coffin.state.xMult).toBeCloseTo(1.75, 5);
+  });
+
+  test('Mirror Lake copies Graverobber stored xMult', () => {
+    const graverobber = itemWithState('graverobber', { xMult: 2 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), graverobber],
+    });
+    expect(result.mult).toBeMult(4);
+  });
+
+  test('Mirror Lake copies Trailblazer streak xMult', () => {
+    const trailblazer = itemWithState('trailblazer', { streak: 0 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), trailblazer],
+    });
+    // Hand played bumps streak to 1 before scoring → x1.2 mirror + x1.2 trailblazer
+    expect(result.mult).toBeMultCloseTo(1.44, 5);
+  });
+
+  test('Mirror Lake copying Trailblazer does not increment mirror streak on hand played', () => {
+    const mirrorLake = item('mirror_lake');
+    const trailblazer = item('trailblazer');
+    const equipment = [mirrorLake, trailblazer];
+
+    processEquipmentOnHandPlayed(equipment, HandType.THREE_OF_A_KIND);
+    expect(mirrorLake.state.streak).toBeUndefined();
+    expect(trailblazer.state.streak).toBe(1);
+  });
+
+  test('Mirror Lake copies Campfire Embers stored xMult', () => {
+    const embers = itemWithState('campfire_embers', { xMult: 1.4 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), embers],
+    });
+    expect(result.mult).toBeMultCloseTo(1.96, 5);
+  });
+
+  test("Mirror Lake copies Collector's Case uncommon scaling", () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('collectors_case'), item('war_drums')],
+    });
+    // 1 uncommon (war_drums) → x1.5 per collectors case copy
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
+  });
+
+  test("Mirror Lake copies Rabbit's Foot stored xMult", () => {
+    const foot = itemWithState('rabbits_foot', { xMult: 1.5 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), foot],
+    });
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
+  });
+
+  test("Mirror Lake copying Rabbit's Foot does not gain xMult on lucky trigger", () => {
+    const mirrorLake = item('mirror_lake');
+    const foot = item('rabbits_foot');
+    const equipment = [mirrorLake, foot];
+
+    processEquipmentOnLuckyTrigger(equipment);
+    expect(mirrorLake.state.xMult).toBeUndefined();
+    expect(foot.state.xMult).toBeCloseTo(1.25, 5);
   });
 });

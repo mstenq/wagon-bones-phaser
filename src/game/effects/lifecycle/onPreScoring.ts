@@ -14,6 +14,7 @@ import { pickRandomSticker } from '../../BoosterPackSystem';
 import { rngPick } from '../../RunRng';
 import { setDieEnhancement } from '../../DiceSystem';
 import { getRunState } from '../../store/runStore';
+import { isDiceScoringDisabledByBoss } from '../../BossEffectsSystem';
 
 interface PreScoringContext {
   scoringDice: Die[];
@@ -83,6 +84,7 @@ effectRegistry.registerLifecycle('on-pre-scoring', (equip, ctx, equipIndex) => {
       const goldChance = (equip.def.effectParams as Record<string, unknown>).chance as [number, number];
       for (const die of scoringDice) {
         if (die.enhancement === 'gold') continue;
+        if (isDiceScoringDisabledByBoss(die)) continue;
         if (checkLoadedChance(goldChance, equipment)) {
           applyPreScoringDiePatchImmediate(scoringDice, mutations, die.id, { enhancement: 'gold' });
           animEvents.push({

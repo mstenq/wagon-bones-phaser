@@ -9,6 +9,8 @@ import { gameFacade } from '../../game/facade';
 import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
 import { canUseConsumableInShop } from '../../game/facade/consumable';
 import type { TrailEventChoice, TrailEventDef, TrailEventEffect, TrailEventResult } from '../../game/facade/trail';
+import { filterEquipmentEligibleForTrailSacrifice } from '../../game/TrailEventsSystem';
+import type { EquipmentInstance } from '../../game/ItemsSystem';
 import { resolveEquipmentList } from '../../game/store/resolve';
 import { selectEffectiveDays, selectEffectiveRerolls } from '../../game/store/selectors/runSelectors';
 import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constants';
@@ -331,7 +333,7 @@ export class TrailEventScene extends Scene {
     const enhancedDiceBeforeCount = run.dice.filter(
       (d) => d.enhancement !== null || d.sticker !== null || d.aura !== null,
     ).length;
-    const equipmentBeforeCount = resolveEquipmentList(run).length;
+    const equipmentBeforeResolve = [...resolveEquipmentList(run)];
 
     // Disable all choice buttons
     for (const btn of this.choiceButtons) {
@@ -352,10 +354,15 @@ export class TrailEventScene extends Scene {
     flushAutoSave();
 
     // Show result with animations
-    this.showResult(result, enhancedDiceBeforeCount, equipmentBeforeCount);
+    this.showResult(result, enhancedDiceBeforeCount, equipmentBeforeResolve);
   }
 
-  private showResult(result: TrailEventResult, enhancedDiceBeforeCount: number, equipmentBeforeCount: number): void {
+  private showResult(
+    result: TrailEventResult,
+    enhancedDiceBeforeCount: number,
+    equipmentBeforeResolve: EquipmentInstance[],
+  ): void {
+    const equipmentBeforeCount = equipmentBeforeResolve.length;
     const { height } = this.scale;
     const layout = this.getContentLayout();
     const contentCX = layout.contentCX;
@@ -480,7 +487,8 @@ export class TrailEventScene extends Scene {
     const loseEquipEffect = result.effects.find(
       (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(gameFacade.trail.isNegativeEffect(e) && negatesNegatives),
     );
-    const sacrificableCount = equipment.filter((e) => !gameFacade.trail.isEquipmentCursed(e)).length;
+    const eligibleForSacrifice = filterEquipmentEligibleForTrailSacrifice(equipmentBeforeResolve, equipment);
+    const sacrificableCount = eligibleForSacrifice.filter((e) => !gameFacade.trail.isEquipmentCursed(e)).length;
     const needsEquipChoice = loseEquipEffect && sacrificableCount > 0;
 
     // Continue button (after a short delay)
@@ -490,6 +498,7 @@ export class TrailEventScene extends Scene {
           loseEquipEffect.count ?? 1,
           contentCX,
           Math.min(resultY + yOffset + 20, height - 180),
+          equipmentBeforeResolve,
           () => {
             // After equipment chosen, show continue
             const continueY2 = Math.min(resultY + yOffset + 80, height - 60);
@@ -516,9 +525,17 @@ export class TrailEventScene extends Scene {
     });
   }
 
-  private showEquipmentPicker(count: number, cx: number, y: number, onComplete: () => void): void {
+  private showEquipmentPicker(
+    count: number,
+    cx: number,
+    y: number,
+    equipmentOwnedBeforeChoice: EquipmentInstance[],
+    onComplete: () => void,
+  ): void {
     let remaining = count;
-    const initialSacrificable = resolveEquipmentList().filter((e) => !gameFacade.trail.isEquipmentCursed(e)).length;
+    const equipment = resolveEquipmentList();
+    const eligible = filterEquipmentEligibleForTrailSacrifice(equipmentOwnedBeforeChoice, equipment);
+    const initialSacrificable = eligible.filter((e) => !gameFacade.trail.isEquipmentCursed(e)).length;
     remaining = Math.min(count, initialSacrificable);
 
     if (remaining === 0) {
@@ -543,9 +560,11 @@ export class TrailEventScene extends Scene {
 
     const buildCards = () => {
       cardContainer.removeAll(true);
-      const equipment = resolveEquipmentList();
-      const sacrificableIndices = equipment
-        .map((e, idx) => (!gameFacade.trail.isEquipmentCursed(e) ? idx : -1))
+      const currentEquipment = resolveEquipmentList();
+      const eligibleEquipment = filterEquipmentEligibleForTrailSacrifice(equipmentOwnedBeforeChoice, currentEquipment);
+      const eligibleSet = new Set(eligibleEquipment);
+      const sacrificableIndices = currentEquipment
+        .map((e, idx) => (eligibleSet.has(e) && !gameFacade.trail.isEquipmentCursed(e) ? idx : -1))
         .filter((idx) => idx >= 0);
 
       if (sacrificableIndices.length === 0 || remaining === 0) {
@@ -562,7 +581,7 @@ export class TrailEventScene extends Scene {
 
       for (let slot = 0; slot < sacrificableIndices.length; slot++) {
         const equipIndex = sacrificableIndices[slot]!;
-        const equipItem = equipment[equipIndex]!;
+        const equipItem = currentEquipment[equipIndex]!;
         const card = new ItemCard(this, startX + slot * spacing, y + 110, equipItem.def, {
           mode: 'compact',
           cardScale,

@@ -54,6 +54,15 @@ describe('GOLD_DICE_MONEY: Gold Tooth', () => {
     });
     expect(player.economy.balance).toBe(10);
   });
+
+  test('Mirror Lake copies gold tooth money', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'gold' }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('gold_tooth')],
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(18);
+  });
 });
 
 // ─── LUCKY_NUMBER_PIP_XMULT: Lucky Number ───
@@ -104,6 +113,26 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     expect(result.mult).toBeMultCloseTo(4, 5);
     expect(player.profession?.id).toBe('gambler');
   });
+
+  test('Mirror Lake copies lucky pip xMult', () => {
+    const luckyNum = itemWithState('lucky_number', { pip: 5 });
+    const scored = diceWithValue(5, 2);
+    const { game } = setupGame({
+      equipment: [item('mirror_lake'), luckyNum],
+      dice: [...scored, ...diceWithValue(1, 10)],
+    });
+    game.startRound();
+    luckyNum.state.pip = 5;
+    pushEquipmentState(luckyNum);
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = scored;
+    game.state.selectedForRoll = scored;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(scored.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // PAIR of lucky 5s: each die gets x1.5 twice (lucky + mirror copy) → x2.25 per die
+    expect(result.mult).toBeMultCloseTo(5.07, 2);
+  });
 });
 
 // ─── PIP_RETRIGGER: One-Eyed Jack ───
@@ -137,6 +166,14 @@ describe('PIP_RETRIGGER: One-Eyed Jack', () => {
     // TWO_PAIR: two 1s retriggered once each = +2 value
     // totalValue = 1+1+5+5 + 1+1 (retriggers) = 14
     expect(result.totalValue).toBe(14);
+  });
+
+  test('Mirror Lake copies one-eyed jack retrigger', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(1, 2),
+      equipment: [item('mirror_lake'), item('one_eyed_jack')],
+    });
+    expect(result.totalValue).toBe(6);
   });
 });
 
@@ -201,6 +238,31 @@ describe('PIP_SUPPLY_CHANCE: Snake Eyes', () => {
       Math.random = original;
     }
   });
+
+  test('Mirror Lake copies snake eyes supply chance', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+
+    try {
+      const scoredDie = die({ value: 1 });
+      const { game, player } = setupGame({
+        equipment: [item('mirror_lake'), item('snake_eyes')],
+        dice: [scoredDie, ...diceWithValue(2, 20)],
+      });
+
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = [scoredDie];
+      game.state.selectedForRoll = [scoredDie];
+      game.state.rerollsRemaining = 6;
+      game.selectForScore([scoredDie.id]);
+      game.calculateScore();
+
+      expect(player.consumables.length).toBe(2);
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 // ─── ENHANCED_SCORE_MONEY: Gold Pan ───
@@ -222,6 +284,17 @@ describe('ENHANCED_SCORE_MONEY: Gold Pan', () => {
       money: 10,
     });
     expect(player.economy.balance).toBe(12);
+  });
+
+  test('Mirror Lake copies gold pan money on enhanced die', () => {
+    const enhanced = die({ value: 5, enhancement: 'gold' });
+    const { player } = calculateTestScore({
+      scoredDice: [enhanced, die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('gold_pan')],
+      profession: 'prospector',
+      money: 10,
+    });
+    expect(player.economy.balance).toBe(14);
   });
 });
 
@@ -269,6 +342,23 @@ describe('PERMANENT_DIE_MILES_GAIN: Cowboy Boots', () => {
     // first die triggers once for +5, last die triggers twice total for +10
     expect(lastDie.bonusMiles).toBe(10);
   });
+
+  test('Mirror Lake copies cowboy boots permanent miles', () => {
+    const d = die({ value: 5 });
+    calculateTestScore({
+      scoredDice: [d, die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('cowboy_boots')],
+    });
+    expect(d.bonusMiles).toBe(10);
+  });
+
+  test('Mirror Lake copies last laugh retrigger', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('last_laugh')],
+    });
+    expect(result.totalValue).toBe(20);
+  });
 });
 
 // ─── LUCKY_DICE_MONEY: Lucky Penny ───
@@ -302,6 +392,15 @@ describe('LUCKY_DICE_MONEY: Lucky Penny', () => {
     });
     expect(player.economy.balance).toBe(10);
   });
+
+  test('Mirror Lake copies lucky penny money', () => {
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'lucky' }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('lucky_penny')],
+      money: 10,
+    });
+    expect(player.economy.balance).toBeGreaterThanOrEqual(12);
+  });
 });
 
 // ─── WOODEN_DICE_MILES: Wood Axe ───
@@ -334,6 +433,14 @@ describe('WOODEN_DICE_MILES: Wood Axe', () => {
     // miles=(10+10)*5=100
     expect(result.miles).toBeMiles(100);
   });
+
+  test('Mirror Lake copies wood axe miles', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('wood_axe')],
+    });
+    expect(result.miles).toBeMiles(150);
+  });
 });
 
 // ─── IRON_DICE_MULT: Iron Spurs ───
@@ -364,6 +471,14 @@ describe('IRON_DICE_MULT: Iron Spurs', () => {
     });
     // PAIR: baseMult=1+4(bone)=5, no iron spurs bonus
     expect(result.mult).toBeMult(5);
+  });
+
+  test('Mirror Lake copies iron spurs mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'steel' }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('iron_spurs')],
+    });
+    expect(result.mult).toBeMult(15);
   });
 });
 
@@ -519,6 +634,23 @@ describe('ENHANCEMENT_SCORED_MILES: Covered Wagon', () => {
     // first wooden die triggers 3 times total, adding +12 each time
     expect(inst.state.miles).toBe(36);
   });
+
+  test('Mirror Lake copies covered wagon miles', () => {
+    const inst = item('covered_wagon');
+    calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), inst],
+    });
+    expect(inst.state.miles).toBe(24);
+  });
+
+  test('Mirror Lake copies quick draw retrigger', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('quick_draw')],
+    });
+    expect(result.totalValue).toBe(30);
+  });
 });
 
 // ─── BONE_DICE_XMULT_CHANCE: Bone Charm ───
@@ -540,6 +672,14 @@ describe('BONE_DICE_XMULT_CHANCE: Bone Charm', () => {
     // PAIR: baseMult=1, no bone charm trigger, xMult stays 1
     // The mult should only include base (1) — no x1.5
     // wooden gives +30 miles but no mult
+    expect(result.mult).toBeMult(1);
+  });
+
+  test('Mirror Lake copies bone charm on non-bone dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'wooden' }), die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('bone_charm')],
+    });
     expect(result.mult).toBeMult(1);
   });
 });
@@ -586,6 +726,26 @@ describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
     expect(inst.state.miles).toBe(20);
   });
 
+  test('Mirror Lake copies five mile marker miles', () => {
+    const inst = item('five_mile_marker');
+    calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), inst],
+    });
+    expect(inst.state.miles).toBe(20);
+  });
+
+  test('Mirror Lake copies last stand retrigger on final day', () => {
+    const inst = item('five_mile_marker');
+    calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), inst, item('last_stand')],
+      currentDay: 5,
+      maxDays: 5,
+    });
+    expect(inst.state.miles).toBe(40);
+  });
+
   test('accumulated miles apply as bonus', () => {
     const inst = itemWithState('five_mile_marker', { miles: 50 });
     const { result } = calculateTestScore({
@@ -616,6 +776,14 @@ describe('FIRST_PIP_XMULT: Double Barrel', () => {
       equipment: [item('double_barrel'), warDrums],
     });
     // PAIR baseMult=1; first 2 triggers twice (base + war drums) → x2 × x2 = x4
+    expect(result.mult).toBeMult(4);
+  });
+
+  test('Mirror Lake copies double barrel xMult on first 2', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 2 }), die({ value: 2 })],
+      equipment: [item('mirror_lake'), item('double_barrel')],
+    });
     expect(result.mult).toBeMult(4);
   });
 });
@@ -733,6 +901,14 @@ describe('STACKED_DECK: Stacked Deck', () => {
     expect(result.mult).toBeMult(1);
   });
 
+  test('Mirror Lake copies eight second ride consecutive xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 8 }), die({ value: 8 })],
+      equipment: [item('mirror_lake'), item('eight_second_ride')],
+    });
+    expect(result.mult).toBeMultCloseTo(7.5, 5);
+  });
+
   test('Ace in the Hole: held loaded die counts as 1', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
@@ -809,5 +985,14 @@ describe('DICE_DESTROYED_MILES_GAIN: Six Feet Under', () => {
       equipment: [inst],
     });
     expect(gt(result.miles, 132)).toBe(true);
+  });
+
+  test('Mirror Lake copies six feet under destroyed miles', () => {
+    const { player } = setupGame({
+      equipment: [item('mirror_lake'), item('six_feet_under')],
+      dice: diceWithValue(5, 3),
+    });
+    processEquipmentOnDiceDestroyed(player.equipment, 2);
+    expect(player.equipment[1]?.state.miles).toBe(132);
   });
 });

@@ -445,8 +445,8 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'SELL_GRANT_TAG', // Bounty Contract
   'TRAIL_ALMANAC_MONEY', // Trail Almanac
   'ALLOW_DUPLICATES', // Counterfeit Goods
-  'HELLFIRE_ROUND', // Hellfire Round
-  'OPEN_PALM', // Open Palm
+  'FIRST_HAND_ENHANCED_SIX', // Hellfire Round
+  'ALL_DICE_SCORE', // Open Palm
   'SAVINGS_ACCOUNT_INTEREST', // Savings Account
   'EXPLORER_GUILD', // Explorer's Guild
   'PHANTOM_WAGON', // Phantom Wagon
@@ -459,4 +459,5 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'GAMBLERS_DICE_CUP', // Gambler's Dice Cup,
   'ALCHEMY_KIT', // Alchemy Kit
   'SOLO_FIRST_DAY_ENHANCE', // Lucky Find
+  'EXTRA_PACK_PICK', // Rustler
 ]);

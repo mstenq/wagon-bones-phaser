@@ -374,9 +374,11 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
   const excludeIds = getConsumablePackExcludeIds(run);
   const pickedTarget = hasPermitTrailGuideTargeting(run.purchasedPermits) ? pickTargetTrailGuideForRun(run) : null;
   const targetGuide = pickedTarget && !isExcludedId(pickedTarget.id, excludeIds) ? pickedTarget : null;
+  const packExcludeIds =
+    targetGuide && !playerAllowsDuplicateItems(run) ? [...(excludeIds ?? []), targetGuide.id] : excludeIds;
 
   const items: PackItem[] = [];
-  const normalCards = pickRandom(filterPoolByExcludeIds(TRAIL_GUIDES, excludeIds), count, 'trailPack');
+  const normalCards = pickRandom(filterPoolByExcludeIds(TRAIL_GUIDES, packExcludeIds), count, 'trailPack');
   let normalIdx = 0;
   let placedTarget = false;
 

@@ -443,18 +443,29 @@ export function scoreHand(
 
   // CURSED_DICE: loaded dice can shatter and grant a frontier encounter when scored
   console.log('  [postScore] Cursed dice (loaded shatter) pass');
-  for (const equip of equipment) {
+  const maxCopyDepthCursed = equipment.length;
+  for (let ei = 0; ei < equipment.length; ei++) {
+    if (isEquipmentDisabledByBoss(ei)) continue;
+    const originalEquip = equipment[ei];
+    let equip = originalEquip;
+    let triggeredViaEquipmentCopy = false;
+    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
+      const resolved = resolveCopyTarget(equipment, ei, maxCopyDepthCursed);
+      if (!resolved) continue;
+      equip = resolved;
+      triggeredViaEquipmentCopy = true;
+    }
     if (equip.def.effectType !== 'CURSED_DICE') continue;
     const chanceTuple = ((equip.def.effectParams as Record<string, unknown>).chance as [number, number]) ?? [1, 7];
     for (const scoredDie of handResult.scoringDice) {
       if (scoredDie.enhancement !== 'loaded') continue;
-      if (!checkLoadedChance(chanceTuple, equipment, 'loadedDice')) continue;
+      if (!checkLoadedChance(chanceTuple, equipment, 'loadedDice', { triggeredViaEquipmentCopy })) continue;
       if (!removeRunDie(scoredDie.id)) continue;
       const frontierDef = getRandomFrontierDef();
       pipelineCtx.mutations.consumablesGranted.push(frontierDef.id);
       animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
       animEvents.push({
-        target: { kind: 'equip', equipIndex: equipment.indexOf(equip) },
+        target: { kind: 'equip', equipIndex: ei },
         popupType: 'supply',
         value: 0,
         consumableId: frontierDef.id,

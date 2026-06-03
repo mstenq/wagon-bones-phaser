@@ -204,11 +204,12 @@ describe('Equipment Modifiers', () => {
       expect(instance.modifiers).toEqual(['perishable', 'leased']);
     });
 
-    test('cursed sets sell value to 0', () => {
+    test('cursed keeps normal sell value', () => {
       const def = getAllEquipment()[0];
       const instance = createEquipmentInstance(def);
+      const baseSellValue = instance.sellValue;
       applyModifiersToEquipment(instance, ['cursed']);
-      expect(instance.sellValue).toBe(0);
+      expect(instance.sellValue).toBe(baseSellValue);
       expect(instance.perishableRoundsLeft).toBeUndefined();
     });
 
@@ -242,9 +243,11 @@ describe('Equipment Modifiers', () => {
       expect(player.economy.balance).toBe(balanceBefore);
     });
 
-    test('sets sell value to 0', () => {
+    test('keeps sell value for trade and scoring effects', () => {
       const inst = equipWithModifiers('horseshoe', ['cursed']);
-      expect(inst.sellValue).toBe(0);
+      const base = createEquipmentInstance(inst.def);
+      expect(inst.sellValue).toBe(base.sellValue);
+      expect(inst.sellValue).toBeGreaterThan(0);
     });
 
     test('still allows destruction (trail events / bosses)', () => {

@@ -29,14 +29,27 @@ function measurePickRate(targetId: string, runs: number): number {
   return hits / runs;
 }
 
+/**
+ * Pick-rate ratio vs a uniform pool when one card has `targetWeight` and another
+ * has `otherWeightedCardWeight` (all other cards weight 1).
+ */
+function expectedPickRateRatioWithTwoWeightedCards(
+  targetWeight: number,
+  otherWeightedCardWeight: number,
+  poolSize: number,
+): number {
+  const totalWeight = poolSize - 2 + targetWeight + otherWeightedCardWeight;
+  return (targetWeight * poolSize) / totalWeight;
+}
+
 /** Monte Carlo: weighted pick rate / uniform pick rate should match expectedRelativeRate(weight). */
 function expectPickRateRatioNearWeight(
   actualRatio: number,
   weightMultiplier: number,
-  options?: { poolSize?: number; low?: number; high?: number },
+  options?: { poolSize?: number; low?: number; high?: number; expectedRatio?: number },
 ): void {
   const poolSize = options?.poolSize ?? SUPPLY_POOL_SIZE;
-  const expected = expectedRelativeRate(weightMultiplier, poolSize);
+  const expected = options?.expectedRatio ?? expectedRelativeRate(weightMultiplier, poolSize);
   const low = options?.low ?? 0.75;
   const high = options?.high ?? 1.35;
   expect(actualRatio).toBeGreaterThan(expected * low);
@@ -198,15 +211,20 @@ describe('getRandomSupplyDef weighted distribution', () => {
   });
 
   test('steel trio leaves pan_for_gold at 2× pool weight only', () => {
-    initRunRng('supply-weight-pan-base');
     setupGame({ equipment: [] });
+    initRunRng('supply-weight-pan-base');
     const baseline = measurePickRate('pan_for_gold', 8000);
 
-    initRunRng('supply-weight-pan-steel-trio');
     setupGame({ equipment: [item('iron_furnace'), item('iron_spurs'), item('alchemy_kit')] });
+    initRunRng('supply-weight-pan-steel-trio');
     const weighted = measurePickRate('pan_for_gold', 8000);
 
-    expectPickRateRatioNearWeight(weighted / baseline, 2);
+    const expectedRatio = expectedPickRateRatioWithTwoWeightedCards(2, 8, SUPPLY_POOL_SIZE);
+    expectPickRateRatioNearWeight(weighted / baseline, 2, {
+      expectedRatio,
+      low: 0.85,
+      high: 1.15,
+    });
   });
 });
 

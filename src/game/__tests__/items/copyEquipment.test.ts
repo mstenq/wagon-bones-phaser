@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { addScore } from '../../scoreMath';
 import '../setup';
+import { addScore } from '../../scoreMath';
 import { calculateTestScore, die, diceWithValue, item, itemWithState, setupGame, resetDieIds } from '../testHelpers';
 import {
   processEndOfRound,
@@ -8,6 +8,7 @@ import {
   processEquipmentOnReroll,
   getScoredRetriggerCount,
   processEquipmentOnRoundStart,
+  processEquipmentOnPackSkipped,
   getConfigModifiers,
   processPreScoreHandUpgrades,
 } from '../../EquipmentEffects';
@@ -436,7 +437,6 @@ describe('Mirror Lake copies EXPRESS_TRAIN', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('mirror_lake'), item('express_train')],
     });
-    // PAIR base miles + 250 (mirror copies express) + 250 (express itself) = base + 500
     const { result: baseResult } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [],
@@ -458,6 +458,27 @@ describe('Mirror Lake copies EXPRESS_TRAIN', () => {
     game.startRound();
     // Only the original express train applies -2 rerolls
     expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 2);
+  });
+});
+
+describe('Mirror Lake copies ALL_RETRIGGER', () => {
+  test('mirror lake copying seventh_trumpet adds retrigger count', () => {
+    const equipment = [item('mirror_lake'), item('seventh_trumpet')];
+    expect(getScoredRetriggerCount(equipment)).toBe(2);
+  });
+
+  test('mirror lake copying seventh_trumpet doubles scored die triggers', () => {
+    const { result: alone } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('seventh_trumpet')],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('seventh_trumpet')],
+    });
+    // PAIR: alone 2 triggers/die → totalValue 20; mirror copy adds 1 more/die → totalValue 30
+    expect(alone.totalValue).toBe(20);
+    expect(withMirror.totalValue).toBe(30);
   });
 });
 
@@ -547,6 +568,17 @@ describe("Copy item HAND_UPGRADE_CHANCE (Surveyor's Transit)", () => {
     // 3 independent 1-in-4 rolls ≈ 58% per hand; 2000 runs should be well above 50%
     const rate = upgraded / runs;
     expect(rate).toBeGreaterThan(0.5);
+  });
+});
+
+describe('Copy item pack-skipped effects', () => {
+  test('mirror lake copying penny pincher grants $10 when a pack is skipped', () => {
+    const { player } = setupGame({
+      equipment: [item('mirror_lake'), item('penny_pincher')],
+      money: 0,
+    });
+    processEquipmentOnPackSkipped(player.equipment);
+    expect(player.economy.balance).toBe(10);
   });
 });
 

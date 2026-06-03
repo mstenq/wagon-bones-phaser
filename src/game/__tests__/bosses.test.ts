@@ -139,6 +139,28 @@ describe('DISABLE_VALUES: Ghost Town / Undertaker', () => {
     expect(milesDieIds(normal.animEvents).filter((id) => id === scoredDice[0].id)).toHaveLength(2);
     expect(boss.animEvents.some((e) => e.popupType === 'again')).toBe(false);
   });
+
+  test('golden_spike does not enhance boss-disabled scored dice', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const disabledDie = die({ value: 6 });
+      const { result } = calculateTestScore({
+        bossId: 'the_ghost_town',
+        scoredDice: [disabledDie, die({ value: 5 })],
+        equipment: [item('stacked_deck'), item('golden_spike')],
+      });
+      const scored = result.handResult.scoringDice.find((d) => d.id === disabledDie.id)!;
+      expect(scored.enhancement).not.toBe('gold');
+      expect(
+        result.animEvents.some(
+          (e) => e.popupType === 'enhance' && e.dieId === disabledDie.id && e.enhancement === 'gold',
+        ),
+      ).toBe(false);
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 describe('SINGLE_HAND_TYPE: Preacher', () => {

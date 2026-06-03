@@ -7,7 +7,7 @@ the_undertaker,The Undertaker,All played odd dice values are disabled (no additi
 the_preacher,The Preacher,Only one hand type allowed for round
 the_call_girl,The Call Girl,Must play different hands each round
 the_trickster,The Trickster,Every scored hand permanently reduces that hand's trail knowledge by one (min level 1)
-the_river,The River,Only straights count when scoring
+the_river,The River,Only straights or high value count when scoring
 the_chain_gang,The Chain Gang,Start with 0 rerolls
 the_standoff,The Standoff,Play only 1 hand
 the_banker,The Banker,Lose $1 per played dice

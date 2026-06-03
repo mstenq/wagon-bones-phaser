@@ -110,6 +110,20 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
   });
 });
 
+// ─── STATEFUL_ADD_MILES: Scout's Spyglass ───
+
+describe("STATEFUL_ADD_MILES: Scout's Spyglass", () => {
+  test('Mirror Lake copies stored investigate miles', () => {
+    const spyglass = itemWithState('scouts_spyglass', { miles: 20 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), spyglass],
+    });
+    // PAIR: baseMiles=20, +20 spyglass +20 mirror = 60
+    expect(result.miles).toBeMiles(60);
+  });
+});
+
 // ─── STATEFUL_ADD_MILES: Steam Engine ───
 
 describe('STATEFUL_ADD_MILES: Steam Engine', () => {
@@ -153,6 +167,16 @@ describe('STATEFUL_ADD_MILES: Steam Engine', () => {
     // PAIR: baseMiles = 10+10 = 20, +50 from steam engine = 70
     expect(result.miles).toBeMiles(70);
   });
+
+  test('Mirror Lake copies current miles during scoring', () => {
+    const steam = itemWithState('steam_engine', { miles: 50 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), steam],
+    });
+    // PAIR: baseMiles=20, +50 steam +50 mirror = 120
+    expect(result.miles).toBeMiles(120);
+  });
 });
 
 // ─── STATEFUL_ADD_MULT (gainOnPackSkip): Tight Fist ───
@@ -185,6 +209,16 @@ describe('STATEFUL_ADD_MULT: Tight Fist', () => {
     });
     // PAIR: baseMult=1, +6 from tight fist = 7
     expect(result.mult).toBeMult(7);
+  });
+
+  test('Mirror Lake copies accumulated mult during scoring', () => {
+    const tightFist = itemWithState('tight_fist', { mult: 6 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), tightFist],
+    });
+    // PAIR: baseMult=1, +6 tight fist +6 mirror = 13
+    expect(result.mult).toBeMult(13);
   });
 
   test('integration: gains mult when pack is skipped with equipment present', () => {
@@ -249,6 +283,16 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
     });
     // PAIR: baseMiles=10, totalValue=10 (5+5), +12 from square_dance = 32 * mult(1)
     expect(result.miles).toBeMiles(32);
+  });
+
+  test('Mirror Lake copies accumulated miles during scoring', () => {
+    const squareDance = itemWithState('square_dance', { miles: 12 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), squareDance],
+    });
+    // PAIR: baseMiles=10, totalValue=10, +12 square dance +12 mirror = 44
+    expect(result.miles).toBeMiles(44);
   });
 
   test('accumulates across multiple hands', () => {
@@ -341,6 +385,16 @@ describe('HAND_MILES_GAIN: Manifest Destiny', () => {
     expect(result.miles).toBeMiles(50);
   });
 
+  test('Mirror Lake copies accumulated miles during scoring', () => {
+    const manifest = itemWithState('manifest_destiny', { miles: 30 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), manifest],
+    });
+    // PAIR: baseMiles=10, totalValue=10, +30 manifest +30 mirror = 80
+    expect(result.miles).toBeMiles(80);
+  });
+
   test('accumulates across multiple 5 straights', () => {
     const inst = item('manifest_destiny');
     setupGame({ equipment: [inst] });
@@ -381,6 +435,16 @@ describe('SUPPLY_USED_MULT: Campfire Stories', () => {
     });
     // PAIR: baseMult=1, +5 from campfire stories = 6
     expect(result.mult).toBeMult(6);
+  });
+
+  test('Mirror Lake copies supply-used mult during scoring', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('campfire_stories')],
+      supplyCardsUsed: 5,
+    });
+    // PAIR: baseMult=1, +5 campfire +5 mirror = 11
+    expect(result.mult).toBeMult(11);
   });
 });
 

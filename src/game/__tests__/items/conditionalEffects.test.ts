@@ -82,6 +82,18 @@ describe('CONDITIONAL_MULT: Deadeye (scored ≤3 dice, +20 mult)', () => {
     // FIVE_OF_A_KIND: baseMult=6, no bonus
     expect(result.mult).toBeMult(6);
   });
+
+  test('Mirror Lake doubles +20 mult when condition met', () => {
+    const scoreOpts = { scoredDice: [die({ value: 10 })] };
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item('deadeye')] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('deadeye')],
+    });
+    const aloneBonus = Number(alone.mult) - 1;
+    expect(Number(withMirror.mult)).toBe(1 + aloneBonus * 2);
+  });
 });
 
 describe('CONDITIONAL_MULT: Stubborn Mule (no rerolls, +15 mult)', () => {
@@ -111,6 +123,18 @@ describe('CONDITIONAL_MULT: Stubborn Mule (no rerolls, +15 mult)', () => {
       equipment: [item('stubborn_mule')],
     });
     expect(result.mult).toBeMult(1);
+  });
+
+  test('Mirror Lake doubles +15 mult when no rerolls remain', () => {
+    const scoreOpts = { scoredDice: diceWithValue(5, 2), rerollsRemaining: 0 };
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item('stubborn_mule')] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('stubborn_mule')],
+    });
+    const aloneBonus = Number(alone.mult) - 1;
+    expect(Number(withMirror.mult)).toBe(1 + aloneBonus * 2);
   });
 });
 
@@ -150,6 +174,20 @@ describe('MILES_PER_UNUSED_REROLL: Trail Rations (+30 miles per reroll)', () => 
     // miles = (10 + 10 + 90) * 1 = 110
     expect(result.miles).toBeMiles(110);
   });
+
+  test('Mirror Lake doubles miles per unused reroll', () => {
+    const scoreOpts = { scoredDice: diceWithValue(5, 2), rerollsRemaining: 2 };
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item('trail_rations')] });
+    resetDieIds();
+    const { result: baseline } = calculateTestScore({ ...scoreOpts, equipment: [] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('trail_rations')],
+    });
+    const aloneBonus = Number(alone.miles) - Number(baseline.miles);
+    expect(Number(withMirror.miles)).toBe(Number(baseline.miles) + aloneBonus * 2);
+  });
 });
 
 // ─── MULT_PER_EQUIPMENT Items ───
@@ -185,6 +223,20 @@ describe('MULT_PER_EQUIPMENT: Toolbelt (+3 mult per equipment)', () => {
     // Each toolbelt: +3 * 2 = +6
     // Total: 1 + 6 + 6 = 13
     expect(result.mult).toBeMult(13);
+  });
+
+  test('Mirror Lake doubles mult per equipment', () => {
+    const scoreOpts = { scoredDice: diceWithValue(5, 2) };
+    const { result: baseline } = calculateTestScore({ ...scoreOpts, equipment: [item('horseshoe')] });
+    resetDieIds();
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item('toolbelt'), item('horseshoe')] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('toolbelt'), item('horseshoe')],
+    });
+    const aloneBonus = Number(alone.mult) - Number(baseline.mult);
+    expect(Number(withMirror.mult)).toBe(Number(alone.mult) + aloneBonus * 2);
   });
 });
 
@@ -223,6 +275,20 @@ describe('MILES_PER_DOLLAR: Money Wagon', () => {
     // finalMiles = (10 + 10 + 0) * 1 = 20
     expect(result.miles).toBeMiles(20);
   });
+
+  test('Mirror Lake doubles miles per dollar', () => {
+    const scoreOpts = { scoredDice: diceWithValue(5, 2), money: 10 };
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item('money_wagon')] });
+    resetDieIds();
+    const { result: baseline } = calculateTestScore({ ...scoreOpts, equipment: [] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('money_wagon')],
+    });
+    const aloneBonus = Number(alone.miles) - Number(baseline.miles);
+    expect(Number(withMirror.miles)).toBe(Number(baseline.miles) + aloneBonus * 2);
+  });
 });
 
 // ─── ALL_DICE_SCORE: Open Palm ───
@@ -247,6 +313,19 @@ describe('ALL_DICE_SCORE: Open Palm', () => {
     // PAIR from the 5s — only two 5s contribute: 5+5 = 10
     expect(result.totalValue).toBe(10);
   });
+
+  test('Mirror Lake cannot copy Open Palm', () => {
+    const dice = [die({ value: 5 }), die({ value: 5 }), die({ value: 3 }), die({ value: 7 }), die({ value: 9 })];
+    const { result: alone } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [item('open_palm')],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: dice,
+      equipment: [item('mirror_lake'), item('open_palm')],
+    });
+    expect(withMirror.totalValue).toBe(alone.totalValue);
+  });
 });
 
 describe('New conditional/additive mileage items', () => {
@@ -256,6 +335,23 @@ describe('New conditional/additive mileage items', () => {
       equipment: [item('supply_caravan'), item('horseshoe')],
     });
     expect(result.miles).toBeMiles(260);
+  });
+
+  test('Mirror Lake doubles supply caravan miles per equipment', () => {
+    const scoreOpts = { scoredDice: diceWithValue(5, 2) };
+    const { result: alone } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('supply_caravan'), item('horseshoe')],
+    });
+    resetDieIds();
+    const { result: baseline } = calculateTestScore({ ...scoreOpts, equipment: [item('horseshoe')] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('supply_caravan'), item('horseshoe')],
+    });
+    const aloneBonus = Number(alone.miles) - Number(baseline.miles);
+    expect(Number(withMirror.miles)).toBe(Number(alone.miles) + aloneBonus * 2);
   });
 
   test('pioneer spirit adds miles from all hand types above level 1', () => {
@@ -294,6 +390,22 @@ describe('New conditional/additive mileage items', () => {
     expect(highHand.result.handResult.type).toBe(HandType.HIGH_VALUE);
     expect(pioneerBonus(pairHand.result)).toEqual([60]);
     expect(pioneerBonus(highHand.result)).toEqual([60]);
+  });
+
+  test('Mirror Lake doubles pioneer spirit miles bonus', () => {
+    const handLevels = { [HandType.PAIR]: 5, [HandType.FULL_HOUSE]: 2 };
+    const scoreOpts = { scoredDice: diceWithValue(5, 2), handLevels };
+    const pioneerMiles = (result: ScoreResult) =>
+      result.animEvents
+        .filter((e) => e.popupType === 'miles' && e.target.kind === 'equip')
+        .reduce((sum, e) => sum + (typeof e.value === 'number' ? e.value : 0), 0);
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item('pioneer_spirit')] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('pioneer_spirit')],
+    });
+    expect(pioneerMiles(withMirror)).toBe(pioneerMiles(alone) * 2);
   });
 
   test('pioneer spirit adds nothing when every hand is level 1', () => {
@@ -391,6 +503,23 @@ describe('FRESH_TRAIL: Fresh Trail', () => {
     expect(fresh.state.freshActive).toBe(1);
     expect(fresh.state.miles).toBe(15);
   });
+
+  test('Mirror Lake doubles fresh trail scoring miles', () => {
+    const scoreOpts = { scoredDice: diceWithValue(5, 2) };
+    const freshTrailMiles = (result: ScoreResult) =>
+      result.animEvents
+        .filter((e) => e.popupType === 'miles' && e.target.kind === 'equip')
+        .reduce((sum, e) => sum + (typeof e.value === 'number' ? e.value : 0), 0);
+    const freshAlone = itemWithState('fresh_trail', { freshActive: 1, miles: 10 });
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [freshAlone] });
+    resetDieIds();
+    const freshMirror = itemWithState('fresh_trail', { freshActive: 1, miles: 10 });
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), freshMirror],
+    });
+    expect(freshTrailMiles(withMirror)).toBe(freshTrailMiles(alone) * 2);
+  });
 });
 
 // ─── FIRST_DAY_SOLO_COPY: Bloodline ───
@@ -424,6 +553,36 @@ describe('FIRST_DAY_SOLO_COPY: Bloodline', () => {
     });
     const sevens = player.dice.filter((d) => d.value === 7);
     expect(sevens.length).toBeLessThanOrEqual(2);
+  });
+
+  test('Mirror Lake doubles bloodline solo first-day copy', () => {
+    const countBoneInPouch = (dice: Die[]) => dice.filter((d) => d.enhancement === 'bone').length;
+
+    const { player: baseline } = calculateTestScore({
+      scoredDice: [die({ value: 7, enhancement: 'bone' })],
+      currentDay: 1,
+      equipment: [],
+    });
+    const baselineBone = countBoneInPouch([...baseline.dice]);
+    resetDieIds();
+
+    const { player: alone } = calculateTestScore({
+      scoredDice: [die({ value: 7, enhancement: 'bone' })],
+      currentDay: 1,
+      equipment: [item('bloodline')],
+    });
+    const aloneBonus = countBoneInPouch([...alone.dice]) - baselineBone;
+    resetDieIds();
+
+    const { player: withMirror } = calculateTestScore({
+      scoredDice: [die({ value: 7, enhancement: 'bone' })],
+      currentDay: 1,
+      equipment: [item('mirror_lake'), item('bloodline')],
+    });
+    const mirrorBonus = countBoneInPouch([...withMirror.dice]) - baselineBone;
+
+    expect(aloneBonus).toBe(1);
+    expect(mirrorBonus).toBe(aloneBonus * 2);
   });
 });
 
@@ -475,6 +634,27 @@ describe('FIRST_HAND_ENHANCED_SIX: Hellfire Round', () => {
     const frontier = player.consumables.filter((c) => c.def.category === 'frontier');
     expect(frontier.length).toBe(0);
   });
+
+  test('Mirror Lake cannot copy Hellfire Round', () => {
+    const enhanced6 = die({ value: 6, enhancement: 'bone' });
+    const { player: alone } = calculateTestScore({
+      scoredDice: [enhanced6],
+      equipment: [item('hellfire_round')],
+      currentDay: 1,
+    });
+    const enhanced6Copy = die({ value: 6, enhancement: 'bone' });
+    const { player: withMirror } = calculateTestScore({
+      scoredDice: [enhanced6Copy],
+      equipment: [item('mirror_lake'), item('hellfire_round')],
+      currentDay: 1,
+    });
+    expect(withMirror.dice.filter((d) => d.value === 6 && d.enhancement === 'bone').length).toBe(
+      alone.dice.filter((d) => d.value === 6 && d.enhancement === 'bone').length,
+    );
+    const aloneFrontier = alone.consumables.filter((c) => c.def.category === 'frontier').length;
+    const mirrorFrontier = withMirror.consumables.filter((c) => c.def.category === 'frontier').length;
+    expect(mirrorFrontier).toBe(aloneFrontier);
+  });
 });
 
 // ─── MULT_PER_MONEY_CHUNK: Oil Baron ───
@@ -488,6 +668,18 @@ describe('MULT_PER_MONEY_CHUNK: Oil Baron', () => {
     });
     // PAIR: baseMult=1, +10 from oil baron (25/5*2)
     expect(result.mult).toBeMult(11);
+  });
+
+  test('Mirror Lake doubles mult per money chunk', () => {
+    const scoreOpts = { scoredDice: diceWithValue(5, 2), money: 25 };
+    const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item('oil_baron')] });
+    resetDieIds();
+    const { result: withMirror } = calculateTestScore({
+      ...scoreOpts,
+      equipment: [item('mirror_lake'), item('oil_baron')],
+    });
+    const aloneBonus = Number(alone.mult) - 1;
+    expect(Number(withMirror.mult)).toBe(1 + aloneBonus * 2);
   });
 });
 
@@ -509,5 +701,40 @@ describe('MULT_PER_MISSING_DICE: Ghost Town', () => {
     const result = game.calculateScore()!;
     // 5 missing dice → +50 mult → 51 total
     expect(result.mult).toBeMult(51);
+  });
+
+  test('Mirror Lake doubles mult per missing die', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const runGhostTownMirror = () => {
+      const { game, player } = setupGame({
+        equipment: [item('mirror_lake'), item('ghost_town')],
+        dice: [...scoredDice, ...diceWithValue(1, 18)],
+      });
+      player.startingDiceCount = 25;
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = player.dice.slice(0, 2);
+      game.state.selectedForRoll = game.state.rolledDice;
+      game.selectForScore(game.state.rolledDice.map((d) => d.id));
+      return game.calculateScore()!;
+    };
+    const runGhostTownAlone = () => {
+      const { game, player } = setupGame({
+        equipment: [item('ghost_town')],
+        dice: [...scoredDice, ...diceWithValue(1, 18)],
+      });
+      player.startingDiceCount = 25;
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = player.dice.slice(0, 2);
+      game.state.selectedForRoll = game.state.rolledDice;
+      game.selectForScore(game.state.rolledDice.map((d) => d.id));
+      return game.calculateScore()!;
+    };
+    const alone = runGhostTownAlone();
+    resetDieIds();
+    const withMirror = runGhostTownMirror();
+    const aloneBonus = Number(alone.mult) - 1;
+    expect(Number(withMirror.mult)).toBe(1 + aloneBonus * 2);
   });
 });

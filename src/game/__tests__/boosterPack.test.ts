@@ -281,6 +281,42 @@ describe('Binoculars trail guide targeting', () => {
       expect(items.some((packItem) => packItem.trailGuideId === 'tg_pair')).toBe(false);
     }
   });
+
+  test('binoculars packs do not contain duplicate trail guide ids without counterfeit_goods', () => {
+    const player = getPlayerState();
+    player.purchasedPermits.push('binoculars');
+    player.getHandStats(HandType.PAIR).timesPlayed = 10;
+
+    for (let i = 0; i < 50; i++) {
+      const items = generatePackContents(trailGuidePack);
+      const guideIds = items.map((packItem) => packItem.trailGuideId).filter((id): id is string => id != null);
+      expect(new Set(guideIds).size).toBe(guideIds.length);
+    }
+  });
+
+  test('counterfeit_goods allows duplicate trail guides in binoculars packs', () => {
+    setupGame({ equipment: [item('counterfeit_goods')] });
+    const run = getRunState();
+    run.purchasedPermits.push('binoculars');
+    run.handStats[HandType.PAIR] = {
+      level: 1,
+      timesPlayed: 10,
+      milesPerLevel: 10,
+      multPerLevel: 1,
+    };
+    expect(playerAllowsDuplicateItems(run)).toBe(true);
+
+    let sawDuplicateGuides = false;
+    for (let i = 0; i < 300; i++) {
+      const items = generatePackContents(trailGuidePack);
+      const guideIds = items.map((packItem) => packItem.trailGuideId).filter((id): id is string => id != null);
+      if (new Set(guideIds).size < guideIds.length) {
+        sawDuplicateGuides = true;
+        break;
+      }
+    }
+    expect(sawDuplicateGuides).toBe(true);
+  });
 });
 
 describe('supply pack medicine exclusion', () => {

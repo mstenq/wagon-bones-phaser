@@ -64,6 +64,7 @@ interface CardSprite {
   container: Phaser.GameObjects.Container;
   item: PackItem;
   used: boolean;
+  useInProgress?: boolean;
   index: number;
   diceSprite?: DiceSprite;
   itemCard?: ItemCard;
@@ -1195,8 +1196,21 @@ export class BoosterPackScene extends Scene {
     }
   }
 
+  private lockPackCard(sprite: CardSprite): void {
+    sprite.itemCard?.prepareForRemoval();
+    sprite.container.disableInteractive();
+    this.dismissActiveTab();
+  }
+
+  private beginPackCardUse(sprite: CardSprite): boolean {
+    if (sprite.used || sprite.useInProgress) return false;
+    sprite.useInProgress = true;
+    this.lockPackCard(sprite);
+    return true;
+  }
+
   private onUseCard(sprite: CardSprite): void {
-    if (sprite.used) return;
+    if (sprite.used || sprite.useInProgress) return;
 
     const item = sprite.item;
     const run = getRunState();
@@ -1210,6 +1224,7 @@ export class BoosterPackScene extends Scene {
     if (this.cardNeedsDiceSelection(item)) {
       const config = item.diceSelection!;
       if (!isDiceSelectionReady(config, this.selectedDiceIds.size)) return;
+      if (!this.beginPackCardUse(sprite)) return;
 
       // Get actual selected dice from player's pool
       const selectedDice = this.lineupDice.filter((d) => this.selectedDiceIds.has(d.id));
@@ -1218,16 +1233,19 @@ export class BoosterPackScene extends Scene {
       const result = gameFacade.pack.applyDiceSelection(config, selectedDice);
       this.showFloatingText(result);
     } else if (item.category === 'equipment' && item.equipmentDef) {
+      if (!this.beginPackCardUse(sprite)) return;
       if (item.equipmentDef.aura?.id === 'ghost' || selectEquipmentSlotsFree(run) > 0) {
         const instance = gameFacade.pack.acquireEquipment(item.equipmentDef, item.equipmentPreview?.modifiers);
         gameFacade.pack.addEquipmentInstance(instance);
         equipmentPopInCount = 1;
       }
     } else if (item.category === 'dice' && item.die) {
+      if (!this.beginPackCardUse(sprite)) return;
       gameFacade.pack.addDie(item.die);
     } else if (item.category === 'trail_guide' && item.trailGuideId) {
       const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
       if (tg) {
+        if (!this.beginPackCardUse(sprite)) return;
         const def = createTrailGuideConsumableDef(tg);
         const result = gameFacade.pack.useConsumableDirectly(def);
         queuedPlayback = true;
@@ -1238,6 +1256,7 @@ export class BoosterPackScene extends Scene {
     } else if (item.category === 'supply' && item.supplyCardId) {
       const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
       if (cardData) {
+        if (!this.beginPackCardUse(sprite)) return;
         const def = createSupplyConsumableDef(cardData);
         const result = gameFacade.pack.useConsumableDirectly(def);
         queuedPlayback = true;
@@ -1248,6 +1267,7 @@ export class BoosterPackScene extends Scene {
     } else if (item.category === 'frontier' && item.frontierEncounterId) {
       const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
       if (fe) {
+        if (!this.beginPackCardUse(sprite)) return;
         const def = createFrontierConsumableDef(fe);
         consumableResult = gameFacade.pack.useConsumableDirectly(def, {
           visibleDiceIds: this.lineupDice.map((d) => d.id),
@@ -1258,6 +1278,7 @@ export class BoosterPackScene extends Scene {
         }
       }
     } else if (item.instantEffect) {
+      if (!this.beginPackCardUse(sprite)) return;
       const instantResult = gameFacade.pack.applyInstantEffect(item.instantEffect);
       queuedPlayback = Boolean(
         instantResult.handUpgrades?.length ||

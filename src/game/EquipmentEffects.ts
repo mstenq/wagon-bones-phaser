@@ -7,7 +7,7 @@ import { EquipmentInstance } from './ItemsSystem';
 import { getRunState } from './store/runStore';
 import { selectProfession } from './store/selectors/runSelectors';
 import { GAMEPLAY } from './Constants';
-import { isEquipmentDisabledByBoss } from './BossEffectsSystem';
+import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { resolveCopyTarget } from './equipmentUtils';
 import {
   buildHeldRetriggerSources,
@@ -231,6 +231,8 @@ export function processHeldInHand(
   const alchemy = hasAlchemyKit(equipment);
 
   for (const die of heldDice) {
+    if (isDiceScoringDisabledByBoss(die)) continue;
+
     const triggers = getHeldDieTriggerCount(die, doubleDownCount);
 
     for (let t = 0; t < triggers; t++) {

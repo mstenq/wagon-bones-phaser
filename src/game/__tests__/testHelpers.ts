@@ -18,7 +18,13 @@ import {
 } from '../store';
 import { getRunState } from '../store/runStore';
 import { getRoundState } from '../store/roundStore';
-import { EquipmentDef, EquipmentInstance, getAllEquipment, createEquipmentInstance } from '../ItemsSystem';
+import {
+  EquipmentDef,
+  EquipmentInstance,
+  getAllEquipment,
+  createEquipmentInstance,
+  getEquipmentSellValue,
+} from '../ItemsSystem';
 import { EQUIPMENT_MODIFIER } from '../Constants';
 import { createPouch } from '../DiceSystem';
 import { GAMEPLAY } from '../Constants';
@@ -86,11 +92,7 @@ export function equipWithModifiers(id: string, modifiers: EquipmentModifier[]): 
   if (!def) throw new Error(`Unknown item id: "${id}"`);
   return {
     def,
-    sellValue: modifiers.includes('cursed')
-      ? 0
-      : modifiers.includes('leased')
-        ? EQUIPMENT_MODIFIER.LEASED_BUY_PRICE
-        : Math.max(1, Math.floor(def.cost / 2)),
+    sellValue: modifiers.includes('leased') ? EQUIPMENT_MODIFIER.LEASED_BUY_PRICE : getEquipmentSellValue(def),
     state: def.initialState ? { ...def.initialState } : {},
     modifiers: [...modifiers],
     perishableRoundsLeft: modifiers.includes('perishable') ? EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS : undefined,

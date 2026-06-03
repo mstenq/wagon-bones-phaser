@@ -1,22 +1,16 @@
 # Bugs noticed while playing
-- I hate the "theft from a wagon" card. It is brutal to lose a random equipment. Need to think if we add a way to recover the item, or negate some way.
-- Blue moon sticker gives a trail guide for every hand its not scored in. Should only work if the round ends.
-- Second helping gave me firewood even though within one mega pack i first purchased and used loaded. I used firewood the turn before 
 -Golden Spike shouldn't work on disabled dice (the_undertaker and other bosses)
 -follow_traveler trail event, you shouldn't be able to trade back the same item you got from the trade, thats weird.
 -binoculars permit - while it now guarantees my most played hand it also is allowing for duplicates. Dupes should only be allowed if you have counterfeit_goods.
-- the_river - instead of only high value and straights, how about we set anything that is not a straight or high value to level 1 during that round
 - disabled dice should not count when held in hand (steel dice that are disabled by boss should not trigger)
+- you can double click trail upgrade cards in packs (Or even more) to keep upgrading a hand while the animation plays. Need to disable the button after first press.
+- bad water event only gives "drink it" as an option which is lame.
 
 ## New Feature Ideas
 - new permits for luck:
     - Good Omens - Stage 1 — Positive trail events are 2x more likely
     - Manifest Destiny - Stage 2 — Positive trail events are 4x more likely
-- new equipment
-    - Long Haul - $8 - rare - x1 mult per day travelled. Resets every round.
-    - Blackjack - $7 - rare - Gives x3 mult when the ranks of all played dice is exactly 21. Gives x0.5 mult less for every point below 21. [21=3x, 20=2.5x, 19=2x, 18=2x, 17=1.5x]
-    - Sharpening Stone - $6 - uncommon - x1 mult. Gains x0.1 mult per 10 dice scored.
-    - Rustler - common - $5 - Choose one additional item when opening any booster pack.
+
 
 
 
@@ -42,7 +36,7 @@ Notes: Each category cooresponds to a tarot card. They'll only see the tarot car
 * Judgement - will only show if profession is demon_hunter
 
 ## Balance Notes
-
+- I hate the "theft from a wagon" card. It is brutal to lose a random equipment. Need to think if we add a way to recover the item, or negate some way.
 
 
 # Bad Art

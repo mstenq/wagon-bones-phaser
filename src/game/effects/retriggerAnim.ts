@@ -1,7 +1,7 @@
 import type { Die, HandType, ScoreAnimEvent } from '../types';
 import type { EquipmentInstance } from '../ItemsSystem';
 import { resolveCopyTarget } from '../equipmentUtils';
-import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
+import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 import { dieMatchesPip, hasStackedDeck, isLowestHeldDieTarget } from './helpers';
 import { enhancementHeldSteelXMult, hasAlchemyKit } from '../alchemyKit';
 
@@ -39,6 +39,8 @@ export function heldDieHasRetriggerableEffects(
   equipment: EquipmentInstance[],
   _scoredHandType?: HandType,
 ): boolean {
+  if (isDiceScoringDisabledByBoss(die)) return false;
+
   if (enhancementHeldSteelXMult(die.enhancement, hasAlchemyKit(equipment))) return true;
 
   const stackedDeck = hasStackedDeck(equipment);

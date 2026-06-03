@@ -1110,6 +1110,20 @@ describe('new supply cards', () => {
     expect(player.economy.balance - before).toBe(Math.min(total, 50));
   });
 
+  test('trade card payout includes cursed equipment sell value', () => {
+    const { player } = setupGame({
+      equipment: [equipWithModifiers('horseshoe', ['cursed']), item('war_drums')],
+    });
+    const total = player.equipment.reduce((s, e) => s + e.sellValue, 0);
+    expect(total).toBeGreaterThan(player.equipment[1]!.sellValue);
+    const def = getSupplyDefById('trade')!;
+    const before = player.economy.balance;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(player.equipment).toHaveLength(2);
+    expect(player.sellEquipment(0)).toBe(false);
+    expect(player.economy.balance - before).toBe(Math.min(total, 50));
+  });
+
   test('bless tooltip odds account for loaded dice', () => {
     const { player } = setupGame({ equipment: [item('loaded_dice')] });
     const def = getSupplyDefById('bless')!;
@@ -1132,6 +1146,17 @@ describe('new supply cards', () => {
     const def = getSupplyDefById('fools_gold')!;
     executeConsumableEffect(createConsumableInstance(def));
     expect(player.economy.balance).toBe(130);
+  });
+});
+
+describe('trail guide direct use', () => {
+  test('useConsumableDirectly upgrades hand level on each call', () => {
+    setupGame();
+    const def = getTrailGuideDefById('tg_pair')!;
+    useConsumableDirectly(def);
+    expect(getRunState().handStats[HandType.PAIR]?.level).toBe(2);
+    useConsumableDirectly(def);
+    expect(getRunState().handStats[HandType.PAIR]?.level).toBe(3);
   });
 });
 
@@ -1165,6 +1190,15 @@ describe('consumable display context', () => {
     const rows = def.display(null, getItemDisplayContext());
     expect(rows.tooltip[0]?.[0]?.text).toBe('Current payout: $50');
     expect(rows.tooltip[1]?.[0]?.text).toContain('cap $50');
+  });
+
+  test('trade tooltip includes cursed equipment sell value', () => {
+    setupGame({ equipment: [equipWithModifiers('horseshoe', ['cursed']), item('war_drums')] });
+    const total = getItemDisplayContext().equipment.reduce((sum, equip) => sum + equip.sellValue, 0);
+    const def = getSupplyDefById('trade')!;
+    const rows = def.display(null, getItemDisplayContext());
+    expect(rows.tooltip[0]?.[0]?.text).toBe(`Current payout: $${Math.min(total, 50)}`);
+    expect(total).toBeGreaterThan(getItemDisplayContext().equipment[1]!.sellValue);
   });
 });
 

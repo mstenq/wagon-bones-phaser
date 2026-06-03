@@ -54,6 +54,20 @@ describe('ROUND_START_DESTROY_RIGHT: Funeral Pyre', () => {
     // PAIR: baseMult=1, +15 bonusMult from funeral_pyre state
     expect(result.mult).toBeMult(16);
   });
+
+  test('Mirror Lake copying funeral pyre does not trigger a second destruction', () => {
+    const equipment = [item('mirror_lake'), itemWithState('funeral_pyre', { mult: 6 }), item('horseshoe')];
+    const result = processEquipmentOnRoundStart(equipment);
+    expect(result.animatedDestructions.length).toBe(1);
+  });
+
+  test('Mirror Lake copying funeral pyre still applies stored mult when scoring', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), itemWithState('funeral_pyre', { mult: 6 })],
+    });
+    expect(result.mult).toBeMult(13);
+  });
 });
 
 // ─── ROUND_START_ADD_STONE: Quarry Stone ───
@@ -67,6 +81,11 @@ describe('ROUND_START_ADD_STONE: Quarry Stone', () => {
 
   test('multiple quarry stones stack', () => {
     const result = processEquipmentOnRoundStart([item('quarry_stone'), item('quarry_stone')]);
+    expect(result.stoneDiceToAdd).toBe(2);
+  });
+
+  test('Mirror Lake copying quarry stone adds a second stone die', () => {
+    const result = processEquipmentOnRoundStart([item('mirror_lake'), item('quarry_stone')]);
     expect(result.stoneDiceToAdd).toBe(2);
   });
 });
@@ -140,6 +159,20 @@ describe('ROUND_START_XMULT_DESTROY: Haunted Totem', () => {
     processEquipmentOnRoundStart([totem, other2]);
     expect(totem.state.xMult).toBeCloseTo(2.0, 5);
   });
+
+  test('Mirror Lake copying haunted totem does not trigger a second destruction', () => {
+    const equipment = [item('mirror_lake'), itemWithState('haunted_totem', { xMult: 2 }), item('horseshoe')];
+    const result = processEquipmentOnRoundStart(equipment);
+    expect(result.animatedDestructions.length).toBe(1);
+  });
+
+  test('Mirror Lake copying haunted totem still applies xMult when scoring', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), itemWithState('haunted_totem', { xMult: 2 })],
+    });
+    expect(result.mult).toBeMult(6.25);
+  });
 });
 
 // ─── ROUND_START_CREATE_EQUIPMENT: Junk Dealer ───
@@ -169,6 +202,11 @@ describe('ROUND_START_CREATE_EQUIPMENT: Junk Dealer', () => {
     const result = processEquipmentOnRoundStart([item('junk_dealer')]);
     expect(result.equipmentCreateRarities).toEqual(['common']);
   });
+
+  test('Mirror Lake copying junk dealer doubles equipment to create', () => {
+    const result = processEquipmentOnRoundStart([item('mirror_lake'), item('junk_dealer')]);
+    expect(result.equipmentToCreate).toBe(4);
+  });
 });
 
 // ─── ROUND_START_SELL_VALUE: Antique Revolver ───
@@ -197,6 +235,12 @@ describe('ROUND_START_DAYS_NO_REROLLS: Hardtack', () => {
     const hardtack = item('hardtack');
     const result = processEquipmentOnRoundStart([hardtack]);
     expect(result.daysBonus).toBe(3);
+    expect(result.loseAllRerolls).toBe(true);
+  });
+
+  test('Mirror Lake copying hardtack grants +6 days total', () => {
+    const result = processEquipmentOnRoundStart([item('mirror_lake'), item('hardtack')]);
+    expect(result.daysBonus).toBe(6);
     expect(result.loseAllRerolls).toBe(true);
   });
 });
@@ -250,6 +294,14 @@ describe('LOW_MONEY_SUPPLY: Emergency Supplies', () => {
     const initialConsumables = player.consumables.length;
     processEquipmentAfterHandScored([inst], HandType.PAIR);
     expect(player.consumables.length).toBe(initialConsumables);
+  });
+
+  test('Mirror Lake copying emergency supplies grants two supply cards when eligible', () => {
+    const inst = item('emergency_supplies');
+    const { player } = setupGame({ equipment: [item('mirror_lake'), inst], money: 3 });
+    const before = player.consumables.length;
+    processEquipmentAfterHandScored([item('mirror_lake'), inst], HandType.PAIR);
+    expect(player.consumables.length).toBe(before + 2);
   });
 });
 
@@ -408,5 +460,19 @@ describe('ROUND_START_DESTROY_STANDARD_DICE: Burn Barrel', () => {
     expect(result.burnBarrelMoney).toBe(0);
     expect(player.dice.length).toBe(2);
     expect(player.economy.balance).toBe(10);
+  });
+
+  test('Mirror Lake copying burn barrel destroys two standard dice and earns $6', () => {
+    const inst = item('burn_barrel');
+    const { player } = setupGame({
+      equipment: [item('mirror_lake'), inst],
+      money: 10,
+      dice: [die({ value: 5 }), die({ value: 3 }), die({ value: 7 })],
+    });
+    const result = processEquipmentOnRoundStart([item('mirror_lake'), inst]);
+    expect(result.burnBarrelTriggered).toBe(true);
+    expect(result.burnBarrelMoney).toBe(6);
+    expect(player.dice.length).toBe(1);
+    expect(player.economy.balance).toBe(16);
   });
 });

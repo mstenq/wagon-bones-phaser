@@ -999,7 +999,7 @@ const items: ItemDef[] = [
       const xm = equip?.state.xMult ?? 1;
       const total = equip?.state.diceScoredTotal ?? 0;
       return {
-        hint: [[mult(`x${xm.toFixed(1)}`)], [text(`${total % 10}/10`)]],
+        hint: [[mult(`x${xm.toFixed(1)}`)], [condition(`${total % 10}/10`, 'sm')]],
         tooltip: [
           [
             mult('x1'),
@@ -1321,6 +1321,7 @@ const items: ItemDef[] = [
         tooltip: [
           [mult('x0.2'), text(' mult for each steel die in collection')],
           [text('Also makes Coffee Tin supply cards 2 times more likely')],
+          [text('Currently in collection:'), condition(`${count} ${steelLabel}`, 'sm'), mult(`x${xm.toFixed(1)}`)],
         ],
       };
     },
@@ -1833,7 +1834,7 @@ const items: ItemDef[] = [
     effectType: 'EXTRA_PACK_PICK',
     effectParams: { value: 1 },
     display: (_round, _player) => ({
-      hint: [[text('+1 pick'), condition('booster pack', 'sm')]],
+      hint: [[text('+1 pick')], [condition('booster pack', 'sm')]],
       tooltip: [[text('Choose 1 additional item when opening any booster pack')]],
     }),
   },
@@ -3162,7 +3163,8 @@ const items: ItemDef[] = [
     effectType: 'DICE_SUM_XMULT',
     effectParams: { peak: 21, peakMult: 3, step: 0.5, bustMult: 1 },
     display: (round, _player) => {
-      const sum = round && round.selectedForScore.length > 0 ? round.selectedForScore.reduce((s, d) => s + d.value, 0) : 0;
+      const sum =
+        round && round.selectedForScore.length > 0 ? round.selectedForScore.reduce((s, d) => s + d.value, 0) : 0;
       const xVal = Math.max(3 - 0.5 * (21 - sum), 1);
       const xLabel = Number.isInteger(xVal) ? `x${xVal}` : `x${xVal.toFixed(1)}`;
       return {

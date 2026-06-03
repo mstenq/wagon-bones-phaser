@@ -43,6 +43,14 @@ describe('ADD_MULT: Horseshoe', () => {
     // THREE_OF_A_KIND: baseMult=3, +4 = 7
     expect(result.mult).toBeMult(7);
   });
+
+  test('Mirror Lake copies +4 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('horseshoe')],
+    });
+    expect(result.mult).toBeMult(9);
+  });
 });
 
 describe('ADD_MULT_RISKY: Dynamite', () => {
@@ -136,6 +144,14 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
       Math.random = original;
     }
   });
+
+  test('Mirror Lake copies +15 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('dynamite')],
+    });
+    expect(result.mult).toBeMult(31);
+  });
 });
 
 // ─── SHOP_REROLL_MULT_GAIN: Bargain Bin ───
@@ -199,6 +215,22 @@ describe('SHOP_REROLL_MULT_GAIN: Bargain Bin', () => {
     });
     // PAIR: baseMult=1 + 6 = 7
     expect(result.mult).toBeMult(7);
+  });
+
+  test('Mirror Lake copies shop reroll mult gain', () => {
+    const bargain = item('bargain_bin');
+    const { player } = setupGame({
+      equipment: [item('mirror_lake'), bargain],
+      money: 100,
+    });
+    player.payShopReroll();
+    syncEquipmentInstances(bargain);
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), bargain],
+    });
+    // Mirror copies bargain (+2) + bargain (+2) = +4
+    expect(result.mult).toBeMult(5);
   });
 });
 
@@ -297,6 +329,14 @@ describe('DECAYING_MULT: Fading Memory', () => {
     expect(player.equipment[0]?.state.mult).toBe(16);
     expect(player.equipment[0]?.state.roundsPlayed).toBe(1);
   });
+
+  test('Mirror Lake copies +20 decaying mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('fading_memory')],
+    });
+    expect(result.mult).toBeMult(41);
+  });
 });
 
 // ─── SELL_VALUE_AS_MULT: Desperado ───
@@ -325,6 +365,21 @@ describe('SELL_VALUE_AS_MULT: Desperado', () => {
     });
     expect(result.mult).toBeMult(1);
   });
+
+  test('Mirror Lake copies sell value as mult', () => {
+    const horseshoe = item('horseshoe');
+    const { result: alone } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('desperado'), horseshoe],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('desperado'), horseshoe],
+    });
+    // Mirror copies desperado: second sell-value pass (mirror + horseshoe sell values)
+    expect(Number(withMirror.mult)).toBeGreaterThan(Number(alone.mult));
+    expect(Number(withMirror.mult)).toBe(Number(alone.mult) + 11);
+  });
 });
 
 // ─── RANDOM_MULT: Wild Card ───
@@ -346,5 +401,34 @@ describe('RANDOM_MULT: Wild Card', () => {
     // At least some variation (not all the same)
     const unique = new Set(results);
     expect(unique.size).toBeGreaterThan(1);
+  });
+
+  test('Mirror Lake copies random mult bonus', () => {
+    // Wild Card rolls via rngInt('equipment', …) in RunRng — Math.random does not apply.
+    const runSeed = 'wild-card-mirror-copy';
+    const scoredDice = diceWithValue(5, 2);
+
+    const { result: alone } = calculateTestScore({
+      scoredDice,
+      equipment: [item('wild_card')],
+      runSeed,
+    });
+    const aloneMultEvents = alone.animEvents.filter((e) => e.popupType === 'mult' && e.target.kind === 'equip');
+    expect(aloneMultEvents).toHaveLength(1);
+    const aloneRoll = aloneMultEvents[0].value as number;
+
+    const { result: withMirror } = calculateTestScore({
+      scoredDice,
+      equipment: [item('mirror_lake'), item('wild_card')],
+      runSeed,
+    });
+    const copyMultEvents = withMirror.animEvents.filter((e) => e.popupType === 'mult' && e.target.kind === 'equip');
+    expect(copyMultEvents).toHaveLength(2);
+    expect(copyMultEvents[0].target).toEqual({ kind: 'equip', equipIndex: 0 });
+    expect(copyMultEvents[1].target).toEqual({ kind: 'equip', equipIndex: 1 });
+    const bonusSum = copyMultEvents.reduce((sum, e) => sum + (e.value as number), 0);
+    expect(withMirror.mult).toBeMult(1 + bonusSum);
+    expect(bonusSum).toBeGreaterThan(aloneRoll);
+    expect(Number(withMirror.mult)).toBeGreaterThan(Number(alone.mult));
   });
 });

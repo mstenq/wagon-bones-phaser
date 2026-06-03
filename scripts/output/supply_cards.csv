@@ -1,11 +1,12 @@
 id,name,description
-coffee_tin,Coffee Tin,Make 2 dice steel
-buzzards,Buzzards,Make 2 dice bone
-rabbits_foot,Rabbit's Foot,Make 2 dice lucky
-firewood,Firewood,Make 2 dice wooden
-loaded,Loaded,Make two dice loaded
-pick_axe,Pick Axe,Make one dice diamond
-pan_for_gold,Pan for Gold,Make 1 dice golden
+coffee_tin,Coffee Tin,Make 2 steel dice
+buzzards,Buzzards,Make 3 bone dice
+rabbits_foot,Rabbit's Foot,Make 3 lucky dice
+firewood,Firewood,Make 3 wooden dice
+loaded,Loaded,Make 3 loaded dice
+pick_axe,Pick Axe,Make 2 diamond dice
+pan_for_gold,Pan for Gold,Make 2 golden dice
+chisel,Chisel,Make 2 stone dice
 treasure_map,Treasure Map,Double your money (max $20)
 shallow_grave,Shallow Grave,Choose 2 from 5 random dice to destroy
 trade,Trade,Get money equal to equipment value (max $50)

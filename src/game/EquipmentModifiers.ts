@@ -57,9 +57,7 @@ export function applyModifiersToEquipment(instance: EquipmentInstance, modifiers
     instance.perishableRoundsLeft = EQUIPMENT_MODIFIER.PERISHABLE_ROUNDS;
   }
 
-  if (modifiers.includes('cursed')) {
-    instance.sellValue = 0;
-  } else if (modifiers.includes('leased')) {
+  if (modifiers.includes('leased')) {
     instance.sellValue = EQUIPMENT_MODIFIER.LEASED_BUY_PRICE;
   }
 }

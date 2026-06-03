@@ -533,3 +533,141 @@ describe('HAND_MULT: Open Range (5 straight, +12)', () => {
     expect(result.mult).toBeMult(1);
   });
 });
+
+describe('Mirror Lake copies hand-type equipment', () => {
+  test('wedding_ring: doubles PAIR mult bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(6, 2),
+      equipment: [item('mirror_lake'), item('wedding_ring')],
+    });
+    expect(result.mult).toBeMult(17);
+  });
+
+  test('town_choir: doubles three of a kind mult bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 3),
+      equipment: [item('mirror_lake'), item('town_choir')],
+    });
+    expect(result.mult).toBeMult(27);
+  });
+
+  test('deputy_brothers: doubles two pair mult bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [...diceWithValue(3, 2), ...diceWithValue(8, 2)],
+      equipment: [item('mirror_lake'), item('deputy_brothers')],
+    });
+    expect(result.mult).toBeMult(22);
+  });
+
+  test('work_boots: doubles PAIR miles bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('work_boots')],
+    });
+    expect(result.miles).toBeMiles(120);
+  });
+
+  test('buffalo_stampede: doubles three of a kind miles bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 3),
+      equipment: [item('mirror_lake'), item('buffalo_stampede')],
+    });
+    expect(result.miles).toBeMiles(696);
+  });
+
+  test('card_counter: doubles accumulated mult without mutating mirror state', () => {
+    const mirrorLake = item('mirror_lake');
+    const cardCounter = item('card_counter');
+    processEquipmentOnHandPlayed([mirrorLake, cardCounter], HandType.TWO_PAIR);
+    processEquipmentOnHandPlayed([mirrorLake, cardCounter], HandType.TWO_PAIR);
+    expect(mirrorLake.state.mult).toBeUndefined();
+    expect(cardCounter.state.mult).toBe(4);
+
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [mirrorLake, cardCounter],
+    });
+    expect(result.mult).toBeMult(9);
+  });
+
+  test('twin_colts: doubles TWO_PAIR miles bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [...diceWithValue(3, 2), ...diceWithValue(7, 2)],
+      equipment: [item('mirror_lake'), item('twin_colts')],
+    });
+    expect(result.miles).toBeMiles(390);
+  });
+
+  test('rail_line: doubles FOUR_STRAIGHT miles bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6]),
+      equipment: [item('mirror_lake'), item('rail_line')],
+    });
+    expect(result.miles).toBeMiles(386);
+  });
+
+  test('long_haul: doubles FIVE_STRAIGHT miles bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([2, 3, 4, 5, 6]),
+      equipment: [item('mirror_lake'), item('long_haul')],
+    });
+    expect(result.miles).toBeMiles(1000);
+  });
+
+  test('trail_journal: doubles times-played mult bonus', () => {
+    const { game, player } = setupGame({ equipment: [item('mirror_lake'), item('trail_journal')] });
+    player.recordHandPlayed(HandType.PAIR);
+    player.recordHandPlayed(HandType.PAIR);
+    player.recordHandPlayed(HandType.PAIR);
+
+    const dice = diceWithValue(5, 2);
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = dice;
+    game.state.selectedForRoll = dice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(dice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    expect(result.mult).toBeMult(7);
+  });
+
+  test('wanted_poster: doubles matching-hand money', () => {
+    const inst = item('wanted_poster');
+    const handTypes = Object.values(HandType);
+    const pairIdx = handTypes.indexOf(HandType.PAIR);
+
+    const { game, player } = setupGame({
+      equipment: [item('mirror_lake'), inst],
+      dice: [...diceWithValue(5, 2), ...diceWithValue(1, 50)],
+      money: 10,
+    });
+
+    game.startRound();
+    inst.state.targetHand = pairIdx;
+    pushEquipmentState(inst);
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = diceWithValue(5, 2);
+    game.state.selectedForRoll = game.state.rolledDice;
+    game.state.rerollsRemaining = 6;
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    game.calculateScore();
+    expect(player.economy.balance).toBe(18);
+  });
+
+  test('rail_splitter: doubles FOUR_STRAIGHT mult bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6]),
+      equipment: [item('mirror_lake'), item('rail_splitter')],
+    });
+    expect(result.mult).toBeMult(18);
+  });
+
+  test('open_range: doubles FIVE_STRAIGHT mult bonus', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([3, 4, 5, 6, 7]),
+      equipment: [item('mirror_lake'), item('open_range')],
+    });
+    expect(result.mult).toBeMult(28);
+  });
+});

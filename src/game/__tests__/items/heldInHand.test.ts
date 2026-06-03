@@ -23,6 +23,15 @@ describe('HELD_RETRIGGER: Silver Bullets', () => {
     expect(result.mult).toBeMult(2.25);
   });
 
+  test('Mirror Lake copies silver bullets held retrigger', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'steel' })],
+      equipment: [item('mirror_lake'), item('silver_bullets')],
+    });
+    expect(result.mult).toBeMultCloseTo(3.38, 2);
+  });
+
   test('retriggers eleventh_crossing effect', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
@@ -44,6 +53,33 @@ describe('HELD_RETRIGGER: Silver Bullets', () => {
     });
     // xMult = 1.5 (one trigger)
     expect(result.mult).toBeMult(1.5);
+  });
+
+  test('boss-disabled held steel does not trigger', () => {
+    const { result: boss } = calculateTestScore({
+      bossId: 'the_ghost_town',
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 6, enhancement: 'steel' })],
+      equipment: [],
+    });
+    expect(boss.mult).toBeMult(1);
+
+    const { result: normal } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 6, enhancement: 'steel' })],
+      equipment: [],
+    });
+    expect(normal.mult).toBeMult(1.5);
+  });
+
+  test('boss-disabled held steel ignores silver_bullets retrigger', () => {
+    const { result } = calculateTestScore({
+      bossId: 'the_undertaker',
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 3, enhancement: 'steel' })],
+      equipment: [item('silver_bullets')],
+    });
+    expect(result.mult).toBeMult(1);
   });
 });
 
@@ -223,6 +259,15 @@ describe('HELD_PIP_XMULT: Ace in the Hole (pip 1, x1.5)', () => {
     expect(result.mult).toBeMult(2.25);
   });
 
+  test('Mirror Lake copies ace in the hole', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 1 })],
+      equipment: [item('mirror_lake'), item('ace_in_the_hole')],
+    });
+    expect(result.mult).toBeMult(2.25);
+  });
+
   test('echo chamber copies ace in the hole', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
@@ -283,6 +328,15 @@ describe('HELD_PIP_MULT: The Eleventh Crossing (pip 11, +11 mult)', () => {
     const steelIdx = heldEvents.findIndex((e) => e.popupType === 'xmult');
     expect(multIdx).toBeGreaterThanOrEqual(0);
     expect(steelIdx).toBeGreaterThan(multIdx);
+  });
+
+  test('Mirror Lake copies eleventh crossing held mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 11 })],
+      equipment: [item('mirror_lake'), item('eleventh_crossing')],
+    });
+    expect(result.mult).toBeMult(23);
   });
 });
 

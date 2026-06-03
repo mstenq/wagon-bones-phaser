@@ -41,6 +41,34 @@ import { GAMEPLAY } from '../../Constants';
 
 beforeEach(() => resetDieIds());
 
+/** Mirror Lake must not alter scoring for lifecycle-only / NONE equipment. */
+function expectMirrorLakeDoesNotChangeScore(
+  itemId: string,
+  opts: {
+    scoredDice?: ReturnType<typeof diceWithValue>;
+    heldDice?: ReturnType<typeof die>[];
+    money?: number;
+    profession?: string;
+    currentDay?: number;
+  } = {},
+) {
+  const scoreOpts = {
+    scoredDice: opts.scoredDice ?? diceWithValue(5, 2),
+    heldDice: opts.heldDice,
+    money: opts.money,
+    profession: opts.profession,
+    currentDay: opts.currentDay,
+  };
+  const { result: alone } = calculateTestScore({ ...scoreOpts, equipment: [item(itemId)] });
+  const { result: withMirror } = calculateTestScore({
+    ...scoreOpts,
+    equipment: [item('mirror_lake'), item(itemId)],
+  });
+  expect(withMirror.mult).toBeMult(alone.mult);
+  expect(withMirror.miles).toBeMiles(alone.miles);
+  expect(withMirror.totalValue).toBe(alone.totalValue);
+}
+
 // ─── MODIFY_REROLLS: Spare Holster ───
 
 describe('MODIFY_REROLLS: Spare Holster (+1 reroll)', () => {
@@ -162,6 +190,10 @@ describe('Deprecated items', () => {
     const equip = item('stagecoach');
     expect(equip.def.effectType).toBe('NONE');
     expect(equip.def.rarity).toBe('deprecated');
+  });
+
+  test('Mirror Lake does not change score vs stagecoach alone', () => {
+    expectMirrorLakeDoesNotChangeScore('stagecoach');
   });
 });
 
@@ -560,6 +592,21 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
       Math.random = original;
     }
   });
+
+  test("Mirror Lake copies surveyor's transit hand upgrade chance", () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const equipment = [item('mirror_lake'), item('surveyors_transit')];
+      const { player } = setupGame({ equipment });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      const upgrades = processPreScoreHandUpgrades(equipment, HandType.PAIR);
+      expect(upgrades.length).toBe(2);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 2);
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 // ─── TRAIL_TAX ───
@@ -615,6 +662,10 @@ describe('TRAIL_TAX: Trail Tax', () => {
     playScoredDayAndEnd(game, { avoidWin: true });
     expect(player.equipment[0]?.state.mult).toBe(2);
   });
+
+  test('Mirror Lake does not change score vs trail tax alone', () => {
+    expectMirrorLakeDoesNotChangeScore('trail_tax');
+  });
 });
 
 // ─── PACK_OPEN_SUPPLY_CHANCE: Leftovers ───
@@ -651,6 +702,10 @@ describe('PACK_OPEN_SUPPLY_CHANCE: Leftovers', () => {
   test('returns false with no PACK_OPEN_SUPPLY_CHANCE equipment', () => {
     const result = processEquipmentOnPackOpened([item('horseshoe')]);
     expect(result).toBe(false);
+  });
+
+  test('Mirror Lake does not change score vs leftovers alone', () => {
+    expectMirrorLakeDoesNotChangeScore('leftovers');
   });
 });
 
@@ -822,6 +877,10 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     // PAIR: baseMiles=10, totalValue=10, +100 (4 stone × 25) = 120 * mult(1)
     expect(result.miles).toBeMiles(120);
   });
+
+  test('Mirror Lake does not change score vs quarry mine alone', () => {
+    expectMirrorLakeDoesNotChangeScore('quarry_mine');
+  });
 });
 
 // ─── FIRST_DICE_RETRIGGER: Quick Draw ───
@@ -925,6 +984,10 @@ describe('ENHANCED_RETRIGGER: Moonshine', () => {
     // PAIR: both dice trigger 1x (no enhancement), totalValue=10
     expect(result.totalValue).toBe(10);
   });
+
+  test('Mirror Lake does not change score vs moonshine alone', () => {
+    expectMirrorLakeDoesNotChangeScore('moonshine');
+  });
 });
 
 // ─── ALLOW_DUPLICATES: Counterfeit Goods ───
@@ -985,6 +1048,20 @@ describe('EXPRESS_TRAIN: Express Train', () => {
     });
     game.startRound();
     expect(game.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS - 2);
+  });
+
+  test('Mirror Lake copies +250 miles but not reroll penalty', () => {
+    const { result: alone } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('express_train')],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('express_train')],
+    });
+    expect(withMirror.miles).toBeMiles(alone.miles.add(250));
+    const mods = getConfigModifiers([item('mirror_lake'), item('express_train')]);
+    expect(mods.rerollsBonus).toBe(-2);
   });
 });
 
@@ -1098,6 +1175,10 @@ describe('ROUND_START_SUPPLY: Supply Drop', () => {
     const consumablesBefore = player.consumables.length;
     game.startRound();
     expect(player.consumables.length).toBe(consumablesBefore + 1);
+  });
+
+  test('Mirror Lake does not change score vs supply drop alone', () => {
+    expectMirrorLakeDoesNotChangeScore('supply_drop');
   });
 });
 
@@ -1379,6 +1460,10 @@ describe('SHOP_END_GHOST_CONSUMABLE: Ghost Lantern', () => {
     processEquipmentOnShopEnd(player.equipment);
     expect(player.consumables.length).toBe(0);
   });
+
+  test('Mirror Lake does not change score vs ghost lantern alone', () => {
+    expectMirrorLakeDoesNotChangeScore('ghost_lantern');
+  });
 });
 
 // ─── ALL_RETRIGGER: The Seventh Trumpet ───
@@ -1403,6 +1488,22 @@ describe('ALL_RETRIGGER: The Seventh Trumpet', () => {
     // Steel held triggers twice (base + seventh trumpet): x1.5 * x1.5 = 2.25
     expect(result.mult).toBeMultCloseTo(2.25, 5);
   });
+
+  test('Mirror Lake copies seventh trumpet retrigger', () => {
+    expect(getScoredRetriggerCount([item('mirror_lake'), item('seventh_trumpet')])).toBe(2);
+    expect(getScoredRetriggerCount([item('seventh_trumpet')])).toBe(1);
+
+    const { result: alone } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('seventh_trumpet')],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('seventh_trumpet')],
+    });
+    expect(alone.totalValue).toBe(20);
+    expect(withMirror.totalValue).toBe(30);
+  });
 });
 
 // ─── Saint Elmo's Shield: boss negation ───
@@ -1423,6 +1524,10 @@ describe("Saint Elmo's Shield boss negation", () => {
 
     expect(getBossRoundConfigMods().targetMilesMultiplier).toBe(1);
   });
+
+  test("Mirror Lake does not change score vs saint elmo's shield alone", () => {
+    expectMirrorLakeDoesNotChangeScore('saint_elmos_shield');
+  });
 });
 
 describe('New utility equipment lifecycle effects', () => {
@@ -1432,11 +1537,19 @@ describe('New utility equipment lifecycle effects', () => {
     expect(boosted).toBe(base + 2);
   });
 
+  test('Mirror Lake does not change score vs pack mule alone', () => {
+    expectMirrorLakeDoesNotChangeScore('pack_mule');
+  });
+
   test('penny pincher grants $5 when a pack is skipped', () => {
     const { player } = setupGame({ equipment: [item('penny_pincher')], money: 0 });
     const before = player.economy.balance;
     processEquipmentOnPackSkipped(player.equipment);
     expect(player.economy.balance).toBe(before + 5);
+  });
+
+  test('Mirror Lake does not change score vs penny pincher alone', () => {
+    expectMirrorLakeDoesNotChangeScore('penny_pincher');
   });
 
   test('potluck fills free slots with second helpings after boss defeat', () => {
@@ -1445,6 +1558,10 @@ describe('New utility equipment lifecycle effects', () => {
     processEquipmentOnBossDefeat(player.equipment);
     expect(player.consumables.length).toBe(3);
     expect(player.consumables.every((card) => card.def.id === 'second_helpings')).toBe(true);
+  });
+
+  test('Mirror Lake does not change score vs potluck alone', () => {
+    expectMirrorLakeDoesNotChangeScore('potluck');
   });
 
   test('pawn broker gains sell value whenever money is earned', () => {
@@ -1471,6 +1588,10 @@ describe('New utility equipment lifecycle effects', () => {
     } finally {
       Math.random = original;
     }
+  });
+
+  test('Mirror Lake does not change score vs pawn broker alone', () => {
+    expectMirrorLakeDoesNotChangeScore('pawn_broker');
   });
 
   test('old calendar gains miles from days left and mult from rerolls left at leg round end', () => {
@@ -1512,6 +1633,10 @@ describe('New utility equipment lifecycle effects', () => {
     expect((instEnd.state.miles ?? 0) > 0).toBe(true);
   });
 
+  test('Mirror Lake does not change score vs old calendar alone', () => {
+    expectMirrorLakeDoesNotChangeScore('old_calendar');
+  });
+
   test('offering bowl destroys a consumable and stores mult on round start', () => {
     const bowl = item('offering_bowl');
     const { player } = setupGame({ equipment: [bowl] });
@@ -1530,6 +1655,10 @@ describe('New utility equipment lifecycle effects', () => {
     processEquipmentOnRoundStart([bowl]);
     expect(player.consumables.length).toBe(0);
     expect(bowl.state.mult ?? 0).toBe(0);
+  });
+
+  test('Mirror Lake does not change score vs offering bowl alone', () => {
+    expectMirrorLakeDoesNotChangeScore('offering_bowl');
   });
 });
 
@@ -1571,6 +1700,20 @@ describe('STEW', () => {
       Math.random = original;
     }
   });
+
+  test('Mirror Lake copies stew day-1 hand upgrade chance', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const equipment = [item('mirror_lake'), item('stew')];
+      const { game } = setupGame({ equipment });
+      game.startRound();
+      const upgrades = processPreScoreHandUpgrades(equipment, HandType.PAIR);
+      expect(upgrades.length).toBe(2);
+    } finally {
+      Math.random = original;
+    }
+  });
 });
 
 describe('STEW: rounds remaining', () => {
@@ -1607,6 +1750,10 @@ describe('SANDWICH', () => {
     expect(getRunState().pendingTags.length).toBe(before + 1);
     const added = getRunState().pendingTags[getRunState().pendingTags.length - 1]!;
     expect(['tag_dice_mega', 'tag_supply_mega', 'tag_trail_guide_mega', 'tag_equipment_mega']).toContain(added.tagId);
+  });
+
+  test('Mirror Lake does not change score vs sandwich alone', () => {
+    expectMirrorLakeDoesNotChangeScore('sandwich');
   });
 });
 

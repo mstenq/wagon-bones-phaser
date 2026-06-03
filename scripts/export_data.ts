@@ -17,6 +17,14 @@ import permits from '../src/data/permits';
 import pipEnhancements from '../src/data/pip_enhancements';
 import professions from '../src/data/professions';
 import supplyCards from '../src/data/supply_cards';
+import trailEvents from '../src/data/trail_events';
+import type {
+  TrailEventChoice,
+  TrailEventCondition,
+  TrailEventDef,
+  TrailEventEffect,
+  TrailEventOutcome,
+} from '../src/data/trail_events';
 import trailGuides from '../src/data/trail_guides';
 import trailTags, { resolveTagDescription } from '../src/data/trail_tags';
 import type { ItemDisplayContext } from '../src/game/displayContextTypes';
@@ -24,7 +32,85 @@ import { createDefaultHandStats } from '../src/game/store/types';
 
 const OUTPUT_DIR = join(import.meta.dir, 'output');
 
-type CsvRow = Record<string, string | number | null | undefined>;
+/** Choice / outcome pairs flattened into CSV columns (max observed choices per event is 3). */
+const TRAIL_EVENT_CHOICE_COLUMNS = 4;
+
+type CsvRow = Record<string, string | number | null | undefined | boolean>;
+
+function formatTrailEventCondition(condition: TrailEventCondition): string {
+  const parts: string[] = [condition.type];
+  if (condition.id !== undefined) parts.push(`id=${condition.id}`);
+  if (condition.amount !== undefined) parts.push(`amount=${condition.amount}`);
+  return parts.join(' ');
+}
+
+function formatTrailEventEffect(effect: TrailEventEffect): string {
+  const params: string[] = [];
+  if (effect.amount !== undefined) params.push(`amount=${effect.amount}`);
+  if (effect.count !== undefined) params.push(`count=${effect.count}`);
+  if (effect.percent !== undefined) params.push(`percent=${effect.percent}`);
+  if (effect.enhancement !== undefined && effect.enhancement !== null) {
+    params.push(`enhancement=${effect.enhancement}`);
+  }
+  if (effect.aura !== undefined && effect.aura !== null) {
+    params.push(`aura=${effect.aura}`);
+  }
+  if (effect.sticker !== undefined && effect.sticker !== null) {
+    params.push(`sticker=${effect.sticker}`);
+  }
+  if (effect.id !== undefined) params.push(`id=${effect.id}`);
+  if (effect.rarity !== undefined) params.push(`rarity=${effect.rarity}`);
+  if (effect.multiplier !== undefined) params.push(`multiplier=${effect.multiplier}`);
+  if (effect.chance !== undefined) params.push(`chance=${effect.chance}`);
+  if (params.length === 0) return effect.type;
+  return `${effect.type}(${params.join(', ')})`;
+}
+
+function formatTrailEventOutcomes(outcomes: TrailEventOutcome[]): string {
+  return outcomes
+    .map((outcome) => {
+      const parts: string[] = [];
+      if (outcome.probability !== 1) {
+        parts.push(`p=${outcome.probability}`);
+      }
+      if (outcome.message) {
+        parts.push(outcome.message);
+      }
+      if (outcome.effects.length > 0) {
+        parts.push(outcome.effects.map(formatTrailEventEffect).join('; '));
+      }
+      return parts.join(' — ');
+    })
+    .join(' | ');
+}
+
+function formatTrailEventChoice(choice: TrailEventChoice): string {
+  const condition = choice.condition
+    ? ` [${formatTrailEventCondition(choice.condition)}]`
+    : '';
+  return `${choice.id}: ${choice.label}${condition}`;
+}
+
+function trailEventToCsvRow(event: TrailEventDef): CsvRow {
+  const row: CsvRow = {
+    id: event.id,
+    name: event.name,
+    description: event.description,
+    category: event.category,
+    weight: event.weight,
+    demonHunterOnly: event.demonHunterOnly,
+    minimumLeg: event.minimumLeg ?? '',
+  };
+
+  for (let i = 0; i < TRAIL_EVENT_CHOICE_COLUMNS; i++) {
+    const slot = i + 1;
+    const choice = event.choices[i];
+    row[`choice${slot}`] = choice ? formatTrailEventChoice(choice) : '';
+    row[`outcome${slot}`] = choice ? formatTrailEventOutcomes(choice.outcomes) : '';
+  }
+
+  return row;
+}
 
 function segmentsToText(segments: HintSegment[][]): string {
   return segments
@@ -89,6 +175,8 @@ writeCsv(
     return {
       id: item.id,
       name: item.name,
+      cost: item.cost,
+      rarity: item.rarity,
       description: segmentsToText(tooltip),
     };
   }),
@@ -135,6 +223,8 @@ writeCsv(
     description: g.description,
   })),
 );
+
+writeCsv('trail_events.csv', trailEvents.map(trailEventToCsvRow));
 
 writeCsv(
   'trail_tags.csv',

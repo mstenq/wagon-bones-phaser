@@ -46,6 +46,15 @@ describe('PARITY_MULT: Even Odds (even, +4 mult per even die)', () => {
     // PAIR: baseMult=1, 2 even dice → +8 → mult=9
     expect(result.mult).toBeMult(9);
   });
+
+  test('Mirror Lake copies +4 mult per even die scored', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 3),
+      equipment: [item('mirror_lake'), item('even_odds')],
+    });
+    // THREE_OF_A_KIND: baseMult=3, +12 even_odds +12 mirror = 27
+    expect(result.mult).toBeMult(27);
+  });
 });
 
 // ─── PARITY_MILES Items ───
@@ -94,5 +103,15 @@ describe('PARITY_MILES: Odd Fellow (odd, +31 miles per odd die)', () => {
     // miles = (10 + 84) * 1 = 94
     expect(result.totalValue).toBe(84);
     expect(result.miles).toBeMiles(94);
+  });
+
+  test('Mirror Lake copies +31 miles per odd die scored', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 3),
+      equipment: [item('mirror_lake'), item('odd_fellow')],
+    });
+    // THREE_OF_A_KIND: baseMiles=20, totalValue=15+186 parity = 201, miles=663
+    expect(result.totalValue).toBe(201);
+    expect(result.miles).toBeMiles(663);
   });
 });

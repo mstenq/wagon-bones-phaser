@@ -13,6 +13,7 @@ import {
 } from './testHelpers';
 import { resetPlayerState } from './testRunPlayer';
 import { getRunState, runActions } from '../store/runStore';
+import { resolveEquipmentList } from '../store/resolve';
 import { getItemDisplayContext } from '../displayContext';
 import {
   getAllTrailEvents,
@@ -25,6 +26,7 @@ import {
   getTrailEventMinimumLeg,
   getAvailableChoices,
   resolveChoice,
+  filterEquipmentEligibleForTrailSacrifice,
   checkCondition,
   isNegativeEffect,
   applyEffect,
@@ -810,6 +812,24 @@ describe('Outcome resolution', () => {
     const event = getTrailEventById('heavy_fog')!;
     const result = resolveChoice(event, 'endure');
     expect(result.modifiers.disableRerollDay1).toBe(true);
+  });
+
+  test('fellow_traveler trade sacrifice excludes equipment gained from the same choice', () => {
+    const player = resetPlayerState();
+    player.equipment = [item('horseshoe')];
+    player.persistEquipment();
+    const before = [...resolveEquipmentList()];
+    const event = getTrailEventById('fellow_traveler')!;
+    resolveChoice(event, 'trade', () => 0);
+    const after = [...resolveEquipmentList()];
+    expect(after.length).toBeGreaterThan(before.length);
+
+    expect(after.length).toBe(before.length + 1);
+
+    const eligible = filterEquipmentEligibleForTrailSacrifice(before, after);
+    expect(eligible).toHaveLength(before.length);
+    expect(eligible[0]?.def.id).toBe('horseshoe');
+    expect(eligible.some((inst) => inst.def.id === after[after.length - 1]?.def.id)).toBe(false);
   });
 });
 

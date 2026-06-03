@@ -9,6 +9,7 @@ import {
 } from '../../EquipmentEffects';
 import { PACK_ONLY_FRONTIER_IDS } from '../../Constants';
 import { getLoadedDiceMultiplier } from '../../equipmentUtils';
+import { computeScoredDieRetriggers } from '../../effects/scoredRetrigger';
 import { gt, lte } from '../../scoreMath';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
 import { getItemAuraById } from '../../ItemsSystem';
@@ -241,8 +242,8 @@ describe('loaded enhancement rolling', () => {
   });
 });
 
-describe('New loaded/lucky equipment', () => {
-  test('loaded chamber retriggers lucky dice', () => {
+describe('loaded_chamber', () => {
+  test('retriggers lucky dice', () => {
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 5, enhancement: 'lucky' }), die({ value: 5 })],
       equipment: [item('loaded_chamber')],
@@ -250,13 +251,51 @@ describe('New loaded/lucky equipment', () => {
     expect(result.totalValue).toBe(15);
   });
 
-  test('cursed dice has loaded destroy chance metadata', () => {
+  test('Mirror Lake copy doubles lucky retrigger scoring', () => {
+    const luckyDie = die({ value: 5, enhancement: 'lucky' });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: [luckyDie, die({ value: 5 })],
+      equipment: [item('mirror_lake'), item('loaded_chamber')],
+    });
+    const { result: chamberOnly } = calculateTestScore({
+      scoredDice: [luckyDie, die({ value: 5 })],
+      equipment: [item('loaded_chamber')],
+    });
+    expect(withMirror.totalValue).toBe(20);
+    expect(chamberOnly.totalValue).toBe(15);
+  });
+
+  test('Mirror Lake copy doubles lucky retrigger count', () => {
+    const lucky = die({ value: 5, enhancement: 'lucky' });
+    const { triggerCount: withMirror } = computeScoredDieRetriggers({
+      die: lucky,
+      equipment: [item('mirror_lake'), item('loaded_chamber')],
+      firstDieId: lucky.id,
+      lastDieId: lucky.id,
+      isEnhanced: true,
+      isLucky: true,
+    });
+    const { triggerCount: chamberOnly } = computeScoredDieRetriggers({
+      die: lucky,
+      equipment: [item('loaded_chamber')],
+      firstDieId: lucky.id,
+      lastDieId: lucky.id,
+      isEnhanced: true,
+      isLucky: true,
+    });
+    expect(withMirror).toBe(3);
+    expect(chamberOnly).toBe(2);
+  });
+});
+
+describe('cursed_dice', () => {
+  test('has loaded destroy chance metadata', () => {
     const inst = item('cursed_dice');
     expect(inst.def.effectType).toBe('CURSED_DICE');
     expect(inst.def.effectParams.chance).toEqual([1, 7]);
   });
 
-  test('cursed dice hit adds a frontier encounter consumable', () => {
+  test('hit adds a frontier encounter consumable', () => {
     const { player } = calculateTestScore({
       scoredDice: [die({ value: 9, enhancement: 'loaded' })],
       equipment: [item('cursed_dice'), item('loaded_dice'), item('loaded_dice'), item('loaded_dice')],
@@ -266,7 +305,7 @@ describe('New loaded/lucky equipment', () => {
     expect(player.consumables[0]?.def.category).toBe('frontier');
   });
 
-  test('cursed dice never grants pack-only frontier encounters', () => {
+  test('never grants pack-only frontier encounters', () => {
     const packOnlyIds = [...PACK_ONLY_FRONTIER_IDS];
     const grantedIds = new Set<string>();
 
@@ -284,6 +323,67 @@ describe('New loaded/lucky equipment', () => {
     for (const packOnly of packOnlyIds) {
       expect(grantedIds.has(packOnly)).toBe(false);
     }
+  });
+
+  test('Mirror Lake copy doubles loaded shatter grant chance', () => {
+    let grantsWithMirror = 0;
+    let grantsChamberOnly = 0;
+    const runs = 8000;
+
+    for (let i = 0; i < runs; i++) {
+      const { player: mirrored } = calculateTestScore({
+        scoredDice: [die({ value: 9, enhancement: 'loaded' })],
+        equipment: [item('mirror_lake'), item('cursed_dice')],
+      });
+      if (mirrored.consumables.length > 0) grantsWithMirror++;
+
+      const { player: solo } = calculateTestScore({
+        scoredDice: [die({ value: 9, enhancement: 'loaded' })],
+        equipment: [item('cursed_dice')],
+      });
+      if (solo.consumables.length > 0) grantsChamberOnly++;
+    }
+
+    const mirrorRate = grantsWithMirror / runs;
+    const soloRate = grantsChamberOnly / runs;
+    // Two independent 1/7 rolls ≈ 2/7; single roll ≈ 1/7
+    expect(mirrorRate).toBeGreaterThan(0.22);
+    expect(mirrorRate).toBeLessThan(0.32);
+    expect(soloRate).toBeGreaterThan(0.11);
+    expect(soloRate).toBeLessThan(0.17);
+    expect(mirrorRate).toBeGreaterThan(soloRate * 1.35);
+  });
+
+  test('Loaded Dice boosts real Cursed Dice only, not Mirror Lake copy', () => {
+    let grantsMirrorCursedLoaded = 0;
+    let grantsMirrorCursed = 0;
+    const runs = 6000;
+
+    for (let i = 0; i < runs; i++) {
+      const { player: mirrorCursedLoaded } = calculateTestScore({
+        scoredDice: [die({ value: 9, enhancement: 'loaded' })],
+        equipment: [item('mirror_lake'), item('cursed_dice'), item('loaded_dice')],
+      });
+      if (mirrorCursedLoaded.consumables.length > 0) grantsMirrorCursedLoaded++;
+
+      const { player: mirrorCursed } = calculateTestScore({
+        scoredDice: [die({ value: 9, enhancement: 'loaded' })],
+        equipment: [item('mirror_lake'), item('cursed_dice')],
+      });
+      if (mirrorCursed.consumables.length > 0) grantsMirrorCursed++;
+    }
+
+    const loadedRate = grantsMirrorCursedLoaded / runs;
+    const mirrorRate = grantsMirrorCursed / runs;
+    // Mirror copies Cursed Dice at 1/7; real Cursed Dice at 2/7 with Loaded Dice → 1 − (6/7)(5/7) ≈ 39%
+    expect(loadedRate).toBeGreaterThan(0.33);
+    expect(loadedRate).toBeLessThan(0.44);
+    // Two independent 1/7 rolls (Loaded Dice item is not copied) ≈ 27%
+    expect(mirrorRate).toBeGreaterThan(0.22);
+    expect(mirrorRate).toBeLessThan(0.32);
+    expect(loadedRate).toBeGreaterThan(mirrorRate * 1.15);
+    // Would be ~48% if Loaded Dice doubled both rolls — that must not happen
+    expect(loadedRate).toBeLessThan(mirrorRate * 1.55);
   });
 });
 

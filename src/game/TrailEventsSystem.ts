@@ -68,6 +68,15 @@ export interface TrailEventResult {
   negationSource?: 'omen_stone' | 'saint_elmos_shield' | 'trail_repair_kit';
 }
 
+/** Equipment owned before a trail choice resolved (excludes instances gained from that choice). */
+export function filterEquipmentEligibleForTrailSacrifice(
+  ownedBeforeChoice: readonly EquipmentInstance[],
+  current: readonly EquipmentInstance[],
+): EquipmentInstance[] {
+  // resolveEquipmentList() creates fresh instances each call; match by pre-choice count.
+  return current.slice(0, ownedBeforeChoice.length);
+}
+
 // ─── Data Access ───
 
 const ALL_EVENTS: TrailEventDef[] = trailEventsData;

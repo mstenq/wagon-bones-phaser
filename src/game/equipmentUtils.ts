@@ -67,6 +67,14 @@ export function formatLoadedDieOddsNote(equipment: { def: { effectType: string }
   return `Loaded dice: ${formatLoadedFaceOdds(loadedChance)} · Other dice: ${formatLoadedFaceOdds(otherChance)}`;
 }
 
+export type CheckLoadedChanceOptions = {
+  /**
+   * When true, the roll is from a Mirror Lake / Echo Chamber copy of another item.
+   * The Loaded Dice equipment item does not apply (LOADED_DICE is copy-incompatible).
+   */
+  triggeredViaEquipmentCopy?: boolean;
+};
+
 /**
  * Roll a probability check with Loaded Dice support.
  * Takes a [numerator, denominator] chance tuple and the equipment array.
@@ -76,9 +84,13 @@ export function checkLoadedChance(
   chance: [number, number],
   equipment: { def: { effectType: string } }[],
   stream: RngStream = 'loadedDice',
+  options?: CheckLoadedChanceOptions,
 ): boolean {
   const [num, den] = chance;
-  const ldm = getLoadedDiceMultiplier(equipment);
+  const pool = options?.triggeredViaEquipmentCopy
+    ? equipment.filter((e) => e.def.effectType !== 'LOADED_DICE')
+    : equipment;
+  const ldm = getLoadedDiceMultiplier(pool);
   return rngFloat(stream) < (num * ldm) / den;
 }
 
