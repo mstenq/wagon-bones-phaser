@@ -114,6 +114,7 @@ export class ItemCard extends GameObjects.Container {
   private _bossDisabled: boolean = false;
   private _faceDown: boolean = false;
   private _suppressTooltip: boolean = false;
+  private _interactionTooltipSuppressed: boolean = false;
   private _suppressHints: boolean = false;
   private disabledOverlay: GameObjects.Graphics;
   private faceDownCover: GameObjects.Graphics | null = null;
@@ -322,6 +323,12 @@ export class ItemCard extends GameObjects.Container {
   setSuppressTooltip(suppress: boolean): void {
     this._suppressTooltip = suppress;
     if (suppress) this.hideTooltip();
+  }
+
+  /** Hide tooltips during drag/reorder without clearing boss or scene suppress state. */
+  setInteractionTooltipSuppressed(suppressed: boolean): void {
+    this._interactionTooltipSuppressed = suppressed;
+    if (suppressed) this.hideTooltip();
   }
 
   setSuppressHints(suppress: boolean): void {
@@ -787,6 +794,7 @@ export class ItemCard extends GameObjects.Container {
 
   /** Render or update the hint rows below the card */
   updateHints(round: RoundHintContext | null, player: ItemDisplayContext): void {
+    if (!this.scene) return;
     this.setTooltipContext(round, player);
     if (this._suppressHints) return;
     if (!this._def.aura && this.resolveDisplay(round, player).hint.length === 0) return;
@@ -1127,7 +1135,7 @@ export class ItemCard extends GameObjects.Container {
   // ─── Tooltip ───
 
   private showTooltip(): void {
-    if (this._suppressTooltip || this._faceDown) return;
+    if (this._suppressTooltip || this._interactionTooltipSuppressed || this._faceDown) return;
     if (this.tooltip) return;
 
     const player = this.tooltipPlayer ?? getItemDisplayContext();

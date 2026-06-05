@@ -1,8 +1,10 @@
-import { Game } from 'phaser';
+import { Display, Game } from 'phaser';
 import { gameConfig } from './config';
 
 const StartGame = (parent: string) => {
-  return new Game({ ...gameConfig, parent });
+  const game = new Game({ ...gameConfig, parent });
+  Display.Canvas.TouchAction(game.canvas);
+  return game;
 };
 
 export default StartGame;

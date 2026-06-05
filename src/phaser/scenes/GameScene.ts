@@ -46,6 +46,8 @@ import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
+import { attachPointerDragTrack, getPointerDragDistance } from '../ui/pointerDragTrack';
+import { RollDiceDragReorder } from '../ui/rollDiceDragReorder';
 import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
@@ -103,13 +105,8 @@ export class GameScene extends Scene {
   /** Ambient fire sounds from equipment destruction — stopped on scene shutdown */
   private activeEquipDestroySounds: Phaser.Sound.BaseSound[] = [];
 
-  // Drag-to-reorder (play area)
-  private draggingSprite: DiceSprite | null = null;
   private wasDragging: boolean = false;
-  private dragOffsetX: number = 0;
-  private dragOffsetY: number = 0;
-  private dragPrevX: number = 0;
-  private dragVelocityX: number = 0;
+  private rollDiceDrag!: RollDiceDragReorder;
 
   // Marquee lock selection (ROLL phase, empty-space drag)
   private rollMarqueeZone: Phaser.GameObjects.Zone | null = null;
@@ -118,6 +115,7 @@ export class GameScene extends Scene {
   private marqueeStartY: number = 0;
   private marqueeActive: boolean = false;
   private marqueePointerId: number | null = null;
+  private detachMarqueeTrack: (() => void) | null = null;
 
   // Loaded die target control
   private loadedDiceValueBg: Phaser.GameObjects.Graphics;
@@ -178,10 +176,37 @@ export class GameScene extends Scene {
       this.scale.off('resize', this.onResize, this);
       this.destroyLoadedDicePicker();
       this.stopEquipDestroySounds();
+      this.rollDiceDrag?.stop();
+      this.stopMarqueeTracking();
       this.roundSessionActive = false;
     });
 
-    this.setupDragHandlers();
+    this.rollDiceDrag = new RollDiceDragReorder({
+      scene: this,
+      getRollSprites: () => this.rollSprites,
+      contentCenterX: () => this.contentCX,
+      diceSpacing: DICE_SPACING,
+      getRollDieY: (index, sprite) => this.getRollDieY(index, sprite),
+      getArcOffset: (index, count) => this.getArcOffset(index, count),
+      isDieLifted: (sprite) => this.isDieLifted(sprite),
+      syncRolledDiceFromSprites: () => this.syncRolledDiceFromSprites(),
+      onTouchTap: (sprite) => {
+        if (this.consumableTargeting) {
+          this.onConsumableTargetClick(sprite);
+        } else {
+          this.onRollDieClick(sprite, false);
+        }
+      },
+      onDragBegin: () => {
+        this.wasDragging = true;
+      },
+      canStart: (sprite) => {
+        if (this.animating || this.rollDiceDrag.isDragging()) return false;
+        return this.rollSprites.includes(sprite);
+      },
+      canTap: () => !this.animating && !this.marqueeActive,
+    });
+
     this.buildLayout(false);
 
     sceneActions.enterScene('Game');
@@ -609,14 +634,15 @@ export class GameScene extends Scene {
   private setupRollSpriteInteraction(): void {
     for (let i = 0; i < this.rollSprites.length; i++) {
       const sprite = this.rollSprites[i];
-      this.input.setDraggable(sprite);
 
       sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         this.wasDragging = false;
         sprite.setData('rollClickRight', pointer.rightButtonDown());
+        this.rollDiceDrag.wirePointerDown(sprite, pointer);
       });
 
       sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+        if (pointer.wasTouch) return;
         if (this.wasDragging || this.animating || this.marqueeActive) return;
 
         // Consumable targeting mode takes over click behavior
@@ -659,9 +685,19 @@ export class GameScene extends Scene {
       this.marqueePointerId = pointer.id;
       this.marqueeActive = false;
 
-      this.input.on('pointermove', this.onMarqueePointerMove);
-      this.input.on('pointerup', this.onMarqueePointerUp);
+      this.stopMarqueeTracking();
+      this.detachMarqueeTrack = attachPointerDragTrack(this, this.rollMarqueeZone, {
+        onMove: this.onMarqueePointerMove,
+        onEnd: this.onMarqueePointerUp,
+      });
     });
+  }
+
+  private stopMarqueeTracking(): void {
+    if (this.detachMarqueeTrack) {
+      this.detachMarqueeTrack();
+      this.detachMarqueeTrack = null;
+    }
   }
 
   private onMarqueePointerMove = (pointer: Phaser.Input.Pointer): void => {
@@ -669,7 +705,7 @@ export class GameScene extends Scene {
 
     const dx = pointer.worldX - this.marqueeStartX;
     const dy = pointer.worldY - this.marqueeStartY;
-    if (!this.marqueeActive && Math.hypot(dx, dy) < this.input.dragDistanceThreshold) return;
+    if (!this.marqueeActive && Math.hypot(dx, dy) < getPointerDragDistance(pointer)) return;
 
     this.marqueeActive = true;
     this.wasDragging = true;
@@ -679,8 +715,7 @@ export class GameScene extends Scene {
   private onMarqueePointerUp = (pointer: Phaser.Input.Pointer): void => {
     if (this.marqueePointerId === null || pointer.id !== this.marqueePointerId) return;
 
-    this.input.off('pointermove', this.onMarqueePointerMove);
-    this.input.off('pointerup', this.onMarqueePointerUp);
+    this.stopMarqueeTracking();
 
     if (this.marqueeActive) {
       const rect = this.getMarqueeRect(this.marqueeStartX, this.marqueeStartY, pointer.worldX, pointer.worldY);
@@ -734,8 +769,7 @@ export class GameScene extends Scene {
   }
 
   private destroyRollMarqueeZone(): void {
-    this.input.off('pointermove', this.onMarqueePointerMove);
-    this.input.off('pointerup', this.onMarqueePointerUp);
+    this.stopMarqueeTracking();
     this.cleanupMarquee();
     this.marqueeGfx?.destroy();
     this.marqueeGfx = null;
@@ -1591,19 +1625,6 @@ export class GameScene extends Scene {
 
   // ─── Drag-to-Reorder (ROLL phase) ───
 
-  /** Get the active draggable sprite list (roll sprites during ROLL) */
-  private getDraggableList(): DiceSprite[] | null {
-    if (this.rollSprites.length > 0) return this.rollSprites;
-    return null;
-  }
-
-  /** Get the row Y and position calculator for the active draggable list */
-  private getDraggableRowY(): number {
-    const phase = selectRoundPhase();
-    if (phase === 'SELECT') return this.playAreaY;
-    return this.scale.height * UI.ROLL_Y_RATIO;
-  }
-
   /** Get X positions for a row of count dice */
   private getRowXPositions(count: number): number[] {
     if (count === 0) return [];
@@ -1619,153 +1640,6 @@ export class GameScene extends Scene {
     const y = -UI.DICE_ARC_HEIGHT * (1 - 4 * t * t); // negative = up, parabola peak at center
     const rotation = t * UI.DICE_ARC_ROTATION * 2; // fan out from center
     return { y, rotation };
-  }
-
-  private setupDragHandlers(): void {
-    this.input.dragDistanceThreshold = 8;
-
-    this.input.on('dragstart', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
-      if (this.animating) return;
-      const sprite = gameObject as DiceSprite;
-      const list = this.getDraggableList();
-      if (!list || list.indexOf(sprite) === -1) return;
-
-      this.draggingSprite = sprite;
-      this.wasDragging = true;
-      this.dragOffsetX = pointer.worldX - sprite.x;
-      this.dragOffsetY = pointer.worldY - sprite.y;
-      this.dragPrevX = pointer.worldX;
-      this.dragVelocityX = 0;
-
-      // Hide tooltip during drag
-      sprite.emit('pointerout');
-      DiceSprite.suppressTooltips = true;
-
-      sprite.setDepth(30);
-      sprite.scaleX = 1.1;
-      sprite.scaleY = 1.1;
-    });
-
-    this.input.on('drag', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
-      if (!this.draggingSprite || gameObject !== this.draggingSprite) return;
-      const list = this.getDraggableList();
-      if (!list) return;
-
-      // Track velocity for momentum swing
-      const dx = pointer.worldX - this.dragPrevX;
-      this.dragVelocityX = this.dragVelocityX * ANIM.CARD_DRAG_SWING_DAMPING + dx * (1 - ANIM.CARD_DRAG_SWING_DAMPING);
-      this.dragPrevX = pointer.worldX;
-
-      // Apply swing rotation
-      const swing = Phaser.Math.Clamp(
-        this.dragVelocityX * ANIM.CARD_DRAG_SWING_FACTOR,
-        -ANIM.CARD_DRAG_SWING_MAX,
-        ANIM.CARD_DRAG_SWING_MAX,
-      );
-      this.draggingSprite.rotation = swing;
-
-      // Follow pointer with offset
-      this.draggingSprite.x = pointer.worldX - this.dragOffsetX;
-      this.draggingSprite.y = pointer.worldY - this.dragOffsetY + ANIM.CARD_DRAG_LIFT_Y;
-
-      // Calculate which slot the dragged sprite should occupy
-      const positions = this.getRowXPositions(list.length);
-      let newIndex = 0;
-      let minDist = Infinity;
-      for (let i = 0; i < positions.length; i++) {
-        const dist = Math.abs(this.draggingSprite.x - positions[i]);
-        if (dist < minDist) {
-          minDist = dist;
-          newIndex = i;
-        }
-      }
-
-      const currentIndex = list.indexOf(this.draggingSprite);
-      if (newIndex !== currentIndex) {
-        list.splice(currentIndex, 1);
-        list.splice(newIndex, 0, this.draggingSprite);
-
-        // Animate non-dragged sprites to their new slots
-        const rowY = this.getDraggableRowY();
-        for (let i = 0; i < list.length; i++) {
-          if (list[i] === this.draggingSprite) continue;
-          const arc = this.getArcOffset(i, list.length);
-          const targetY = list === this.rollSprites ? this.getRollDieY(i, list[i]) : rowY + arc.y;
-          this.tweens.add({
-            targets: list[i],
-            x: positions[i],
-            y: targetY,
-            rotation: arc.rotation,
-            duration: 150,
-            ease: 'Power2',
-          });
-        }
-      }
-    });
-
-    this.input.on('dragend', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
-      if (!this.draggingSprite || gameObject !== this.draggingSprite) return;
-      const list = this.getDraggableList();
-      if (!list) return;
-
-      const sprite = this.draggingSprite;
-      const finalVelocity = this.dragVelocityX;
-      const lifted = list === this.rollSprites && this.isDieLifted(sprite);
-      sprite.setDepth(list === this.rollSprites ? (lifted ? 15 : 10) : 20);
-      this.sound.play('sfx_dice_land', { volume: 0.2 });
-
-      this.draggingSprite = null;
-      this.dragVelocityX = 0;
-      DiceSprite.suppressTooltips = false;
-
-      // Spring settle with overshoot like equipment cards
-      const positions = this.getRowXPositions(list.length);
-      const idx = list.indexOf(sprite);
-      const rowY = this.getDraggableRowY();
-      const arc = this.getArcOffset(idx, list.length);
-      const settleY = list === this.rollSprites ? this.getRollDieY(idx, sprite) : rowY + arc.y;
-
-      const overshoot = Phaser.Math.Clamp(
-        finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
-        -ANIM.CARD_DRAG_SWING_MAX,
-        ANIM.CARD_DRAG_SWING_MAX,
-      );
-      const dur = ANIM.CARD_DRAG_SETTLE_DURATION;
-
-      this.tweens.chain({
-        targets: sprite,
-        tweens: [
-          {
-            x: positions[idx],
-            y: settleY,
-            rotation: overshoot + arc.rotation,
-            scaleX: 1,
-            scaleY: 1,
-            duration: dur * 0.3,
-            ease: 'Sine.easeOut',
-          },
-          {
-            rotation: -overshoot * 0.4 + arc.rotation,
-            duration: dur * 0.25,
-            ease: 'Sine.easeInOut',
-          },
-          {
-            rotation: overshoot * 0.1 + arc.rotation,
-            duration: dur * 0.2,
-            ease: 'Sine.easeInOut',
-          },
-          {
-            rotation: arc.rotation,
-            duration: dur * 0.25,
-            ease: 'Sine.easeIn',
-          },
-        ],
-      });
-
-      if (list === this.rollSprites) {
-        this.syncRolledDiceFromSprites();
-      }
-    });
   }
 
   /** Wire consumable targeting clicks on pre-roll hand dice */

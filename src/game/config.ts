@@ -29,6 +29,10 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     mode: Scale.RESIZE,
     autoCenter: Scale.CENTER_BOTH,
   },
+  input: {
+    touch: { capture: true },
+    activePointers: 2,
+  },
   scene: [
     Boot,
     Preloader,

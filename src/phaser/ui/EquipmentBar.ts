@@ -61,6 +61,7 @@ export class EquipmentBar extends CardBar {
   }
 
   private rebuildFromStore(): void {
+    if (this.isDragSettling()) return;
     syncEquipmentDisplayOrder();
     for (const icon of this.devIcons) icon.destroy();
     this.devIcons = [];
@@ -92,6 +93,7 @@ export class EquipmentBar extends CardBar {
     const hintsHidden = isBossEquipmentHintsHidden();
     const faceHidden = isBossEquipmentHidden();
     for (const card of this.cards) {
+      if (!card.scene) continue;
       const equipIndex = card.getData('equipIndex') as number;
       const equip = equipment[equipIndex];
       card.setSuppressHints(hintsHidden);

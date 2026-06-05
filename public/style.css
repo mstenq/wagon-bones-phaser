@@ -4,6 +4,8 @@ body {
     color: rgba(255, 255, 255, 0.87);
     background-color: #1a1a2e;
     font-family: Arial, Helvetica, sans-serif;
+    touch-action: none;
+    -ms-touch-action: none;
 }
 
 #loading-overlay {
@@ -36,16 +38,24 @@ body {
     width: 100%;
     height: 100vh;
     overflow: hidden;
+    touch-action: none;
+    -ms-touch-action: none;
 }
 
 #game-container {
     width: 100%;
     height: 100%;
+    touch-action: none;
+    -ms-touch-action: none;
 }
 
 #game-container canvas {
     width: 100% !important;
     height: 100% !important;
+    touch-action: none;
+    -ms-touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .spritePosition {

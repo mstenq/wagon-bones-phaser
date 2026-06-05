@@ -45,8 +45,24 @@ export class ConsumableBar extends CardBar {
   }
 
   private onStoreConsumablesChanged(): void {
-    if (this.suppressStoreRebuild) return;
-    this.rebuildCards();
+    if (this.suppressStoreRebuild || this.isDragSettling()) return;
+    if (!this.tryRefreshCardsInPlace()) {
+      this.rebuildCards();
+    }
+  }
+
+  /** Keep existing cards when only order/content matches slots (preserves drag settle tweens). */
+  private tryRefreshCardsInPlace(): boolean {
+    const consumables = resolveConsumableList();
+    const count = this.getItemCount();
+    if (this.cards.length !== count) return false;
+    for (let i = 0; i < count; i++) {
+      const card = this.cards[i];
+      const consumable = consumables[i];
+      if (!card || !consumable) return false;
+      if (card.def.id !== consumable.def.id) return false;
+    }
+    return true;
   }
 
   setCanUsePredicate(predicate: ((def: ConsumableDef) => boolean) | null): void {
