@@ -8,7 +8,7 @@ import type { DifficultyDef } from './types';
 export const GAME = {
   WIDTH: 1024,
   HEIGHT: 768,
-  BACKGROUND_COLOR: '#1a1a2e',
+  BACKGROUND_COLOR: '#f8f3eb',
   BACKGROUND_HEX: 0x1a1a2e,
 };
 

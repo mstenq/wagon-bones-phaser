@@ -1,4 +1,4 @@
-# Wagon Bones
+# Wagon Bones Phaser
 
 A Balatro-inspired dice roguelike set on the Oregon Trail. Roll dice, build hands, collect equipment, and travel the frontier — one leg at a time.
 
