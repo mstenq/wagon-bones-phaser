@@ -7,13 +7,7 @@ import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableDef, UseConsumableResult } from '../../game/facade/consumable';
-import {
-  canBuyAndUseConsumableInShop,
-  getConsumableAtlasKey,
-  getRandomSupplyDef,
-  getRandomTrailGuideDef,
-  getShopRandomFrontierDef,
-} from '../../game/facade/consumable';
+import { canBuyAndUseConsumableInShop, getConsumableAtlasKey } from '../../game/facade/consumable';
 import type { EquipmentDef, EquipmentInstance, PackInstance } from '../../game/facade/shop';
 import { getConsumableDefById } from '../../game/facade/consumable';
 import { getEquipmentDefById, getPackDefById } from '../../game/facade/shop';
@@ -27,7 +21,7 @@ import {
 import { resolveConsumableList } from '../../game/store/resolve';
 import { canAfford } from '../../game/store/economy';
 import { getPermitById } from '../../game/PermitsSystem';
-import { TEXT_COLORS, FONTS, UI, SHOP_WEIGHTS } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { ItemCard, CardActionTabConfig, type CardData } from '../ui/ItemCard';
 import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { getItemDisplayContext } from '../../game/displayContext';
@@ -35,15 +29,14 @@ import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import { hitIncludesObjectOrChild, installClickAwayDismiss } from '../ui/clickAwayDismiss';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import {
-  PermitDef,
-  generateShopPermit,
-  getPermitShopDiscount,
-  getDiscountedShopPrice,
-  hasPermitDiceInShop,
-} from '../../game/PermitsSystem';
+  createShopActiveTabHandle,
+  openShopCardTabs,
+  wireShopCardHover,
+  type ShopActiveTabHandle,
+} from './shop/shopCardInteractions';
+import { PermitDef, generateShopPermit, getPermitShopDiscount, getDiscountedShopPrice } from '../../game/PermitsSystem';
 import { Die } from '../../game/types';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
 import { type SerializedShopItem, serializeEquipmentInstance, deserializeEquipmentInstance } from '../../game/SaveLoad';
@@ -53,8 +46,7 @@ import { sceneStore } from '../../game/store/sceneStore';
 import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../game/store/selectors/sceneSelectors';
 import { bindStore } from '../store/subscribe';
 import type { ShopSceneState } from '../../game/store/types';
-import { rngFloat } from '../../game/RunRng';
-import { buildShopDieDisplayDef, generateShopDie } from '../../game/store/shopStock';
+import { appendShopStockForSlots, buildShopDieDisplayDef, buildShopPermitDisplayDef } from '../../game/store/shopStock';
 
 const CARD_SPACING = 185;
 
@@ -77,9 +69,7 @@ export class ShopScene extends Scene {
   /** Avoid double stock rebuild when reroll handler and store subscription both fire. */
   private suppressStockRefresh = false;
 
-  // Action tab state (shop card click-to-buy)
-  private activeTabCard: ItemCard | null = null;
-  private dismissClickAway: (() => void) | null = null;
+  private activeTab!: ShopActiveTabHandle;
 
   // Shared UI
   private runShell: RunSceneShell | null = null;
@@ -119,7 +109,7 @@ export class ShopScene extends Scene {
 
   private isPackOpened(pack: PackInstance): boolean {
     const shop = getSceneState().shop;
-    if (!shop) return !!(pack as unknown as { _opened?: boolean })._opened;
+    if (!shop) return false;
     const entry = shop.packs.find((p) => p.instanceId === pack.id);
     return entry?.opened ?? false;
   }
@@ -173,11 +163,13 @@ export class ShopScene extends Scene {
     }
     sceneActions.enterScene('Shop');
 
+    this.activeTab = createShopActiveTabHandle(this);
+
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
       this.tearDownShopSubscriptions();
-      this.clearDismissClickAway();
+      this.activeTab.destroy();
       this.runShell?.destroy();
       this.runShell = null;
       this.stockItems = null!;
@@ -445,44 +437,15 @@ export class ShopScene extends Scene {
   // ─── Shop Card Action Tabs ───
 
   private setupShopCardClick(card: ItemCard, stockIndex: number): void {
-    card.on('pointerover', () => {
-      if (!card.sold && this.activeTabCard !== card) {
-        this.tweens.add({ targets: card, scaleX: 1.05, scaleY: 1.05, duration: 100 });
-      }
-    });
-    card.on('pointerout', () => {
-      if (!card.sold && this.activeTabCard !== card) {
-        this.tweens.add({ targets: card, scaleX: 1, scaleY: 1, duration: 100 });
-      }
-    });
+    wireShopCardHover(this, card, this.activeTab);
 
     card.on('pointerup', () => {
       if (card.sold) return;
       card.setTooltipContext(null, getItemDisplayContext());
 
-      // Toggle: if this card already has tabs, dismiss
-      if (this.activeTabCard === card) {
-        this.dismissActiveTab();
-        return;
-      }
-
-      // Dismiss any other card's tabs first
-      this.dismissActiveTab();
-
       const shopItem = this.stockItems[stockIndex];
       if (!shopItem) return;
 
-      // Lift card
-      this.tweens.add({
-        targets: card,
-        scaleX: 1.1,
-        scaleY: 1.1,
-        duration: 150,
-        ease: 'Back.easeOut',
-      });
-      card.setDepth(200);
-
-      // Build tabs based on item type
       const tabs: CardActionTabConfig[] = [];
 
       if (shopItem.type === 'equipment') {
@@ -491,7 +454,7 @@ export class ShopScene extends Scene {
           color: 0x2255aa,
           position: 'bottom',
           callback: () => {
-            this.dismissActiveTab();
+            this.activeTab.dismiss();
             this.onBuyEquipment(card, stockIndex);
           },
         });
@@ -501,18 +464,17 @@ export class ShopScene extends Scene {
           color: 0x2255aa,
           position: 'bottom',
           callback: () => {
-            this.dismissActiveTab();
+            this.activeTab.dismiss();
             this.onBuyDie(card, shopItem);
           },
         });
       } else {
-        // Consumable
         tabs.push({
           label: 'BUY',
           color: 0x2255aa,
           position: 'bottom',
           callback: () => {
-            this.dismissActiveTab();
+            this.activeTab.dismiss();
             this.onBuyConsumable(card, shopItem.def);
           },
         });
@@ -526,7 +488,7 @@ export class ShopScene extends Scene {
             position: 'right',
             disabled: !canBuyAndUse,
             callback: () => {
-              this.dismissActiveTab();
+              this.activeTab.dismiss();
               this.onBuyAndUseConsumable(card, shopItem.def);
             },
           });
@@ -536,56 +498,15 @@ export class ShopScene extends Scene {
             color: 0x338833,
             position: 'right',
             callback: () => {
-              this.dismissActiveTab();
+              this.activeTab.dismiss();
               this.onBuyAndUseConsumable(card, shopItem.def);
             },
           });
         }
       }
 
-      card.showActionTabs(tabs);
-      this.activeTabCard = card;
-
-      // Install click-away dismiss
-      this.installActionTabClickAway();
+      openShopCardTabs(this, card, tabs, this.activeTab);
     });
-  }
-
-  private clearDismissClickAway(): void {
-    if (this.dismissClickAway) {
-      this.dismissClickAway();
-      this.dismissClickAway = null;
-    }
-  }
-
-  private installActionTabClickAway(): void {
-    this.clearDismissClickAway();
-    this.dismissClickAway = installClickAwayDismiss(this, {
-      isInside: (hitObjects) => hitIncludesObjectOrChild(hitObjects, this.activeTabCard),
-      onDismiss: () => this.dismissActiveTab(),
-    });
-  }
-
-  private dismissActiveTab(): void {
-    if (this.activeTabCard) {
-      const card = this.activeTabCard;
-      card.hideActionTabs(true);
-
-      // Settle card back
-      if (!card.sold) {
-        this.tweens.add({
-          targets: card,
-          scaleX: 1,
-          scaleY: 1,
-          duration: 200,
-          ease: 'Back.easeOut',
-        });
-      }
-      card.setDepth(10);
-
-      this.activeTabCard = null;
-    }
-    this.clearDismissClickAway();
   }
 
   private handleConsumableResult(result: UseConsumableResult): void {
@@ -694,7 +615,7 @@ export class ShopScene extends Scene {
   }
 
   private clearShopStock(): void {
-    this.dismissActiveTab();
+    this.activeTab.dismiss();
     for (const obj of this.shopStockObjects) {
       if (obj.scene) obj.destroy();
     }
@@ -986,65 +907,6 @@ export class ShopScene extends Scene {
     }
   }
 
-  /** Get IDs of equipment and consumables the player already owns */
-  private getOwnedItemIds(): string[] {
-    const run = getRunState();
-    const equipIds = resolveEquipmentList(run).map((e) => e.def.id);
-    const consumableIds = resolveConsumableList(run).map((c) => c.def.id);
-    return [...equipIds, ...consumableIds];
-  }
-
-  /** Generate a single random stock item using the same category weights */
-  private generateOneStockItem(): ShopItem {
-    const run = getRunState();
-    const excludeIds = this.getOwnedItemIds();
-    // Also exclude items already in current stock
-    for (const item of this.stockItems) {
-      if (item.type === 'equipment') excludeIds.push(item.def.id);
-      else if (item.type === 'consumable') excludeIds.push(item.def.id);
-    }
-
-    const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier' | 'dice'; weight: number }[] = [
-      { type: 'equipment', weight: SHOP_WEIGHTS.equipment },
-      { type: 'supply', weight: SHOP_WEIGHTS.supply },
-      { type: 'trail_guide', weight: SHOP_WEIGHTS.trail_guide },
-    ];
-    const diceMode = hasPermitDiceInShop(run.purchasedPermits);
-    if (diceMode !== 'none') {
-      categories.push({ type: 'dice', weight: SHOP_WEIGHTS.dice });
-    }
-    if (selectProfession(run)?.modifiers?.frontierInShop) {
-      categories.push({ type: 'frontier', weight: SHOP_WEIGHTS.frontier });
-    }
-    const totalWeight = categories.reduce((sum, c) => sum + c.weight, 0);
-    let roll = rngFloat('shop') * totalWeight;
-    let picked = categories[0].type;
-    for (const cat of categories) {
-      roll -= cat.weight;
-      if (roll <= 0) {
-        picked = cat.type;
-        break;
-      }
-    }
-    if (picked === 'dice' && diceMode !== 'none') {
-      const die = generateShopDie(diceMode);
-      return { type: 'dice', die, displayDef: buildShopDieDisplayDef(die) };
-    }
-    if (picked === 'equipment') {
-      const [def] = gameFacade.shop.generateShopStock(1, excludeIds);
-      return {
-        type: 'equipment',
-        def,
-        preview: gameFacade.shop.rollShopEquipmentPreview(def, run.purchasedPermits),
-      };
-    }
-    let def: ConsumableDef;
-    if (picked === 'supply') def = getRandomSupplyDef(undefined, excludeIds);
-    else if (picked === 'trail_guide') def = getRandomTrailGuideDef(undefined, excludeIds);
-    else def = getShopRandomFrontierDef(undefined, excludeIds);
-    return { type: 'consumable', def };
-  }
-
   // ─── Permit Helpers ───
 
   private renderPermitCard(
@@ -1057,18 +919,7 @@ export class ShopScene extends Scene {
     isPrimary: boolean,
   ): void {
     if (permit) {
-      const permitDisplayDef = {
-        id: permit.id,
-        name: permit.name,
-        cost: this.getPermitCost(permit),
-        rarity: 'permit' as string,
-        effectType: 'PERMIT',
-        effectParams: {},
-        display: () => ({
-          hint: [],
-          tooltip: [[{ text: permit.description, style: 'text' }]],
-        }),
-      } as unknown as EquipmentDef;
+      const permitDisplayDef = buildShopPermitDisplayDef(permit, this.getPermitCost(permit));
 
       const permitItemCard = new ItemCard(this, voucherX, voucherY, permitDisplayDef, {
         mode: 'shop',
@@ -1147,35 +998,10 @@ export class ShopScene extends Scene {
 
   /** Set up click-to-buy on the permit card */
   private setupPermitCardClick(card: ItemCard, permit: PermitDef, isPrimary: boolean): void {
-    card.on('pointerover', () => {
-      if (!card.sold && this.activeTabCard !== card) {
-        this.tweens.add({ targets: card, scaleX: 1.05, scaleY: 1.05, duration: 100 });
-      }
-    });
-    card.on('pointerout', () => {
-      if (!card.sold && this.activeTabCard !== card) {
-        this.tweens.add({ targets: card, scaleX: 1, scaleY: 1, duration: 100 });
-      }
-    });
+    wireShopCardHover(this, card, this.activeTab);
 
     card.on('pointerup', () => {
       if (card.sold) return;
-
-      if (this.activeTabCard === card) {
-        this.dismissActiveTab();
-        return;
-      }
-
-      this.dismissActiveTab();
-
-      this.tweens.add({
-        targets: card,
-        scaleX: 1.1,
-        scaleY: 1.1,
-        duration: 150,
-        ease: 'Back.easeOut',
-      });
-      card.setDepth(200);
 
       const tabs: CardActionTabConfig[] = [
         {
@@ -1183,16 +1009,13 @@ export class ShopScene extends Scene {
           color: 0x7722aa,
           position: 'bottom',
           callback: () => {
-            this.dismissActiveTab();
+            this.activeTab.dismiss();
             this.onBuyPermit(card, permit, isPrimary);
           },
         },
       ];
 
-      card.showActionTabs(tabs);
-      this.activeTabCard = card;
-
-      this.installActionTabClickAway();
+      openShopCardTabs(this, card, tabs, this.activeTab);
     });
   }
 
@@ -1222,9 +1045,9 @@ export class ShopScene extends Scene {
         card.destroy();
         // If permit increased shop slots, append new items (keep existing stock)
         const newSlotCount = Math.max(1, getRunState().shopSlots);
-        while (this.stockItems.length < newSlotCount) {
-          this.stockItems.push(this.generateOneStockItem());
-        }
+        const currentStored = this.stockItems.map((item) => this.serializeShopItem(item));
+        const appendedStored = appendShopStockForSlots(currentStored, newSlotCount);
+        this.stockItems = appendedStored.map((s) => this.deserializeShopItem(s));
         this.syncShopToStore();
         // Rebuild layout to reflect all permit changes (prices, sidebar, slots)
         this.children.removeAll(true);
@@ -1291,7 +1114,7 @@ export class ShopScene extends Scene {
       this.showDevMessage('ID not found');
       return;
     }
-    this.packs[index] = { def: packDef as any, id: `pack_dev_${Date.now()}` };
+    this.packs[index] = { def: packDef, id: `pack_dev_${Date.now()}` };
     this.syncShopToStore();
     // Rebuild
     this.children.removeAll(true);

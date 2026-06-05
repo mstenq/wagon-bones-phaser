@@ -9,12 +9,7 @@ import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableDef, ConsumableInstance } from '../../game/facade/consumable';
 import type { DiceSelectionConfig } from '../../game/facade/diceSelection';
-import {
-  getDiceSelectionMaxPicks,
-  getDiceSelectionMinPicks,
-  isDiceSelectionReady,
-  shouldUpdateDisplayedDiceValue,
-} from '../../game/facade/diceSelection';
+import { shouldUpdateDisplayedDiceValue } from '../../game/facade/diceSelection';
 import { getRoundHintContext } from '../../game/displayContext';
 import { getRunState } from '../../game/store/runStore';
 import { getRoundState } from '../../game/store/roundStore';
@@ -50,6 +45,8 @@ import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
 import { getArcOffset } from './game/diceRowGeometry';
+import { GameConsumableTargetingController } from './game/GameConsumableTargetingController';
+import { PlayAreaDiceController } from './game/PlayAreaDiceController';
 import { RollMarqueeSelection } from './game/RollMarqueeSelection';
 import { RollRowController } from './game/RollRowController';
 import { ScoreRowLayout, type ScoreLayoutGate } from './game/ScoreRowLayout';
@@ -75,8 +72,7 @@ export class GameScene extends Scene {
   private devPanel!: GameSceneDevPanel;
 
   // Pre-roll hand row (SELECT phase)
-  private playAreaSprites: DiceSprite[] = [];
-  private playAreaY: number = 0;
+  private playArea!: PlayAreaDiceController;
 
   // Buttons
   private readyBtn: Button;
@@ -112,14 +108,7 @@ export class GameScene extends Scene {
 
   private wasDragging: boolean = false;
 
-  // Consumable targeting mode (inline dice selection for consumables like coffee_tin)
-  private consumableTargeting: DiceSelectionConfig | null = null;
-  private consumableTargetIds: Set<string> = new Set();
-  private consumableConfirmBtn: Button | null = null;
-  private consumableCancelBtn: Button | null = null;
-  private savedInstructionText: string = '';
-  private savedSelectedDiceIds: Set<string> = new Set();
-  private savedRerollLockedDiceIds: Set<string> = new Set();
+  private consumableTargeting!: GameConsumableTargetingController;
 
   constructor() {
     super('Game');
@@ -174,6 +163,29 @@ export class GameScene extends Scene {
       diceSpacing: DICE_SPACING,
     });
 
+    this.consumableTargeting = new GameConsumableTargetingController({
+      scene: this,
+      getContentCenterX: () => this.contentCX,
+      getInstructionText: () => this.instructionText,
+      getRollSprites: () => this.rollRow.getRollSprites(),
+      getPlayAreaSprites: () => this.playArea.getSprites(),
+      hideAllButtons: () => this.hideAllButtons(),
+      restorePhaseUi: () => this.restorePhaseUiAfterTargeting(),
+      syncRollDieVisuals: () => this.syncRollDieVisuals(),
+      repositionRollRow: (animated, duration) => this.rollRow.reposition(animated, duration),
+      repositionPlayArea: (animated, duration) => this.playArea.reposition(animated, duration),
+      setPlayAreaTargetingInteractive: (enabled) => this.playArea.setTargetingInteractive(enabled),
+      getSelectedDiceIds: () => this.selectedDiceIds,
+      setSelectedDiceIds: (ids) => {
+        this.selectedDiceIds = ids;
+      },
+      getRerollLockedDiceIds: () => this.rerollLockedDiceIds,
+      setRerollLockedDiceIds: (ids) => {
+        this.rerollLockedDiceIds = ids;
+      },
+      onApply: (config, selectedDice) => this.handleConsumableTargetingApply(config, selectedDice),
+    });
+
     this.rollRow = new RollRowController({
       scene: this,
       diceSpacing: DICE_SPACING,
@@ -181,10 +193,10 @@ export class GameScene extends Scene {
       getSortOrder: () => this.sortOrder,
       isAnimating: () => this.animating,
       isMarqueeActive: () => this.rollMarquee.isActive(),
-      isConsumableTargeting: () => this.consumableTargeting !== null,
+      isConsumableTargeting: () => this.consumableTargeting.isActive(),
       isDieLifted: (sprite) => this.isDieLifted(sprite),
       onRollDieClick: (sprite, isRightClick) => this.onRollDieClick(sprite, isRightClick),
-      onConsumableTargetClick: (sprite) => this.onConsumableTargetClick(sprite),
+      onConsumableTargetClick: (sprite) => this.consumableTargeting.onTargetClick(sprite),
       syncRolledDiceFromSprites: () => this.syncRolledDiceFromSprites(),
       onDragBegin: () => {
         this.wasDragging = true;
@@ -193,6 +205,15 @@ export class GameScene extends Scene {
       setWasDragging: (value) => {
         this.wasDragging = value;
       },
+    });
+
+    this.playArea = new PlayAreaDiceController({
+      scene: this,
+      diceSpacing: DICE_SPACING,
+      getContentCenterX: () => this.contentCX,
+      isConsumableTargeting: () => this.consumableTargeting.isActive(),
+      isConsumableTargetDie: (sprite) => this.consumableTargeting.isTargetDie(sprite),
+      onConsumableTargetClick: (sprite) => this.consumableTargeting.onTargetClick(sprite),
     });
 
     this.rollMarquee = new RollMarqueeSelection({
@@ -396,7 +417,7 @@ export class GameScene extends Scene {
   private onResize(): void {
     // Preserve game state, destroy all display objects, rebuild layout
     this.rollRow.destroyRollSprites();
-    this.playAreaSprites = [];
+    this.playArea.clear();
     this.rollMarquee.destroy();
     this.children.removeAll(true);
     this.buildLayout(true);
@@ -422,16 +443,13 @@ export class GameScene extends Scene {
     options: { autoRoll?: boolean } = {},
   ): void {
     const { height } = this.scale;
-    this.playAreaY = height * UI.ROLL_Y_RATIO;
+    this.playArea.setY(height * UI.ROLL_Y_RATIO);
 
     const hand = selectHandDice();
-    this.playAreaSprites = this.createDiceRow(hand, this.playAreaY);
-    for (const sprite of this.playAreaSprites) {
-      this.setupPlayAreaSprite(sprite);
-      sprite.disableInteractive();
-    }
+    this.playArea.buildHand(hand);
+    const playAreaSprites = this.playArea.getSprites();
 
-    if (animateFromPouch && this.playAreaSprites.length > 0) {
+    if (animateFromPouch && playAreaSprites.length > 0) {
       const launch = this.getDicePouchLaunchPoint();
       this.animating = true;
       let completed = 0;
@@ -440,8 +458,8 @@ export class GameScene extends Scene {
         this.animating = false;
         if (options.autoRoll) this.maybeAutoRollFirstHand();
       };
-      for (let i = 0; i < this.playAreaSprites.length; i++) {
-        const sprite = this.playAreaSprites[i];
+      for (let i = 0; i < playAreaSprites.length; i++) {
+        const sprite = playAreaSprites[i];
         const finalX = sprite.x;
         const finalY = sprite.y;
         const finalRot = sprite.rotation;
@@ -475,7 +493,7 @@ export class GameScene extends Scene {
           },
           onComplete: () => {
             completed++;
-            if (completed >= this.playAreaSprites.length) {
+            if (completed >= playAreaSprites.length) {
               onPouchAnimDone();
             }
           },
@@ -598,7 +616,7 @@ export class GameScene extends Scene {
 
   /** Click rolled die: left = select for score, right = reroll lock (marquee uses left-click rules). */
   private onRollDieClick(sprite: DiceSprite, isRightClick: boolean, playSound = true, updateButtons = true): void {
-    if (this.consumableTargeting) return;
+    if (this.consumableTargeting.isActive()) return;
     const id = sprite.dieData.id;
     const state = this.getRollDieUiState(id);
 
@@ -633,7 +651,12 @@ export class GameScene extends Scene {
   }
 
   private canUseMarquee(): boolean {
-    return !this.animating && !this.consumableTargeting && this.rollSprites.length > 0 && selectRoundPhase() === 'ROLL';
+    return (
+      !this.animating &&
+      !this.consumableTargeting.isActive() &&
+      this.rollSprites.length > 0 &&
+      selectRoundPhase() === 'ROLL'
+    );
   }
 
   /** Layout-only version for resize: shows rolled dice without replaying animation */
@@ -839,26 +862,10 @@ export class GameScene extends Scene {
 
   // ─── Helpers ───
 
-  private createDiceRow(dice: Die[], y: number): DiceSprite[] {
-    const sprites: DiceSprite[] = [];
-    const totalWidth = (dice.length - 1) * DICE_SPACING;
-    const startX = this.contentCX - totalWidth / 2;
-
-    for (let i = 0; i < dice.length; i++) {
-      const arc = getArcOffset(i, dice.length);
-      const sprite = new DiceSprite(this, startX + i * DICE_SPACING, y + arc.y, dice[i]);
-      sprite.rotation = arc.rotation;
-      sprite.setDepth(10);
-      sprites.push(sprite);
-    }
-    return sprites;
-  }
-
   private clearSprites(): void {
     this.rollRow.destroyRollSprites();
-    for (const s of this.playAreaSprites) s.destroy();
+    this.playArea.clear();
     this.rollMarquee.destroy();
-    this.playAreaSprites = [];
   }
 
   private hideAllButtons(): void {
@@ -918,33 +925,8 @@ export class GameScene extends Scene {
     this.equipBar?.setHintRound(getRoundHintContext());
   }
 
-  private isConsumableTargetDie(sprite: DiceSprite): boolean {
-    return this.consumableTargeting !== null && this.consumableTargetIds.has(sprite.dieData.id);
-  }
-
   private isDieLifted(sprite: DiceSprite): boolean {
-    return this.isRollDieSelected(sprite) || this.isConsumableTargetDie(sprite);
-  }
-
-  private getPlayAreaDieY(index: number, sprite: DiceSprite): number {
-    const arc = getArcOffset(index, this.playAreaSprites.length);
-    const lift = this.isConsumableTargetDie(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
-    return this.playAreaY + arc.y - lift;
-  }
-
-  private applyPlayAreaDieDepth(sprite: DiceSprite): void {
-    sprite.setDepth(this.isConsumableTargetDie(sprite) ? 15 : 10);
-  }
-
-  private repositionConsumableTargets(animated: boolean, duration = 200): void {
-    if (!this.consumableTargeting) return;
-
-    const phase = selectRoundPhase();
-    if (phase === 'ROLL' && this.rollSprites.length > 0) {
-      this.rollRow.reposition(animated, duration);
-    } else if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
-      this.repositionPlayArea(animated, duration);
-    }
+    return this.isRollDieSelected(sprite) || this.consumableTargeting.isTargetDie(sprite);
   }
 
   /** Keep game-state dice order aligned with on-screen roll sprite order (held-in-hand scoring). */
@@ -995,7 +977,7 @@ export class GameScene extends Scene {
   private animateNewDiceAppearing(): void {
     const newIds = new Set(this.pendingNewDiceIds);
 
-    for (const sprite of this.playAreaSprites) {
+    for (const sprite of this.playArea.getSprites()) {
       if (!newIds.has(sprite.dieData.id)) continue;
       const origScale = sprite.scaleX;
       sprite.setScale(0);
@@ -1041,7 +1023,7 @@ export class GameScene extends Scene {
 
     // Show floating text
     const text = this.add
-      .text(this.contentCX, this.playAreaY - 50, '✨ New Die Added!', {
+      .text(this.contentCX, this.playArea.getY() - 50, '✨ New Die Added!', {
         fontFamily: FONTS.HEADING,
         fontSize: '20px',
         color: '#ffd700',
@@ -1083,52 +1065,9 @@ export class GameScene extends Scene {
     this.activeEquipDestroySounds = [];
   }
 
-  /** Calculate X positions for dice in the play area */
-  private getPlayAreaXPositions(count: number): number[] {
-    if (count === 0) return [];
-    const totalWidth = (count - 1) * DICE_SPACING;
-    const startX = this.contentCX - totalWidth / 2;
-    return Array.from({ length: count }, (_, i) => startX + i * DICE_SPACING);
-  }
-
-  /** Reposition play area sprites */
-  private repositionPlayArea(animated: boolean, duration = 200): void {
-    const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
-    for (let i = 0; i < this.playAreaSprites.length; i++) {
-      const sprite = this.playAreaSprites[i];
-      const arc = getArcOffset(i, this.playAreaSprites.length);
-      const targetY = this.getPlayAreaDieY(i, sprite);
-      this.applyPlayAreaDieDepth(sprite);
-      if (animated) {
-        this.tweens.add({
-          targets: sprite,
-          x: positions[i],
-          y: targetY,
-          rotation: arc.rotation,
-          duration,
-          ease: 'Power2',
-        });
-      } else {
-        sprite.setPosition(positions[i], targetY);
-        sprite.rotation = arc.rotation;
-      }
-    }
-  }
-
-  // ─── Drag-to-Reorder (ROLL phase) ───
-
-  /** Wire consumable targeting clicks on pre-roll hand dice */
-  private setupPlayAreaSprite(sprite: DiceSprite): void {
-    sprite.on('pointerup', () => {
-      if (this.consumableTargeting) {
-        this.onConsumableTargetClick(sprite);
-      }
-    });
-  }
-
   private async handleConsumableUsed(consumed: ConsumableInstance): Promise<void> {
     const result = gameFacade.consumable.use(consumed, {
-      visibleDiceIds: this.getVisibleConsumableDiceIds(),
+      visibleDiceIds: this.consumableTargeting.getVisibleDiceIds(),
     });
 
     if (!result.success && result.failReason) {
@@ -1154,18 +1093,14 @@ export class GameScene extends Scene {
     }
 
     if (result.diceSelection) {
-      this.enterConsumableTargeting(result.diceSelection);
+      this.consumableTargeting.enter(result.diceSelection);
     }
   }
 
   private canUseConsumable(def: ConsumableDef): boolean {
-    if (this.consumableTargeting) return false;
+    if (this.consumableTargeting.isActive()) return false;
     if (def.id !== 'raid') return true;
-    return this.getVisibleConsumableDiceIds().length > 0;
-  }
-
-  private getVisibleConsumableDiceIds(): string[] {
-    return this.getTargetableDice().dice.map((d) => d.id);
+    return this.consumableTargeting.getVisibleDiceIds().length > 0;
   }
 
   private animateConsumableDiceDestruction(
@@ -1177,7 +1112,7 @@ export class GameScene extends Scene {
 
     this.removeDestroyedDiceFromRoundState(destroyedSet);
 
-    const targetSprites = (phase === 'SELECT' ? this.playAreaSprites : this.rollSprites).filter((sprite) =>
+    const targetSprites = (phase === 'SELECT' ? this.playArea.getSprites() : this.rollSprites).filter((sprite) =>
       destroyedSet.has(sprite.dieData.id),
     );
 
@@ -1240,8 +1175,7 @@ export class GameScene extends Scene {
           onComplete: () => {
             fireEmitter.stop();
             this.time.delayedCall(400, () => fireEmitter.destroy());
-            const idxPlay = this.playAreaSprites.indexOf(sprite);
-            if (idxPlay >= 0) this.playAreaSprites.splice(idxPlay, 1);
+            this.playArea.removeSprite(sprite);
             const idxRoll = this.rollSprites.indexOf(sprite);
             if (idxRoll >= 0) this.rollSprites.splice(idxRoll, 1);
             sprite.destroy();
@@ -1296,7 +1230,7 @@ export class GameScene extends Scene {
     const currentIds = new Set(selectHandDice().map((d) => d.id));
     const needed = Math.max(0, selectRoundConfig().rollSize - selectHandDice().length);
     if (needed <= 0) {
-      this.repositionPlayArea(true);
+      this.playArea.reposition(true);
       this.updateDrawButtons();
       return Promise.resolve();
     }
@@ -1309,7 +1243,7 @@ export class GameScene extends Scene {
     if (toAdd.length === 0) return Promise.resolve();
 
     const launch = this.getDicePouchLaunchPoint();
-    const startingLength = this.playAreaSprites.length;
+    const startingLength = this.playArea.getSprites().length;
     const nextHand = [...selectHandDice()];
     for (const die of toAdd) {
       nextHand.push(die);
@@ -1317,19 +1251,19 @@ export class GameScene extends Scene {
       sprite.setDepth(20);
       sprite.setAlpha(0);
       sprite.setScale(0.2);
-      this.setupPlayAreaSprite(sprite);
-      sprite.disableInteractive();
-      this.playAreaSprites.push(sprite);
+      this.playArea.addSprite(sprite);
     }
     gameFacade.round.setHandDice(nextHand.slice(0, selectRoundConfig().rollSize));
 
-    const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
+    const positions = this.playArea.getXPositions(this.playArea.getSprites().length);
+    const playAreaY = this.playArea.getY();
+    const playAreaSprites = this.playArea.getSprites();
     for (let i = 0; i < startingLength; i++) {
-      const arc = getArcOffset(i, this.playAreaSprites.length);
+      const arc = getArcOffset(i, playAreaSprites.length);
       this.tweens.add({
-        targets: this.playAreaSprites[i],
+        targets: playAreaSprites[i],
         x: positions[i],
-        y: this.playAreaY + arc.y,
+        y: playAreaY + arc.y,
         rotation: arc.rotation,
         duration: 220,
         ease: 'Power2',
@@ -1339,13 +1273,13 @@ export class GameScene extends Scene {
     return new Promise((resolve) => {
       let completed = 0;
       for (let i = 0; i < toAdd.length; i++) {
-        const sprite = this.playAreaSprites[startingLength + i];
+        const sprite = playAreaSprites[startingLength + i];
         const idx = startingLength + i;
-        const arc = getArcOffset(idx, this.playAreaSprites.length);
+        const arc = getArcOffset(idx, playAreaSprites.length);
         this.tweens.add({
           targets: sprite,
           x: positions[idx],
-          y: this.playAreaY + arc.y,
+          y: playAreaY + arc.y,
           rotation: arc.rotation,
           alpha: 1,
           scaleX: 1,
@@ -1367,159 +1301,25 @@ export class GameScene extends Scene {
     });
   }
 
-  // ─── Consumable Targeting Mode ───
-  // When a consumable with diceSelection is used, we enter a targeting mode
-  // where the player selects dice from the visible roll/play area to apply the effect.
-
-  private enterConsumableTargeting(config: DiceSelectionConfig): void {
-    this.consumableTargeting = config;
-    this.consumableTargetIds = new Set();
-
-    // In pre-roll SELECT phase, hand dice are normally non-interactive.
-    // Consumable targeting needs temporary interaction to pick targets.
-    if (selectRoundPhase() === 'SELECT') {
-      for (const sprite of this.playAreaSprites) {
-        sprite.setInteractive({ useHandCursor: true });
-      }
-    }
-
-    // Save current state so we can restore
-    this.savedInstructionText = this.instructionText.text;
-    this.savedSelectedDiceIds = new Set(this.selectedDiceIds);
-    this.savedRerollLockedDiceIds = new Set(this.rerollLockedDiceIds);
-
-    // Clear roll-phase selections — we repurpose highlight for targeting
-    this.selectedDiceIds.clear();
-    this.rerollLockedDiceIds.clear();
-    this.syncRollDieVisuals();
-    this.rollRow.reposition(true, 150);
-
-    // Hide normal game buttons
-    this.hideAllButtons();
-
-    // Show targeting UI
-    const btnY = this.scale.height - 30;
-
-    // For BUMP_VALUE, show two confirm buttons (+1 / -1)
-    if (config.effectType === 'BUMP_VALUE') {
-      this.consumableConfirmBtn = new Button(this, this.contentCX - 70, btnY, '+1 Up', 120, 40);
-      this.consumableConfirmBtn.setEnabled(false);
-      this.consumableConfirmBtn.onClick(() => {
-        config.effectParams.bumpDirection = 'up';
-        this.applyConsumableTargeting();
-      });
-
-      this.consumableCancelBtn = new Button(this, this.contentCX + 70, btnY, '-1 Down', 120, 40);
-      this.consumableCancelBtn.onClick(() => {
-        config.effectParams.bumpDirection = 'down';
-        this.applyConsumableTargeting();
-      });
-      (this.consumableCancelBtn as Button).setEnabled(false);
-    } else {
-      this.consumableConfirmBtn = new Button(this, this.contentCX - 80, btnY, 'Apply', 140, 40);
-      this.consumableConfirmBtn.setEnabled(false);
-      this.consumableConfirmBtn.onClick(() => this.applyConsumableTargeting());
-
-      this.consumableCancelBtn = new Button(this, this.contentCX + 80, btnY, 'Cancel', 120, 40);
-      this.consumableCancelBtn.onClick(() => this.cancelConsumableTargeting());
-    }
-
-    for (const sprite of this.getTargetableDice().sprites) {
-      sprite.setSelected(false);
-    }
-
-    this.updateConsumableTargetingText();
-  }
-
-  /** Get the dice sprites currently visible for targeting */
-  private getTargetableDice(): { sprites: DiceSprite[]; dice: Die[] } {
+  private restorePhaseUiAfterTargeting(): void {
     const phase = selectRoundPhase();
-    if (phase === 'ROLL' && this.rollSprites.length > 0) {
-      return {
-        sprites: this.rollSprites,
-        dice: selectRolledDice(),
-      };
-    }
-    if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
-      return {
-        sprites: this.playAreaSprites,
-        dice: selectHandDice(),
-      };
-    }
-    // Fallback — roll sprites if available
-    if (this.rollSprites.length > 0) {
-      return {
-        sprites: this.rollSprites,
-        dice: selectRolledDice(),
-      };
-    }
-    return { sprites: [], dice: [] };
-  }
-
-  /** Called when a die is clicked during consumable targeting mode */
-  private onConsumableTargetClick(sprite: DiceSprite): void {
-    if (!this.consumableTargeting) return;
-    const id = sprite.dieData.id;
-    const max = getDiceSelectionMaxPicks(this.consumableTargeting);
-
-    if (this.consumableTargetIds.has(id)) {
-      // Deselect
-      this.consumableTargetIds.delete(id);
-      this.sound.play('sfx_card_slide2', { volume: 0.25 });
-    } else if (this.consumableTargetIds.size < max) {
-      // Select
-      this.consumableTargetIds.add(id);
-      this.sound.play('sfx_highlight1', { volume: 0.3 });
-    }
-
-    this.repositionConsumableTargets(true);
-
-    const enough = isDiceSelectionReady(this.consumableTargeting, this.consumableTargetIds.size);
-    if (this.consumableConfirmBtn) this.consumableConfirmBtn.setEnabled(enough);
-    // For BUMP_VALUE, the cancel button is actually the -1 Down button
-    if (this.consumableTargeting.effectType === 'BUMP_VALUE' && this.consumableCancelBtn) {
-      (this.consumableCancelBtn as Button).setEnabled(enough);
-    }
-    this.updateConsumableTargetingText();
-  }
-
-  private updateConsumableTargetingText(): void {
-    if (!this.consumableTargeting) return;
-    const config = this.consumableTargeting;
-    const min = getDiceSelectionMinPicks(config);
-    const max = getDiceSelectionMaxPicks(config);
-    const selected = this.consumableTargetIds.size;
-    const name = config.cardName || 'Effect';
-    if (selected < min) {
-      const need = min - selected;
-      if (min === max) {
-        this.instructionText.setText(`${name}: Select ${need} more dice`);
-      } else {
-        this.instructionText.setText(`${name}: Select at least ${need} more (up to ${max})`);
-      }
-    } else if (selected < max) {
-      this.instructionText.setText(`${name}: Ready! Pick another die or click Apply`);
-    } else {
-      this.instructionText.setText(`${name}: Ready! Click Apply`);
+    if (phase === 'ROLL') {
+      this.rerollBtn.setVisible(true);
+      this.scoreBtn.setVisible(true);
+      this.showSortButtons();
+      this.updateRollButtons();
+    } else if (phase === 'SELECT') {
+      this.playArea.setTargetingInteractive(false);
+      this.readyBtn.setVisible(true);
+      this.updateDrawButtons();
     }
   }
 
-  private async applyConsumableTargeting(): Promise<void> {
-    if (!this.consumableTargeting) return;
-    if (!isDiceSelectionReady(this.consumableTargeting, this.consumableTargetIds.size)) return;
-    const effectType = this.consumableTargeting.effectType;
+  private async handleConsumableTargetingApply(config: DiceSelectionConfig, selectedDice: Die[]): Promise<void> {
+    const effectType = config.effectType;
+    const resultMsg = gameFacade.diceSelection.applyEffect(config, selectedDice);
+    const affectedIds = new Set(selectedDice.map((d) => d.id));
 
-    // Get the actual dice objects from the targetable set
-    const { dice } = this.getTargetableDice();
-    const selectedDice = dice.filter((d) => this.consumableTargetIds.has(d.id));
-
-    // Apply the effect
-    const resultMsg = gameFacade.diceSelection.applyEffect(this.consumableTargeting, selectedDice);
-
-    // Save affected IDs before exit clears them
-    const affectedIds = new Set(this.consumableTargetIds);
-
-    // Show result feedback
     const text = this.add
       .text(this.contentCX, this.scale.height * UI.ROLL_Y_RATIO - 60, resultMsg, {
         fontFamily: FONTS.HEADING,
@@ -1539,8 +1339,6 @@ export class GameScene extends Scene {
       onComplete: () => text.destroy(),
     });
 
-    this.exitConsumableTargeting();
-
     if (effectType === 'DESTROY') {
       await this.animateConsumableDiceDestruction([...affectedIds], {
         refillSelectHand: false,
@@ -1549,61 +1347,7 @@ export class GameScene extends Scene {
       return;
     }
 
-    // Refresh dice visuals — update only affected sprites to reflect changes
     this.refreshDiceSpritesAfterEffect(affectedIds, effectType);
-  }
-
-  private cancelConsumableTargeting(): void {
-    this.exitConsumableTargeting();
-  }
-
-  private exitConsumableTargeting(): void {
-    // Cleanup targeting UI
-    if (this.consumableConfirmBtn) {
-      this.consumableConfirmBtn.destroy();
-      this.consumableConfirmBtn = null;
-    }
-    if (this.consumableCancelBtn) {
-      this.consumableCancelBtn.destroy();
-      this.consumableCancelBtn = null;
-    }
-
-    // Clear targeting selections
-    const { sprites } = this.getTargetableDice();
-    for (const s of sprites) {
-      s.setSelected(false);
-    }
-
-    this.consumableTargeting = null;
-    this.consumableTargetIds.clear();
-
-    // Restore saved state
-    this.selectedDiceIds = new Set(this.savedSelectedDiceIds);
-    this.rerollLockedDiceIds = new Set(this.savedRerollLockedDiceIds);
-    this.syncRollDieVisuals();
-    this.instructionText.setText(this.savedInstructionText);
-
-    // Restore roll / play-area lift positions
-    if (this.rollSprites.length > 0) {
-      this.rollRow.reposition(true, 150);
-    } else if (this.playAreaSprites.length > 0) {
-      this.repositionPlayArea(true, 150);
-    }
-
-    // Restore game buttons for current phase
-    const phase = selectRoundPhase();
-    if (phase === 'ROLL') {
-      this.rerollBtn.setVisible(true);
-      this.scoreBtn.setVisible(true);
-      this.showSortButtons();
-      this.updateRollButtons();
-    } else if (phase === 'SELECT') {
-      for (const sprite of this.playAreaSprites) {
-        sprite.disableInteractive();
-      }
-      this.readyBtn.setVisible(true);
-      this.updateDrawButtons();
-    }
   }
 
   /** Refresh dice sprites in-place after a consumable effect changes dice data */
@@ -1646,7 +1390,7 @@ export class GameScene extends Scene {
     }
 
     // Update play area sprites if in SELECT phase
-    for (const sprite of this.playAreaSprites) {
+    for (const sprite of this.playArea.getSprites()) {
       if (!affectedIds.has(sprite.dieData.id)) continue;
       const updated = runDice.find((d) => d.id === sprite.dieData.id);
       if (updated) {

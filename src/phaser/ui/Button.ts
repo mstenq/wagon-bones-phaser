@@ -83,6 +83,11 @@ export class Button extends GameObjects.Container {
     return this;
   }
 
+  setLabelFontSize(size: number | string): this {
+    this.label.setFontSize(size);
+    return this;
+  }
+
   private drawBg(color: number): void {
     this.bg.clear();
     this.bg.fillStyle(color, 1);

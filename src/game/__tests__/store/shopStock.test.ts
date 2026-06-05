@@ -4,14 +4,17 @@ import { getSceneState, sceneActions } from '../../store/sceneStore';
 import { setupActions } from '../../store/actions/setupActions';
 import { economyActions } from '../../store/actions/economyActions';
 import {
+  appendShopStockForSlots,
   generateNewShopState,
   generateShopStockRows,
   shopRowsToStored,
   buildShopDieDisplayDef,
+  buildShopPermitDisplayDef,
   DICE_SHOP_COST,
 } from '../../store/shopStock';
 import { createDie } from '../../DiceSystem';
 import { getItemDisplayContext } from '../../displayContext';
+import { getPermitById } from '../../PermitsSystem';
 import { shopSceneActions } from '../../store/actions/shopSceneActions';
 import { selectShopStockRevision } from '../../store/selectors/sceneSelectors';
 import { initRunRng } from '../../RunRng';
@@ -136,6 +139,79 @@ describe('shopStock', () => {
     expect(nonAuraDiceSeen).toBeGreaterThan(0);
   });
 
+  test('appendShopStockForSlots preserves existing stock rows', () => {
+    const existing = shopRowsToStored(generateShopStockRows());
+    const targetCount = existing.length + 2;
+    const appended = appendShopStockForSlots(existing, targetCount);
+
+    expect(appended.length).toBe(targetCount);
+    for (let i = 0; i < existing.length; i++) {
+      expect(appended[i]).toEqual(existing[i]);
+    }
+  });
+
+  test('appendShopStockForSlots does not append when stock already meets slot count', () => {
+    const existing = shopRowsToStored(generateShopStockRows());
+    const same = appendShopStockForSlots(existing, existing.length);
+
+    expect(same.length).toBe(existing.length);
+    expect(same).toEqual(existing);
+  });
+
+  test('appendShopStockForSlots excludes owned and existing stock ids from new rows', () => {
+    const existing = shopRowsToStored(generateShopStockRows());
+    const existingIds = existing
+      .filter((item) => item.type === 'equipment' || item.type === 'consumable')
+      .map((item) => item.defId);
+
+    runActions.patch({
+      equipment: [{ defId: 'dynamite', sellValue: 2, state: {}, modifiers: [] }],
+    });
+
+    const targetCount = existing.length + 4;
+    const appended = appendShopStockForSlots(existing, targetCount);
+    const newRows = appended.slice(existing.length);
+
+    expect(newRows.length).toBe(4);
+    for (const item of newRows) {
+      if (item.type === 'equipment' || item.type === 'consumable') {
+        expect(item.defId).not.toBe('dynamite');
+        expect(existingIds).not.toContain(item.defId);
+      }
+    }
+  });
+
+  test('appendShopStockForSlots equipment rows include preview instances', () => {
+    const existing = shopRowsToStored(generateShopStockRows());
+
+    let sawEquipment = false;
+    for (let i = 0; i < 40; i++) {
+      const appended = appendShopStockForSlots(existing, existing.length + 1);
+      const row = appended[existing.length];
+      if (row?.type === 'equipment') {
+        sawEquipment = true;
+        expect(row.preview).toBeDefined();
+        expect(row.preview.defId).toBe(row.defId);
+        break;
+      }
+    }
+
+    expect(sawEquipment).toBe(true);
+  });
+
+  test('appendShopStockForSlots can roll dice when dice permits are active', () => {
+    runActions.patch({ purchasedPermits: ['dice_carver'] });
+    const existing = shopRowsToStored(generateShopStockRows().slice(0, 1));
+
+    let diceAppended = 0;
+    for (let i = 0; i < 200; i++) {
+      const appended = appendShopStockForSlots(existing, 4);
+      if (appended.slice(1).some((row) => row.type === 'dice')) diceAppended++;
+    }
+
+    expect(diceAppended).toBeGreaterThan(0);
+  });
+
   test('master_engraver shop dice can include auras using dice aura rates', () => {
     runActions.patch({
       purchasedPermits: ['dice_carver', 'master_engraver'],
@@ -192,5 +268,19 @@ describe('buildShopDieDisplayDef', () => {
     const displayDef = buildShopDieDisplayDef(die);
     expect(displayDef.id).toBe(`shop_die_${die.id}`);
     expect(displayDef.cost).toBe(5);
+  });
+});
+
+describe('buildShopPermitDisplayDef', () => {
+  test('permit card uses permit metadata and supplied cost', () => {
+    const permit = getPermitById('supply_wagon');
+    expect(permit).not.toBeNull();
+    const displayDef = buildShopPermitDisplayDef(permit!, 7);
+    expect(displayDef.id).toBe('supply_wagon');
+    expect(displayDef.name).toBe(permit!.name);
+    expect(displayDef.cost).toBe(7);
+    expect(displayDef.rarity).toBe('permit');
+    const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
+    expect(tooltip).toBe(permit!.description);
   });
 });

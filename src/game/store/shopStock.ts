@@ -15,7 +15,7 @@ import {
   type ConsumableDef,
 } from '../ConsumablesSystem';
 import { applyRandomSticker, generateShopPacks } from '../BoosterPackSystem';
-import { getPermitAuraMultiplier, hasPermitDiceInShop } from '../PermitsSystem';
+import { getPermitAuraMultiplier, hasPermitDiceInShop, type PermitDef } from '../PermitsSystem';
 import { rollShopEquipmentPreview } from '../EquipmentModifiers';
 import { getProfessionById } from '../../data/professions';
 import {
@@ -61,6 +61,23 @@ export function buildShopDieDisplayDef(die: Die): EquipmentDef {
     }),
   };
 }
+
+/** Equipment-shaped display metadata for shop permit cards (name, cost, tooltip). */
+export function buildShopPermitDisplayDef(permit: PermitDef, cost: number): EquipmentDef {
+  return {
+    id: permit.id,
+    name: permit.name,
+    cost,
+    rarity: 'permit',
+    effectType: 'PERMIT',
+    effectParams: {},
+    display: () => ({
+      hint: [],
+      tooltip: [[{ text: permit.description, style: 'text' }]],
+    }),
+  };
+}
+
 /** Mutable row used while generating / tagging shop stock (equipment tag helpers need defs). */
 export interface ShopStockGenRow {
   type: 'equipment' | 'consumable' | 'dice';
@@ -82,19 +99,40 @@ export function generateShopDie(mode: 'enhanced' | 'stickered', run: RunState = 
   return die;
 }
 
+type ShopStockCategory = 'equipment' | 'supply' | 'trail_guide' | 'frontier' | 'dice';
+
+interface ShopStockCategoryWeight {
+  type: ShopStockCategory;
+  weight: number;
+}
+
 function ownedDefIds(run: RunState): string[] {
   return [...run.equipment.map((e) => e.defId), ...run.consumables.map((c) => c.defId)];
 }
 
-/** Roll weighted shop stock rows (before tag injection / auras). */
-export function generateShopStockRows(run: RunState = getRunState()): ShopStockGenRow[] {
-  const slotCount = Math.max(1, run.shopSlots);
-  const items: ShopStockGenRow[] = [];
-  const excludeIds = ownedDefIds(run);
-  const profession = run.professionId ? getProfessionById(run.professionId) : null;
+function defIdsFromStoredStock(stored: StoredShopItem[]): string[] {
+  const ids: string[] = [];
+  for (const item of stored) {
+    if (item.type === 'equipment' || item.type === 'consumable') {
+      ids.push(item.defId);
+    }
+  }
+  return ids;
+}
 
+function defIdFromGenRow(row: ShopStockGenRow): string | null {
+  if (row.type === 'equipment' && row.def) return row.def.id;
+  if (row.type === 'consumable' && row.consumableDef) return row.consumableDef.id;
+  return null;
+}
+
+function buildShopStockCategories(run: RunState): {
+  categories: ShopStockCategoryWeight[];
+  diceMode: ReturnType<typeof hasPermitDiceInShop>;
+} {
+  const profession = run.professionId ? getProfessionById(run.professionId) : null;
   const diceMode = hasPermitDiceInShop(run.purchasedPermits);
-  const categories: { type: 'equipment' | 'supply' | 'trail_guide' | 'frontier' | 'dice'; weight: number }[] = [
+  const categories: ShopStockCategoryWeight[] = [
     { type: 'equipment', weight: SHOP_WEIGHTS.equipment },
     { type: 'supply', weight: SHOP_WEIGHTS.supply },
     { type: 'trail_guide', weight: SHOP_WEIGHTS.trail_guide },
@@ -105,46 +143,90 @@ export function generateShopStockRows(run: RunState = getRunState()): ShopStockG
   if (profession?.modifiers?.frontierInShop) {
     categories.push({ type: 'frontier', weight: SHOP_WEIGHTS.frontier });
   }
+  return { categories, diceMode };
+}
 
+function pickShopStockCategory(categories: ShopStockCategoryWeight[]): ShopStockCategory {
   const totalWeight = categories.reduce((sum, c) => sum + c.weight, 0);
+  let roll = rngFloat('shop') * totalWeight;
+  let picked = categories[0]!.type;
+  for (const cat of categories) {
+    roll -= cat.weight;
+    if (roll <= 0) {
+      picked = cat.type;
+      break;
+    }
+  }
+  return picked;
+}
+
+/** Roll one weighted shop stock row (before tag injection / auras). */
+export function generateOneShopStockRow(excludeIds: string[], run: RunState = getRunState()): ShopStockGenRow | null {
+  const { categories, diceMode } = buildShopStockCategories(run);
+  const picked = pickShopStockCategory(categories);
+
+  if (picked === 'dice' && diceMode !== 'none') {
+    return { type: 'dice', die: generateShopDie(diceMode, run) };
+  }
+
+  if (picked === 'equipment') {
+    const [def] = generateShopStock(1, excludeIds);
+    if (!def) return null;
+    return {
+      type: 'equipment',
+      def,
+      preview: rollShopEquipmentPreview(def, run.purchasedPermits),
+    };
+  }
+
+  let consumableDef: ConsumableDef;
+  if (picked === 'supply') {
+    consumableDef = getRandomSupplyDef(undefined, excludeIds);
+  } else if (picked === 'trail_guide') {
+    consumableDef = getRandomTrailGuideDef(undefined, excludeIds);
+  } else {
+    consumableDef = getShopRandomFrontierDef(undefined, excludeIds);
+  }
+  return { type: 'consumable', consumableDef };
+}
+
+/** Append rows until `targetSlotCount` is reached; preserves existing stored stock. */
+export function appendShopStockForSlots(
+  existingStored: StoredShopItem[],
+  targetSlotCount: number,
+  run: RunState = getRunState(),
+): StoredShopItem[] {
+  const slotCount = Math.max(1, targetSlotCount);
+  if (existingStored.length >= slotCount) {
+    return existingStored.map((item) => ({ ...item }));
+  }
+
+  const excludeIds = [...ownedDefIds(run), ...defIdsFromStoredStock(existingStored)];
+  const newRows: ShopStockGenRow[] = [];
+
+  while (existingStored.length + newRows.length < slotCount) {
+    const row = generateOneShopStockRow(excludeIds, run);
+    if (!row) continue;
+    newRows.push(row);
+    const id = defIdFromGenRow(row);
+    if (id) excludeIds.push(id);
+  }
+
+  return [...existingStored, ...shopRowsToStored(newRows)];
+}
+
+/** Roll weighted shop stock rows (before tag injection / auras). */
+export function generateShopStockRows(run: RunState = getRunState()): ShopStockGenRow[] {
+  const slotCount = Math.max(1, run.shopSlots);
+  const items: ShopStockGenRow[] = [];
+  const excludeIds = ownedDefIds(run);
 
   for (let i = 0; i < slotCount; i++) {
-    let roll = rngFloat('shop') * totalWeight;
-    let picked = categories[0]!.type;
-    for (const cat of categories) {
-      roll -= cat.weight;
-      if (roll <= 0) {
-        picked = cat.type;
-        break;
-      }
-    }
-
-    if (picked === 'dice' && diceMode !== 'none') {
-      items.push({ type: 'dice', die: generateShopDie(diceMode) });
-      continue;
-    }
-
-    if (picked === 'equipment') {
-      const [def] = generateShopStock(1, excludeIds);
-      if (!def) continue;
-      items.push({
-        type: 'equipment',
-        def,
-        preview: rollShopEquipmentPreview(def, run.purchasedPermits),
-      });
-      excludeIds.push(def.id);
-    } else {
-      let consumableDef: ConsumableDef;
-      if (picked === 'supply') {
-        consumableDef = getRandomSupplyDef(undefined, excludeIds);
-      } else if (picked === 'trail_guide') {
-        consumableDef = getRandomTrailGuideDef(undefined, excludeIds);
-      } else {
-        consumableDef = getShopRandomFrontierDef(undefined, excludeIds);
-      }
-      items.push({ type: 'consumable', consumableDef });
-      excludeIds.push(consumableDef.id);
-    }
+    const row = generateOneShopStockRow(excludeIds, run);
+    if (!row) continue;
+    items.push(row);
+    const id = defIdFromGenRow(row);
+    if (id) excludeIds.push(id);
   }
 
   return items;

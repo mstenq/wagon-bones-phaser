@@ -1,11 +1,17 @@
 // ─── catalogModal ───
-// Shared dim/panel chrome, scroll list container, clipping bands, and scroll input
-// for catalog-style modals (Equipment catalog, Boss test picker, …).
+// Shared scroll list container, clipping bands, and scroll input for catalog-style
+// modals (Equipment catalog, Boss test picker, …). Shell chrome comes from modalShell.ts.
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
-import { Button } from './Button';
+import {
+  createModalActionButton,
+  createModalDim,
+  createModalPanel,
+  createModalPanelStroke,
+  createModalTitle,
+} from './modalShell';
 
 export const CATALOG_MODAL_DEPTH = 500;
 export const CATALOG_SCROLL_DEPTH = 501;
@@ -83,29 +89,16 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
     sceneObjects.push(obj);
   };
 
-  const dim = scene.add.graphics();
-  dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
-  dim.fillRect(0, 0, screenW, screenH);
-  dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, screenW, screenH), Phaser.Geom.Rectangle.Contains);
+  const dim = createModalDim(scene, screenH, screenW);
   dim.setDepth(CATALOG_MODAL_DEPTH);
   parent.add(dim);
 
-  const panelGfx = scene.add.graphics();
-  panelGfx.fillStyle(UI.MODAL_BG, 1);
-  panelGfx.fillRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
-  panelGfx.lineStyle(2, UI.MODAL_BORDER, 1);
-  panelGfx.strokeRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
+  const panelGfx = createModalPanel(scene, panel);
   panelGfx.setDepth(CATALOG_MODAL_DEPTH);
   track(panelGfx);
 
-  const titleText = scene.add
-    .text(panelX + panelW / 2, panelY + titleY, title, {
-      fontFamily: FONTS.HEADING,
-      fontSize: titleFontSize,
-      color: TEXT_COLORS.GOLD,
-    })
-    .setOrigin(0.5)
-    .setDepth(CATALOG_CHROME_DEPTH);
+  const titleText = createModalTitle(scene, panel, title, { fontSize: titleFontSize, titleY });
+  titleText.setDepth(CATALOG_CHROME_DEPTH);
   track(titleText);
 
   if (subtitle) {
@@ -153,9 +146,7 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
   footerCover.setDepth(CATALOG_CHROME_DEPTH);
   track(footerCover);
 
-  const panelFrame = scene.add.graphics();
-  panelFrame.lineStyle(2, UI.MODAL_BORDER, 1);
-  panelFrame.strokeRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
+  const panelFrame = createModalPanelStroke(scene, panel);
   panelFrame.setDepth(CATALOG_CHROME_DEPTH);
   track(panelFrame);
 
@@ -165,9 +156,12 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
   listFrame.setDepth(CATALOG_CHROME_DEPTH);
   track(listFrame);
 
-  const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - closeBottomOffset, closeLabel, 120, 32);
+  const closeBtn = createModalActionButton(scene, panel, onClose, {
+    label: closeLabel,
+    bottomOffset: closeBottomOffset,
+    buttonHeight: 32,
+  });
   closeBtn.setDepth(CATALOG_CLOSE_DEPTH);
-  closeBtn.onClick(onClose);
   track(closeBtn);
 
   let scrollHandlers: CatalogScrollHandlers | undefined;

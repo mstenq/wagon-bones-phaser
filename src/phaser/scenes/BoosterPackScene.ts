@@ -6,7 +6,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameFacade } from '../../game/facade';
-import type { ConsumableInstance, PackDefinition, PackItem, UseConsumableResult } from '../../game/facade/pack';
+import type { ConsumableInstance, PackDefinition, PackItem } from '../../game/facade/pack';
 import { getConsumableAtlasKey, isSecondHelpingsCloneTarget } from '../../game/facade/consumable';
 import {
   createFrontierConsumableDef,
@@ -30,11 +30,14 @@ import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
 import { createHorizontalDragReorder, type HorizontalDragReorder } from '../ui/horizontalDragReorder';
 import { hitIncludesObjectOrChild, installClickAwayDismiss } from '../ui/clickAwayDismiss';
+import { createActionTabs, type ActionTabsHandle } from '../ui/actionTabs';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
+import { getArcOffset, getRowXPositions } from './game/diceRowGeometry';
+import { resolvePackCardUse } from './boosterPack/packCardUseDispatcher';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import type { BoosterPackSceneState } from '../../game/store/types';
@@ -66,6 +69,7 @@ interface CardSprite {
   index: number;
   diceSprite?: DiceSprite;
   itemCard?: ItemCard;
+  actionTabs?: ActionTabsHandle;
 }
 
 export class BoosterPackScene extends Scene {
@@ -206,9 +210,9 @@ export class BoosterPackScene extends Scene {
       scene: this,
       getItems: () => this.lineupSprites,
       getSlotPositions: (count) => {
-        const positions = this.getLineupRowXPositions(count);
+        const positions = getRowXPositions(count, this.contentCX, DICE_SPACING);
         return positions.map((x, i) => {
-          const arc = this.getArcOffset(i, count);
+          const arc = getArcOffset(i, count);
           return { x, y: this.lineupY + arc.y, rotation: arc.rotation };
         });
       },
@@ -249,8 +253,8 @@ export class BoosterPackScene extends Scene {
         this.lineupLockIcons[index]?.setPosition(slot.x, slot.y + 46);
       },
       getSettleSlot: (_sprite, index, count) => {
-        const positions = this.getLineupRowXPositions(count);
-        const arc = this.getArcOffset(index, count);
+        const positions = getRowXPositions(count, this.contentCX, DICE_SPACING);
+        const arc = getArcOffset(index, count);
         return {
           x: positions[index],
           y: this.lineupY + arc.y,
@@ -263,8 +267,8 @@ export class BoosterPackScene extends Scene {
       },
       onDragEnd: (sprite) => {
         const idx = this.lineupSprites.indexOf(sprite);
-        const positions = this.getLineupRowXPositions(this.lineupSprites.length);
-        const arc = this.getArcOffset(idx, this.lineupSprites.length);
+        const positions = getRowXPositions(this.lineupSprites.length, this.contentCX, DICE_SPACING);
+        const arc = getArcOffset(idx, this.lineupSprites.length);
         const settleY = this.lineupY + arc.y;
         this.lineupLockIcons[idx]?.setPosition(positions[idx], settleY + 46);
       },
@@ -355,6 +359,22 @@ export class BoosterPackScene extends Scene {
       const x = startX + i * CARD_SPACING;
       const { container, diceSprite, itemCard } = this.createCardDisplay(x, this.cardY, item);
 
+      const actionTabs =
+        itemCard === null
+          ? createActionTabs({
+              scene: this,
+              parent: container,
+              layout: {
+                cardW: CARD_W,
+                cardH: CARD_H,
+                cardScale: 1,
+                tabAnchorX: CARD_W / 2,
+                rightTabYOffset: 20,
+              },
+              liftParentForBottomTabs: false,
+            })
+          : undefined;
+
       const sprite: CardSprite = {
         container,
         item,
@@ -362,6 +382,7 @@ export class BoosterPackScene extends Scene {
         index: i,
         diceSprite: diceSprite ?? undefined,
         itemCard: itemCard ?? undefined,
+        actionTabs,
       };
       this.cardSprites.push(sprite);
 
@@ -399,13 +420,12 @@ export class BoosterPackScene extends Scene {
 
     if (this.lineupDice.length === 0) return;
 
-    const totalWidth = (this.lineupDice.length - 1) * DICE_SPACING;
-    const startX = this.contentCX - totalWidth / 2;
+    const positions = getRowXPositions(this.lineupDice.length, this.contentCX, DICE_SPACING);
 
     for (let i = 0; i < this.lineupDice.length; i++) {
       const die = this.lineupDice[i]!;
-      const arc = this.getArcOffset(i, this.lineupDice.length);
-      const x = startX + i * DICE_SPACING;
+      const arc = getArcOffset(i, this.lineupDice.length);
+      const x = positions[i];
       const y = this.lineupY + arc.y;
 
       const sprite = new DiceSprite(this, x, y, die, { showSelectedStroke: true });
@@ -496,13 +516,6 @@ export class BoosterPackScene extends Scene {
     }
   }
 
-  private getLineupRowXPositions(count: number): number[] {
-    if (count === 0) return [];
-    const totalWidth = (count - 1) * DICE_SPACING;
-    const startX = this.contentCX - totalWidth / 2;
-    return Array.from({ length: count }, (_, i) => startX + i * DICE_SPACING);
-  }
-
   private wireLineupSpriteInteraction(sprite: DiceSprite): void {
     sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (!this.activeTabCard?.item.diceSelection || sprite._disabled) return;
@@ -541,14 +554,6 @@ export class BoosterPackScene extends Scene {
 
     this.updateInstructionText();
     this.updateActiveTabEnabled();
-  }
-
-  private getArcOffset(i: number, count: number): { y: number; rotation: number } {
-    if (count <= 1) return { y: 0, rotation: 0 };
-    const t = i / (count - 1) - 0.5;
-    const y = -UI.DICE_ARC_HEIGHT * (1 - 4 * t * t);
-    const rotation = t * UI.DICE_ARC_ROTATION * 2;
-    return { y, rotation };
   }
 
   // ─── Card Display ───
@@ -737,12 +742,7 @@ export class BoosterPackScene extends Scene {
         return;
       }
 
-      // Show tabs — use ItemCard if available, otherwise build custom tabs on container
-      if (itemCard) {
-        itemCard.showActionTabs(tabs);
-      } else {
-        this.showContainerActionTabs(container, tabs);
-      }
+      this.showCardActionTabs(sprite, tabs);
 
       this.activeTabCard = sprite;
 
@@ -819,133 +819,44 @@ export class BoosterPackScene extends Scene {
     ];
   }
 
-  /** Show action tabs on a plain container (for dice cards that don't use ItemCard) */
-  private showContainerActionTabs(container: Phaser.GameObjects.Container, tabs: CardActionTabConfig[]): void {
-    const tabW = 50;
-    const tabH = 45;
-    const tabGap = 4;
-    const tabRadius = 6;
-    const hw = CARD_W / 2;
-    const hh = CARD_H / 2;
-
-    for (let i = 0; i < tabs.length; i++) {
-      const cfg = tabs[i];
-      const tabContainer = this.add.container(hw, 0);
-      tabContainer.setDepth(-1);
-
-      const tabY = hh - tabH - (tabH + tabGap) * i - 20;
-
-      const bg = this.add.graphics();
-      bg.fillStyle(cfg.color, 0.95);
-      bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
-      bg.lineStyle(1, 0xffffff, 0.2);
-      bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
-      tabContainer.add(bg);
-
-      const label = this.add
-        .text(tabW / 2, tabY + tabH / 2, cfg.label, {
-          fontFamily: 'sans-serif',
-          fontSize: '16px',
-          color: '#ffffff',
-          align: 'center',
-          lineSpacing: -2,
-        })
-        .setOrigin(0.5);
-      tabContainer.add(label);
-
-      tabContainer.setSize(tabW, tabH);
-      tabContainer.setInteractive(
-        new Phaser.Geom.Rectangle(tabW / 2, tabY + tabH / 2, tabW, tabH),
-        Phaser.Geom.Rectangle.Contains,
-      );
-
-      tabContainer.on('pointerover', () => {
-        bg.clear();
-        bg.fillStyle(Phaser.Display.Color.ValueToColor(cfg.color).lighten(20).color, 0.95);
-        bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
-        bg.lineStyle(1, 0xffffff, 0.4);
-        bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
-      });
-
-      tabContainer.on('pointerout', () => {
-        bg.clear();
-        bg.fillStyle(cfg.color, 0.95);
-        bg.fillRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
-        bg.lineStyle(1, 0xffffff, 0.2);
-        bg.strokeRoundedRect(0, tabY, tabW, tabH, { tl: 0, tr: tabRadius, bl: 0, br: tabRadius });
-      });
-
-      tabContainer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        pointer.event?.stopPropagation();
-        cfg.callback();
-      });
-
-      // Slide-out animation
-      const finalX = hw;
-      tabContainer.x = hw - tabW;
-      container.add(tabContainer);
-      container.sendToBack(tabContainer);
-
-      this.tweens.add({
-        targets: tabContainer,
-        x: finalX,
-        duration: 200,
-        ease: 'Back.easeOut',
-        delay: i * 50,
-      });
-
-      // Tag for cleanup
-      tabContainer.setName('actionTab');
+  private showCardActionTabs(sprite: CardSprite, tabs: CardActionTabConfig[]): void {
+    if (sprite.itemCard) {
+      sprite.itemCard.showActionTabs(tabs);
+    } else {
+      sprite.actionTabs?.show(tabs);
     }
-
-    this.sound.play('sfx_whoosh', { volume: 0.3 });
   }
 
-  /** Remove action tabs from a plain container */
-  private hideContainerActionTabs(container: Phaser.GameObjects.Container, animate: boolean): void {
-    const tabs = container.getAll().filter((c) => c.name === 'actionTab') as Phaser.GameObjects.Container[];
-    if (tabs.length === 0) return;
-
-    if (animate && this.scene) {
-      this.sound.play('sfx_whoosh2', { volume: 0.3 });
-      const tabW = 50;
-      const hw = CARD_W / 2;
-      for (const tab of tabs) {
-        this.tweens.add({
-          targets: tab,
-          x: hw - tabW,
-          duration: 150,
-          ease: 'Power2',
-          onComplete: () => tab.destroy(),
-        });
-      }
+  private hideCardActionTabs(sprite: CardSprite, animate: boolean): void {
+    if (sprite.itemCard) {
+      sprite.itemCard.hideActionTabs(animate);
     } else {
-      for (const tab of tabs) tab.destroy();
+      sprite.actionTabs?.hide(animate);
     }
+  }
+
+  private getCardActionTabContainers(sprite: CardSprite): Phaser.GameObjects.Container[] {
+    if (sprite.itemCard) {
+      return sprite.itemCard.getActionTabContainers();
+    }
+    return sprite.actionTabs?.getContainers() ?? [];
   }
 
   private dismissActiveTab(): void {
     if (this.activeTabCard) {
       const sprite = this.activeTabCard;
-      const { container, itemCard } = sprite;
-
-      // Hide tabs
-      if (itemCard) {
-        itemCard.hideActionTabs(true);
-      } else {
-        this.hideContainerActionTabs(container, true);
-      }
+      this.hideCardActionTabs(sprite, true);
 
       // Settle card back
       if (!sprite.used) {
         this.tweens.add({
-          targets: container,
+          targets: sprite.container,
           scaleX: 1,
           scaleY: 1,
           duration: 150,
           ease: 'Power2',
         });
-        container.setDepth(10);
+        sprite.container.setDepth(10);
       }
 
       // Clear dice selection state
@@ -1019,28 +930,12 @@ export class BoosterPackScene extends Scene {
     const selected = this.selectedDiceIds.size;
     const enabled = isDiceSelectionReady(config, selected);
 
-    // Update tab visuals — just adjust alpha on action tabs
-    const { container, itemCard } = this.activeTabCard;
-    if (itemCard) {
-      // ItemCard manages its own tabs — we need to find them
-      // The tabs are children of the ItemCard container; adjust their alpha
-      for (const tab of itemCard.getActionTabContainers()) {
-        tab.setAlpha(enabled ? 1 : 0.4);
-        if (enabled) {
-          tab.setInteractive();
-        } else {
-          tab.disableInteractive();
-        }
-      }
-    } else {
-      const tabs = container.getAll().filter((c) => c.name === 'actionTab') as Phaser.GameObjects.Container[];
-      for (const tab of tabs) {
-        tab.setAlpha(enabled ? 1 : 0.4);
-        if (enabled) {
-          tab.setInteractive();
-        } else {
-          tab.disableInteractive();
-        }
+    for (const tab of this.getCardActionTabContainers(this.activeTabCard)) {
+      tab.setAlpha(enabled ? 1 : 0.4);
+      if (enabled) {
+        tab.setInteractive();
+      } else {
+        tab.disableInteractive();
       }
     }
   }
@@ -1091,82 +986,19 @@ export class BoosterPackScene extends Scene {
 
     const item = sprite.item;
     const run = getRunState();
-    let consumableResult: UseConsumableResult | undefined;
-    let equipmentPopInCount = 0;
-    const equipmentCountBefore = resolveEquipmentList(run).length;
+    const useResult = resolvePackCardUse(item, {
+      selectedDiceIds: this.selectedDiceIds,
+      lineupDice: this.lineupDice,
+      equipmentCountBefore: resolveEquipmentList(run).length,
+      cardNeedsDiceSelection: (packItem) => this.cardNeedsDiceSelection(packItem),
+    });
 
-    let queuedPlayback = false;
+    if (useResult.status === 'blocked') return;
+    if (!this.beginPackCardUse(sprite)) return;
 
-    // If card needs dice selection, validate
-    if (this.cardNeedsDiceSelection(item)) {
-      const config = item.diceSelection!;
-      if (!isDiceSelectionReady(config, this.selectedDiceIds.size)) return;
-      if (!this.beginPackCardUse(sprite)) return;
-
-      // Get actual selected dice from player's pool
-      const selectedDice = this.lineupDice.filter((d) => this.selectedDiceIds.has(d.id));
-
-      // Apply the dice selection effect
-      const result = gameFacade.pack.applyDiceSelection(config, selectedDice);
-      this.showFloatingText(result);
-    } else if (item.category === 'equipment' && item.equipmentDef) {
-      if (!this.beginPackCardUse(sprite)) return;
-      if (item.equipmentDef.aura?.id === 'ghost' || selectEquipmentSlotsFree(run) > 0) {
-        const instance = gameFacade.pack.acquireEquipment(item.equipmentDef, item.equipmentPreview?.modifiers);
-        gameFacade.pack.addEquipmentInstance(instance);
-        equipmentPopInCount = 1;
-      }
-    } else if (item.category === 'dice' && item.die) {
-      if (!this.beginPackCardUse(sprite)) return;
-      gameFacade.pack.addDie(item.die);
-    } else if (item.category === 'trail_guide' && item.trailGuideId) {
-      const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
-      if (tg) {
-        if (!this.beginPackCardUse(sprite)) return;
-        const def = createTrailGuideConsumableDef(tg);
-        const result = gameFacade.pack.useConsumableDirectly(def);
-        queuedPlayback = true;
-        if (!result.success && result.failReason) {
-          this.showFloatingText(result.failReason);
-        }
-      }
-    } else if (item.category === 'supply' && item.supplyCardId) {
-      const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
-      if (cardData) {
-        if (!this.beginPackCardUse(sprite)) return;
-        const def = createSupplyConsumableDef(cardData);
-        const result = gameFacade.pack.useConsumableDirectly(def);
-        queuedPlayback = true;
-        if (!result.success && result.failReason) {
-          this.showFloatingText(result.failReason);
-        }
-      }
-    } else if (item.category === 'frontier' && item.frontierEncounterId) {
-      const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
-      if (fe) {
-        if (!this.beginPackCardUse(sprite)) return;
-        const def = createFrontierConsumableDef(fe);
-        consumableResult = gameFacade.pack.useConsumableDirectly(def, {
-          visibleDiceIds: this.lineupDice.map((d) => d.id),
-        });
-        queuedPlayback = true;
-        if (!consumableResult.success && consumableResult.failReason) {
-          this.showFloatingText(consumableResult.failReason);
-        }
-      }
-    } else if (item.instantEffect) {
-      if (!this.beginPackCardUse(sprite)) return;
-      const instantResult = gameFacade.pack.applyInstantEffect(item.instantEffect);
-      queuedPlayback = Boolean(
-        instantResult.handUpgrades?.length ||
-        instantResult.handUpgrade ||
-        (instantResult.consumableAnimEvents?.length ?? 0) > 0 ||
-        (instantResult.equipmentCreatedCount ?? 0) > 0,
-      );
-      equipmentPopInCount = Math.max(
-        equipmentPopInCount,
-        instantResult.equipmentCreatedCount ?? resolveEquipmentList().length - equipmentCountBefore,
-      );
+    const { queuedPlayback, equipmentPopInCount, feedbackText } = useResult.outcome;
+    if (feedbackText) {
+      this.showFloatingText(feedbackText);
     }
 
     const finishUse = () => this.finishUseCard(sprite, equipmentPopInCount);

@@ -42,11 +42,12 @@ export function computeModalPanelLayout(options: ModalShellOptions): ModalPanelL
   return { panelX, panelY, panelW, panelH, labelX, controlRight };
 }
 
-export function createModalDim(scene: Scene, height: number): GameObjects.Graphics {
+export function createModalDim(scene: Scene, height: number, width?: number): GameObjects.Graphics {
+  const dimWidth = width ?? scene.scale.width;
   const dim = scene.add.graphics();
   dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
-  dim.fillRect(0, 0, scene.scale.width, height);
-  dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
+  dim.fillRect(0, 0, dimWidth, height);
+  dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, dimWidth, height), Phaser.Geom.Rectangle.Contains);
   return dim;
 }
 
@@ -58,21 +59,47 @@ export function createModalPanel(
   const panel = scene.add.graphics();
   panel.fillStyle(UI.MODAL_BG, 1);
   panel.fillRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
-  panel.lineStyle(2, UI.MODAL_BORDER, 1);
-  panel.strokeRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
+  strokeModalPanelBorder(panel, layout);
   return panel;
+}
+
+/** Stroke-only panel border for redraw above scroll covers. */
+export function strokeModalPanelBorder(
+  graphics: GameObjects.Graphics,
+  layout: Pick<ModalPanelLayout, 'panelX' | 'panelY' | 'panelW' | 'panelH'>,
+): void {
+  const { panelX, panelY, panelW, panelH } = layout;
+  graphics.lineStyle(2, UI.MODAL_BORDER, 1);
+  graphics.strokeRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
+}
+
+export function createModalPanelStroke(
+  scene: Scene,
+  layout: Pick<ModalPanelLayout, 'panelX' | 'panelY' | 'panelW' | 'panelH'>,
+): GameObjects.Graphics {
+  const panel = scene.add.graphics();
+  strokeModalPanelBorder(panel, layout);
+  return panel;
+}
+
+export interface ModalTitleOptions {
+  fontSize?: string;
+  titleY?: number;
 }
 
 export function createModalTitle(
   scene: Scene,
   layout: Pick<ModalPanelLayout, 'panelX' | 'panelY' | 'panelW'>,
   titleText: string,
+  options?: ModalTitleOptions,
 ): GameObjects.Text {
   const { panelX, panelY, panelW } = layout;
+  const fontSize = options?.fontSize ?? '24px';
+  const titleY = options?.titleY ?? 28;
   return scene.add
-    .text(panelX + panelW / 2, panelY + 28, titleText, {
+    .text(panelX + panelW / 2, panelY + titleY, titleText, {
       fontFamily: FONTS.HEADING,
-      fontSize: '24px',
+      fontSize,
       color: TEXT_COLORS.GOLD,
     })
     .setOrigin(0.5);
@@ -88,22 +115,42 @@ export function createModalShell(scene: Scene, titleText: string, options: Modal
   };
 }
 
+export interface ModalActionButtonOptions {
+  label?: string;
+  bottomOffset?: number;
+  buttonWidth?: number;
+  buttonHeight?: number;
+}
+
+export function createModalActionButton(
+  scene: Scene,
+  layout: Pick<ModalPanelLayout, 'panelX' | 'panelY' | 'panelW' | 'panelH'>,
+  onClick: () => void,
+  options?: ModalActionButtonOptions,
+): Button {
+  const label = options?.label ?? 'Back';
+  const bottomOffset = options?.bottomOffset ?? 36;
+  const buttonWidth = options?.buttonWidth ?? 120;
+  const buttonHeight = options?.buttonHeight ?? 34;
+  const btn = new Button(
+    scene,
+    layout.panelX + layout.panelW / 2,
+    layout.panelY + layout.panelH - bottomOffset,
+    label,
+    buttonWidth,
+    buttonHeight,
+  );
+  btn.onClick(onClick);
+  return btn;
+}
+
 export function createModalBackButton(
   scene: Scene,
   layout: ModalPanelLayout,
   onBack: () => void,
   bottomOffset = 36,
 ): Button {
-  const backBtn = new Button(
-    scene,
-    layout.panelX + layout.panelW / 2,
-    layout.panelY + layout.panelH - bottomOffset,
-    'Back',
-    120,
-    34,
-  );
-  backBtn.onClick(onBack);
-  return backBtn;
+  return createModalActionButton(scene, layout, onBack, { label: 'Back', bottomOffset });
 }
 
 export function finalizeModal(container: GameObjects.Container, scene: Scene, depth = 500): void {

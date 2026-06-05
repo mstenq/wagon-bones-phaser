@@ -74,7 +74,7 @@ export class GameSceneDevPanel {
       this.adjustLoadedDieTarget(-1);
     });
     this.loadedDiceDecBtn.setDepth(50);
-    (this.loadedDiceDecBtn as any).label?.setFontSize?.(14);
+    this.loadedDiceDecBtn.setLabelFontSize(14);
 
     this.loadedDiceValueBg = this.deps.scene.add.graphics().setDepth(50);
     this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
@@ -109,7 +109,7 @@ export class GameSceneDevPanel {
       this.adjustLoadedDieTarget(1);
     });
     this.loadedDiceIncBtn.setDepth(50);
-    (this.loadedDiceIncBtn as any).label?.setFontSize?.(14);
+    this.loadedDiceIncBtn.setLabelFontSize(14);
 
     this.updateLoadedDiceControl();
   }
@@ -244,7 +244,7 @@ export class GameSceneDevPanel {
         this.destroyPicker();
       });
       button.setDepth(501);
-      (button as any).label?.setFontSize?.(13);
+      button.setLabelFontSize(13);
       if (selected === value) {
         button.setColor(COLORS.GOLD, COLORS.GOLD);
         button.setEnabled(false);
@@ -267,7 +267,7 @@ export class GameSceneDevPanel {
         this.destroyPicker();
       });
       syncBtn.setDepth(501);
-      (syncBtn as any).label?.setFontSize?.(10);
+      syncBtn.setLabelFontSize(10);
       if (syncLucky) {
         syncBtn.setColor(COLORS.GOLD, COLORS.GOLD);
         syncBtn.setEnabled(false);
@@ -281,7 +281,7 @@ export class GameSceneDevPanel {
       this.destroyPicker();
     });
     clearBtn.setDepth(501);
-    (clearBtn as any).label?.setFontSize?.(13);
+    clearBtn.setLabelFontSize(13);
     clearBtn.setEnabled(syncLucky || selected !== null);
     picker.add(clearBtn);
 

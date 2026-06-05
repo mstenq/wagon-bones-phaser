@@ -9,7 +9,7 @@ import { UI } from '../../game/Constants';
 import type { EquipmentInstance } from '../../game/ItemsSystem';
 import type { ItemDisplayResult } from '../../game/ItemsSystem';
 import type { RoundHintContext, ItemDisplayContext } from '../../game/displayContext';
-import { ItemCardActionTabs } from './itemCard/ItemCardActionTabs';
+import { createActionTabs, type ActionTabsHandle } from './actionTabs';
 import { ItemCardAuras } from './itemCard/ItemCardAuras';
 import { ItemCardBadges } from './itemCard/ItemCardBadges';
 import { ItemCardChrome } from './itemCard/ItemCardChrome';
@@ -34,7 +34,7 @@ export class ItemCard extends GameObjects.Container {
   private readonly auras: ItemCardAuras;
   private readonly hints: ItemCardHints;
   private readonly tooltip: ItemCardTooltip;
-  private readonly actionTabs: ItemCardActionTabs;
+  private readonly actionTabs: ActionTabsHandle;
 
   constructor(scene: Scene, x: number, y: number, def: CardData, options?: ItemCardOptions) {
     super(scene, x, y);
@@ -71,7 +71,16 @@ export class ItemCard extends GameObjects.Container {
         return { x: matrix.tx, y: matrix.ty };
       },
     );
-    this.actionTabs = new ItemCardActionTabs(scene, this, this.layout);
+    this.actionTabs = createActionTabs({
+      scene,
+      parent: this,
+      layout: {
+        cardW: this.layout.cardW,
+        cardH: this.layout.cardH,
+        cardScale: this.layout.cardScale,
+        tabAnchorX: this.layout.tabAnchorX,
+      },
+    });
 
     this.badges.render(this._equipment);
     if (this._def.aura) this.auras.setup(this._def.aura);
@@ -231,7 +240,7 @@ export class ItemCard extends GameObjects.Container {
   }
 
   getActionTabContainers(): GameObjects.Container[] {
-    return this.actionTabs.getActionTabContainers();
+    return this.actionTabs.getContainers();
   }
 
   destroy(fromScene?: boolean): void {
