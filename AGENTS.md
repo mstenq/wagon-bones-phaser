@@ -105,6 +105,23 @@ Default gameplay sizing (see `GAMEPLAY` in `Constants.ts`): **8 dice rolled**, *
 
 **Scene flow (typical run):** `MainMenu` → `ProfessionSelect` → `DifficultySelect` → `RoundSelect` → `Game` → `Payout` → (`TrailEvent` | `Shop` | `BoosterPack` | `DiceSelection`) → … → `GameOver`.
 
+#### Container input and hit areas (common pitfall)
+
+`GameObjects.Container` always uses a **center transform** (`originX/Y` are fixed at `0.5`). Local `(0, 0)` is the container center, not the top-left corner. Input hit tests add `displayOriginX/Y` (`width * 0.5`, `height * 0.5`) before checking the hit shape.
+
+**Symptom:** clickable/hover area is shifted **up and left** of the visible UI when graphics are drawn from local `(0, 0)` but the hit rect is `new Phaser.Geom.Rectangle(0, 0, w, h)`.
+
+**Fix — pick one pattern and use it consistently:**
+
+| Pattern | Draw children | Hit area | Examples |
+|---------|---------------|----------|----------|
+| **Center-anchored** (preferred for new UI) | `fillRoundedRect(-w / 2, -h / 2, w, h)`; center text at `(0, 0)` | `Rectangle(0, 0, w, h)` | `Button.ts` |
+| **Top-left children** | `fillRoundedRect(0, 0, w, h)`; place content from `(0, 0)` | `Rectangle(w / 2, h / 2, w, h)` | `DicePouch.ts`, `actionTabs.ts` |
+
+Always call `setSize(w, h)` before `setInteractive(...)`. When adding nested interactive containers, apply the same offset rule to the child’s hit rect relative to **its** drawn bounds.
+
+**Scene placement:** if children are top-left drawn, the container’s `(x, y)` is still its transform center in Phaser — the project often places that at the visual top-left and accepts the offset. If you center-draw instead, position the container at the visual center (`topLeft + w/2`, `topLeft + h/2`).
+
 ### Data Layer (`src/data/`)
 
 | Module | Contents |
