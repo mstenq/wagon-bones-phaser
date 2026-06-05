@@ -13,6 +13,8 @@ export type PointerDragSessionHandlers<T> = {
   onDragEnd: (target: T, pointer: Phaser.Input.Pointer) => void;
   /** Touch-only tap when pointer up without crossing drag threshold. */
   onTap?: (target: T, pointer: Phaser.Input.Pointer) => void;
+  /** Pointer up without drag (all pointer types). Takes precedence over onTap when set. */
+  onReleaseWithoutDrag?: (target: T, pointer: Phaser.Input.Pointer) => void;
 };
 
 export type PointerDragSession<T> = {
@@ -66,8 +68,12 @@ export function createPointerDragSession<T>(
       const dragTarget = dragging;
       dragging = null;
       handlers.onDragEnd(dragTarget, pointer);
-    } else if (tapTarget && pointer.wasTouch && handlers.onTap) {
-      handlers.onTap(tapTarget, pointer);
+    } else if (tapTarget) {
+      if (handlers.onReleaseWithoutDrag) {
+        handlers.onReleaseWithoutDrag(tapTarget, pointer);
+      } else if (pointer.wasTouch && handlers.onTap) {
+        handlers.onTap(tapTarget, pointer);
+      }
     }
 
     candidate = null;

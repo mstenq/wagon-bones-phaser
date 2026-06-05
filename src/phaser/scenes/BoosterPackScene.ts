@@ -28,15 +28,13 @@ import { Die } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI, ANIM, DICE } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { DiceSprite } from '../ui/DiceSprite';
+import { createHorizontalDragReorder, type HorizontalDragReorder } from '../ui/horizontalDragReorder';
+import { hitIncludesObjectOrChild, installClickAwayDismiss } from '../ui/clickAwayDismiss';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { addDiceCardVisual } from '../ui/DiceCardVisual';
-import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import { createLayout } from '../ui/SceneLayout';
-import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
-import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
-import { handleStandardConsumableResult } from './consumableResult';
+import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import type { BoosterPackSceneState } from '../../game/store/types';
@@ -83,10 +81,9 @@ export class BoosterPackScene extends Scene {
   private instructionText: Phaser.GameObjects.Text;
 
   // Shared UI
-  private sidebar: Sidebar;
+  private runShell: RunSceneShell | null = null;
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
-  private playbackRunner: PlaybackRunnerHandle | null = null;
 
   // Layout helpers
   private contentCX: number = 0;
@@ -100,22 +97,12 @@ export class BoosterPackScene extends Scene {
   private selectedDiceIds: Set<string> = new Set();
   private lineupY: number = 0;
 
-  // Drag-to-reorder (dice lineup — manual pointer drag, same feel as GameScene)
-  private draggingLineupSprite: DiceSprite | null = null;
-  private lineupDragCandidate: DiceSprite | null = null;
-  private lineupDragPointerId: number | null = null;
-  private lineupWasDragging = false;
-  private lineupDragOffsetX = 0;
-  private lineupDragOffsetY = 0;
-  private lineupDragStartX = 0;
-  private lineupDragStartY = 0;
-  private lineupDragPrevX = 0;
-  private lineupDragVelocityX = 0;
-  private lineupPointerTracking = false;
+  // Drag-to-reorder (dice lineup)
+  private lineupDragReorder!: HorizontalDragReorder<DiceSprite>;
 
   // Active card tab state
   private activeTabCard: CardSprite | null = null;
-  private dismissHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  private dismissClickAway: (() => void) | null = null;
   private pendingUsedCardIndices: number[] = [];
 
   constructor() {
@@ -200,38 +187,116 @@ export class BoosterPackScene extends Scene {
     this.selectedDiceIds = new Set();
     this.activeTabCard = null;
 
+    this.initLineupDragReorder();
+
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
-      this.stopLineupPointerTracking();
+      this.lineupDragReorder.stop();
+      this.clearDismissClickAway();
+      this.runShell?.destroy();
+      this.runShell = null;
     });
 
     this.buildLayout();
   }
 
+  private initLineupDragReorder(): void {
+    this.lineupDragReorder = createHorizontalDragReorder({
+      scene: this,
+      getItems: () => this.lineupSprites,
+      getSlotPositions: (count) => {
+        const positions = this.getLineupRowXPositions(count);
+        return positions.map((x, i) => {
+          const arc = this.getArcOffset(i, count);
+          return { x, y: this.lineupY + arc.y, rotation: arc.rotation };
+        });
+      },
+      canStart: (sprite) => {
+        return !!(this.activeTabCard?.item.diceSelection && !sprite._disabled);
+      },
+      getPointerOffset: (sprite, pointer) => ({
+        x: pointer.worldX - sprite.x,
+        y: pointer.worldY - sprite.y,
+      }),
+      onBegin: (sprite) => {
+        sprite.emit('pointerout');
+        DiceSprite.suppressTooltips = true;
+        sprite.setDepth(30);
+        sprite.scaleX = 1.1;
+        sprite.scaleY = 1.1;
+      },
+      onMoveItem: (sprite, pointer, ctx) => {
+        sprite.rotation = ctx.swing;
+        sprite.x = pointer.worldX - ctx.offsetX;
+        sprite.y = pointer.worldY - ctx.offsetY + ANIM.CARD_DRAG_LIFT_Y;
+      },
+      onReorder: (fromIndex, toIndex) => {
+        const die = this.lineupDice.splice(fromIndex, 1)[0]!;
+        this.lineupDice.splice(toIndex, 0, die);
+        const lockIcon = this.lineupLockIcons.splice(fromIndex, 1)[0]!;
+        this.lineupLockIcons.splice(toIndex, 0, lockIcon);
+      },
+      onSiblingMove: (sibling, index, slot) => {
+        this.tweens.add({
+          targets: sibling,
+          x: slot.x,
+          y: slot.y,
+          rotation: slot.rotation ?? 0,
+          duration: 150,
+          ease: 'Power2',
+        });
+        this.lineupLockIcons[index]?.setPosition(slot.x, slot.y + 46);
+      },
+      getSettleSlot: (_sprite, index, count) => {
+        const positions = this.getLineupRowXPositions(count);
+        const arc = this.getArcOffset(index, count);
+        return {
+          x: positions[index],
+          y: this.lineupY + arc.y,
+          rotation: arc.rotation,
+        };
+      },
+      onSettleStart: (sprite) => {
+        sprite.setDepth(10);
+        DiceSprite.suppressTooltips = false;
+      },
+      onDragEnd: (sprite) => {
+        const idx = this.lineupSprites.indexOf(sprite);
+        const positions = this.getLineupRowXPositions(this.lineupSprites.length);
+        const arc = this.getArcOffset(idx, this.lineupSprites.length);
+        const settleY = this.lineupY + arc.y;
+        this.lineupLockIcons[idx]?.setPosition(positions[idx], settleY + 46);
+      },
+      playSettleSound: true,
+      onReleaseWithoutDrag: (sprite) => {
+        this.onLineupDieClick(sprite);
+      },
+    });
+  }
+
   private buildLayout(): void {
     const { height } = this.scale;
 
-    const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'BOOSTER PACK' });
-    this.sidebar = layout.sidebar;
+    this.runShell?.destroy();
+    this.runShell = createRunSceneShell(this, {
+      layout: { bgKey: null, felt: true, sidebarTitle: 'BOOSTER PACK' },
+      consumableReturnScene: 'BoosterPack',
+      showConsumableFailurePopup: false,
+      autoDestroyOnShutdown: false,
+      canUseConsumable: (def) => def.id !== 'raid' && !this.isPackDiceTargetingPending(),
+      onConsumableUsed: (consumed) => {
+        void this.handleConsumableUsed(consumed);
+      },
+    });
+
+    const layout = this.runShell.layout;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
-    this.consumableBar.setCanUsePredicate((def) => def.id !== 'raid' && !this.isPackDiceTargetingPending());
     this.contentCX = layout.contentCX;
 
     this.equipBar.on('equipment-changed', () => this.updateEquipHints());
     this.consumableBar.on('consumable-changed', () => this.updateEquipHints());
-
-    this.playbackRunner = bindScenePlaybackRunner(this, {
-      scene: this,
-      equipBar: this.equipBar,
-      consumableBar: this.consumableBar,
-      sidebar: this.sidebar,
-    });
-
-    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      void this.handleConsumableUsed(consumed);
-    });
 
     // Show equipment hints
     this.updateEquipHints();
@@ -441,197 +506,14 @@ export class BoosterPackScene extends Scene {
   private wireLineupSpriteInteraction(sprite: DiceSprite): void {
     sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (!this.activeTabCard?.item.diceSelection || sprite._disabled) return;
-
-      this.lineupWasDragging = false;
-      this.lineupDragCandidate = sprite;
-      this.lineupDragPointerId = pointer.id;
-      this.lineupDragOffsetX = pointer.worldX - sprite.x;
-      this.lineupDragOffsetY = pointer.worldY - sprite.y;
-      this.lineupDragStartX = pointer.worldX;
-      this.lineupDragStartY = pointer.worldY;
-      this.lineupDragPrevX = pointer.worldX;
-      this.lineupDragVelocityX = 0;
-      this.startLineupPointerTracking();
+      this.lineupDragReorder.wirePointerDown(sprite, pointer, sprite);
     });
-  }
-
-  private startLineupPointerTracking(): void {
-    if (this.lineupPointerTracking) return;
-    this.lineupPointerTracking = true;
-    this.input.on('pointermove', this.onLineupPointerMove);
-    this.input.on('pointerup', this.onLineupPointerUp);
-  }
-
-  private stopLineupPointerTracking(): void {
-    if (!this.lineupPointerTracking) return;
-    this.lineupPointerTracking = false;
-    this.input.off('pointermove', this.onLineupPointerMove);
-    this.input.off('pointerup', this.onLineupPointerUp);
   }
 
   private cancelLineupDrag(): void {
-    this.draggingLineupSprite = null;
-    this.lineupDragCandidate = null;
-    this.lineupDragPointerId = null;
-    this.lineupDragVelocityX = 0;
+    this.lineupDragReorder.stop();
     DiceSprite.suppressTooltips = false;
-    this.stopLineupPointerTracking();
   }
-
-  private beginLineupDrag(sprite: DiceSprite): void {
-    this.draggingLineupSprite = sprite;
-    this.lineupDragCandidate = null;
-    this.lineupWasDragging = true;
-
-    sprite.emit('pointerout');
-    DiceSprite.suppressTooltips = true;
-    sprite.setDepth(30);
-    sprite.scaleX = 1.1;
-    sprite.scaleY = 1.1;
-  }
-
-  private updateLineupDrag(pointer: Phaser.Input.Pointer): void {
-    if (!this.draggingLineupSprite) return;
-
-    const dx = pointer.worldX - this.lineupDragPrevX;
-    this.lineupDragVelocityX =
-      this.lineupDragVelocityX * ANIM.CARD_DRAG_SWING_DAMPING + dx * (1 - ANIM.CARD_DRAG_SWING_DAMPING);
-    this.lineupDragPrevX = pointer.worldX;
-
-    const swing = Phaser.Math.Clamp(
-      this.lineupDragVelocityX * ANIM.CARD_DRAG_SWING_FACTOR,
-      -ANIM.CARD_DRAG_SWING_MAX,
-      ANIM.CARD_DRAG_SWING_MAX,
-    );
-    this.draggingLineupSprite.rotation = swing;
-    this.draggingLineupSprite.x = pointer.worldX - this.lineupDragOffsetX;
-    this.draggingLineupSprite.y = pointer.worldY - this.lineupDragOffsetY + ANIM.CARD_DRAG_LIFT_Y;
-
-    const list = this.lineupSprites;
-    const positions = this.getLineupRowXPositions(list.length);
-    let newIndex = 0;
-    let minDist = Infinity;
-    for (let i = 0; i < positions.length; i++) {
-      const dist = Math.abs(this.draggingLineupSprite.x - positions[i]);
-      if (dist < minDist) {
-        minDist = dist;
-        newIndex = i;
-      }
-    }
-
-    const currentIndex = list.indexOf(this.draggingLineupSprite);
-    if (newIndex !== currentIndex) {
-      list.splice(currentIndex, 1);
-      list.splice(newIndex, 0, this.draggingLineupSprite);
-
-      const die = this.lineupDice.splice(currentIndex, 1)[0]!;
-      this.lineupDice.splice(newIndex, 0, die);
-
-      const lockIcon = this.lineupLockIcons.splice(currentIndex, 1)[0]!;
-      this.lineupLockIcons.splice(newIndex, 0, lockIcon);
-
-      for (let i = 0; i < list.length; i++) {
-        if (list[i] === this.draggingLineupSprite) continue;
-        const arc = this.getArcOffset(i, list.length);
-        this.tweens.add({
-          targets: list[i],
-          x: positions[i],
-          y: this.lineupY + arc.y,
-          rotation: arc.rotation,
-          duration: 150,
-          ease: 'Power2',
-        });
-        this.lineupLockIcons[i]?.setPosition(positions[i], this.lineupY + arc.y + 46);
-      }
-    }
-  }
-
-  private finishLineupDrag(): void {
-    if (!this.draggingLineupSprite) return;
-
-    const sprite = this.draggingLineupSprite;
-    const finalVelocity = this.lineupDragVelocityX;
-    this.draggingLineupSprite = null;
-    this.lineupDragVelocityX = 0;
-    DiceSprite.suppressTooltips = false;
-
-    sprite.setDepth(10);
-    this.sound.play('sfx_dice_land', { volume: 0.2 });
-
-    const positions = this.getLineupRowXPositions(this.lineupSprites.length);
-    const idx = this.lineupSprites.indexOf(sprite);
-    const arc = this.getArcOffset(idx, this.lineupSprites.length);
-    const settleY = this.lineupY + arc.y;
-
-    const overshoot = Phaser.Math.Clamp(
-      finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
-      -ANIM.CARD_DRAG_SWING_MAX,
-      ANIM.CARD_DRAG_SWING_MAX,
-    );
-    const dur = ANIM.CARD_DRAG_SETTLE_DURATION;
-
-    this.tweens.chain({
-      targets: sprite,
-      tweens: [
-        {
-          x: positions[idx],
-          y: settleY,
-          rotation: overshoot + arc.rotation,
-          scaleX: 1,
-          scaleY: 1,
-          duration: dur * 0.3,
-          ease: 'Sine.easeOut',
-        },
-        {
-          rotation: -overshoot * 0.4 + arc.rotation,
-          duration: dur * 0.25,
-          ease: 'Sine.easeInOut',
-        },
-        {
-          rotation: overshoot * 0.1 + arc.rotation,
-          duration: dur * 0.2,
-          ease: 'Sine.easeInOut',
-        },
-        {
-          rotation: arc.rotation,
-          duration: dur * 0.25,
-          ease: 'Sine.easeIn',
-        },
-      ],
-    });
-
-    this.lineupLockIcons[idx]?.setPosition(positions[idx], settleY + 46);
-  }
-
-  private onLineupPointerMove = (pointer: Phaser.Input.Pointer): void => {
-    if (this.lineupDragPointerId !== null && pointer.id !== this.lineupDragPointerId) return;
-
-    if (!this.draggingLineupSprite && this.lineupDragCandidate) {
-      const dx = pointer.worldX - this.lineupDragStartX;
-      const dy = pointer.worldY - this.lineupDragStartY;
-      if (Math.hypot(dx, dy) < 8) return;
-      this.beginLineupDrag(this.lineupDragCandidate);
-    }
-
-    this.updateLineupDrag(pointer);
-  };
-
-  private onLineupPointerUp = (pointer: Phaser.Input.Pointer): void => {
-    if (this.lineupDragPointerId !== null && pointer.id !== this.lineupDragPointerId) return;
-
-    const candidate = this.lineupDragCandidate;
-    const wasDragging = this.lineupWasDragging;
-
-    if (this.draggingLineupSprite) {
-      this.finishLineupDrag();
-    } else if (candidate && !wasDragging) {
-      this.onLineupDieClick(candidate);
-    }
-
-    this.lineupDragCandidate = null;
-    this.lineupDragPointerId = null;
-    this.stopLineupPointerTracking();
-  };
 
   private onLineupDieClick(sprite: DiceSprite): void {
     if (!this.activeTabCard) return;
@@ -873,33 +755,7 @@ export class BoosterPackScene extends Scene {
       }
 
       // Install click-away dismiss
-      this.time.delayedCall(50, () => {
-        if (this.dismissHandler) {
-          this.input.off('pointerdown', this.dismissHandler);
-        }
-        this.dismissHandler = (pointer: Phaser.Input.Pointer) => {
-          const hitObjects = this.input.hitTestPointer(pointer);
-          // Don't dismiss if clicking the active card, its children, or lineup dice
-          if (this.activeTabCard) {
-            const activeContainer = this.activeTabCard.container;
-            if (hitObjects.includes(activeContainer)) return;
-            for (const go of hitObjects) {
-              if (go.parentContainer && go.parentContainer === activeContainer) return;
-              // Check if clicking an ItemCard's action tab
-              if (this.activeTabCard.itemCard && go.parentContainer === this.activeTabCard.itemCard) return;
-            }
-          }
-          // Don't dismiss if clicking lineup dice
-          for (const ds of this.lineupSprites) {
-            if (hitObjects.includes(ds)) return;
-            for (const go of hitObjects) {
-              if (go.parentContainer && go.parentContainer === ds) return;
-            }
-          }
-          this.dismissActiveTab();
-        };
-        this.input.on('pointerdown', this.dismissHandler);
-      });
+      this.installActionTabClickAway();
     };
 
     container.on('pointerup', clickHandler);
@@ -1101,10 +957,34 @@ export class BoosterPackScene extends Scene {
       this.activeTabCard = null;
     }
 
-    if (this.dismissHandler) {
-      this.input.off('pointerdown', this.dismissHandler);
-      this.dismissHandler = null;
+    this.clearDismissClickAway();
+  }
+
+  private clearDismissClickAway(): void {
+    if (this.dismissClickAway) {
+      this.dismissClickAway();
+      this.dismissClickAway = null;
     }
+  }
+
+  private installActionTabClickAway(): void {
+    this.clearDismissClickAway();
+    this.dismissClickAway = installClickAwayDismiss(this, {
+      isInside: (hitObjects) => {
+        if (this.activeTabCard) {
+          const activeContainer = this.activeTabCard.container;
+          if (hitIncludesObjectOrChild(hitObjects, activeContainer)) return true;
+          if (this.activeTabCard.itemCard && hitIncludesObjectOrChild(hitObjects, this.activeTabCard.itemCard)) {
+            return true;
+          }
+        }
+        for (const ds of this.lineupSprites) {
+          if (hitIncludesObjectOrChild(hitObjects, ds)) return true;
+        }
+        return false;
+      },
+      onDismiss: () => this.dismissActiveTab(),
+    });
   }
 
   private clearLineupSelections(): void {
@@ -1144,15 +1024,12 @@ export class BoosterPackScene extends Scene {
     if (itemCard) {
       // ItemCard manages its own tabs — we need to find them
       // The tabs are children of the ItemCard container; adjust their alpha
-      const tabContainers = (itemCard as any).actionTabs as { container: Phaser.GameObjects.Container }[] | undefined;
-      if (tabContainers) {
-        for (const tab of tabContainers) {
-          tab.container.setAlpha(enabled ? 1 : 0.4);
-          if (enabled) {
-            tab.container.setInteractive();
-          } else {
-            tab.container.disableInteractive();
-          }
+      for (const tab of itemCard.getActionTabContainers()) {
+        tab.setAlpha(enabled ? 1 : 0.4);
+        if (enabled) {
+          tab.setInteractive();
+        } else {
+          tab.disableInteractive();
         }
       }
     } else {
@@ -1295,7 +1172,7 @@ export class BoosterPackScene extends Scene {
     const finishUse = () => this.finishUseCard(sprite, equipmentPopInCount);
 
     if (queuedPlayback) {
-      void this.playbackRunner
+      void this.runShell?.playbackRunner
         ?.drainMatching(
           (cmd) =>
             cmd.kind === 'consumable-playback' ||
@@ -1447,7 +1324,7 @@ export class BoosterPackScene extends Scene {
     }
     this.cardSprites = [];
     this.activeTabCard = null;
-    this.dismissHandler = null;
+    this.clearDismissClickAway();
     this.children.removeAll(true);
     this.buildLayout();
   }
@@ -1481,6 +1358,6 @@ export class BoosterPackScene extends Scene {
       this.sound.play('sfx_cancel', { volume: 0.5 });
     }
 
-    handleStandardConsumableResult(this, this.sidebar, result, 'BoosterPack');
+    this.runShell?.handleConsumableResult(result);
   }
 }

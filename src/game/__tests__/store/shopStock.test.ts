@@ -3,7 +3,15 @@ import { getRunState, runActions } from '../../store/runStore';
 import { getSceneState, sceneActions } from '../../store/sceneStore';
 import { setupActions } from '../../store/actions/setupActions';
 import { economyActions } from '../../store/actions/economyActions';
-import { generateNewShopState, generateShopStockRows, shopRowsToStored } from '../../store/shopStock';
+import {
+  generateNewShopState,
+  generateShopStockRows,
+  shopRowsToStored,
+  buildShopDieDisplayDef,
+  DICE_SHOP_COST,
+} from '../../store/shopStock';
+import { createDie } from '../../DiceSystem';
+import { getItemDisplayContext } from '../../displayContext';
 import { shopSceneActions } from '../../store/actions/shopSceneActions';
 import { selectShopStockRevision } from '../../store/selectors/sceneSelectors';
 import { initRunRng } from '../../RunRng';
@@ -151,5 +159,38 @@ describe('shopStock', () => {
     expect(diceSeen).toBeGreaterThan(0);
     expect(auraDiceSeen).toBeGreaterThan(0);
     expect(nonAuraDiceSeen).toBeGreaterThan(0);
+  });
+});
+
+describe('buildShopDieDisplayDef', () => {
+  test('plain die uses default name and description', () => {
+    const die = createDie();
+    const displayDef = buildShopDieDisplayDef(die);
+    expect(displayDef.name).toBe('Die');
+    expect(displayDef.cost).toBe(DICE_SHOP_COST);
+    const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
+    expect(tooltip).toBe('Standard die');
+  });
+
+  test('enhanced die includes enhancement description in tooltip', () => {
+    const die = createDie({ enhancement: 'gold' });
+    const displayDef = buildShopDieDisplayDef(die);
+    expect(displayDef.name).toBe('Gold Die');
+    const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
+    expect(tooltip).toContain('Earn $3 when dice is not scored at end of round');
+  });
+
+  test('stickered die appends sticker line to tooltip', () => {
+    const die = createDie({ enhancement: 'steel', sticker: 'purple_flower' });
+    const displayDef = buildShopDieDisplayDef(die);
+    const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
+    expect(tooltip).toContain('Sticker: Purple Flower');
+  });
+
+  test('shop die display id is tied to die instance', () => {
+    const die = createDie({ enhancement: 'lucky' });
+    const displayDef = buildShopDieDisplayDef(die);
+    expect(displayDef.id).toBe(`shop_die_${die.id}`);
+    expect(displayDef.cost).toBe(5);
   });
 });

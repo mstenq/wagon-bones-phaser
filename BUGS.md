@@ -5,6 +5,7 @@
 - disabled dice should not count when held in hand (steel dice that are disabled by boss should not trigger)
 - you can double click trail upgrade cards in packs (Or even more) to keep upgrading a hand while the animation plays. Need to disable the button after first press.
 - bad water event only gives "drink it" as an option which is lame.
+- dice pouch button hit target is up and to the left of where it should be.
 
 ## New Feature Ideas
 - new permits for luck:

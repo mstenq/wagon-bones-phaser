@@ -6,8 +6,6 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
-import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
-import { canUseConsumableInShop } from '../../game/facade/consumable';
 import { getRunState } from '../../game/store';
 import { selectProfession, selectStoryVictoryOffered } from '../../game/store/selectors/runSelectors';
 import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
@@ -17,13 +15,10 @@ import { Button } from '../ui/Button';
 import { buildVictoryGameOverData } from './GameOver';
 import { recordStoryVictory } from '../../game/UserStats';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
-import { createLayout, type LayoutResult } from '../ui/SceneLayout';
+import type { LayoutResult } from '../ui/SceneLayout';
 import type { DecimalSource } from '../../game/decimal';
 import type { PayoutBreakdown, PayoutPresentationState } from '../../game/store/types';
-import { ConsumableBar } from '../ui/ConsumableBar';
-import { Sidebar } from '../ui/Sidebar';
-import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
-import { handleStandardConsumableResult } from './consumableResult';
+import { createRunSceneShell } from './runSceneShell';
 import { consumeAndStartImmediatePackOpens } from './immediatePackFlow';
 
 export interface PayoutData {
@@ -52,9 +47,6 @@ function presentationToView(p: PayoutPresentationState): PayoutData {
 }
 
 export class PayoutScene extends Scene {
-  private consumableBar: ConsumableBar;
-  private sidebar: Sidebar;
-
   constructor() {
     super('Payout');
   }
@@ -72,20 +64,11 @@ export class PayoutScene extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
 
-    const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'PAYOUT' });
-    this.sidebar = layout.sidebar;
-    this.consumableBar = layout.consumableBar;
-    this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
-    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      this.handleConsumableUsed(consumed);
+    const shell = createRunSceneShell(this, {
+      layout: { bgKey: null, felt: true, sidebarTitle: 'PAYOUT' },
+      consumableReturnScene: 'Payout',
     });
-    bindScenePlaybackRunner(this, {
-      scene: this,
-      equipBar: layout.equipBar,
-      consumableBar: layout.consumableBar,
-      sidebar: layout.sidebar,
-    });
-    this.buildPayoutPanel(layout, payout, data, investmentBonus);
+    this.buildPayoutPanel(shell.layout, payout, data, investmentBonus);
 
     EventBus.emit(Events.SCENE_READY, this);
   }
@@ -305,18 +288,5 @@ export class PayoutScene extends Scene {
 
   private onResize(): void {
     this.scene.restart({});
-  }
-
-  private handleConsumableUsed(consumed: ConsumableInstance): void {
-    const result = gameFacade.consumable.use(consumed);
-    this.handleConsumableResult(result);
-  }
-
-  private handleConsumableResult(result: UseConsumableResult): void {
-    handleStandardConsumableResult(this, this.sidebar, result, 'Payout', {
-      x: this.consumableBar.x + this.consumableBar.width / 2,
-      y: this.consumableBar.y,
-      sound: () => this.sound.play('sfx_cancel', { volume: 0.5 }),
-    });
   }
 }

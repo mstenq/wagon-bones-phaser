@@ -6,6 +6,8 @@ import { rollDiceAura } from '../auraRng';
 import { createDie } from '../DiceSystem';
 import type { Die } from '../types';
 import { generateShopStock, type EquipmentDef } from '../ItemsSystem';
+import diceEnhancements from '../../data/dice_enhancements';
+import pipEnhancements from '../../data/pip_enhancements';
 import {
   getRandomSupplyDef,
   getRandomTrailGuideDef,
@@ -29,6 +31,36 @@ import type { RunState, ShopSceneState, StoredShopItem } from './types';
 import { selectIsFirstShopVisit } from './selectors/runSelectors';
 
 const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded'];
+
+/** Fixed shop price for dice stock rows (enhanced / stickered dice from permits). */
+export const DICE_SHOP_COST = 5;
+
+const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
+const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
+
+/** Equipment-shaped display metadata for shop dice cards (name, cost, tooltip). */
+export function buildShopDieDisplayDef(die: Die): EquipmentDef {
+  const enhInfo = die.enhancement ? ENHANCEMENT_INFO.get(die.enhancement) : null;
+  const name = enhInfo ? `${enhInfo.name} Die` : 'Die';
+  const descParts = [enhInfo?.description ?? 'Standard die'];
+  if (die.sticker) {
+    const stickerInfo = STICKER_INFO.get(die.sticker);
+    if (stickerInfo) descParts.push(`Sticker: ${stickerInfo.name}`);
+  }
+  const tooltipText = descParts.join('\n');
+  return {
+    id: `shop_die_${die.id}`,
+    name,
+    cost: DICE_SHOP_COST,
+    rarity: 'uncommon',
+    effectType: 'DICE',
+    effectParams: {},
+    display: () => ({
+      hint: [],
+      tooltip: [[{ text: tooltipText, style: 'text' }]],
+    }),
+  };
+}
 /** Mutable row used while generating / tagging shop stock (equipment tag helpers need defs). */
 export interface ShopStockGenRow {
   type: 'equipment' | 'consumable' | 'dice';

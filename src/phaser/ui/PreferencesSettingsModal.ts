@@ -1,9 +1,8 @@
 // ─── PreferencesSettingsModal ───
 // Gameplay toggles; persisted via GameplayPreferences.
 
-import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { TEXT_COLORS, FONTS } from '../../game/Constants';
 import {
   getGameplayPreferences,
   setGameplayPreferences,
@@ -11,105 +10,29 @@ import {
 } from '../../game/GameplayPreferences';
 import { Button } from './Button';
 import { DiceSprite } from './DiceSprite';
-import { OptionsModal } from './OptionsModal';
+import { TOGGLE_CHECKBOX_HIT, ToggleCheckbox } from './ToggleCheckbox';
+import { bringModalInteractivesToTop, createModalBackButton, createModalShell, finalizeModal } from './modalShell';
 
-const CHECK_HIT = 32;
-const CHECK_DRAW = 22;
-
-class ToggleCheckbox extends GameObjects.Container {
-  private box: GameObjects.Graphics;
-  private check: GameObjects.Graphics;
-  private hitZone: Phaser.GameObjects.Zone;
-  private _checked = false;
-  private onChangeCallback: ((checked: boolean) => void) | null = null;
-
-  constructor(scene: Scene, x: number, y: number) {
-    super(scene, x, y);
-
-    this.box = scene.add.graphics();
-    this.check = scene.add.graphics();
-    this.hitZone = scene.add.zone(0, 0, CHECK_HIT, CHECK_HIT);
-
-    this.add([this.box, this.check, this.hitZone]);
-
-    this.box.disableInteractive();
-    this.check.disableInteractive();
-
-    this.hitZone.setInteractive({ useHandCursor: true });
-    this.hitZone.on('pointerdown', () => {
-      this.setChecked(!this._checked);
-      this.onChangeCallback?.(this._checked);
-    });
-
-    this.redraw();
-  }
-
-  onChange(cb: (checked: boolean) => void): this {
-    this.onChangeCallback = cb;
-    return this;
-  }
-
-  setChecked(checked: boolean): this {
-    this._checked = checked;
-    this.redraw();
-    return this;
-  }
-
-  private redraw(): void {
-    const half = CHECK_DRAW / 2;
-    this.box.clear();
-    this.box.fillStyle(this._checked ? COLORS.SCORE_GREEN : COLORS.BTN_DEFAULT, 1);
-    this.box.fillRoundedRect(-half, -half, CHECK_DRAW, CHECK_DRAW, 4);
-    this.box.lineStyle(1, UI.MODAL_BORDER, 1);
-    this.box.strokeRoundedRect(-half, -half, CHECK_DRAW, CHECK_DRAW, 4);
-
-    this.check.clear();
-    if (this._checked) {
-      this.check.lineStyle(3, 0xffffff, 1);
-      this.check.beginPath();
-      this.check.moveTo(-6, 0);
-      this.check.lineTo(-2, 5);
-      this.check.lineTo(7, -6);
-      this.check.strokePath();
-    }
-  }
+export interface PreferencesSettingsModalOptions {
+  onBack: () => void;
 }
 
 export class PreferencesSettingsModal extends GameObjects.Container {
-  constructor(scene: Scene, contentX: number, width: number, height: number) {
+  constructor(scene: Scene, contentX: number, width: number, height: number, options: PreferencesSettingsModalOptions) {
     super(scene, 0, 0);
 
-    const panelW = Math.min(width - 40, 420);
-    const panelH = 360;
-    const panelX = contentX + (width - panelW) / 2;
-    const panelY = (height - panelH) / 2;
-    const labelX = panelX + 32;
-    const controlRight = panelX + panelW - 32;
+    const { layout, dim, panel, title } = createModalShell(scene, 'Preferences', {
+      contentX,
+      width,
+      height,
+      panelHeight: 360,
+    });
+    const { labelX, controlRight } = layout;
 
-    const dim = scene.add.graphics();
-    dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
-    dim.fillRect(0, 0, scene.scale.width, height);
-    dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
-    this.add(dim);
-
-    const panel = scene.add.graphics();
-    panel.fillStyle(UI.MODAL_BG, 1);
-    panel.fillRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
-    panel.lineStyle(2, UI.MODAL_BORDER, 1);
-    panel.strokeRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
-    this.add(panel);
-
-    const title = scene.add
-      .text(panelX + panelW / 2, panelY + 28, 'Preferences', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '24px',
-        color: TEXT_COLORS.GOLD,
-      })
-      .setOrigin(0.5);
-    this.add(title);
+    this.add([dim, panel, title]);
 
     const prefs = getGameplayPreferences();
-    const rowY = panelY + 88;
+    const rowY = layout.panelY + 88;
 
     const autoRollLabel = scene.add.text(labelX, rowY, 'Auto Roll First Hand', {
       fontFamily: FONTS.PRIMARY,
@@ -123,12 +46,12 @@ export class PreferencesSettingsModal extends GameObjects.Container {
       fontFamily: FONTS.PRIMARY,
       fontSize: '13px',
       color: TEXT_COLORS.MUTED,
-      wordWrap: { width: panelW - 100 },
+      wordWrap: { width: layout.panelW - 100 },
     });
     autoRollHint.setOrigin(0, 0);
     this.add(autoRollHint);
 
-    const autoRollCheckbox = new ToggleCheckbox(scene, controlRight - CHECK_HIT / 2, rowY).setChecked(
+    const autoRollCheckbox = new ToggleCheckbox(scene, controlRight - TOGGLE_CHECKBOX_HIT / 2, rowY).setChecked(
       prefs.autoRollFirstHand,
     );
     autoRollCheckbox.onChange((checked) => this.updatePref({ autoRollFirstHand: checked }));
@@ -151,37 +74,26 @@ export class PreferencesSettingsModal extends GameObjects.Container {
         fontFamily: FONTS.PRIMARY,
         fontSize: '13px',
         color: TEXT_COLORS.MUTED,
-        wordWrap: { width: panelW - 100 },
+        wordWrap: { width: layout.panelW - 100 },
       },
     );
     stickerHint.setOrigin(0, 0);
     this.add(stickerHint);
 
-    const stickerCheckbox = new ToggleCheckbox(scene, controlRight - CHECK_HIT / 2, stickerRowY).setChecked(
+    const stickerCheckbox = new ToggleCheckbox(scene, controlRight - TOGGLE_CHECKBOX_HIT / 2, stickerRowY).setChecked(
       prefs.stationaryStickers,
     );
     stickerCheckbox.onChange((checked) => this.updatePref({ stationaryStickers: checked }));
     this.add(stickerCheckbox);
 
-    const backBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 36, 'Back', 120, 34);
-    backBtn.onClick(() => {
+    const backBtn = createModalBackButton(scene, layout, () => {
       this.destroy();
-      new OptionsModal(scene, contentX, width, height);
+      options.onBack();
     });
     this.add(backBtn);
 
-    this.bringInteractiveToTop();
-
-    this.setDepth(500);
-    scene.add.existing(this);
-  }
-
-  private bringInteractiveToTop(): void {
-    for (const child of this.list) {
-      if (child instanceof ToggleCheckbox || child instanceof Button) {
-        this.bringToTop(child);
-      }
-    }
+    bringModalInteractivesToTop(this, ToggleCheckbox, Button);
+    finalizeModal(this, scene);
   }
 
   private updatePref(change: Partial<GameplayPreferences>): void {

@@ -6,10 +6,9 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
-import type { ConsumableDef, ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
+import type { ConsumableDef, UseConsumableResult } from '../../game/facade/consumable';
 import {
   canBuyAndUseConsumableInShop,
-  canUseConsumableInShop,
   getConsumableAtlasKey,
   getRandomSupplyDef,
   getRandomTrailGuideDef,
@@ -34,11 +33,10 @@ import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
-import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
-import { createLayout } from '../ui/SceneLayout';
-import { handleStandardConsumableResult } from './consumableResult';
+import { hitIncludesObjectOrChild, installClickAwayDismiss } from '../ui/clickAwayDismiss';
+import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import {
   PermitDef,
   generateShopPermit,
@@ -47,8 +45,6 @@ import {
   hasPermitDiceInShop,
 } from '../../game/PermitsSystem';
 import { Die } from '../../game/types';
-import diceEnhancements from '../../data/dice_enhancements';
-import pipEnhancements from '../../data/pip_enhancements';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
 import { type SerializedShopItem, serializeEquipmentInstance, deserializeEquipmentInstance } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
@@ -56,10 +52,9 @@ import { getRunState, runActions, runStore } from '../../game/store/runStore';
 import { sceneStore } from '../../game/store/sceneStore';
 import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../game/store/selectors/sceneSelectors';
 import { bindStore } from '../store/subscribe';
-import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
 import type { ShopSceneState } from '../../game/store/types';
 import { rngFloat } from '../../game/RunRng';
-import { generateShopDie } from '../../game/store/shopStock';
+import { buildShopDieDisplayDef, generateShopDie } from '../../game/store/shopStock';
 
 const CARD_SPACING = 185;
 
@@ -68,32 +63,6 @@ type ShopItem =
   | { type: 'equipment'; def: EquipmentDef; preview: EquipmentInstance; sold?: boolean }
   | { type: 'consumable'; def: ConsumableDef; sold?: boolean }
   | { type: 'dice'; die: Die; displayDef: EquipmentDef; sold?: boolean };
-
-const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
-const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
-const DICE_SHOP_COST = 5;
-
-function buildShopDieDisplayDef(die: Die): EquipmentDef {
-  const enhInfo = die.enhancement ? ENHANCEMENT_INFO.get(die.enhancement) : null;
-  const name = enhInfo ? `${enhInfo.name} Die` : 'Die';
-  const descParts = [enhInfo?.description ?? 'Standard die'];
-  if (die.sticker) {
-    const stickerInfo = STICKER_INFO.get(die.sticker);
-    if (stickerInfo) descParts.push(`Sticker: ${stickerInfo.name}`);
-  }
-  return {
-    id: `shop_die_${die.id}`,
-    name,
-    cost: DICE_SHOP_COST,
-    rarity: 'uncommon' as string,
-    effectType: 'DICE',
-    effectParams: {},
-    display: () => ({
-      hint: [],
-      tooltip: [[{ text: descParts.join('\n'), style: 'text' }]],
-    }),
-  } as unknown as EquipmentDef;
-}
 
 export class ShopScene extends Scene {
   private stockItems: ShopItem[];
@@ -110,10 +79,10 @@ export class ShopScene extends Scene {
 
   // Action tab state (shop card click-to-buy)
   private activeTabCard: ItemCard | null = null;
-  private dismissHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  private dismissClickAway: (() => void) | null = null;
 
   // Shared UI
-  private sidebar: Sidebar;
+  private runShell: RunSceneShell | null = null;
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
 
@@ -208,6 +177,9 @@ export class ShopScene extends Scene {
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
       this.tearDownShopSubscriptions();
+      this.clearDismissClickAway();
+      this.runShell?.destroy();
+      this.runShell = null;
       this.stockItems = null!;
       this.packs = null!;
     });
@@ -224,11 +196,16 @@ export class ShopScene extends Scene {
     const trailGuidesFree = selectTrailGuidesFree(run);
     const bonusPermit = run.bonusShopPermitId ? getPermitById(run.bonusShopPermitId) : null;
 
-    const layout = createLayout(this, { bgKey: 'bg_shop', sidebarTitle: 'SHOP' });
-    this.sidebar = layout.sidebar;
+    this.runShell?.destroy();
+    this.runShell = createRunSceneShell(this, {
+      layout: { bgKey: 'bg_shop', sidebarTitle: 'SHOP' },
+      consumableReturnScene: 'Shop',
+      autoDestroyOnShutdown: false,
+    });
+
+    const layout = this.runShell.layout;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
-    this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
     const contentL = layout.contentX;
     const contentW = layout.contentW;
 
@@ -238,17 +215,6 @@ export class ShopScene extends Scene {
 
     this.consumableBar.on('consumable-changed', () => {
       this.updateEquipHints();
-    });
-
-    bindScenePlaybackRunner(this, {
-      scene: this,
-      equipBar: this.equipBar,
-      consumableBar: this.consumableBar,
-      sidebar: this.sidebar,
-    });
-
-    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      void this.handleConsumableUsed(consumed);
     });
 
     // Show equipment hints with default (shop) context
@@ -581,20 +547,22 @@ export class ShopScene extends Scene {
       this.activeTabCard = card;
 
       // Install click-away dismiss
-      this.time.delayedCall(50, () => {
-        if (this.dismissHandler) {
-          this.input.off('pointerdown', this.dismissHandler);
-        }
-        this.dismissHandler = (pointer: Phaser.Input.Pointer) => {
-          const hitObjects = this.input.hitTestPointer(pointer);
-          if (this.activeTabCard && hitObjects.includes(this.activeTabCard)) return;
-          for (const go of hitObjects) {
-            if (go.parentContainer && this.activeTabCard && go.parentContainer === this.activeTabCard) return;
-          }
-          this.dismissActiveTab();
-        };
-        this.input.on('pointerdown', this.dismissHandler);
-      });
+      this.installActionTabClickAway();
+    });
+  }
+
+  private clearDismissClickAway(): void {
+    if (this.dismissClickAway) {
+      this.dismissClickAway();
+      this.dismissClickAway = null;
+    }
+  }
+
+  private installActionTabClickAway(): void {
+    this.clearDismissClickAway();
+    this.dismissClickAway = installClickAwayDismiss(this, {
+      isInside: (hitObjects) => hitIncludesObjectOrChild(hitObjects, this.activeTabCard),
+      onDismiss: () => this.dismissActiveTab(),
     });
   }
 
@@ -617,23 +585,11 @@ export class ShopScene extends Scene {
 
       this.activeTabCard = null;
     }
-    if (this.dismissHandler) {
-      this.input.off('pointerdown', this.dismissHandler);
-      this.dismissHandler = null;
-    }
-  }
-
-  private handleConsumableUsed(consumed: ConsumableInstance): void {
-    const result = gameFacade.consumable.use(consumed);
-    this.handleConsumableResult(result);
+    this.clearDismissClickAway();
   }
 
   private handleConsumableResult(result: UseConsumableResult): void {
-    handleStandardConsumableResult(this, this.sidebar, result, 'Shop', {
-      x: this.consumableBar.x + this.consumableBar.width / 2,
-      y: this.consumableBar.y,
-      sound: () => this.sound.play('sfx_cancel', { volume: 0.5 }),
-    });
+    this.runShell?.handleConsumableResult(result);
   }
 
   /** Show a brief floating text popup above a card with a cancel sound */
@@ -1236,20 +1192,7 @@ export class ShopScene extends Scene {
       card.showActionTabs(tabs);
       this.activeTabCard = card;
 
-      this.time.delayedCall(50, () => {
-        if (this.dismissHandler) {
-          this.input.off('pointerdown', this.dismissHandler);
-        }
-        this.dismissHandler = (pointer: Phaser.Input.Pointer) => {
-          const hitObjects = this.input.hitTestPointer(pointer);
-          if (this.activeTabCard && hitObjects.includes(this.activeTabCard)) return;
-          for (const go of hitObjects) {
-            if (go.parentContainer && this.activeTabCard && go.parentContainer === this.activeTabCard) return;
-          }
-          this.dismissActiveTab();
-        };
-        this.input.on('pointerdown', this.dismissHandler);
-      });
+      this.installActionTabClickAway();
     });
   }
 

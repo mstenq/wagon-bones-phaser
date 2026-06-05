@@ -7,7 +7,8 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI, ANIM } from '../../game/Constants';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
-import { createPointerDragSession, type PointerDragSession } from './pointerDragSession';
+import { hitIncludesObjectOrChild, installClickAwayDismiss } from './clickAwayDismiss';
+import { createHorizontalDragReorder, type HorizontalDragReorder } from './horizontalDragReorder';
 
 const CARD_VERTICAL_OFFSET = 20;
 
@@ -26,13 +27,8 @@ export abstract class CardBar extends GameObjects.Container {
   // Drag state (manual pointer tracking — Phaser setDraggable is unreliable on touch)
   private draggingCard: ItemCard | null = null;
   private dragSettling: boolean = false;
-  private dragStartIndex: number = -1;
-  private dragOffsetX: number = 0;
-  private dragOffsetY: number = 0;
-  private dragPrevX: number = 0;
-  private dragVelocityX: number = 0;
   private cardDragMoved: boolean = false;
-  private cardDragSession: PointerDragSession<ItemCard>;
+  private cardDragReorder: HorizontalDragReorder<ItemCard>;
 
   // Per-card wobble tweens
   private wobbleTweens: Phaser.Tweens.Tween[] = [];
@@ -47,7 +43,7 @@ export abstract class CardBar extends GameObjects.Container {
 
   // Action tab state
   private activeTabCard: ItemCard | null = null;
-  private dismissHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  private dismissClickAway: (() => void) | null = null;
 
   constructor(scene: Scene, x: number, y: number, width: number, height: number) {
     super(scene, x, y);
@@ -73,20 +69,42 @@ export abstract class CardBar extends GameObjects.Container {
     this.setDepth(150);
     scene.add.existing(this);
 
-    this.cardDragSession = createPointerDragSession(scene, {
-      canStart: (card) => this.canStartCardDrag(card),
-      onPress: (card, pointer) => {
-        this.dragOffsetX = pointer.worldX - (this.x + card.x);
-        this.dragOffsetY = pointer.worldY - (this.y + card.y);
-        this.dragPrevX = pointer.worldX;
-        this.dragVelocityX = 0;
+    this.cardDragReorder = createHorizontalDragReorder({
+      scene,
+      getItems: () => this.cards,
+      getSlotPositions: (count) => {
+        const positions = this.getCardXPositions(count);
+        const cy = this.barHeight / 2 - CARD_VERTICAL_OFFSET;
+        return positions.map((x) => ({ x, y: cy, rotation: 0 }));
       },
-      onBeginDrag: (card) => {
+      canStart: (card) => this.canStartCardDrag(card),
+      getPointerOffset: (card, pointer) => ({
+        x: pointer.worldX - (this.x + card.x),
+        y: pointer.worldY - (this.y + card.y),
+      }),
+      onBegin: (card) => {
         this.cardDragMoved = true;
         this.beginCardDrag(card);
       },
-      onDragMove: (_card, pointer) => this.updateCardDrag(pointer),
-      onDragEnd: () => this.finishCardDrag(),
+      onMoveItem: (card, pointer, ctx) => {
+        card.rotation = ctx.swing;
+        card.y = pointer.worldY - this.y - ctx.offsetY;
+        card.x = pointer.worldX - this.x - ctx.offsetX;
+      },
+      onSettleStart: (card) => {
+        card.setDepth(0);
+        this.applyCardDepths();
+        this.draggingCard = null;
+        this.dragSettling = true;
+      },
+      onSettleComplete: (card, fromIndex, toIndex) => {
+        if (fromIndex !== toIndex) {
+          this.onReorder(fromIndex, toIndex);
+        }
+        this.dragSettling = false;
+        this.setAllCardTooltipsSuppressed(false);
+        this.resumeWobble(card);
+      },
       onTap: (card) => {
         const index = this.cards.indexOf(card);
         if (index !== -1) this.openActionTabsForCard(card, index);
@@ -95,15 +113,12 @@ export abstract class CardBar extends GameObjects.Container {
   }
 
   destroy(fromScene?: boolean): void {
-    this.cardDragSession.stop();
+    this.cardDragReorder.stop();
     if (this.moveHandler) {
       this.scene.input.off('pointermove', this.moveHandler);
       this.moveHandler = null;
     }
-    if (this.dismissHandler) {
-      this.scene.input.off('pointerdown', this.dismissHandler);
-      this.dismissHandler = null;
-    }
+    this.clearDismissClickAway();
     super.destroy(fromScene);
   }
 
@@ -337,20 +352,18 @@ export abstract class CardBar extends GameObjects.Container {
     card.showActionTabs(tabs);
     this.activeTabCard = card;
 
-    this.scene.time.delayedCall(50, () => {
-      if (this.dismissHandler) {
-        this.scene.input.off('pointerdown', this.dismissHandler);
-      }
-      this.dismissHandler = (pointer: Phaser.Input.Pointer) => {
-        const hitObjects = this.scene.input.hitTestPointer(pointer);
-        if (this.activeTabCard && hitObjects.includes(this.activeTabCard)) return;
-        for (const go of hitObjects) {
-          if (go.parentContainer && this.activeTabCard && go.parentContainer === this.activeTabCard) return;
-        }
-        this.dismissActiveTab();
-      };
-      this.scene.input.on('pointerdown', this.dismissHandler);
+    this.clearDismissClickAway();
+    this.dismissClickAway = installClickAwayDismiss(this.scene, {
+      isInside: (hitObjects) => hitIncludesObjectOrChild(hitObjects, this.activeTabCard),
+      onDismiss: () => this.dismissActiveTab(),
     });
+  }
+
+  private clearDismissClickAway(): void {
+    if (this.dismissClickAway) {
+      this.dismissClickAway();
+      this.dismissClickAway = null;
+    }
   }
 
   // ─── Sell Animation ───
@@ -385,10 +398,7 @@ export abstract class CardBar extends GameObjects.Container {
   protected beginCardRemoval(card: ItemCard): void {
     card.prepareForRemoval();
     this.activeTabCard = null;
-    if (this.dismissHandler) {
-      this.scene.input.off('pointerdown', this.dismissHandler);
-      this.dismissHandler = null;
-    }
+    this.clearDismissClickAway();
   }
 
   private dismissActiveTab(): void {
@@ -414,10 +424,7 @@ export abstract class CardBar extends GameObjects.Container {
 
       this.activeTabCard = null;
     }
-    if (this.dismissHandler) {
-      this.scene.input.off('pointerdown', this.dismissHandler);
-      this.dismissHandler = null;
-    }
+    this.clearDismissClickAway();
   }
 
   // ─── Drag-to-Reorder ───
@@ -462,7 +469,7 @@ export abstract class CardBar extends GameObjects.Container {
   private setupCardDragPointerDown(card: ItemCard): void {
     card.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.cardDragMoved = false;
-      this.cardDragSession.start(card, pointer, card);
+      this.cardDragReorder.wirePointerDown(card, pointer, card);
     });
   }
 
@@ -476,7 +483,6 @@ export abstract class CardBar extends GameObjects.Container {
     }
 
     this.draggingCard = card;
-    this.dragStartIndex = idx;
 
     this.dismissActiveTab();
     this.setAllCardTooltipsSuppressed(true);
@@ -486,114 +492,5 @@ export abstract class CardBar extends GameObjects.Container {
     this.bringToTop(card);
     card.scaleX = 1.03;
     card.scaleY = 1.03;
-  }
-
-  private updateCardDrag(pointer: Phaser.Input.Pointer): void {
-    if (!this.draggingCard) return;
-
-    const dx = pointer.worldX - this.dragPrevX;
-    this.dragVelocityX = this.dragVelocityX * ANIM.CARD_DRAG_SWING_DAMPING + dx * (1 - ANIM.CARD_DRAG_SWING_DAMPING);
-    this.dragPrevX = pointer.worldX;
-
-    const swing = Phaser.Math.Clamp(
-      this.dragVelocityX * ANIM.CARD_DRAG_SWING_FACTOR,
-      -ANIM.CARD_DRAG_SWING_MAX,
-      ANIM.CARD_DRAG_SWING_MAX,
-    );
-    this.draggingCard.rotation = swing;
-    this.draggingCard.y = pointer.worldY - this.y - this.dragOffsetY;
-    this.draggingCard.x = pointer.worldX - this.x - this.dragOffsetX;
-
-    const positions = this.getCardXPositions(this.cards.length);
-    let newIndex = 0;
-    let minDist = Infinity;
-    for (let i = 0; i < positions.length; i++) {
-      const dist = Math.abs(this.draggingCard.x - positions[i]);
-      if (dist < minDist) {
-        minDist = dist;
-        newIndex = i;
-      }
-    }
-
-    const currentIndex = this.cards.indexOf(this.draggingCard);
-    if (newIndex !== currentIndex) {
-      this.cards.splice(currentIndex, 1);
-      this.cards.splice(newIndex, 0, this.draggingCard);
-
-      for (let i = 0; i < this.cards.length; i++) {
-        if (this.cards[i] === this.draggingCard) continue;
-        this.scene.tweens.add({
-          targets: this.cards[i],
-          x: positions[i],
-          duration: 150,
-          ease: 'Power2',
-        });
-      }
-    }
-  }
-
-  private finishCardDrag(): void {
-    if (!this.draggingCard) return;
-
-    const card = this.draggingCard;
-    const finalIndex = this.cards.indexOf(card);
-    const fromIndex = this.dragStartIndex;
-    const needsReorder = finalIndex !== fromIndex;
-    const finalVelocity = this.dragVelocityX;
-    this.draggingCard = null;
-    this.dragVelocityX = 0;
-    this.dragSettling = true;
-
-    card.setDepth(0);
-
-    const positions = this.getCardXPositions(this.cards.length);
-    const cy = this.barHeight / 2 - CARD_VERTICAL_OFFSET;
-    const overshoot = Phaser.Math.Clamp(
-      finalVelocity * ANIM.CARD_DRAG_SWING_FACTOR * 2,
-      -ANIM.CARD_DRAG_SWING_MAX,
-      ANIM.CARD_DRAG_SWING_MAX,
-    );
-    const dur = ANIM.CARD_DRAG_SETTLE_DURATION;
-
-    this.applyCardDepths();
-
-    this.scene.tweens.chain({
-      targets: card,
-      tweens: [
-        {
-          x: positions[finalIndex],
-          y: cy,
-          rotation: overshoot,
-          scaleX: 1,
-          scaleY: 1,
-          duration: dur * 0.3,
-          ease: 'Sine.easeOut',
-        },
-        {
-          rotation: -overshoot * 0.4,
-          duration: dur * 0.25,
-          ease: 'Sine.easeInOut',
-        },
-        {
-          rotation: overshoot * 0.1,
-          duration: dur * 0.2,
-          ease: 'Sine.easeInOut',
-        },
-        {
-          rotation: 0,
-          duration: dur * 0.25,
-          ease: 'Sine.easeIn',
-          onComplete: () => {
-            if (needsReorder) {
-              this.onReorder(fromIndex, finalIndex);
-            }
-            this.dragSettling = false;
-            this.setAllCardTooltipsSuppressed(false);
-            this.resumeWobble(card);
-            this.dragStartIndex = -1;
-          },
-        },
-      ],
-    });
   }
 }

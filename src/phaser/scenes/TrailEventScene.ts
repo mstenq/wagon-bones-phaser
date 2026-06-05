@@ -6,8 +6,6 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { gameFacade } from '../../game/facade';
-import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
-import { canUseConsumableInShop } from '../../game/facade/consumable';
 import type { TrailEventChoice, TrailEventDef, TrailEventEffect, TrailEventResult } from '../../game/facade/trail';
 import { filterEquipmentEligibleForTrailSacrifice } from '../../game/TrailEventsSystem';
 import type { EquipmentInstance } from '../../game/ItemsSystem';
@@ -17,17 +15,15 @@ import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constant
 import { trailEventImageKey, trailEventImagePath } from '../../game/trailEventAssets';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
-import { createLayout, type LayoutResult } from '../ui/SceneLayout';
-import { Sidebar } from '../ui/Sidebar';
+import type { LayoutResult } from '../ui/SceneLayout';
 import { rngFloat } from '../../game/RunRng';
 import type { TrailEventSaveData } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import { getRunState, runActions } from '../../game/store/runStore';
 import { flushAutoSave } from '../AutoSaveManager';
 import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
-import { ConsumableBar } from '../ui/ConsumableBar';
-import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
-import { handleStandardConsumableResult } from './consumableResult';
+import type { Sidebar } from '../ui/Sidebar';
+import { createRunSceneShell } from './runSceneShell';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -44,8 +40,7 @@ const CATEGORY_COLORS: Record<string, number> = {
 };
 
 export class TrailEventScene extends Scene {
-  private sidebar: Sidebar;
-  private consumableBar: ConsumableBar;
+  private sidebar!: Sidebar;
 
   private currentEvent: TrailEventDef;
   private resolved: boolean = false;
@@ -124,19 +119,13 @@ export class TrailEventScene extends Scene {
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
 
     // Standard layout with sidebar, equip bar, consumable bar, pouch
-    const layout = createLayout(this, { bgKey: null, felt: true, sidebarTitle: 'TRAIL' });
+    const shell = createRunSceneShell(this, {
+      layout: { bgKey: null, felt: true, sidebarTitle: 'TRAIL' },
+      consumableReturnScene: 'TrailEvent',
+      consumableFailureSound: () => this.safePlaySound('sfx_cancel', { volume: 0.5 }),
+    });
+    const layout = shell.layout;
     this.sidebar = layout.sidebar;
-    this.consumableBar = layout.consumableBar;
-    this.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
-    this.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      this.handleConsumableUsed(consumed);
-    });
-    bindScenePlaybackRunner(this, {
-      scene: this,
-      equipBar: layout.equipBar,
-      consumableBar: layout.consumableBar,
-      sidebar: layout.sidebar,
-    });
 
     // Select / preview trail event (persist across resize restarts)
     if (!this.currentEvent) {
@@ -941,18 +930,5 @@ export class TrailEventScene extends Scene {
       this.syncTrailToStore();
       this.scene.restart({});
     }
-  }
-
-  private handleConsumableUsed(consumed: ConsumableInstance): void {
-    const result = gameFacade.consumable.use(consumed);
-    this.handleConsumableResult(result);
-  }
-
-  private handleConsumableResult(result: UseConsumableResult): void {
-    handleStandardConsumableResult(this, this.sidebar, result, 'TrailEvent', {
-      x: this.consumableBar.x + this.consumableBar.width / 2,
-      y: this.consumableBar.y,
-      sound: () => this.safePlaySound('sfx_cancel', { volume: 0.5 }),
-    });
   }
 }

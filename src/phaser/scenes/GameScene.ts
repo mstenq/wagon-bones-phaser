@@ -34,7 +34,7 @@ import {
 } from '../../game/store/selectors/roundSelectors';
 import { selectAvailableDice, selectCurrentBoss, selectSpentDice } from '../../game/store/selectors/runSelectors';
 import { D } from '../../game/scoreMath';
-import { COLORS, TEXT_COLORS, FONTS, UI, ANIM, DICE, MARQUEE } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, ANIM, MARQUEE } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
@@ -46,11 +46,14 @@ import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
-import { attachPointerDragTrack, getPointerDragDistance } from '../ui/pointerDragTrack';
-import { RollDiceDragReorder } from '../ui/rollDiceDragReorder';
 import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
+import { getArcOffset } from './game/diceRowGeometry';
+import { RollMarqueeSelection } from './game/RollMarqueeSelection';
+import { RollRowController } from './game/RollRowController';
+import { ScoreRowLayout, type ScoreLayoutGate } from './game/ScoreRowLayout';
+import { GameSceneDevPanel } from './game/GameSceneDevPanel';
 
 const DICE_SPACING = UI.DICE_SPACING;
 
@@ -65,8 +68,11 @@ export class GameScene extends Scene {
   private contentCX: number = 0;
   private sidebarW: number = 0;
 
-  // Dice sprites
-  private rollSprites: DiceSprite[] = [];
+  // Roll-phase dice row + marquee selection
+  private rollRow!: RollRowController;
+  private rollMarquee!: RollMarqueeSelection;
+  private scoreRowLayout!: ScoreRowLayout;
+  private devPanel!: GameSceneDevPanel;
 
   // Pre-roll hand row (SELECT phase)
   private playAreaSprites: DiceSprite[] = [];
@@ -78,7 +84,6 @@ export class GameScene extends Scene {
   private rerollBtn: Button;
   private scoreBtn: Button;
   private continueBtn: Button;
-  private devWinBtn: Button | null = null;
 
   // Instruction text
   private instructionText: Phaser.GameObjects.Text;
@@ -97,7 +102,7 @@ export class GameScene extends Scene {
   private animating: boolean = false;
 
   private playbackRunner: PlaybackRunnerHandle | null = null;
-  private scoreLayoutGate: { promise: Promise<void>; release: () => void } | null = null;
+  private scoreLayoutGate: ScoreLayoutGate | null = null;
 
   /** Lazy-loaded round background texture key; cleared in init for each scene visit */
   private roundBackgroundKey: string | null = null;
@@ -106,24 +111,6 @@ export class GameScene extends Scene {
   private activeEquipDestroySounds: Phaser.Sound.BaseSound[] = [];
 
   private wasDragging: boolean = false;
-  private rollDiceDrag!: RollDiceDragReorder;
-
-  // Marquee lock selection (ROLL phase, empty-space drag)
-  private rollMarqueeZone: Phaser.GameObjects.Zone | null = null;
-  private marqueeGfx: Phaser.GameObjects.Graphics | null = null;
-  private marqueeStartX: number = 0;
-  private marqueeStartY: number = 0;
-  private marqueeActive: boolean = false;
-  private marqueePointerId: number | null = null;
-  private detachMarqueeTrack: (() => void) | null = null;
-
-  // Loaded die target control
-  private loadedDiceValueBg: Phaser.GameObjects.Graphics;
-  private loadedDiceValueText: Phaser.GameObjects.Text;
-  private loadedDiceValueHitArea: Phaser.GameObjects.Zone;
-  private loadedDiceDecBtn: Button;
-  private loadedDiceIncBtn: Button;
-  private loadedDicePicker: Phaser.GameObjects.Container | null = null;
 
   // Consumable targeting mode (inline dice selection for consumables like coffee_tin)
   private consumableTargeting: DiceSelectionConfig | null = null;
@@ -147,12 +134,12 @@ export class GameScene extends Scene {
     this.roundBackgroundKey = null;
   }
 
-  private createScoreLayoutGate(): { promise: Promise<void>; release: () => void } {
-    let release!: () => void;
-    const promise = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    return { promise, release };
+  private get rollSprites(): DiceSprite[] {
+    return this.rollRow.getRollSprites();
+  }
+
+  private set rollSprites(sprites: DiceSprite[]) {
+    this.rollRow.setRollSprites(sprites);
   }
 
   create() {
@@ -174,37 +161,61 @@ export class GameScene extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
-      this.destroyLoadedDicePicker();
+      this.devPanel?.destroyPicker();
       this.stopEquipDestroySounds();
-      this.rollDiceDrag?.stop();
-      this.stopMarqueeTracking();
+      this.rollRow?.stopDrag();
+      this.rollMarquee?.stopTracking();
       this.roundSessionActive = false;
     });
 
-    this.rollDiceDrag = new RollDiceDragReorder({
+    this.scoreRowLayout = new ScoreRowLayout({
       scene: this,
-      getRollSprites: () => this.rollSprites,
       contentCenterX: () => this.contentCX,
       diceSpacing: DICE_SPACING,
-      getRollDieY: (index, sprite) => this.getRollDieY(index, sprite),
-      getArcOffset: (index, count) => this.getArcOffset(index, count),
+    });
+
+    this.rollRow = new RollRowController({
+      scene: this,
+      diceSpacing: DICE_SPACING,
+      getContentCenterX: () => this.contentCX,
+      getSortOrder: () => this.sortOrder,
+      isAnimating: () => this.animating,
+      isMarqueeActive: () => this.rollMarquee.isActive(),
+      isConsumableTargeting: () => this.consumableTargeting !== null,
       isDieLifted: (sprite) => this.isDieLifted(sprite),
+      onRollDieClick: (sprite, isRightClick) => this.onRollDieClick(sprite, isRightClick),
+      onConsumableTargetClick: (sprite) => this.onConsumableTargetClick(sprite),
       syncRolledDiceFromSprites: () => this.syncRolledDiceFromSprites(),
-      onTouchTap: (sprite) => {
-        if (this.consumableTargeting) {
-          this.onConsumableTargetClick(sprite);
-        } else {
-          this.onRollDieClick(sprite, false);
-        }
-      },
       onDragBegin: () => {
         this.wasDragging = true;
       },
-      canStart: (sprite) => {
-        if (this.animating || this.rollDiceDrag.isDragging()) return false;
-        return this.rollSprites.includes(sprite);
+      getWasDragging: () => this.wasDragging,
+      setWasDragging: (value) => {
+        this.wasDragging = value;
       },
-      canTap: () => !this.animating && !this.marqueeActive,
+    });
+
+    this.rollMarquee = new RollMarqueeSelection({
+      scene: this,
+      canUseMarquee: () => this.canUseMarquee(),
+      getRollSprites: () => this.rollRow.getRollSprites(),
+      getZoneBounds: () => ({
+        width: this.scale.width - this.sidebarW,
+        height: this.scale.height - MARQUEE.BOTTOM_RESERVE,
+        cx: this.contentCX,
+        cy: (this.scale.height - MARQUEE.BOTTOM_RESERVE) / 2,
+      }),
+      onSpriteHit: (sprite, playSound) => this.onRollDieClick(sprite, false, playSound, false),
+      onSelectionComplete: () => this.updateRollButtons(),
+      onDragBegin: () => {
+        this.wasDragging = true;
+      },
+    });
+
+    this.devPanel = new GameSceneDevPanel({
+      scene: this,
+      getSidebarW: () => this.sidebarW,
+      onDevWin: () => this.onDevWinRound(),
     });
 
     this.buildLayout(false);
@@ -259,7 +270,7 @@ export class GameScene extends Scene {
       equipBar: this.equipBar,
       consumableBar: this.consumableBar,
       sidebar: this.sidebar,
-      getDiceSprites: () => this.rollSprites,
+      getDiceSprites: () => this.rollRow.getRollSprites(),
       destroyDice: (diceIds) =>
         this.animateConsumableDiceDestruction(diceIds, {
           refillSelectHand: true,
@@ -314,7 +325,7 @@ export class GameScene extends Scene {
       .setDepth(55)
       .setVisible(false);
 
-    this.buildLoadedDiceControl();
+    this.devPanel.build();
 
     // Create buttons (all hidden initially)
     this.readyBtn = new Button(this, this.contentCX, btnY, 'Roll Selected', 200, 40).onClick(() =>
@@ -326,16 +337,6 @@ export class GameScene extends Scene {
       this.onReroll(),
     );
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
-
-    if (isDevMode()) {
-      const devBtnX = this.scale.width - 70;
-      this.devWinBtn = new Button(this, devBtnX, 280, 'Dev Win', 120, 32)
-        .setColor(0x553388, 0x7744aa)
-        .onClick(() => this.onDevWinRound());
-      this.devWinBtn.setDepth(100);
-    } else {
-      this.devWinBtn = null;
-    }
 
     // Sort buttons (small, positioned above the main buttons)
     this.sortAscBtn = new Button(this, this.contentCX - 50, sortY, '↑ Low', 80, 28).onClick(() =>
@@ -394,8 +395,9 @@ export class GameScene extends Scene {
 
   private onResize(): void {
     // Preserve game state, destroy all display objects, rebuild layout
-    this.rollSprites = [];
+    this.rollRow.destroyRollSprites();
     this.playAreaSprites = [];
+    this.rollMarquee.destroy();
     this.children.removeAll(true);
     this.buildLayout(true);
   }
@@ -518,15 +520,15 @@ export class GameScene extends Scene {
 
     // Create sprites for rolled dice
     const rolled = selectRolledDice();
-    this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
+    this.rollSprites = this.rollRow.createRollRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
 
     // Play roll animation
     this.animating = true;
     playRollAnimation(this, this.rollSprites, rolled, () => {
       this.animating = false;
-      this.sortAndRepositionDice();
-      this.setupRollSpriteInteraction();
-      this.setupRollMarqueeZone();
+      this.rollRow.sortAndReposition();
+      this.rollRow.setupInteraction();
+      this.rollMarquee.setup();
 
       this.rerollBtn.setVisible(true);
       this.scoreBtn.setVisible(true);
@@ -552,7 +554,7 @@ export class GameScene extends Scene {
     }
     this.syncRollDieVisuals();
     this.syncSelectedForScore();
-    this.repositionRollDice(true);
+    this.rollRow.reposition(true);
     this.updateRollButtons();
   }
 
@@ -621,7 +623,7 @@ export class GameScene extends Scene {
     }
 
     const idx = this.rollSprites.indexOf(sprite);
-    if (idx >= 0) this.animateRollDieSelectLift(sprite, idx);
+    if (idx >= 0) this.rollRow.animateSelectLift(sprite, idx);
     this.syncSelectedForScore();
     if (updateButtons) this.updateRollButtons();
   }
@@ -630,151 +632,8 @@ export class GameScene extends Scene {
     gameFacade.round.setSelectedForScoreDice(selectRolledDice().filter((d) => this.selectedDiceIds.has(d.id)));
   }
 
-  /** Shared: wire up click handlers on roll sprites (select / reroll-lock, drag to reorder) */
-  private setupRollSpriteInteraction(): void {
-    for (let i = 0; i < this.rollSprites.length; i++) {
-      const sprite = this.rollSprites[i];
-
-      sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        this.wasDragging = false;
-        sprite.setData('rollClickRight', pointer.rightButtonDown());
-        this.rollDiceDrag.wirePointerDown(sprite, pointer);
-      });
-
-      sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-        if (pointer.wasTouch) return;
-        if (this.wasDragging || this.animating || this.marqueeActive) return;
-
-        // Consumable targeting mode takes over click behavior
-        if (this.consumableTargeting) {
-          this.onConsumableTargetClick(sprite);
-          return;
-        }
-
-        const isRightClick = pointer.rightButtonReleased() || sprite.getData('rollClickRight') === true;
-        this.onRollDieClick(sprite, isRightClick);
-      });
-    }
-  }
-
   private canUseMarquee(): boolean {
     return !this.animating && !this.consumableTargeting && this.rollSprites.length > 0 && selectRoundPhase() === 'ROLL';
-  }
-
-  private getRollMarqueeZoneBounds(): { width: number; height: number; cx: number; cy: number } {
-    const width = this.scale.width - this.sidebarW;
-    const height = this.scale.height - MARQUEE.BOTTOM_RESERVE;
-    return { width, height, cx: this.contentCX, cy: height / 2 };
-  }
-
-  private createRollMarqueeZone(): void {
-    this.destroyRollMarqueeZone();
-    const { width, height, cx, cy } = this.getRollMarqueeZoneBounds();
-    this.rollMarqueeZone = this.add.zone(cx, cy, width, height).setDepth(MARQUEE.ZONE_DEPTH).setInteractive();
-  }
-
-  private setupRollMarqueeZone(): void {
-    this.createRollMarqueeZone();
-    if (!this.rollMarqueeZone) return;
-
-    this.rollMarqueeZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (!this.canUseMarquee()) return;
-
-      this.marqueeStartX = pointer.worldX;
-      this.marqueeStartY = pointer.worldY;
-      this.marqueePointerId = pointer.id;
-      this.marqueeActive = false;
-
-      this.stopMarqueeTracking();
-      this.detachMarqueeTrack = attachPointerDragTrack(this, this.rollMarqueeZone, {
-        onMove: this.onMarqueePointerMove,
-        onEnd: this.onMarqueePointerUp,
-      });
-    });
-  }
-
-  private stopMarqueeTracking(): void {
-    if (this.detachMarqueeTrack) {
-      this.detachMarqueeTrack();
-      this.detachMarqueeTrack = null;
-    }
-  }
-
-  private onMarqueePointerMove = (pointer: Phaser.Input.Pointer): void => {
-    if (this.marqueePointerId === null || pointer.id !== this.marqueePointerId) return;
-
-    const dx = pointer.worldX - this.marqueeStartX;
-    const dy = pointer.worldY - this.marqueeStartY;
-    if (!this.marqueeActive && Math.hypot(dx, dy) < getPointerDragDistance(pointer)) return;
-
-    this.marqueeActive = true;
-    this.wasDragging = true;
-    this.drawMarqueeGfx(this.marqueeStartX, this.marqueeStartY, pointer.worldX, pointer.worldY);
-  };
-
-  private onMarqueePointerUp = (pointer: Phaser.Input.Pointer): void => {
-    if (this.marqueePointerId === null || pointer.id !== this.marqueePointerId) return;
-
-    this.stopMarqueeTracking();
-
-    if (this.marqueeActive) {
-      const rect = this.getMarqueeRect(this.marqueeStartX, this.marqueeStartY, pointer.worldX, pointer.worldY);
-      const hits = this.getDiceInMarquee(rect);
-      let playSound = true;
-      for (const sprite of hits) {
-        this.onRollDieClick(sprite, false, playSound, false);
-        playSound = false;
-      }
-      if (hits.length > 0) this.updateRollButtons();
-    }
-
-    this.cleanupMarquee();
-  };
-
-  private drawMarqueeGfx(x1: number, y1: number, x2: number, y2: number): void {
-    if (!this.marqueeGfx) {
-      this.marqueeGfx = this.add.graphics().setDepth(MARQUEE.GFX_DEPTH);
-    }
-    const rect = this.getMarqueeRect(x1, y1, x2, y2);
-    this.marqueeGfx.clear();
-    this.marqueeGfx.fillStyle(DICE.SELECTED_STROKE, MARQUEE.FILL_ALPHA);
-    this.marqueeGfx.fillRect(rect.x, rect.y, rect.width, rect.height);
-    this.marqueeGfx.lineStyle(2, DICE.SELECTED_STROKE, 1);
-    this.marqueeGfx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-  }
-
-  private getDiceWorldBounds(sprite: DiceSprite): Phaser.Geom.Rectangle {
-    const half = DICE.SIZE / 2;
-    return new Phaser.Geom.Rectangle(sprite.x - half, sprite.y - half, DICE.SIZE, DICE.SIZE);
-  }
-
-  private getMarqueeRect(x1: number, y1: number, x2: number, y2: number): Phaser.Geom.Rectangle {
-    return new Phaser.Geom.Rectangle(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
-  }
-
-  private getDiceInMarquee(rect: Phaser.Geom.Rectangle): DiceSprite[] {
-    const hits: DiceSprite[] = [];
-    for (const sprite of this.rollSprites) {
-      if (Phaser.Geom.Rectangle.Overlaps(rect, this.getDiceWorldBounds(sprite))) {
-        hits.push(sprite);
-      }
-    }
-    return hits;
-  }
-
-  private cleanupMarquee(): void {
-    this.marqueeGfx?.clear();
-    this.marqueeActive = false;
-    this.marqueePointerId = null;
-  }
-
-  private destroyRollMarqueeZone(): void {
-    this.stopMarqueeTracking();
-    this.cleanupMarquee();
-    this.marqueeGfx?.destroy();
-    this.marqueeGfx = null;
-    this.rollMarqueeZone?.destroy();
-    this.rollMarqueeZone = null;
   }
 
   /** Layout-only version for resize: shows rolled dice without replaying animation */
@@ -785,14 +644,14 @@ export class GameScene extends Scene {
     this.hideAllButtons();
 
     const rolled = selectRolledDice();
-    this.rollSprites = this.createDiceRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
-    this.setupRollSpriteInteraction();
-    this.setupRollMarqueeZone();
+    this.rollSprites = this.rollRow.createRollRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
+    this.rollRow.setupInteraction();
+    this.rollMarquee.setup();
 
     this.rerollBtn.setVisible(true);
     this.scoreBtn.setVisible(true);
     this.showSortButtons();
-    this.sortAndRepositionDice();
+    this.rollRow.sortAndReposition();
     this.updateRollButtons();
 
     this.instructionText.setText('Click to select for score · Right-click to lock against re-rolls');
@@ -808,69 +667,9 @@ export class GameScene extends Scene {
     prepareScoreSidebar(result, roundScoreBefore);
 
     this.animating = true;
-    this.layoutDiceForScoring(result, () => {
+    this.scoreRowLayout.layoutForScoring(result, this.rollSprites, this.selectedDiceIds, () => {
       this.scoreLayoutGate?.release();
     });
-  }
-
-  /** Move locked dice to a centered score line; held dice stay in the roll row below */
-  private layoutDiceForScoring(result: ScoreResult, onComplete: () => void): void {
-    const scoringIds = new Set(result.handResult.scoringDice.map((d) => d.id));
-    const selectedSprites = this.rollSprites.filter((s) => this.selectedDiceIds.has(s.dieData.id));
-    const heldSprites = this.rollSprites.filter((s) => !this.selectedDiceIds.has(s.dieData.id));
-    const tweenCount = selectedSprites.length + heldSprites.length;
-
-    if (tweenCount === 0) {
-      onComplete();
-      return;
-    }
-
-    const scorePositions = this.getRowXPositions(selectedSprites.length);
-    const scoreY = this.scale.height * UI.SCORE_Y_RATIO;
-    const rollY = this.scale.height * UI.ROLL_Y_RATIO;
-    let finished = 0;
-
-    const onSpriteDone = () => {
-      finished++;
-      if (finished >= tweenCount) onComplete();
-    };
-
-    for (let i = 0; i < selectedSprites.length; i++) {
-      const sprite = selectedSprites[i];
-      const isScoring = scoringIds.has(sprite.dieData.id);
-      sprite.setSelected(false);
-      sprite.setScorePresentation(isScoring ? 'none' : 'filler');
-      sprite.setDepth(isScoring ? 22 : 18);
-
-      this.tweens.add({
-        targets: sprite,
-        x: scorePositions[i],
-        y: isScoring ? scoreY : scoreY + UI.DICE_SCORE_FILLER_DROP_Y,
-        rotation: 0,
-        duration: ANIM.DICE_SCORE_LAYOUT_DURATION,
-        ease: 'Power2',
-        onComplete: onSpriteDone,
-      });
-    }
-
-    const heldPositions = this.getRowXPositions(heldSprites.length);
-    for (let i = 0; i < heldSprites.length; i++) {
-      const sprite = heldSprites[i];
-      const arc = this.getArcOffset(i, heldSprites.length);
-      sprite.setSelected(false);
-      sprite.setScorePresentation('none');
-      sprite.setDepth(10);
-
-      this.tweens.add({
-        targets: sprite,
-        x: heldPositions[i],
-        y: rollY + arc.y,
-        rotation: arc.rotation,
-        duration: ANIM.DICE_SCORE_LAYOUT_DURATION,
-        ease: 'Power2',
-        onComplete: onSpriteDone,
-      });
-    }
   }
 
   // ─── Player Actions ───
@@ -918,7 +717,7 @@ export class GameScene extends Scene {
             const updated = rolled.find((d) => d.id === sprite.dieData.id);
             if (updated) sprite.setDieData(updated);
           }
-          this.sortAndRepositionDice();
+          this.rollRow.sortAndReposition();
           this.applyBossRollDiceState();
           this.updateRollButtons();
         },
@@ -944,7 +743,7 @@ export class GameScene extends Scene {
     if (!success) return;
 
     this.syncRolledDiceFromSprites();
-    this.scoreLayoutGate = this.createScoreLayoutGate();
+    this.scoreLayoutGate = ScoreRowLayout.createGate();
     this.playbackRunner?.setScoreLayoutGate(this.scoreLayoutGate);
     const result = gameFacade.round.calculateScore({ deferConsumableGrants: true });
     if (result) {
@@ -1046,7 +845,7 @@ export class GameScene extends Scene {
     const startX = this.contentCX - totalWidth / 2;
 
     for (let i = 0; i < dice.length; i++) {
-      const arc = this.getArcOffset(i, dice.length);
+      const arc = getArcOffset(i, dice.length);
       const sprite = new DiceSprite(this, startX + i * DICE_SPACING, y + arc.y, dice[i]);
       sprite.rotation = arc.rotation;
       sprite.setDepth(10);
@@ -1056,10 +855,9 @@ export class GameScene extends Scene {
   }
 
   private clearSprites(): void {
-    for (const s of this.rollSprites) s.destroy();
+    this.rollRow.destroyRollSprites();
     for (const s of this.playAreaSprites) s.destroy();
-    this.destroyRollMarqueeZone();
-    this.rollSprites = [];
+    this.rollMarquee.destroy();
     this.playAreaSprites = [];
   }
 
@@ -1120,18 +918,6 @@ export class GameScene extends Scene {
     this.equipBar?.setHintRound(getRoundHintContext());
   }
 
-  /** Sort roll sprites by die value and reposition them (selected dice stay raised) */
-  private sortAndRepositionDice(): void {
-    // Stone dice sort as highest (above 12s)
-    const sortValue = (d: Die) => (d.enhancement === 'stone' ? 13 : d.value);
-    const cmp =
-      this.sortOrder === 'asc'
-        ? (a: DiceSprite, b: DiceSprite) => sortValue(a.dieData) - sortValue(b.dieData)
-        : (a: DiceSprite, b: DiceSprite) => sortValue(b.dieData) - sortValue(a.dieData);
-    this.rollSprites.sort(cmp);
-    this.repositionRollDice(true);
-  }
-
   private isConsumableTargetDie(sprite: DiceSprite): boolean {
     return this.consumableTargeting !== null && this.consumableTargetIds.has(sprite.dieData.id);
   }
@@ -1140,66 +926,14 @@ export class GameScene extends Scene {
     return this.isRollDieSelected(sprite) || this.isConsumableTargetDie(sprite);
   }
 
-  /** Y for a roll-row die: arc baseline minus Balatro-style lift when selected */
-  private getRollDieY(index: number, sprite: DiceSprite): number {
-    const rollY = this.scale.height * UI.ROLL_Y_RATIO;
-    const arc = this.getArcOffset(index, this.rollSprites.length);
-    const lift = this.isDieLifted(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
-    return rollY + arc.y - lift;
-  }
-
   private getPlayAreaDieY(index: number, sprite: DiceSprite): number {
-    const arc = this.getArcOffset(index, this.playAreaSprites.length);
+    const arc = getArcOffset(index, this.playAreaSprites.length);
     const lift = this.isConsumableTargetDie(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
     return this.playAreaY + arc.y - lift;
   }
 
-  private applyRollDieDepth(sprite: DiceSprite): void {
-    sprite.setDepth(this.isDieLifted(sprite) ? 15 : 10);
-  }
-
   private applyPlayAreaDieDepth(sprite: DiceSprite): void {
     sprite.setDepth(this.isConsumableTargetDie(sprite) ? 15 : 10);
-  }
-
-  /** Reposition all roll sprites (row layout + selected lift + depth) */
-  private repositionRollDice(animated: boolean, duration = 250): void {
-    if (this.rollSprites.length === 0) return;
-
-    const totalWidth = (this.rollSprites.length - 1) * DICE_SPACING;
-    const startX = this.contentCX - totalWidth / 2;
-    for (let i = 0; i < this.rollSprites.length; i++) {
-      const sprite = this.rollSprites[i];
-      const arc = this.getArcOffset(i, this.rollSprites.length);
-      const targetX = startX + i * DICE_SPACING;
-      const targetY = this.getRollDieY(i, sprite);
-      this.applyRollDieDepth(sprite);
-
-      if (animated) {
-        this.tweens.add({
-          targets: sprite,
-          x: targetX,
-          y: targetY,
-          rotation: arc.rotation,
-          duration,
-          ease: 'Power2',
-        });
-      } else {
-        sprite.setPosition(targetX, targetY);
-        sprite.rotation = arc.rotation;
-      }
-    }
-    this.syncRolledDiceFromSprites();
-  }
-
-  private animateRollDieSelectLift(sprite: DiceSprite, index: number): void {
-    this.applyRollDieDepth(sprite);
-    this.tweens.add({
-      targets: sprite,
-      y: this.getRollDieY(index, sprite),
-      duration: 200,
-      ease: 'Power2',
-    });
   }
 
   private repositionConsumableTargets(animated: boolean, duration = 200): void {
@@ -1207,7 +941,7 @@ export class GameScene extends Scene {
 
     const phase = selectRoundPhase();
     if (phase === 'ROLL' && this.rollSprites.length > 0) {
-      this.repositionRollDice(animated, duration);
+      this.rollRow.reposition(animated, duration);
     } else if (phase === 'SELECT' && this.playAreaSprites.length > 0) {
       this.repositionPlayArea(animated, duration);
     }
@@ -1220,7 +954,7 @@ export class GameScene extends Scene {
 
   private setSortOrder(order: 'asc' | 'desc'): void {
     this.sortOrder = order;
-    this.sortAndRepositionDice();
+    this.rollRow.sortAndReposition();
     this.updateSortButtonStyles();
   }
 
@@ -1252,249 +986,7 @@ export class GameScene extends Scene {
                 : 'GAME',
     });
     this.equipBar.setHintRound(getRoundHintContext());
-    this.updateLoadedDiceControl();
-  }
-
-  private buildLoadedDiceControl(): void {
-    const { height } = this.scale;
-    const controlLeft = this.sidebarW + 18;
-    const controlY = height - 34;
-    const boxWidth = 44;
-    const boxHeight = 28;
-    const boxCenterX = controlLeft + 50;
-
-    this.add
-      .text(controlLeft, controlY - 26, 'Loaded Die Number', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '11px',
-        color: TEXT_COLORS.SECONDARY,
-      })
-      .setOrigin(0, 0.5)
-      .setDepth(50);
-
-    this.loadedDiceDecBtn = new Button(this, controlLeft + 12, controlY, '-', 24, 24).onClick(() => {
-      this.adjustLoadedDieTarget(-1);
-    });
-    this.loadedDiceDecBtn.setDepth(50);
-    (this.loadedDiceDecBtn as any).label?.setFontSize?.(14);
-
-    this.loadedDiceValueBg = this.add.graphics().setDepth(50);
-    this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
-    this.loadedDiceValueBg.fillRoundedRect(boxCenterX - boxWidth / 2, controlY - boxHeight / 2, boxWidth, boxHeight, 6);
-    this.loadedDiceValueBg.lineStyle(1, COLORS.PANEL_BORDER, 1);
-    this.loadedDiceValueBg.strokeRoundedRect(
-      boxCenterX - boxWidth / 2,
-      controlY - boxHeight / 2,
-      boxWidth,
-      boxHeight,
-      6,
-    );
-
-    this.loadedDiceValueHitArea = this.add
-      .zone(boxCenterX, controlY, boxWidth, boxHeight)
-      .setOrigin(0.5)
-      .setDepth(52)
-      .setInteractive({ useHandCursor: true });
-    this.loadedDiceValueHitArea.on('pointerdown', () => this.toggleLoadedDicePicker());
-
-    this.loadedDiceValueText = this.add
-      .text(boxCenterX, controlY, '-', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '16px',
-        color: TEXT_COLORS.PRIMARY,
-        align: 'center',
-      })
-      .setOrigin(0.5)
-      .setDepth(51);
-
-    this.loadedDiceIncBtn = new Button(this, controlLeft + 88, controlY, '+', 24, 24).onClick(() => {
-      this.adjustLoadedDieTarget(1);
-    });
-    this.loadedDiceIncBtn.setDepth(50);
-    (this.loadedDiceIncBtn as any).label?.setFontSize?.(14);
-
-    this.updateLoadedDiceControl();
-  }
-
-  private adjustLoadedDieTarget(delta: number): void {
-    const { syncLucky, rawTarget: current } = gameFacade.dice.getLoadedDieDisplay();
-    if (syncLucky) return;
-
-    let nextValue: number | null;
-    if (delta > 0) {
-      nextValue = current === null ? 1 : Math.min(12, current + 1);
-    } else {
-      nextValue = current === null ? null : current === 1 ? null : current - 1;
-    }
-
-    gameFacade.dice.setLoadedDieTarget(nextValue);
-    this.updateLoadedDiceControl();
-    this.destroyLoadedDicePicker();
-  }
-
-  private updateLoadedDiceControl(): void {
-    if (!this.loadedDiceValueText || !this.loadedDiceDecBtn || !this.loadedDiceIncBtn || !this.loadedDiceValueBg)
-      return;
-
-    const { syncLucky, target } = gameFacade.dice.getLoadedDieDisplay();
-
-    if (syncLucky) {
-      this.loadedDiceValueText.setText('🍀');
-      this.loadedDiceValueText.setColor(TEXT_COLORS.GOLD);
-    } else {
-      this.loadedDiceValueText.setText(target === null ? '-' : String(target));
-      this.loadedDiceValueText.setColor(target === null ? TEXT_COLORS.SECONDARY : TEXT_COLORS.PRIMARY);
-    }
-    this.loadedDiceDecBtn.setEnabled(!syncLucky && target !== null);
-    this.loadedDiceIncBtn.setEnabled(!syncLucky && (target === null || target < 12));
-
-    this.loadedDiceValueBg.clear();
-    this.loadedDiceValueBg.fillStyle(COLORS.BG_PANEL, 1);
-    this.loadedDiceValueBg.fillRoundedRect(
-      this.loadedDiceValueHitArea.x - 22,
-      this.loadedDiceValueHitArea.y - 14,
-      44,
-      28,
-      6,
-    );
-    this.loadedDiceValueBg.lineStyle(1, this.loadedDicePicker ? COLORS.GOLD : COLORS.PANEL_BORDER, 1);
-    this.loadedDiceValueBg.strokeRoundedRect(
-      this.loadedDiceValueHitArea.x - 22,
-      this.loadedDiceValueHitArea.y - 14,
-      44,
-      28,
-      6,
-    );
-  }
-
-  private toggleLoadedDicePicker(): void {
-    if (this.loadedDicePicker) {
-      this.destroyLoadedDicePicker();
-      return;
-    }
-
-    const picker = this.buildLoadedDicePicker();
-    this.loadedDicePicker = picker;
-    this.updateLoadedDiceControl();
-  }
-
-  private destroyLoadedDicePicker(): void {
-    if (!this.loadedDicePicker) return;
-    this.loadedDicePicker.destroy();
-    this.loadedDicePicker = null;
-    this.updateLoadedDiceControl();
-  }
-
-  private buildLoadedDicePicker(): Phaser.GameObjects.Container {
-    const controlX = this.loadedDiceValueHitArea.x;
-    const controlY = this.loadedDiceValueHitArea.y;
-    const { hasLuckyNumberGear: showLuckySync, rawTarget } = gameFacade.dice.getLoadedDieDisplay();
-    const run = getRunState();
-    const panelWidth = 208;
-    const panelHeight = showLuckySync ? 248 : 214;
-    const panelX = Phaser.Math.Clamp(controlX - panelWidth / 2, this.sidebarW + 12, this.scale.width - panelWidth - 12);
-    const panelY = controlY - panelHeight - 14;
-    const panelCenterX = panelX + panelWidth / 2;
-    const picker = this.add.container(0, 0).setDepth(500);
-
-    const panel = this.add.graphics();
-    panel.fillStyle(COLORS.BG_PANEL, 0.98);
-    panel.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
-    panel.lineStyle(2, COLORS.PANEL_BORDER, 1);
-    panel.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
-    picker.add(panel);
-
-    const title = this.add
-      .text(panelCenterX, panelY + 16, 'Pick Loaded Number', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '11px',
-        color: TEXT_COLORS.SECONDARY,
-      })
-      .setOrigin(0.5, 0.5);
-    picker.add(title);
-
-    const oddsNote = this.add
-      .text(panelCenterX, panelY + 40, this.getLoadedDiceOddsNote(), {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '10px',
-        color: TEXT_COLORS.GOLD,
-        align: 'center',
-        wordWrap: { width: panelWidth - 28 },
-      })
-      .setOrigin(0.5, 0.5);
-    picker.add(oddsNote);
-
-    const cols = 4;
-    const cellWidth = 34;
-    const cellHeight = 26;
-    const cellGap = 8;
-    const gridWidth = cols * cellWidth + (cols - 1) * cellGap;
-    const gridStartX = panelX + (panelWidth - gridWidth) / 2 + cellWidth / 2;
-    const gridStartY = panelY + 72 + cellHeight / 2;
-    const syncLucky = run.loadedDieSyncLucky && showLuckySync;
-    const selected = syncLucky ? null : rawTarget;
-
-    for (let value = 1; value <= 12; value++) {
-      const col = (value - 1) % cols;
-      const row = Math.floor((value - 1) / cols);
-      const button = new Button(
-        this,
-        gridStartX + col * (cellWidth + cellGap),
-        gridStartY + row * (cellHeight + cellGap),
-        String(value),
-        cellWidth,
-        cellHeight,
-      ).onClick(() => {
-        gameFacade.dice.setLoadedDieTarget(value);
-        this.destroyLoadedDicePicker();
-      });
-      button.setDepth(501);
-      (button as any).label?.setFontSize?.(13);
-      if (selected === value) {
-        button.setColor(COLORS.GOLD, COLORS.GOLD);
-        button.setEnabled(false);
-      }
-      picker.add(button);
-    }
-
-    let clearBtnY = panelY + panelHeight - 24;
-    if (showLuckySync) {
-      const syncBtnY = panelY + panelHeight - 58;
-      const syncBtn = new Button(
-        this,
-        panelCenterX,
-        syncBtnY,
-        'Sync Loaded Die with Lucky Number',
-        panelWidth - 28,
-        26,
-      ).onClick(() => {
-        gameFacade.dice.setLoadedDieSyncLucky(true);
-        this.destroyLoadedDicePicker();
-      });
-      syncBtn.setDepth(501);
-      (syncBtn as any).label?.setFontSize?.(10);
-      if (syncLucky) {
-        syncBtn.setColor(COLORS.GOLD, COLORS.GOLD);
-        syncBtn.setEnabled(false);
-      }
-      picker.add(syncBtn);
-      clearBtnY = panelY + panelHeight - 24;
-    }
-
-    const clearBtn = new Button(this, panelCenterX, clearBtnY, 'Clear', 86, 26).onClick(() => {
-      gameFacade.dice.setLoadedDieTarget(null);
-      this.destroyLoadedDicePicker();
-    });
-    clearBtn.setDepth(501);
-    (clearBtn as any).label?.setFontSize?.(13);
-    clearBtn.setEnabled(syncLucky || selected !== null);
-    picker.add(clearBtn);
-
-    return picker;
-  }
-
-  private getLoadedDiceOddsNote(): string {
-    return gameFacade.dice.getLoadedDieOddsNote();
+    this.devPanel.update();
   }
 
   // ─── Pre-roll hand (SELECT phase) ───
@@ -1604,7 +1096,7 @@ export class GameScene extends Scene {
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < this.playAreaSprites.length; i++) {
       const sprite = this.playAreaSprites[i];
-      const arc = this.getArcOffset(i, this.playAreaSprites.length);
+      const arc = getArcOffset(i, this.playAreaSprites.length);
       const targetY = this.getPlayAreaDieY(i, sprite);
       this.applyPlayAreaDieDepth(sprite);
       if (animated) {
@@ -1624,23 +1116,6 @@ export class GameScene extends Scene {
   }
 
   // ─── Drag-to-Reorder (ROLL phase) ───
-
-  /** Get X positions for a row of count dice */
-  private getRowXPositions(count: number): number[] {
-    if (count === 0) return [];
-    const totalWidth = (count - 1) * DICE_SPACING;
-    const startX = this.contentCX - totalWidth / 2;
-    return Array.from({ length: count }, (_, i) => startX + i * DICE_SPACING);
-  }
-
-  /** Get Balatro-style arc Y offset and rotation for a die at index i in a row of count */
-  private getArcOffset(i: number, count: number): { y: number; rotation: number } {
-    if (count <= 1) return { y: 0, rotation: 0 };
-    const t = i / (count - 1) - 0.5; // -0.5 to 0.5
-    const y = -UI.DICE_ARC_HEIGHT * (1 - 4 * t * t); // negative = up, parabola peak at center
-    const rotation = t * UI.DICE_ARC_ROTATION * 2; // fan out from center
-    return { y, rotation };
-  }
 
   /** Wire consumable targeting clicks on pre-roll hand dice */
   private setupPlayAreaSprite(sprite: DiceSprite): void {
@@ -1850,7 +1325,7 @@ export class GameScene extends Scene {
 
     const positions = this.getPlayAreaXPositions(this.playAreaSprites.length);
     for (let i = 0; i < startingLength; i++) {
-      const arc = this.getArcOffset(i, this.playAreaSprites.length);
+      const arc = getArcOffset(i, this.playAreaSprites.length);
       this.tweens.add({
         targets: this.playAreaSprites[i],
         x: positions[i],
@@ -1866,7 +1341,7 @@ export class GameScene extends Scene {
       for (let i = 0; i < toAdd.length; i++) {
         const sprite = this.playAreaSprites[startingLength + i];
         const idx = startingLength + i;
-        const arc = this.getArcOffset(idx, this.playAreaSprites.length);
+        const arc = getArcOffset(idx, this.playAreaSprites.length);
         this.tweens.add({
           targets: sprite,
           x: positions[idx],
@@ -1917,7 +1392,7 @@ export class GameScene extends Scene {
     this.selectedDiceIds.clear();
     this.rerollLockedDiceIds.clear();
     this.syncRollDieVisuals();
-    this.repositionRollDice(true, 150);
+    this.rollRow.reposition(true, 150);
 
     // Hide normal game buttons
     this.hideAllButtons();
@@ -2110,7 +1585,7 @@ export class GameScene extends Scene {
 
     // Restore roll / play-area lift positions
     if (this.rollSprites.length > 0) {
-      this.repositionRollDice(true, 150);
+      this.rollRow.reposition(true, 150);
     } else if (this.playAreaSprites.length > 0) {
       this.repositionPlayArea(true, 150);
     }

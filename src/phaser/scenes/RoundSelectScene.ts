@@ -6,17 +6,15 @@ import { EventBus, Events } from '../../game/EventBus';
 import { runStore } from '../../game/store/runStore';
 import { bindStore } from '../store/subscribe';
 import { TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
-import { createLayout, LayoutResult } from '../ui/SceneLayout';
+import type { LayoutResult } from '../ui/SceneLayout';
 import { createLegRoundPanels } from '../ui/RoundInfo';
 import { TagTooltip } from '../ui/TagTooltip';
+import { createRunSceneShell } from './runSceneShell';
 import { gameFacade } from '../../game/facade';
-import type { ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
-import { canUseConsumableInShop } from '../../game/facade/consumable';
 import type { ImmediateTagResult } from '../../game/facade/meta';
 import { resolveTagDescription } from '../../data/trail_tags';
 import { buildVictoryGameOverData } from './GameOver';
-import { handleStandardConsumableResult } from './consumableResult';
-import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
+import { consumeAndStartImmediatePackOpens } from './immediatePackFlow';
 import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
 import { enqueueHandUpgrades, enqueueTagEarned } from '../../game/store/playbackEnqueue';
 import { getRunState } from '../../game/store';
@@ -32,7 +30,7 @@ import {
   selectTargetMiles,
 } from '../../game/store/selectors/runSelectors';
 import { sceneActions } from '../../game/store/sceneStore';
-import { consumeAndStartImmediatePackOpens } from './immediatePackFlow';
+
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
 
@@ -53,24 +51,20 @@ export class RoundSelectScene extends Scene {
       this.tagTooltip.hide();
     });
 
-    this.layout = createLayout(this, {
-      bgKey: null,
-      felt: true,
-      sidebarTitle: 'TRAIL MAP',
+    const shell = createRunSceneShell(this, {
+      layout: {
+        bgKey: null,
+        felt: true,
+        sidebarTitle: 'TRAIL MAP',
+      },
+      consumableReturnScene: 'RoundSelect',
+      playback: {
+        getTagEarnedOrigin: (round) => this.getRoundColumnCenter(round),
+        getTagStackAnchor: () => this.layout.tagStack.getStackAnchor(),
+      },
     });
-    this.layout.consumableBar.setCanUsePredicate((def) => canUseConsumableInShop(def));
-    this.layout.consumableBar.on('consumable-used', (consumed: ConsumableInstance) => {
-      this.handleConsumableUsed(consumed);
-    });
-
-    this.playbackRunner = bindScenePlaybackRunner(this, {
-      scene: this,
-      equipBar: this.layout.equipBar,
-      consumableBar: this.layout.consumableBar,
-      sidebar: this.layout.sidebar,
-      getTagEarnedOrigin: (round) => this.getRoundColumnCenter(round),
-      getTagStackAnchor: () => this.layout.tagStack.getStackAnchor(),
-    });
+    this.layout = shell.layout;
+    this.playbackRunner = shell.playbackRunner;
 
     gameFacade.meta.ensureRoundSkipPreviewTags();
     sceneActions.syncRoundSelectFromRun(getRunState().roundSkipPreviewTags);
@@ -272,19 +266,5 @@ export class RoundSelectScene extends Scene {
 
   private onResize(): void {
     this.scene.restart();
-  }
-
-  private handleConsumableUsed(consumed: ConsumableInstance): void {
-    const result = gameFacade.consumable.use(consumed);
-    this.handleConsumableResult(result);
-  }
-
-  private handleConsumableResult(result: UseConsumableResult): void {
-    const bar = this.layout.consumableBar;
-    handleStandardConsumableResult(this, this.layout.sidebar, result, 'RoundSelect', {
-      x: bar.x + bar.width / 2,
-      y: bar.y,
-      sound: () => this.sound.play('sfx_cancel', { volume: 0.5 }),
-    });
   }
 }
