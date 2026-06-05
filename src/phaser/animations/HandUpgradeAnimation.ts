@@ -42,15 +42,17 @@ export function playHandUpgradeAnimation(config: HandUpgradeAnimConfig): void {
 
 function animateOneUpgrade(scene: Scene, sidebar: Sidebar, upgrade: HandUpgradeInfo, onDone: () => void): void {
   const isDowngrade = upgrade.newLevel < upgrade.oldLevel;
-  const sidebarW = sidebar.getSidebarWidth();
-  const cx = sidebarW / 2;
+  const isTopBar = sidebar.getLayoutMode() === 'topbar';
+  const chromeW = isTopBar ? scene.scale.width : sidebar.getSidebarWidth();
+  const cx = chromeW / 2;
+  const pad = isTopBar ? 8 : UI.SIDEBAR_PADDING;
 
   const container = scene.add.container(sidebar.x, sidebar.y).setDepth(250);
 
-  const panelW = sidebarW - UI.SIDEBAR_PADDING * 2;
+  const panelW = chromeW - pad * 2;
   const panelH = 100;
   const panelY = sidebar.getHandUpgradeY() - panelH / 2 + 20;
-  const panelX = UI.SIDEBAR_PADDING;
+  const panelX = pad;
 
   const strokeColor = isDowngrade ? 0xaa4444 : 0x4488ff;
 

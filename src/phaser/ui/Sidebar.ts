@@ -21,6 +21,7 @@ import { addDifficultyImage, getDifficultyDef } from './DifficultyAssets';
 import { DifficultyTooltip } from './DifficultyTooltip';
 import { bindGameObject } from '../store/subscribe';
 import type { RunStatusTrait } from '../../game/runStatusTraits';
+import type { LayoutMode } from '../../game/Constants';
 
 export interface SidebarData {
   /** Title shown at top: "SHOP", "The Inspector", etc. */
@@ -58,6 +59,8 @@ export interface SidebarData {
 export class Sidebar extends GameObjects.Container {
   private bg: GameObjects.Graphics;
   private sidebarWidth: number;
+  private barHeight: number;
+  private layoutMode: LayoutMode;
 
   // Text elements for updating
   private titleText: GameObjects.Text;
@@ -85,6 +88,9 @@ export class Sidebar extends GameObjects.Container {
   private bossDescText: GameObjects.Text | null = null;
   private statusPanelsContainer: GameObjects.Container;
   private statusPanelsTotalHeight = 0;
+  private modifiersIndicator: GameObjects.Container | null = null;
+  private topBarBoss: BossDef | null = null;
+  private topBarTraits: RunStatusTrait[] = [];
   private profTooltip: GameObjects.Container | null = null;
   private difficultyTooltip = new DifficultyTooltip();
   private difficultyIcon: GameObjects.Image | null = null;
@@ -94,25 +100,40 @@ export class Sidebar extends GameObjects.Container {
   private onJourneyInfo: (() => void) | null = null;
   private onDevBossTest: (() => void) | null = null;
   private onOptions: (() => void) | null = null;
+  private onModifiersModal: (() => void) | null = null;
   private subscribedDifficulty = 1;
 
   /** Y coordinate of the hand display area in sidebar space (for upgrade animation positioning) */
   private handDisplayY: number = 0;
   private handDisplayLocalY: number = 0;
 
-  constructor(scene: Scene, width: number, height: number) {
+  constructor(scene: Scene, width: number, height: number, layoutMode: LayoutMode = 'sidebar') {
     super(scene, 0, 0);
     this.sidebarWidth = width;
+    this.barHeight = height;
+    this.layoutMode = layoutMode;
 
     this.bg = scene.add.graphics();
     this.add(this.bg);
 
     this.drawBackground(width, height);
-    this.buildContent(scene, width, height);
+    if (layoutMode === 'topbar') {
+      this.buildTopBarContent(scene, width, height);
+    } else {
+      this.buildSidebarContent(scene, width, height);
+    }
 
     this.setDepth(200);
     this.setScrollFactor(0);
     scene.add.existing(this);
+  }
+
+  getLayoutMode(): LayoutMode {
+    return this.layoutMode;
+  }
+
+  getTopBarHeight(): number {
+    return this.layoutMode === 'topbar' ? this.barHeight : 0;
   }
 
   private drawBackground(w: number, h: number): void {
@@ -120,12 +141,15 @@ export class Sidebar extends GameObjects.Container {
     // Main background
     this.bg.fillStyle(UI.SIDEBAR_BG, 0.95);
     this.bg.fillRect(0, 0, w, h);
-    // Right border
     this.bg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
-    this.bg.lineBetween(w, 0, w, h);
+    if (this.layoutMode === 'topbar') {
+      this.bg.lineBetween(0, h, w, h);
+    } else {
+      this.bg.lineBetween(w, 0, w, h);
+    }
   }
 
-  private buildContent(scene: Scene, w: number, _h: number): void {
+  private buildSidebarContent(scene: Scene, w: number, _h: number): void {
     const pad = UI.SIDEBAR_PADDING;
     const cx = w / 2;
     let y: number = pad;
@@ -598,11 +622,342 @@ export class Sidebar extends GameObjects.Container {
     this.syncRoundScoreFromStore();
   }
 
+  private buildTopBarContent(scene: Scene, w: number, _h: number): void {
+    const pad = 8;
+    const titleH = 32;
+    let y = 4;
+
+    // ─── Row 1: difficulty + title + round score ───
+    this.titleSectionY = y;
+    this.titleSectionH = titleH;
+    const titleIconSize = 28;
+    const titleIconX = pad + 14;
+    const titleIconY = y + titleH / 2;
+    this.difficultyIcon = addDifficultyImage(
+      scene,
+      this,
+      selectRunSidebarModel().difficulty,
+      titleIconX,
+      titleIconY,
+      titleIconSize,
+    );
+
+    const titleX = pad + 32;
+    this.titleText = scene.add
+      .text(titleX, titleIconY, 'SHOP', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '16px',
+        color: TEXT_COLORS.GOLD,
+      })
+      .setOrigin(0, 0.5);
+    this.add(this.titleText);
+
+    this.professionContainer = scene.add.container(0, 0);
+    this.add(this.professionContainer);
+    const prof = getRunProfession();
+    if (prof) {
+      const miniSize = 24;
+      const miniX = titleX + 120;
+      const atlasFrame = `${prof.id}.png`;
+      const profTexture = scene.textures.get('professions');
+      const canUseAtlas = scene.textures.exists('professions') && profTexture.has(atlasFrame);
+      if (canUseAtlas) {
+        const profImg = scene.add.image(miniX, titleIconY, 'professions', atlasFrame);
+        const imgScale = miniSize / Math.max(profImg.width, profImg.height);
+        profImg.setScale(imgScale);
+        this.professionContainer.add(profImg);
+      }
+      const profLabel = scene.add.text(miniX + miniSize + 4, titleIconY, prof.title, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.SECONDARY,
+      });
+      profLabel.setOrigin(0, 0.5);
+      this.professionContainer.add(profLabel);
+
+      const hitZone = scene.add
+        .zone(miniX - 4, titleIconY, miniSize + profLabel.width + 12, titleH)
+        .setInteractive({ useHandCursor: true });
+      this.professionContainer.add(hitZone);
+      hitZone.on('pointerover', () => {
+        this.showProfTooltip(scene, w, y + titleH + 4, prof);
+      });
+      hitZone.on('pointerout', () => this.hideProfTooltip());
+    }
+
+    if (this.difficultyIcon) {
+      const iconHit = scene.add
+        .zone(titleIconX, titleIconY, titleIconSize + 8, titleIconSize + 8)
+        .setInteractive({ useHandCursor: true });
+      this.add(iconHit);
+      iconHit.on('pointerover', () => {
+        const def = getDifficultyDef(selectRunSidebarModel().difficulty);
+        this.difficultyTooltip.show(
+          this.scene,
+          def,
+          titleIconX,
+          titleIconY + titleIconSize / 2 + 4,
+          { minX: pad, maxX: w - pad, minY: y + titleH + 4 },
+          400,
+          this,
+        );
+      });
+      iconHit.on('pointerout', () => this.difficultyTooltip.hide());
+    }
+
+    const scoreBlockRight = w - pad;
+    const scoreBlockCY = y + titleH / 2;
+
+    this.roundScoreText = scene.add
+      .text(scoreBlockRight, scoreBlockCY + 7, '0', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: TEXT_COLORS.PRIMARY,
+        align: 'right',
+      })
+      .setOrigin(1, 0.5);
+    this.add(this.roundScoreText);
+
+    const scoreLabel = scene.add
+      .text(scoreBlockRight, scoreBlockCY - 9, 'Round score', {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '8px',
+        color: TEXT_COLORS.MUTED,
+        align: 'right',
+      })
+      .setOrigin(1, 0.5);
+    this.add(scoreLabel);
+
+    this.modifiersIndicator = scene.add.container(w - pad - 98, titleIconY);
+    this.modifiersIndicator.setVisible(false);
+    this.add(this.modifiersIndicator);
+
+    y += titleH + 2;
+    this.contentStartY = y;
+
+    // Top bar: boss/traits shown via dot indicator + modal (not inline panels).
+    this.statusPanelsContainer = scene.add.container(0, 0);
+    this.statusPanelsContainer.setVisible(false);
+    this.add(this.statusPanelsContainer);
+
+    this.bossContainer = scene.add.container(0, 0);
+    this.bossContainer.setVisible(false);
+    this.add(this.bossContainer);
+    this.bossDescText = null;
+
+    this.mainContentContainer = scene.add.container(0, this.contentStartY);
+    this.add(this.mainContentContainer);
+
+    let localY = 0;
+
+    // ─── Row 2: target | hand | miles × mult ───
+    const scoreRowH = 36;
+    const scoreRowBg = scene.add.graphics();
+    scoreRowBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    scoreRowBg.fillRoundedRect(pad, localY, w - pad * 2, scoreRowH, 4);
+    scoreRowBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    scoreRowBg.strokeRoundedRect(pad, localY, w - pad * 2, scoreRowH, 4);
+    this.mainContentContainer.add(scoreRowBg);
+
+    this.targetText = scene.add.text(pad + 8, localY + 6, '300 mi', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '12px',
+      color: TEXT_COLORS.SCORE_GREEN,
+    });
+    this.mainContentContainer.add(this.targetText);
+
+    const targetLabel = scene.add.text(pad + 8, localY + 22, 'Target', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '8px',
+      color: TEXT_COLORS.MUTED,
+    });
+    this.mainContentContainer.add(targetLabel);
+
+    this.handDisplayLocalY = localY + 6;
+    this.handNameText = scene.add
+      .text(w / 2, localY + scoreRowH / 2, '', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '13px',
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
+    this.mainContentContainer.add(this.handNameText);
+
+    const pillW = 56;
+    const pillH = 24;
+    const pillY = localY + (scoreRowH - pillH) / 2;
+    const multX = w - pad - 8 - pillW;
+    const milesX = multX - pillW - 18;
+
+    this.milesBaseBg = scene.add.graphics();
+    this.milesBaseBg.fillStyle(COLORS.MILES_BG, 1);
+    this.milesBaseBg.fillRoundedRect(milesX, pillY, pillW, pillH, 4);
+    this.mainContentContainer.add(this.milesBaseBg);
+
+    this.milesBaseText = scene.add
+      .text(milesX + pillW / 2, pillY + pillH / 2, '0', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: TEXT_COLORS.PRIMARY,
+      })
+      .setOrigin(0.5);
+    this.mainContentContainer.add(this.milesBaseText);
+
+    const xText = scene.add
+      .text(multX - 9, pillY + pillH / 2, '×', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: TEXT_COLORS.SECONDARY,
+      })
+      .setOrigin(0.5);
+    this.mainContentContainer.add(xText);
+
+    this.multBg = scene.add.graphics();
+    this.multBg.fillStyle(COLORS.MULT_BG, 1);
+    this.multBg.fillRoundedRect(multX, pillY, pillW, pillH, 4);
+    this.mainContentContainer.add(this.multBg);
+
+    this.multText = scene.add
+      .text(multX + pillW / 2, pillY + pillH / 2, '0', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: TEXT_COLORS.PRIMARY,
+      })
+      .setOrigin(0.5);
+    this.mainContentContainer.add(this.multText);
+
+    localY += scoreRowH + 2;
+
+    // ─── Row 3: days · rerolls · money · leg · buttons ───
+    const statsH = 24;
+    const statsBg = scene.add.graphics();
+    statsBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
+    statsBg.fillRoundedRect(pad, localY, w - pad * 2, statsH, 4);
+    statsBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
+    statsBg.strokeRoundedRect(pad, localY, w - pad * 2, statsH, 4);
+    this.mainContentContainer.add(statsBg);
+
+    const statY = localY + statsH / 2;
+    const statSlots = 4;
+    const btnW = isDevMode() ? 48 : 52;
+    const btnCount = isDevMode() ? 3 : 2;
+    const btnTotalW = btnCount * btnW + (btnCount - 1) * 4;
+    const statsW = w - pad * 2 - btnTotalW - 8;
+    const slotW = statsW / statSlots;
+    const btnH = 22;
+
+    const daysCenterX = pad + 8 + slotW * 0.5;
+    this.mainContentContainer.add(
+      scene.add
+        .text(daysCenterX, statY - 6, 'Days', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '8px',
+          color: TEXT_COLORS.MUTED,
+        })
+        .setOrigin(0.5),
+    );
+    this.daysText = scene.add
+      .text(daysCenterX, statY + 5, '4', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '13px',
+        color: '#66aaff',
+      })
+      .setOrigin(0.5);
+    this.mainContentContainer.add(this.daysText);
+
+    const rerollCenterX = pad + 8 + slotW * 1.5;
+    this.mainContentContainer.add(
+      scene.add
+        .text(rerollCenterX, statY - 6, 'Re-rolls', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '8px',
+          color: TEXT_COLORS.MUTED,
+        })
+        .setOrigin(0.5),
+    );
+    this.rerollsText = scene.add
+      .text(rerollCenterX, statY + 5, '3', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '13px',
+        color: '#ff6666',
+      })
+      .setOrigin(0.5);
+    this.mainContentContainer.add(this.rerollsText);
+
+    const moneyCenterX = pad + 8 + slotW * 2.5;
+    this.moneyText = scene.add
+      .text(moneyCenterX, statY + 1, '$10', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '13px',
+        color: TEXT_COLORS.MONEY,
+      })
+      .setOrigin(0.5);
+    this.mainContentContainer.add(this.moneyText);
+
+    const legCenterX = pad + 8 + slotW * 3.5;
+    this.mainContentContainer.add(
+      scene.add
+        .text(legCenterX, statY - 6, 'Leg', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '8px',
+          color: TEXT_COLORS.MUTED,
+        })
+        .setOrigin(0.5),
+    );
+    this.legText = scene.add
+      .text(legCenterX, statY + 5, '1/3', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '12px',
+        color: TEXT_COLORS.PRIMARY,
+      })
+      .setOrigin(0.5);
+    this.mainContentContainer.add(this.legText);
+
+    let btnX = w - pad - btnTotalW + btnW / 2;
+    this.journeyInfoBtn = new Button(scene, btnX, statY, 'Info', btnW, btnH);
+    this.journeyInfoBtn.onClick(() => {
+      if (this.onJourneyInfo) this.onJourneyInfo();
+    });
+    this.mainContentContainer.add(this.journeyInfoBtn);
+    btnX += btnW + 4;
+
+    if (isDevMode()) {
+      this.testBossBtn = new Button(scene, btnX, statY, 'Boss', btnW, btnH);
+      this.testBossBtn.onClick(() => {
+        if (this.onDevBossTest) this.onDevBossTest();
+      });
+      this.mainContentContainer.add(this.testBossBtn);
+      btnX += btnW + 4;
+    }
+
+    this.optionsBtn = new Button(scene, btnX, statY, 'Opts', btnW, btnH);
+    this.optionsBtn.onClick(() => {
+      if (this.onOptions) this.onOptions();
+    });
+    this.mainContentContainer.add(this.optionsBtn);
+
+    this.syncMainContentOffset(false);
+
+    bindGameObject(this, runStore, selectRunSidebarModel, (model) => this.applyRunModel(model));
+    bindGameObject(
+      this,
+      roundStore,
+      (round) =>
+        round ? `${round.day}:${round.rerollsRemaining}:${round.config.maxDays}:${round.config.targetMiles}` : '',
+      () => this.applyRunModel(selectRunSidebarModel()),
+    );
+    bindGameObject(this, roundStore, selectSidebarOverlayRevision, () => this.applySidebarOverlay());
+    this.syncRoundScoreFromStore();
+  }
+
   /** Sync round score label from store (not live during score animation — use setRoundScoreAnimated). */
   syncRoundScoreFromStore(): void {
     const miles = selectRoundTotalMiles();
     if (miles !== null) {
       this.roundScoreText.setText(formatScore(miles));
+      this.fitTopBarRoundScore();
     }
   }
 
@@ -631,7 +986,11 @@ export class Sidebar extends GameObjects.Container {
     this.moneyText.setText(`$${model.balance}`);
     this.daysText.setText(`${model.daysRemaining}`);
     this.rerollsText.setText(`${model.rerolls}`);
-    this.legText.setText(`Leg ${model.leg} - ${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
+    if (this.layoutMode === 'topbar') {
+      this.legText.setText(`${model.leg}·${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
+    } else {
+      this.legText.setText(`Leg ${model.leg} - ${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
+    }
     this.targetText.setText(`${formatScore(model.targetMiles)} mi`);
     this.updateBossPanel(model.boss);
     this.updateStatusPanels(model.statusTraits ?? []);
@@ -660,6 +1019,11 @@ export class Sidebar extends GameObjects.Container {
   }
 
   private syncMainContentOffset(bossVisible: boolean): void {
+    if (this.layoutMode === 'topbar') {
+      this.mainContentContainer.setY(this.contentStartY);
+      this.handDisplayY = this.getMainContentBaseY() + this.handDisplayLocalY;
+      return;
+    }
     const statusOffset = this.statusPanelsTotalHeight;
     const bossOffset = bossVisible ? this.bossPanelHeight : 0;
     const baseY = this.contentStartY + statusOffset;
@@ -673,7 +1037,10 @@ export class Sidebar extends GameObjects.Container {
 
   updateData(data: Partial<SidebarData>): void {
     if (data.title !== undefined) this.titleText.setText(data.title);
-    if (data.roundScore !== undefined) this.roundScoreText.setText(formatScore(data.roundScore));
+    if (data.roundScore !== undefined) {
+      this.roundScoreText.setText(formatScore(data.roundScore));
+      this.fitTopBarRoundScore();
+    }
     if (data.milesBase !== undefined) this.milesBaseText.setText(formatScoreComponent(data.milesBase));
     if (data.mult !== undefined) this.multText.setText(formatMult(data.mult));
     if (data.handName !== undefined) {
@@ -693,11 +1060,15 @@ export class Sidebar extends GameObjects.Container {
     if (data.leg !== undefined) {
       let roundLabel: string;
       if (data.round !== undefined && data.totalRounds !== undefined) {
-        roundLabel = `Leg ${data.leg} - ${data.round}/${data.totalRounds}`;
+        if (this.layoutMode === 'topbar') {
+          roundLabel = `${data.leg}·${data.round}/${data.totalRounds}`;
+        } else {
+          roundLabel = `Leg ${data.leg} - ${data.round}/${data.totalRounds}`;
+        }
       } else if (data.totalLegs !== undefined) {
         roundLabel = `${data.leg} / ${data.totalLegs}`;
       } else {
-        roundLabel = `Leg ${data.leg}`;
+        roundLabel = this.layoutMode === 'topbar' ? `${data.leg}` : `Leg ${data.leg}`;
       }
       this.legText.setText(roundLabel);
     }
@@ -713,6 +1084,11 @@ export class Sidebar extends GameObjects.Container {
   }
 
   private updateStatusPanels(traits: RunStatusTrait[]): void {
+    if (this.layoutMode === 'topbar') {
+      this.topBarTraits = traits;
+      this.refreshTopBarModifiersIndicator();
+      return;
+    }
     this.statusPanelsContainer.removeAll(true);
 
     const pad = UI.SIDEBAR_PADDING;
@@ -790,6 +1166,11 @@ export class Sidebar extends GameObjects.Container {
   }
 
   private updateBossPanel(boss: BossDef | null | undefined): void {
+    if (this.layoutMode === 'topbar') {
+      this.topBarBoss = boss ?? null;
+      this.refreshTopBarModifiersIndicator();
+      return;
+    }
     if (!boss) {
       this.bossContainer.setVisible(false);
       this.syncMainContentOffset(false);
@@ -835,6 +1216,70 @@ export class Sidebar extends GameObjects.Container {
     this.onOptions = cb;
   }
 
+  setModifiersCallback(cb: () => void): void {
+    this.onModifiersModal = cb;
+  }
+
+  private refreshTopBarModifiersIndicator(): void {
+    if (!this.modifiersIndicator) return;
+
+    this.modifiersIndicator.removeAll(true);
+
+    const dotColors: number[] = [];
+    if (this.topBarBoss) {
+      dotColors.push(0xcc4444);
+    }
+    for (const trait of this.topBarTraits) {
+      dotColors.push(trait.polarity === 'positive' ? 0x44aa55 : 0xcc8844);
+    }
+
+    if (dotColors.length === 0) {
+      this.modifiersIndicator.setVisible(false);
+      return;
+    }
+
+    this.modifiersIndicator.setVisible(true);
+
+    const visibleDots = dotColors.slice(0, 4);
+    const dotR = 4;
+    const stackGap = 5;
+    const startY = -((visibleDots.length - 1) * stackGap) / 2;
+
+    for (let i = 0; i < visibleDots.length; i++) {
+      const dot = this.scene.add.graphics();
+      dot.fillStyle(visibleDots[i], 1);
+      dot.fillCircle(0, startY + i * stackGap, dotR);
+      this.modifiersIndicator.add(dot);
+    }
+
+    if (dotColors.length > 4) {
+      const overflow = this.scene.add.text(7, startY + 3 * stackGap, `+${dotColors.length - 4}`, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '8px',
+        color: TEXT_COLORS.MUTED,
+      });
+      overflow.setOrigin(0, 0.5);
+      this.modifiersIndicator.add(overflow);
+    }
+
+    const hit = this.scene.add.zone(0, 0, 24, 28).setInteractive({ useHandCursor: true });
+    this.modifiersIndicator.add(hit);
+    hit.on('pointerdown', () => {
+      if (this.onModifiersModal) this.onModifiersModal();
+    });
+  }
+
+  private fitTopBarRoundScore(): void {
+    if (this.layoutMode !== 'topbar') return;
+    const maxW = 84;
+    let size = 14;
+    this.roundScoreText.setFontSize(`${size}px`);
+    while (this.roundScoreText.width > maxW && size > 9) {
+      size -= 1;
+      this.roundScoreText.setFontSize(`${size}px`);
+    }
+  }
+
   getContentX(): number {
     return this.sidebarWidth;
   }
@@ -874,6 +1319,7 @@ export class Sidebar extends GameObjects.Container {
   /** Set round score with a pop animation */
   setRoundScoreAnimated(value: DecimalSource): void {
     this.roundScoreText.setText(formatScoreComponent(value));
+    this.fitTopBarRoundScore();
     this.scene.tweens.add({
       targets: this.roundScoreText,
       scaleX: 1.3,

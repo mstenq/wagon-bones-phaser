@@ -12,13 +12,14 @@ import { exportGameFromScene, exportPreviousAutoSaveFromStorage, performLoadGame
 import { createModalShell, finalizeModal } from './modalShell';
 
 export class OptionsModal extends GameObjects.Container {
-  constructor(scene: Scene, contentX: number, width: number, height: number) {
+  constructor(scene: Scene, contentX: number, width: number, height: number, contentY = 0) {
     super(scene, 0, 0);
 
     const { layout, dim, panel, title } = createModalShell(scene, 'Options', {
       contentX,
       width,
       height,
+      contentY,
       panelHeight: 560,
       panelMaxWidth: 380,
     });
@@ -36,18 +37,32 @@ export class OptionsModal extends GameObjects.Container {
     const soundBtn = new Button(scene, panelX + panelW / 2, panelY + 128, 'Sound Settings', panelW - 60, 40);
     soundBtn.onClick(() => {
       this.destroy();
-      new SoundsSettingsModal(scene, contentX, width, height, {
-        onBack: () => new OptionsModal(scene, contentX, width, height),
-      });
+      new SoundsSettingsModal(
+        scene,
+        contentX,
+        width,
+        height,
+        {
+          onBack: () => new OptionsModal(scene, contentX, width, height, contentY),
+        },
+        contentY,
+      );
     });
     this.add(soundBtn);
 
     const prefsBtn = new Button(scene, panelX + panelW / 2, panelY + 178, 'Preferences', panelW - 60, 40);
     prefsBtn.onClick(() => {
       this.destroy();
-      new PreferencesSettingsModal(scene, contentX, width, height, {
-        onBack: () => new OptionsModal(scene, contentX, width, height),
-      });
+      new PreferencesSettingsModal(
+        scene,
+        contentX,
+        width,
+        height,
+        {
+          onBack: () => new OptionsModal(scene, contentX, width, height, contentY),
+        },
+        contentY,
+      );
     });
     this.add(prefsBtn);
 

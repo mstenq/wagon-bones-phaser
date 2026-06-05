@@ -30,6 +30,7 @@ import { Button } from '../ui/Button';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
+import { computeLayoutMetrics } from '../ui/SceneLayout';
 import {
   createShopActiveTabHandle,
   openShopCardTabs,
@@ -767,16 +768,16 @@ export class ShopScene extends Scene {
     this.clearShopStock();
     const run = getRunState();
     const { width } = this.scale;
-    const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
-    const contentL = sidebarW + UI.FELT_PADDING;
-    const contentW = width - sidebarW - UI.FELT_PADDING * 2;
-    const metrics = this.getShopLayoutMetrics(contentL, contentW);
+    const layout = computeLayoutMetrics(width, this.scale.height);
+    const contentL = layout.contentX;
+    const contentW = layout.contentW;
+    const shopMetrics = this.getShopLayoutMetrics(contentL, contentW);
     this.buildShopStock(
       run,
       resolveEquipmentList(run),
       resolveConsumableList(run),
       selectTrailGuidesFree(run),
-      metrics,
+      shopMetrics,
     );
     this.updateDisplays();
   }

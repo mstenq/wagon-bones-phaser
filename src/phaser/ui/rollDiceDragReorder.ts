@@ -9,9 +9,10 @@ export type RollDiceDragReorderDeps = {
   scene: Phaser.Scene;
   getRollSprites: () => DiceSprite[];
   contentCenterX: () => number;
-  diceSpacing: number;
+  getDiceSpacing: (count: number) => number;
+  getDiceScale: () => number;
   getRollDieY: (index: number, sprite: DiceSprite) => number;
-  getArcOffset: (index: number, count: number) => { y: number; rotation: number };
+  getArcOffset: (index: number, count: number, scale?: number) => { y: number; rotation: number };
   isDieLifted: (sprite: DiceSprite) => boolean;
   syncRolledDiceFromSprites: () => void;
   onTouchTap: (sprite: DiceSprite) => void;
@@ -28,9 +29,10 @@ export class RollDiceDragReorder {
       scene: deps.scene,
       getItems: () => deps.getRollSprites(),
       getSlotPositions: (count) => {
+        const scale = deps.getDiceScale();
         const positions = this.getRowXPositions(count);
         return positions.map((x, i) => {
-          const arc = deps.getArcOffset(i, count);
+          const arc = deps.getArcOffset(i, count, scale);
           return { x, y: deps.getRollDieY(i, deps.getRollSprites()[i]!), rotation: arc.rotation };
         });
       },
@@ -54,8 +56,9 @@ export class RollDiceDragReorder {
       },
       onSiblingMove: (sibling, index, _slot) => {
         const list = deps.getRollSprites();
+        const scale = deps.getDiceScale();
         const positions = this.getRowXPositions(list.length);
-        const arc = deps.getArcOffset(index, list.length);
+        const arc = deps.getArcOffset(index, list.length, scale);
         deps.scene.tweens.add({
           targets: sibling,
           x: positions[index],
@@ -66,8 +69,9 @@ export class RollDiceDragReorder {
         });
       },
       getSettleSlot: (sprite, index, count) => {
+        const scale = deps.getDiceScale();
         const positions = this.getRowXPositions(count);
-        const arc = deps.getArcOffset(index, count);
+        const arc = deps.getArcOffset(index, count, scale);
         return {
           x: positions[index],
           y: deps.getRollDieY(index, sprite),
@@ -104,8 +108,9 @@ export class RollDiceDragReorder {
 
   private getRowXPositions(count: number): number[] {
     if (count === 0) return [];
-    const totalWidth = (count - 1) * this.deps.diceSpacing;
+    const spacing = this.deps.getDiceSpacing(count);
+    const totalWidth = (count - 1) * spacing;
     const startX = this.deps.contentCenterX() - totalWidth / 2;
-    return Array.from({ length: count }, (_, i) => startX + i * this.deps.diceSpacing);
+    return Array.from({ length: count }, (_, i) => startX + i * spacing);
   }
 }

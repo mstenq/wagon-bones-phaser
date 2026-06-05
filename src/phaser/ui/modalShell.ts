@@ -19,6 +19,8 @@ export interface ModalShellOptions {
   contentX: number;
   width: number;
   height: number;
+  /** Top of the modal content region (below portrait top bar). Default 0. */
+  contentY?: number;
   panelHeight: number;
   panelMaxWidth?: number;
   panelWidthInset?: number;
@@ -32,22 +34,22 @@ export interface ModalShellChrome {
 }
 
 export function computeModalPanelLayout(options: ModalShellOptions): ModalPanelLayout {
-  const { contentX, width, height, panelHeight, panelMaxWidth = 420, panelWidthInset = 40 } = options;
+  const { contentX, width, height, contentY = 0, panelHeight, panelMaxWidth = 420, panelWidthInset = 40 } = options;
   const panelW = Math.min(width - panelWidthInset, panelMaxWidth);
   const panelH = panelHeight;
   const panelX = contentX + (width - panelW) / 2;
-  const panelY = (height - panelH) / 2;
+  const panelY = contentY + (height - panelH) / 2;
   const labelX = panelX + 32;
   const controlRight = panelX + panelW - 32;
   return { panelX, panelY, panelW, panelH, labelX, controlRight };
 }
 
-export function createModalDim(scene: Scene, height: number, width?: number): GameObjects.Graphics {
+export function createModalDim(scene: Scene, height: number, width?: number, contentY = 0): GameObjects.Graphics {
   const dimWidth = width ?? scene.scale.width;
   const dim = scene.add.graphics();
   dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
-  dim.fillRect(0, 0, dimWidth, height);
-  dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, dimWidth, height), Phaser.Geom.Rectangle.Contains);
+  dim.fillRect(0, contentY, dimWidth, height);
+  dim.setInteractive(new Phaser.Geom.Rectangle(0, contentY, dimWidth, height), Phaser.Geom.Rectangle.Contains);
   return dim;
 }
 
@@ -107,9 +109,10 @@ export function createModalTitle(
 
 export function createModalShell(scene: Scene, titleText: string, options: ModalShellOptions): ModalShellChrome {
   const layout = computeModalPanelLayout(options);
+  const contentY = options.contentY ?? 0;
   return {
     layout,
-    dim: createModalDim(scene, options.height),
+    dim: createModalDim(scene, options.height, options.width, contentY),
     panel: createModalPanel(scene, layout),
     title: createModalTitle(scene, layout, titleText),
   };

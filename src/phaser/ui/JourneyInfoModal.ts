@@ -44,21 +44,24 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.bringToTop(this.closeBtn);
   }
 
-  constructor(scene: Scene, contentX: number, width: number, height: number) {
+  constructor(scene: Scene, contentX: number, width: number, height: number, contentY = 0) {
     super(scene, 0, 0);
 
     // Dim background
     const dim = scene.add.graphics();
     dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
-    dim.fillRect(0, 0, scene.scale.width, height);
-    dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
+    dim.fillRect(0, contentY, scene.scale.width, height);
+    dim.setInteractive(
+      new Phaser.Geom.Rectangle(0, contentY, scene.scale.width, height),
+      Phaser.Geom.Rectangle.Contains,
+    );
     this.add(dim);
 
     // Modal panel (wider to fit three round columns on the Rounds tab)
     this.panelW = Math.min(width - 40, 680);
     this.panelH = Math.min(height - 80, 560);
     this.panelX = contentX + (width - this.panelW) / 2;
-    this.panelY = (height - this.panelH) / 2;
+    this.panelY = contentY + (height - this.panelH) / 2;
 
     const panel = scene.add.graphics();
     panel.fillStyle(UI.MODAL_BG, 1);

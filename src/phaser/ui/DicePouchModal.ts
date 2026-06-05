@@ -36,21 +36,24 @@ export class DicePouchModal extends GameObjects.Container {
   private panelW: number;
   private panelH: number;
 
-  constructor(scene: Scene, contentX: number, width: number, height: number) {
+  constructor(scene: Scene, contentX: number, width: number, height: number, contentY = 0) {
     super(scene, 0, 0);
 
     // Dim background (full screen)
     const dim = scene.add.graphics();
     dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
-    dim.fillRect(0, 0, scene.scale.width, height);
-    dim.setInteractive(new Phaser.Geom.Rectangle(0, 0, scene.scale.width, height), Phaser.Geom.Rectangle.Contains);
+    dim.fillRect(0, contentY, scene.scale.width, height);
+    dim.setInteractive(
+      new Phaser.Geom.Rectangle(0, contentY, scene.scale.width, height),
+      Phaser.Geom.Rectangle.Contains,
+    );
     this.add(dim);
 
     // Modal panel
     const panelW = Math.min(width - 40, 700);
     const panelH = Math.min(height - 80, 500);
     const panelX = contentX + (width - panelW) / 2;
-    const panelY = (height - panelH) / 2;
+    const panelY = contentY + (height - panelH) / 2;
     this.panelX = panelX;
     this.panelY = panelY;
     this.panelW = panelW;

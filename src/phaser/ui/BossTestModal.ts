@@ -14,7 +14,7 @@ const ROW_GAP = 4;
 export class BossTestModal extends GameObjects.Container {
   private shell!: CatalogModalShell;
 
-  constructor(scene: Scene, contentX: number, width: number, height: number) {
+  constructor(scene: Scene, contentX: number, width: number, height: number, contentY = 0) {
     super(scene, 0, 0);
 
     const bosses = [...devGetAllBosses()].sort((a, b) => a.name.localeCompare(b.name));
@@ -23,13 +23,14 @@ export class BossTestModal extends GameObjects.Container {
     const panelW = Math.min(width - 40, 420);
     const panelH = Math.min(height - 60, 560);
     const panelX = contentX + (width - panelW) / 2;
-    const panelY = (height - panelH) / 2;
+    const panelY = contentY + (height - panelH) / 2;
 
     this.shell = createCatalogModalShell({
       scene,
       parent: this,
       screenW,
       screenH: height,
+      contentY,
       clipX: contentX,
       clipW: width,
       panel: { panelX, panelY, panelW, panelH },

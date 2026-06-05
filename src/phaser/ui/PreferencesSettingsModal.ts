@@ -18,13 +18,21 @@ export interface PreferencesSettingsModalOptions {
 }
 
 export class PreferencesSettingsModal extends GameObjects.Container {
-  constructor(scene: Scene, contentX: number, width: number, height: number, options: PreferencesSettingsModalOptions) {
+  constructor(
+    scene: Scene,
+    contentX: number,
+    width: number,
+    height: number,
+    options: PreferencesSettingsModalOptions,
+    contentY = 0,
+  ) {
     super(scene, 0, 0);
 
     const { layout, dim, panel, title } = createModalShell(scene, 'Preferences', {
       contentX,
       width,
       height,
+      contentY,
       panelHeight: 360,
     });
     const { labelX, controlRight } = layout;

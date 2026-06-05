@@ -9,7 +9,8 @@ import { getArcOffset, getRowXPositions } from './diceRowGeometry';
 export type ScoreRowLayoutDeps = {
   scene: Scene;
   contentCenterX: () => number;
-  diceSpacing: number;
+  getDiceSpacing: (count: number) => number;
+  getDiceScale: () => number;
 };
 
 export type ScoreLayoutGate = { promise: Promise<void>; release: () => void };
@@ -43,7 +44,9 @@ export class ScoreRowLayout {
     }
 
     const contentCX = this.deps.contentCenterX();
-    const scorePositions = getRowXPositions(selectedSprites.length, contentCX, this.deps.diceSpacing);
+    const scale = this.deps.getDiceScale();
+    const scoreSpacing = this.deps.getDiceSpacing(selectedSprites.length);
+    const scorePositions = getRowXPositions(selectedSprites.length, contentCX, scoreSpacing);
     const scoreY = this.deps.scene.scale.height * UI.SCORE_Y_RATIO;
     const rollY = this.deps.scene.scale.height * UI.ROLL_Y_RATIO;
     let finished = 0;
@@ -59,6 +62,7 @@ export class ScoreRowLayout {
       sprite.setSelected(false);
       sprite.setScorePresentation(isScoring ? 'none' : 'filler');
       sprite.setDepth(isScoring ? 22 : 18);
+      sprite.setScale(scale);
 
       this.deps.scene.tweens.add({
         targets: sprite,
@@ -71,13 +75,15 @@ export class ScoreRowLayout {
       });
     }
 
-    const heldPositions = getRowXPositions(heldSprites.length, contentCX, this.deps.diceSpacing);
+    const heldSpacing = this.deps.getDiceSpacing(heldSprites.length);
+    const heldPositions = getRowXPositions(heldSprites.length, contentCX, heldSpacing);
     for (let i = 0; i < heldSprites.length; i++) {
       const sprite = heldSprites[i];
-      const arc = getArcOffset(i, heldSprites.length);
+      const arc = getArcOffset(i, heldSprites.length, scale);
       sprite.setSelected(false);
       sprite.setScorePresentation('none');
       sprite.setDepth(10);
+      sprite.setScale(scale);
 
       this.deps.scene.tweens.add({
         targets: sprite,

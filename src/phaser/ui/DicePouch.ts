@@ -43,10 +43,7 @@ export class DicePouch extends GameObjects.Container {
 
     this.setSize(size, size);
     // Container input origin is center-based; graphics are drawn from local (0, 0).
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(size / 2, size / 2, size, size),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    this.setInteractive(new Phaser.Geom.Rectangle(size / 2, size / 2, size, size), Phaser.Geom.Rectangle.Contains);
 
     this.on('pointerover', () => this.drawBg(true));
     this.on('pointerout', () => this.drawBg(false));

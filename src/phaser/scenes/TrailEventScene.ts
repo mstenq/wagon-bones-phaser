@@ -16,6 +16,7 @@ import { trailEventImageKey, trailEventImagePath } from '../../game/trailEventAs
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
 import type { LayoutResult } from '../ui/SceneLayout';
+import { computeLayoutMetrics } from '../ui/SceneLayout';
 import { rngFloat } from '../../game/RunRng';
 import type { TrailEventSaveData } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
@@ -911,12 +912,16 @@ export class TrailEventScene extends Scene {
   }
 
   private getContentLayout() {
-    const { width } = this.scale;
-    const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
-    const contentX = sidebarW + UI.FELT_PADDING;
-    const contentW = width - sidebarW - UI.FELT_PADDING * 2;
-    const contentCX = sidebarW + (width - sidebarW) / 2;
-    return { contentX, contentW, contentCX, sidebarW };
+    const { width, height } = this.scale;
+    const metrics = computeLayoutMetrics(width, height);
+    return {
+      contentX: metrics.contentX,
+      contentW: metrics.contentW,
+      contentCX: metrics.contentCX,
+      sidebarW: metrics.sidebarW,
+      contentTop: metrics.contentTop,
+      contentBottom: metrics.contentBottom,
+    };
   }
 
   private safePlaySound(key: string, config?: Phaser.Types.Sound.SoundConfig): void {

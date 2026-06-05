@@ -18,13 +18,21 @@ export class SoundsSettingsModal extends GameObjects.Container {
   private musicSlider!: SliderControl;
   private sfxSlider!: SliderControl;
 
-  constructor(scene: Scene, contentX: number, width: number, height: number, options: SoundsSettingsModalOptions) {
+  constructor(
+    scene: Scene,
+    contentX: number,
+    width: number,
+    height: number,
+    options: SoundsSettingsModalOptions,
+    contentY = 0,
+  ) {
     super(scene, 0, 0);
 
     const { layout, dim, panel, title } = createModalShell(scene, 'Sound Settings', {
       contentX,
       width,
       height,
+      contentY,
       panelHeight: 430,
     });
     const { labelX, controlRight } = layout;

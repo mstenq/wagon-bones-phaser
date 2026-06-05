@@ -34,6 +34,8 @@ export interface CatalogModalShellOptions {
   /** Horizontal bounds for outer clip bands (defaults to full screen width). */
   clipX?: number;
   clipW?: number;
+  /** Top of modal region (portrait top bar offset). Default 0. */
+  contentY?: number;
   panel: CatalogPanelBounds;
   title: string;
   subtitle?: string;
@@ -69,6 +71,7 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
     screenH,
     clipX = 0,
     clipW = screenW,
+    contentY = 0,
     panel,
     title,
     subtitle,
@@ -89,7 +92,7 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
     sceneObjects.push(obj);
   };
 
-  const dim = createModalDim(scene, screenH, screenW);
+  const dim = createModalDim(scene, screenH, screenW, contentY);
   dim.setDepth(CATALOG_MODAL_DEPTH);
   parent.add(dim);
 

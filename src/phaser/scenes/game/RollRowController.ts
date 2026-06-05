@@ -10,7 +10,8 @@ import { getArcOffset } from './diceRowGeometry';
 
 export type RollRowControllerDeps = {
   scene: Scene;
-  diceSpacing: number;
+  getDiceSpacing: (count: number) => number;
+  getDiceScale: () => number;
   getContentCenterX: () => number;
   getSortOrder: () => 'asc' | 'desc';
   isAnimating: () => boolean;
@@ -34,7 +35,8 @@ export class RollRowController {
       scene: deps.scene,
       getRollSprites: () => this.rollSprites,
       contentCenterX: deps.getContentCenterX,
-      diceSpacing: deps.diceSpacing,
+      getDiceSpacing: deps.getDiceSpacing,
+      getDiceScale: deps.getDiceScale,
       getRollDieY: (index, sprite) => this.getRollDieY(index, sprite),
       getArcOffset,
       isDieLifted: deps.isDieLifted,
@@ -65,12 +67,15 @@ export class RollRowController {
 
   createRollRow(dice: Die[], y: number): DiceSprite[] {
     const sprites: DiceSprite[] = [];
-    const totalWidth = (dice.length - 1) * this.deps.diceSpacing;
+    const scale = this.deps.getDiceScale();
+    const spacing = this.deps.getDiceSpacing(dice.length);
+    const totalWidth = (dice.length - 1) * spacing;
     const startX = this.deps.getContentCenterX() - totalWidth / 2;
 
     for (let i = 0; i < dice.length; i++) {
-      const arc = getArcOffset(i, dice.length);
-      const sprite = new DiceSprite(this.deps.scene, startX + i * this.deps.diceSpacing, y + arc.y, dice[i]);
+      const arc = getArcOffset(i, dice.length, scale);
+      const sprite = new DiceSprite(this.deps.scene, startX + i * spacing, y + arc.y, dice[i]);
+      sprite.setScale(scale);
       sprite.rotation = arc.rotation;
       sprite.setDepth(10);
       sprites.push(sprite);
@@ -119,13 +124,16 @@ export class RollRowController {
   reposition(animated: boolean, duration = 250): void {
     if (this.rollSprites.length === 0) return;
 
-    const totalWidth = (this.rollSprites.length - 1) * this.deps.diceSpacing;
+    const spacing = this.deps.getDiceSpacing(this.rollSprites.length);
+    const scale = this.deps.getDiceScale();
+    const totalWidth = (this.rollSprites.length - 1) * spacing;
     const startX = this.deps.getContentCenterX() - totalWidth / 2;
     for (let i = 0; i < this.rollSprites.length; i++) {
       const sprite = this.rollSprites[i];
-      const arc = getArcOffset(i, this.rollSprites.length);
-      const targetX = startX + i * this.deps.diceSpacing;
+      const arc = getArcOffset(i, this.rollSprites.length, scale);
+      const targetX = startX + i * spacing;
       const targetY = this.getRollDieY(i, sprite);
+      sprite.setScale(scale);
       this.applyRollDieDepth(sprite);
 
       if (animated) {
@@ -157,7 +165,8 @@ export class RollRowController {
 
   getRollDieY(index: number, sprite: DiceSprite): number {
     const rollY = this.deps.scene.scale.height * UI.ROLL_Y_RATIO;
-    const arc = getArcOffset(index, this.rollSprites.length);
+    const scale = this.deps.getDiceScale();
+    const arc = getArcOffset(index, this.rollSprites.length, scale);
     const lift = this.deps.isDieLifted(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
     return rollY + arc.y - lift;
   }

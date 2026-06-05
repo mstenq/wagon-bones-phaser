@@ -8,7 +8,8 @@ import { getArcOffset, getRowXPositions } from './diceRowGeometry';
 
 export type PlayAreaDiceControllerDeps = {
   scene: Scene;
-  diceSpacing: number;
+  getDiceSpacing: (count: number) => number;
+  getDiceScale: () => number;
   getContentCenterX: () => number;
   isConsumableTargeting: () => boolean;
   isConsumableTargetDie: (sprite: DiceSprite) => boolean;
@@ -36,11 +37,14 @@ export class PlayAreaDiceController {
   /** Build the hand row at the current Y; sprites are non-interactive until targeting enables them. */
   buildHand(dice: Die[]): void {
     this.clear();
-    const positions = getRowXPositions(dice.length, this.deps.getContentCenterX(), this.deps.diceSpacing);
+    const scale = this.deps.getDiceScale();
+    const spacing = this.deps.getDiceSpacing(dice.length);
+    const positions = getRowXPositions(dice.length, this.deps.getContentCenterX(), spacing);
 
     for (let i = 0; i < dice.length; i++) {
-      const arc = getArcOffset(i, dice.length);
+      const arc = getArcOffset(i, dice.length, scale);
       const sprite = new DiceSprite(this.deps.scene, positions[i], this.rowY + arc.y, dice[i]);
+      sprite.setScale(scale);
       sprite.rotation = arc.rotation;
       sprite.setDepth(10);
       this.wireSprite(sprite);
@@ -50,17 +54,20 @@ export class PlayAreaDiceController {
   }
 
   getXPositions(count: number): number[] {
-    return getRowXPositions(count, this.deps.getContentCenterX(), this.deps.diceSpacing);
+    const spacing = this.deps.getDiceSpacing(count);
+    return getRowXPositions(count, this.deps.getContentCenterX(), spacing);
   }
 
   reposition(animated: boolean, duration = 200): void {
     if (this.sprites.length === 0) return;
 
     const positions = this.getXPositions(this.sprites.length);
+    const scale = this.deps.getDiceScale();
     for (let i = 0; i < this.sprites.length; i++) {
       const sprite = this.sprites[i];
-      const arc = getArcOffset(i, this.sprites.length);
+      const arc = getArcOffset(i, this.sprites.length, scale);
       const targetY = this.getDieY(i, sprite);
+      sprite.setScale(scale);
       this.applyDieDepth(sprite);
 
       if (animated) {
@@ -115,7 +122,8 @@ export class PlayAreaDiceController {
   }
 
   private getDieY(index: number, sprite: DiceSprite): number {
-    const arc = getArcOffset(index, this.sprites.length);
+    const scale = this.deps.getDiceScale();
+    const arc = getArcOffset(index, this.sprites.length, scale);
     const lift = this.deps.isConsumableTargetDie(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
     return this.rowY + arc.y - lift;
   }

@@ -248,9 +248,15 @@ export const FONTS = {
 };
 
 // ─── UI Layout ───
+export type LayoutMode = 'sidebar' | 'topbar';
+
 export const UI = {
-  // Sidebar (Balatro-style left panel)
+  // Sidebar (Balatro-style left panel) / portrait top bar
   SIDEBAR_WIDTH_RATIO: 0.24, // 24% of screen width
+  TOP_BAR_BASE_HEIGHT: 112,
+  /** Portrait reference width for UI scale (typical phone) */
+  UI_SCALE_REF_WIDTH: 420,
+  UI_SCALE_MIN: 0.72,
   SIDEBAR_PADDING: 12,
   SIDEBAR_BG: 0x111122,
   SIDEBAR_BORDER: 0x333355,
@@ -309,6 +315,13 @@ export const UI = {
   HAND_Y_RATIO: 0.72,
   ROLL_Y_RATIO: 0.7, // dice row y position from top of play area
   DICE_SPACING: 85,
+  /** Content width below which dice shrink and row padding tightens */
+  DICE_ROW_COMPACT_WIDTH: 650,
+  /** Horizontal inset when fitting dice rows to the content area */
+  DICE_ROW_EDGE_PAD: 16,
+  DICE_ROW_EDGE_PAD_COMPACT: 6,
+  /** Display scale at narrowest supported content widths (below compact width) */
+  DICE_ROW_SCALE_MIN: 0.62,
   DICE_ARC_HEIGHT: 12, // max Y lift at center of arc (px)
   DICE_ARC_ROTATION: 0.04, // max rotation at edges (radians, ~2.3°)
   /** How far locked roll-phase dice rise above the row (Balatro-style hold) */

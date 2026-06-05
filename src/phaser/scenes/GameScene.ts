@@ -44,15 +44,13 @@ import { ensureAuraTextures } from '../ui/AuraFX';
 import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
-import { getArcOffset } from './game/diceRowGeometry';
+import { computeDiceDisplayScale, computeDiceSpacing, getArcOffset } from './game/diceRowGeometry';
 import { GameConsumableTargetingController } from './game/GameConsumableTargetingController';
 import { PlayAreaDiceController } from './game/PlayAreaDiceController';
 import { RollMarqueeSelection } from './game/RollMarqueeSelection';
 import { RollRowController } from './game/RollRowController';
 import { ScoreRowLayout, type ScoreLayoutGate } from './game/ScoreRowLayout';
 import { GameSceneDevPanel } from './game/GameSceneDevPanel';
-
-const DICE_SPACING = UI.DICE_SPACING;
 
 export class GameScene extends Scene {
   private roundSessionActive = false;
@@ -63,6 +61,7 @@ export class GameScene extends Scene {
 
   // Layout helpers
   private contentCX: number = 0;
+  private contentW: number = 0;
   private sidebarW: number = 0;
 
   // Roll-phase dice row + marquee selection
@@ -160,7 +159,8 @@ export class GameScene extends Scene {
     this.scoreRowLayout = new ScoreRowLayout({
       scene: this,
       contentCenterX: () => this.contentCX,
-      diceSpacing: DICE_SPACING,
+      getDiceSpacing: (count) => this.getDiceSpacing(count),
+      getDiceScale: () => this.getDiceScale(),
     });
 
     this.consumableTargeting = new GameConsumableTargetingController({
@@ -188,7 +188,8 @@ export class GameScene extends Scene {
 
     this.rollRow = new RollRowController({
       scene: this,
-      diceSpacing: DICE_SPACING,
+      getDiceSpacing: (count) => this.getDiceSpacing(count),
+      getDiceScale: () => this.getDiceScale(),
       getContentCenterX: () => this.contentCX,
       getSortOrder: () => this.sortOrder,
       isAnimating: () => this.animating,
@@ -209,7 +210,8 @@ export class GameScene extends Scene {
 
     this.playArea = new PlayAreaDiceController({
       scene: this,
-      diceSpacing: DICE_SPACING,
+      getDiceSpacing: (count) => this.getDiceSpacing(count),
+      getDiceScale: () => this.getDiceScale(),
       getContentCenterX: () => this.contentCX,
       isConsumableTargeting: () => this.consumableTargeting.isActive(),
       isConsumableTargetDie: (sprite) => this.consumableTargeting.isTargetDie(sprite),
@@ -221,7 +223,7 @@ export class GameScene extends Scene {
       canUseMarquee: () => this.canUseMarquee(),
       getRollSprites: () => this.rollRow.getRollSprites(),
       getZoneBounds: () => ({
-        width: this.scale.width - this.sidebarW,
+        width: this.contentW,
         height: this.scale.height - MARQUEE.BOTTOM_RESERVE,
         cx: this.contentCX,
         cy: (this.scale.height - MARQUEE.BOTTOM_RESERVE) / 2,
@@ -280,6 +282,7 @@ export class GameScene extends Scene {
     this.dicePouch = layout.dicePouch;
     this.sidebarW = layout.sidebarW;
     this.contentCX = layout.contentCX;
+    this.contentW = layout.contentW;
 
     this.equipBar.setHintRound(getRoundHintContext());
     this.equipBar.on('equipment-changed', () => {
@@ -319,7 +322,7 @@ export class GameScene extends Scene {
     const btnY = height - UI.GAME_BOTTOM_BTN_MARGIN;
     const instructionY = btnY - UI.GAME_INSTRUCTION_ABOVE_BTN;
     const sortY = instructionY - UI.GAME_SORT_ABOVE_INSTRUCTION;
-    const playAreaW = this.scale.width - this.sidebarW;
+    const playAreaW = this.contentW;
     const bossWarningY = height * UI.GAME_BOSS_WARNING_Y_RATIO;
 
     // Instruction text
@@ -412,6 +415,14 @@ export class GameScene extends Scene {
       this.enterDrawPhase(false, null, { autoRoll: !isRelayout });
     }
     this.updateHUD();
+  }
+
+  private getDiceSpacing(diceCount: number): number {
+    return computeDiceSpacing(diceCount, this.contentW);
+  }
+
+  private getDiceScale(): number {
+    return computeDiceDisplayScale(this.contentW);
   }
 
   private onResize(): void {
