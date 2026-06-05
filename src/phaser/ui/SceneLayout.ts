@@ -5,7 +5,8 @@
 // to the shared UI elements plus layout dimensions.
 
 import { Scene } from 'phaser';
-import { COLORS, UI, GAMEPLAY, type LayoutMode } from '../../game/Constants';
+import { COLORS, DICE, UI, GAMEPLAY, type LayoutMode } from '../../game/Constants';
+import { computeDiceDisplayScale } from '../scenes/game/diceRowGeometry';
 import { getRunState } from '../../game/store/runStore';
 import { selectRunSidebarModel } from '../../game/store/selectors/uiSelectors';
 import { selectRoundTotalMiles } from '../../game/store/selectors/roundSelectors';
@@ -24,6 +25,89 @@ import { startAutoSaveLoop } from '../AutoSaveManager';
 import { ensureBackgroundMusic } from '../BackgroundMusic';
 
 export type { LayoutMode } from '../../game/Constants';
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+/** Shared card metrics for equipment and consumable bars. */
+export interface CardBarMetrics {
+  displayScale: number;
+  cardScale: number;
+  cardSpacing: number;
+  barPadding: number;
+  barHeight: number;
+  /** Local Y for card centers (top-anchored inside the bar). */
+  cardCenterY: number;
+  /** Hide on-card hint chips; tooltips still work on tap (Balatro-style mobile). */
+  hideCardHints: boolean;
+}
+
+export interface CardBarWidths {
+  equipW: number;
+  consumableW: number;
+  barGap: number;
+}
+
+/** Shrink card bars when the content area is narrower than the dice-row compact breakpoint. */
+export function computeCardBarDisplayScale(contentWidth: number): number {
+  if (contentWidth >= UI.DICE_ROW_COMPACT_WIDTH) return 1;
+  const minWidth = 360;
+  const t = clamp01((contentWidth - minWidth) / (UI.DICE_ROW_COMPACT_WIDTH - minWidth));
+  return UI.CARD_BAR_SCALE_MIN + t * (1 - UI.CARD_BAR_SCALE_MIN);
+}
+
+/** Minimum consumable bar width to fit two overlapping cards with side padding. */
+export function computeMinConsumableBarWidth(cardBar: CardBarMetrics): number {
+  const cardW = UI.CARD_W * cardBar.cardScale;
+  const twoCardSpan = cardW + cardBar.cardSpacing;
+  return Math.ceil(twoCardSpan + cardBar.barPadding * 2);
+}
+
+/** Split content width between equipment (left) and consumable (right) bars. */
+export function computeCardBarWidths(contentW: number, cardBar: CardBarMetrics): CardBarWidths {
+  const barGap = UI.CARD_BAR_GAP;
+  const innerW = contentW - barGap;
+  const isCompact = contentW < UI.DICE_ROW_COMPACT_WIDTH;
+
+  if (!isCompact) {
+    const equipW = Math.floor(innerW * UI.EQUIP_BAR_RATIO);
+    return { equipW, consumableW: innerW - equipW, barGap };
+  }
+
+  const minConsumableW = computeMinConsumableBarWidth(cardBar);
+  const maxConsumableW = Math.floor(innerW * UI.CONSUMABLE_BAR_COMPACT_MAX_RATIO);
+  let consumableW = Math.min(maxConsumableW, Math.max(minConsumableW, Math.floor(innerW * 0.34)));
+  const minEquipW = cardBar.barPadding * 2 + UI.CARD_W * cardBar.cardScale;
+  const equipW = innerW - consumableW;
+  if (equipW < minEquipW) {
+    consumableW = Math.max(minConsumableW, innerW - minEquipW);
+  }
+
+  return { equipW: innerW - consumableW, consumableW, barGap };
+}
+
+/** Unified equipment + consumable card sizing derived from content width. */
+export function computeCardBarMetrics(contentWidth: number): CardBarMetrics {
+  const displayScale = computeCardBarDisplayScale(contentWidth);
+  const cardScale = UI.CARD_BAR_BASE_SCALE * displayScale;
+  const cardWidth = UI.CARD_W * cardScale;
+  const cardHeight = UI.CARD_H * cardScale;
+  const isCompact = contentWidth < UI.DICE_ROW_COMPACT_WIDTH;
+  const cardSpacing = isCompact ? cardWidth * UI.CARD_BAR_COMPACT_SPACING_RATIO : UI.CARD_BAR_SPACING * displayScale;
+  const topInset = Math.max(6, Math.floor(UI.CARD_BAR_TOP_INSET * displayScale));
+  const bottomPad = isCompact ? UI.CARD_BAR_HEIGHT_PAD_COMPACT : UI.CARD_BAR_HEIGHT_PAD;
+  const barPadding = Math.max(8, Math.floor(UI.CARD_BAR_PADDING * displayScale));
+  return {
+    displayScale,
+    cardScale,
+    cardSpacing,
+    barPadding,
+    barHeight: Math.ceil(topInset + cardHeight + bottomPad * displayScale),
+    cardCenterY: topInset + cardHeight / 2,
+    hideCardHints: isCompact,
+  };
+}
 
 export interface ModalRegion {
   x: number;
@@ -45,6 +129,7 @@ export interface LayoutMetrics {
   contentTop: number;
   contentBottom: number;
   equipBarH: number;
+  cardBar: CardBarMetrics;
   equipBarY: number;
   feltX: number;
   feltY: number;
@@ -77,6 +162,9 @@ export interface LayoutResult {
   contentTop: number;
   /** Y where main content ends (above dice pouch) */
   contentBottom: number;
+  /** Equipment / consumable bar height (content-width responsive) */
+  equipBarH: number;
+  cardBar: CardBarMetrics;
 }
 
 /** True when the viewport is taller than wide (portrait). */
@@ -98,13 +186,14 @@ export function computeLayoutMetrics(width: number, height: number): LayoutMetri
   const uiScale = computeUiScale(width, height);
   const feltPadding = Math.floor(UI.FELT_PADDING * uiScale);
   const pouchMargin = Math.floor(UI.POUCH_MARGIN * uiScale);
-  const equipBarH = Math.floor(UI.EQUIP_BAR_HEIGHT * uiScale);
 
   if (layoutMode === 'sidebar') {
     const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
     const contentX = sidebarW + feltPadding;
     const contentW = width - sidebarW - feltPadding * 2;
     const contentCX = sidebarW + (width - sidebarW) / 2;
+    const cardBar = computeCardBarMetrics(contentW);
+    const equipBarH = cardBar.barHeight;
     const equipBarY = 8;
     const contentTop = equipBarH + 16;
     const contentBottom = height - pouchMargin - UI.POUCH_SIZE - 8;
@@ -121,6 +210,7 @@ export function computeLayoutMetrics(width: number, height: number): LayoutMetri
       contentTop,
       contentBottom,
       equipBarH,
+      cardBar,
       equipBarY,
       feltX: sidebarW,
       feltY: 0,
@@ -136,6 +226,8 @@ export function computeLayoutMetrics(width: number, height: number): LayoutMetri
   const contentX = feltPadding;
   const contentW = width - feltPadding * 2;
   const contentCX = width / 2;
+  const cardBar = computeCardBarMetrics(contentW);
+  const equipBarH = cardBar.barHeight;
   const equipBarY = topBarH + 8;
   const contentTop = topBarH + equipBarH + 16;
   const contentBottom = height - pouchMargin - UI.POUCH_SIZE - 8;
@@ -152,6 +244,7 @@ export function computeLayoutMetrics(width: number, height: number): LayoutMetri
     contentTop,
     contentBottom,
     equipBarH,
+    cardBar,
     equipBarY,
     feltX: 0,
     feltY: topBarH,
@@ -165,6 +258,126 @@ export function computeLayoutMetrics(width: number, height: number): LayoutMetri
 export function computeLayoutMetricsFromScene(scene: Scene): LayoutMetrics {
   const { width, height } = scene.scale;
   return computeLayoutMetrics(width, height);
+}
+
+/** Bottom HUD positions for GameScene — keeps corner pouch / loaded-die clear. */
+export interface GameHudLayout {
+  btnY: number;
+  sortY: number;
+  instructionY: number;
+  showInstruction: boolean;
+  rollY: number;
+  scoreY: number;
+  bottomReserve: number;
+  scoreBtnX: number;
+  rerollBtnX: number;
+  scoreBtnW: number;
+  rerollBtnW: number;
+}
+
+/** Score row Y: ratio on landscape; die-aware gap above roll row on portrait. */
+export function computeScoreRowY(height: number, rollY: number, portrait: boolean, contentWidth: number): number {
+  if (!portrait) {
+    return height * UI.SCORE_Y_RATIO;
+  }
+  const dieScale = computeDiceDisplayScale(contentWidth);
+  const dieHeight = DICE.SIZE * dieScale;
+  const arc = UI.DICE_ARC_HEIGHT * dieScale;
+  const gap = UI.DICE_SCORE_FILLER_DROP_Y + dieHeight + arc + UI.SCORE_ROW_GAP_PAD;
+  return rollY - gap;
+}
+
+function computePortraitRollButtonPositions(
+  width: number,
+  scoreW: number,
+  rerollW: number,
+): { scoreBtnX: number; rerollBtnX: number } {
+  const rightReserve = UI.POUCH_MARGIN + UI.POUCH_SIZE;
+  const leftEdge = UI.GAME_HUD_LEFT_RESERVE;
+  const rightEdge = width - rightReserve;
+  const available = rightEdge - leftEdge;
+  const gap = UI.GAME_HUD_BTN_GAP_PORTRAIT;
+  const pairW = scoreW + gap + rerollW;
+
+  if (pairW <= available) {
+    const startX = leftEdge + (available - pairW) / 2;
+    return {
+      scoreBtnX: startX + scoreW / 2,
+      rerollBtnX: startX + scoreW + gap + rerollW / 2,
+    };
+  }
+
+  const scoreBtnX = leftEdge + scoreW / 2;
+  const rerollBtnX = rightEdge - rerollW / 2;
+  return { scoreBtnX, rerollBtnX };
+}
+
+export function computeGameHudLayout(
+  width: number,
+  height: number,
+  contentCX: number,
+  contentWidth: number,
+): GameHudLayout {
+  const portrait = isPortraitLayout(width, height);
+  const cornerH = UI.POUCH_MARGIN + UI.POUCH_SIZE;
+  const btnHalfH = 20;
+  const sortHalfH = 14;
+
+  let btnY: number;
+  if (portrait) {
+    btnY = height - cornerH - btnHalfH - 10 - UI.GAME_HUD_PORTRAIT_LIFT;
+  } else {
+    btnY = height - UI.GAME_BOTTOM_BTN_MARGIN;
+  }
+
+  const showInstruction = !portrait;
+  const instructionY = btnY - UI.GAME_INSTRUCTION_ABOVE_BTN;
+  let sortY: number;
+  if (showInstruction) {
+    sortY = instructionY - UI.GAME_SORT_ABOVE_INSTRUCTION;
+  } else {
+    sortY = btnY - btnHalfH - sortHalfH - 16;
+  }
+
+  const rollYRatio = portrait ? UI.GAME_ROLL_Y_RATIO_PORTRAIT : UI.ROLL_Y_RATIO;
+  const diceYOffset = portrait ? UI.GAME_PORTRAIT_DICE_Y_OFFSET : 0;
+  const rollY = height * rollYRatio + diceYOffset;
+  const scoreY = computeScoreRowY(height, rollY, portrait, contentWidth);
+
+  const scoreBtnW = portrait ? UI.GAME_HUD_SCORE_BTN_W_PORTRAIT : 160;
+  const rerollBtnW = portrait ? UI.GAME_HUD_REROLL_BTN_W_PORTRAIT : 200;
+
+  let scoreBtnX: number;
+  let rerollBtnX: number;
+  if (portrait) {
+    ({ scoreBtnX, rerollBtnX } = computePortraitRollButtonPositions(width, scoreBtnW, rerollBtnW));
+  } else {
+    const rightReserve = UI.POUCH_MARGIN + UI.POUCH_SIZE;
+    const spread = Math.min(
+      UI.GAME_HUD_BTN_SPREAD_MAX,
+      contentCX - UI.GAME_HUD_LEFT_RESERVE - scoreBtnW / 2,
+      width - rightReserve - contentCX - rerollBtnW / 2,
+    );
+    scoreBtnX = contentCX - spread;
+    rerollBtnX = contentCX + spread;
+  }
+
+  const hudTop = sortY - sortHalfH;
+  const bottomReserve = height - hudTop + 16;
+
+  return {
+    btnY,
+    sortY,
+    instructionY,
+    showInstruction,
+    rollY,
+    scoreY,
+    bottomReserve,
+    scoreBtnX,
+    rerollBtnX,
+    scoreBtnW,
+    rerollBtnW,
+  };
 }
 
 /** Horizontal center of the main content area (excludes left sidebar / below top bar). */
@@ -252,14 +465,26 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
     felt.fillRoundedRect(metrics.feltX, metrics.feltY, metrics.feltW, metrics.feltH, 0);
   }
 
-  // ─── Equipment bar (left 80%) + Consumable bar (right 20%) ───
-  const barGap = 8;
-  const equipW = Math.floor((metrics.contentW - barGap) * UI.EQUIP_BAR_RATIO);
-  const consumableW = metrics.contentW - equipW - barGap;
-  const equipBar = new EquipmentBar(scene, metrics.contentX, metrics.equipBarY, equipW, metrics.equipBarH);
+  // ─── Equipment bar (left) + Consumable bar (right) ───
+  const { equipW, consumableW, barGap } = computeCardBarWidths(metrics.contentW, metrics.cardBar);
+  const equipBar = new EquipmentBar(
+    scene,
+    metrics.contentX,
+    metrics.equipBarY,
+    equipW,
+    metrics.equipBarH,
+    metrics.cardBar,
+  );
 
   const consumableX = metrics.contentX + equipW + barGap;
-  const consumableBar = new ConsumableBar(scene, consumableX, metrics.equipBarY, consumableW, metrics.equipBarH);
+  const consumableBar = new ConsumableBar(
+    scene,
+    consumableX,
+    metrics.equipBarY,
+    consumableW,
+    metrics.equipBarH,
+    metrics.cardBar,
+  );
 
   // ─── Dice Pouch (bottom-right) ───
   const pouchX = width - metrics.pouchMargin - UI.POUCH_SIZE;
@@ -287,5 +512,7 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
     modalRegion: metrics.modalRegion,
     contentTop: metrics.contentTop,
     contentBottom: metrics.contentBottom,
+    equipBarH: metrics.equipBarH,
+    cardBar: metrics.cardBar,
   };
 }

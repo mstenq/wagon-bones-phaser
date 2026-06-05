@@ -224,13 +224,13 @@ export class TrailEventScene extends Scene {
     });
   }
 
-  private buildEventDisplay(layout: { contentX: number; contentW: number; contentCX: number }): void {
-    const { contentW, contentCX } = layout;
+  private buildEventDisplay(layout: Pick<LayoutResult, 'contentX' | 'contentW' | 'contentCX' | 'equipBarH'>): void {
+    const { contentW, contentCX, equipBarH } = layout;
     const event = this.currentEvent;
     // ─── Event card panel ───
     const panelW = Math.min(560, contentW - 40);
     const panelX = contentCX - panelW / 2;
-    const panelTop = UI.EQUIP_BAR_HEIGHT + 20;
+    const panelTop = equipBarH + 20;
 
     const categoryColor = CATEGORY_COLORS[event.category] ?? 0x555588;
 

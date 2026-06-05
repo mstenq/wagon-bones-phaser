@@ -2,7 +2,6 @@
 // Scale + card SFX when new equipment appears on the bar (Junk Dealer, Ingenuity, Skin Walker copy, etc.).
 
 import type { Scene } from 'phaser';
-import { UI } from '../../game/Constants';
 import type { EquipmentBar } from '../ui/EquipmentBar';
 
 /** Pop in the last `count` equipment cards on the bar (Back.easeOut + sfx_card1). */
@@ -35,8 +34,8 @@ export function animateEquipmentPopIn(scene: Scene, equipBar: EquipmentBar, coun
         scene.sound.play('sfx_card1', { volume: 0.5 });
         scene.tweens.add({
           targets: card,
-          scaleX: UI.EQUIP_CARD_SCALE,
-          scaleY: UI.EQUIP_CARD_SCALE,
+          scaleX: 1,
+          scaleY: 1,
           alpha: 1,
           duration: 300,
           ease: 'Back.easeOut',

@@ -3,7 +3,6 @@
 // Extends CardBar with USE action and consumable-specific card creation.
 
 import { Scene } from 'phaser';
-import { UI } from '../../game/Constants';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { ConsumableDef, getConsumableAtlasKey } from '../../game/ConsumablesSystem';
 import { consumableActions } from '../../game/store/actions/consumableActions';
@@ -16,20 +15,18 @@ import {
 } from '../../game/store/selectors/uiSelectors';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { CardBar } from './CardBar';
+import type { CardBarMetrics } from './SceneLayout';
 import { bindGameObject } from '../store/subscribe';
 
 export class ConsumableBar extends CardBar {
-  protected readonly cardScale = UI.CONSUMABLE_CARD_SCALE;
-  protected readonly preferredSpacing = UI.CONSUMABLE_CARD_SPACING;
-  protected readonly barPadding = 16;
   private canUsePredicate: ((def: ConsumableDef) => boolean) | null = null;
   private slotLabel = '';
   private canUseSecondHelpings = false;
   /** Skip store-driven rebuild while a use animation is playing (store already updated). */
   private suppressStoreRebuild = false;
 
-  constructor(scene: Scene, x: number, y: number, width: number, height: number) {
-    super(scene, x, y, width, height);
+  constructor(scene: Scene, x: number, y: number, width: number, height: number, cardLayout: CardBarMetrics) {
+    super(scene, x, y, width, height, cardLayout);
 
     bindGameObject(this, runStore, selectConsumableBarSnapshot, () => this.onStoreConsumablesChanged(), {
       equalityFn: (a, b) => a === b,
@@ -83,7 +80,7 @@ export class ConsumableBar extends CardBar {
     const textureKey = getConsumableAtlasKey(consumable.def.category);
     const card = new ItemCard(this.scene, x, y, consumable.def, {
       mode: 'compact',
-      cardScale: UI.CONSUMABLE_CARD_SCALE,
+      cardScale: this.cardScale,
       textureKey,
     });
     card.setTooltipContext(null, getItemDisplayContext());

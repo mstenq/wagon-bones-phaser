@@ -5,7 +5,6 @@
 
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
-import { UI } from '../../game/Constants';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { equipmentActions } from '../../game/store/actions/equipmentActions';
 import { resolveEquipmentList } from '../../game/store/resolve';
@@ -18,6 +17,7 @@ import {
 } from '../../game/store/selectors/uiSelectors';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { CardBar } from './CardBar';
+import type { CardBarMetrics } from './SceneLayout';
 import type { RoundHintContext } from '../../game/displayContext';
 import { isDevMode, devGetAllAuras } from '../../game/DevMode';
 import { getItemAuraById, isEquipmentCursed, isEquipmentPerishable } from '../../game/ItemsSystem';
@@ -34,15 +34,12 @@ import { applyEquipmentModifierDestructions, type EquipmentModifierRoundResult }
 import { bindGameObject } from '../store/subscribe';
 
 export class EquipmentBar extends CardBar {
-  protected readonly cardScale = UI.EQUIP_CARD_SCALE;
-  protected readonly preferredSpacing = UI.EQUIP_CARD_SPACING;
-  protected readonly barPadding = 20;
   private devIcons: Phaser.GameObjects.Text[] = [];
   private hintRound: RoundHintContext | null = null;
   private slotLabel = '';
 
-  constructor(scene: Scene, x: number, y: number, width: number, height: number) {
-    super(scene, x, y, width, height);
+  constructor(scene: Scene, x: number, y: number, width: number, height: number, cardLayout: CardBarMetrics) {
+    super(scene, x, y, width, height, cardLayout);
 
     bindGameObject(this, runStore, selectEquipmentBarSnapshot, () => this.rebuildFromStore(), {
       equalityFn: (a, b) => a === b,
@@ -90,14 +87,14 @@ export class EquipmentBar extends CardBar {
   private syncHintsFromStore(): void {
     const player = getItemDisplayContext();
     const equipment = resolveEquipmentList();
-    const hintsHidden = isBossEquipmentHintsHidden();
+    const hintsHidden = this.shouldHideCardHints();
     const faceHidden = isBossEquipmentHidden();
     for (const card of this.cards) {
       if (!card.scene) continue;
       const equipIndex = card.getData('equipIndex') as number;
       const equip = equipment[equipIndex];
       card.setSuppressHints(hintsHidden);
-      card.setSuppressTooltip(hintsHidden);
+      card.setSuppressTooltip(isBossEquipmentHintsHidden());
       card.setFaceDown(faceHidden);
       card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
       if (equip) {
@@ -236,15 +233,20 @@ export class EquipmentBar extends CardBar {
     const equip = resolveEquipmentList()[equipIndex]!;
     const card = new ItemCard(this.scene, x, y, equip.def, {
       mode: 'compact',
-      cardScale: UI.EQUIP_CARD_SCALE,
+      cardScale: this.cardScale,
       equipment: equip,
     });
     card.setData('equipIndex', equipIndex);
     card.setBossDisabled(isEquipmentDisabledByBoss(equipIndex));
     card.setFaceDown(isBossEquipmentHidden());
     card.setSuppressTooltip(isBossEquipmentHintsHidden());
-    card.setSuppressHints(isBossEquipmentHintsHidden());
+    card.setSuppressHints(this.shouldHideCardHints());
     return card;
+  }
+
+  /** On-card hints hidden on narrow viewports and during boss hint blackout. */
+  private shouldHideCardHints(): boolean {
+    return this.hideCardHints || isBossEquipmentHintsHidden();
   }
 
   protected buildActionTabs(card: ItemCard, index: number): CardActionTabConfig[] | null {

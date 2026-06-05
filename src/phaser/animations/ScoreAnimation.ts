@@ -285,6 +285,10 @@ function shakeEquipCardAgain(scene: Scene, equipBar: EquipmentBar, equipIndex: n
 function shakeDieSprite(scene: Scene, sprite: DiceSprite): void {
   const origX = sprite.x;
   const origY = sprite.y;
+  const origScaleX = sprite.scaleX;
+  const origScaleY = sprite.scaleY;
+  const punchScaleX = origScaleX * ANIM.DICE_SCORE_PUNCH_MULT;
+  const punchScaleY = origScaleY * ANIM.DICE_SCORE_PUNCH_MULT;
   const shakeDuration = 60;
   const shakeCount = 3;
   const shakeIntensity = 3;
@@ -310,8 +314,8 @@ function shakeDieSprite(scene: Scene, sprite: DiceSprite): void {
     sprite.y = origY;
     scene.tweens.add({
       targets: sprite,
-      scaleX: 1.15,
-      scaleY: 1.15,
+      scaleX: punchScaleX,
+      scaleY: punchScaleY,
       duration: 100,
       yoyo: true,
       ease: 'Back.easeOut',

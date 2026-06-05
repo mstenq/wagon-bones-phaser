@@ -5,7 +5,7 @@ import * as Phaser from 'phaser';
 import { gameFacade } from '../../../game/facade';
 import { getRunState } from '../../../game/store/runStore';
 import { isDevMode } from '../../../game/DevMode';
-import { COLORS, FONTS, TEXT_COLORS } from '../../../game/Constants';
+import { COLORS, FONTS, TEXT_COLORS, UI } from '../../../game/Constants';
 import { Button } from '../../ui/Button';
 
 export type GameSceneDevPanelDeps = {
@@ -55,8 +55,8 @@ export class GameSceneDevPanel {
 
   private buildLoadedDiceControl(): void {
     const { height } = this.deps.scene.scale;
-    const controlLeft = this.deps.getSidebarW() + 18;
-    const controlY = height - 34;
+    const controlLeft = this.deps.getSidebarW() + UI.FELT_PADDING + 6;
+    const controlY = height - UI.POUCH_MARGIN - UI.POUCH_SIZE / 2;
     const boxWidth = 44;
     const boxHeight = 28;
     const boxCenterX = controlLeft + 50;

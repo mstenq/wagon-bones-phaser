@@ -306,8 +306,7 @@ export class BoosterPackScene extends Scene {
     this.updateEquipHints();
 
     // ─── Pack name ───
-    const equipBarH = UI.EQUIP_BAR_HEIGHT;
-    const titleY = equipBarH + 16;
+    const titleY = layout.equipBarH + 16;
     this.add
       .text(this.contentCX, titleY, this.packDef.name, {
         fontFamily: FONTS.HEADING,
@@ -362,17 +361,17 @@ export class BoosterPackScene extends Scene {
       const actionTabs =
         itemCard === null
           ? createActionTabs({
-              scene: this,
-              parent: container,
-              layout: {
-                cardW: CARD_W,
-                cardH: CARD_H,
-                cardScale: 1,
-                tabAnchorX: CARD_W / 2,
-                rightTabYOffset: 20,
-              },
-              liftParentForBottomTabs: false,
-            })
+            scene: this,
+            parent: container,
+            layout: {
+              cardW: CARD_W,
+              cardH: CARD_H,
+              cardScale: 1,
+              tabAnchorX: CARD_W / 2,
+              rightTabYOffset: 20,
+            },
+            liftParentForBottomTabs: false,
+          })
           : undefined;
 
       const sprite: CardSprite = {
@@ -605,10 +604,10 @@ export class BoosterPackScene extends Scene {
       const trailGuideDef = trailGuideData
         ? createTrailGuideConsumableDef(trailGuideData)
         : {
-            ...item,
-            id: item.trailGuideId,
-            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-          };
+          ...item,
+          id: item.trailGuideId,
+          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+        };
       itemCard = new ItemCard(this, 0, 0, trailGuideDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('trail_guide'),
@@ -620,10 +619,10 @@ export class BoosterPackScene extends Scene {
       const supplyDef = supplyCardData
         ? createSupplyConsumableDef(supplyCardData)
         : {
-            ...item,
-            id: item.supplyCardId,
-            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-          };
+          ...item,
+          id: item.supplyCardId,
+          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+        };
       itemCard = new ItemCard(this, 0, 0, supplyDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('supply'),
@@ -635,10 +634,10 @@ export class BoosterPackScene extends Scene {
       const frontierDef = frontierData
         ? createFrontierConsumableDef(frontierData)
         : {
-            ...item,
-            id: item.frontierEncounterId,
-            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-          };
+          ...item,
+          id: item.frontierEncounterId,
+          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+        };
       itemCard = new ItemCard(this, 0, 0, frontierDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('frontier'),

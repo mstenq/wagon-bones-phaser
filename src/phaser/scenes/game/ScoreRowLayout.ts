@@ -9,6 +9,8 @@ import { getArcOffset, getRowXPositions } from './diceRowGeometry';
 export type ScoreRowLayoutDeps = {
   scene: Scene;
   contentCenterX: () => number;
+  getRollRowY: () => number;
+  getScoreRowY: () => number;
   getDiceSpacing: (count: number) => number;
   getDiceScale: () => number;
 };
@@ -47,8 +49,8 @@ export class ScoreRowLayout {
     const scale = this.deps.getDiceScale();
     const scoreSpacing = this.deps.getDiceSpacing(selectedSprites.length);
     const scorePositions = getRowXPositions(selectedSprites.length, contentCX, scoreSpacing);
-    const scoreY = this.deps.scene.scale.height * UI.SCORE_Y_RATIO;
-    const rollY = this.deps.scene.scale.height * UI.ROLL_Y_RATIO;
+    const scoreY = this.deps.getScoreRowY();
+    const rollY = this.deps.getRollRowY();
     let finished = 0;
 
     const onSpriteDone = () => {

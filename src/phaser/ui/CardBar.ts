@@ -9,8 +9,7 @@ import { COLORS, TEXT_COLORS, FONTS, UI, ANIM } from '../../game/Constants';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { hitIncludesObjectOrChild, installClickAwayDismiss } from './clickAwayDismiss';
 import { createHorizontalDragReorder, type HorizontalDragReorder } from './horizontalDragReorder';
-
-const CARD_VERTICAL_OFFSET = 20;
+import type { CardBarMetrics } from './SceneLayout';
 
 export abstract class CardBar extends GameObjects.Container {
   protected bg: GameObjects.Graphics;
@@ -19,10 +18,12 @@ export abstract class CardBar extends GameObjects.Container {
   protected barWidth: number;
   protected barHeight: number;
 
-  // Subclass configuration
-  protected abstract readonly cardScale: number;
-  protected abstract readonly preferredSpacing: number;
-  protected abstract readonly barPadding: number;
+  // Layout (shared equipment + consumable sizing from SceneLayout)
+  protected readonly cardScale: number;
+  protected readonly preferredSpacing: number;
+  protected readonly barPadding: number;
+  protected readonly hideCardHints: boolean;
+  protected readonly cardCenterY: number;
 
   // Drag state (manual pointer tracking — Phaser setDraggable is unreliable on touch)
   private draggingCard: ItemCard | null = null;
@@ -45,10 +46,15 @@ export abstract class CardBar extends GameObjects.Container {
   private activeTabCard: ItemCard | null = null;
   private dismissClickAway: (() => void) | null = null;
 
-  constructor(scene: Scene, x: number, y: number, width: number, height: number) {
+  constructor(scene: Scene, x: number, y: number, width: number, height: number, cardLayout: CardBarMetrics) {
     super(scene, x, y);
     this.barWidth = width;
     this.barHeight = height;
+    this.cardScale = cardLayout.cardScale;
+    this.preferredSpacing = cardLayout.cardSpacing;
+    this.barPadding = cardLayout.barPadding;
+    this.hideCardHints = cardLayout.hideCardHints;
+    this.cardCenterY = cardLayout.cardCenterY;
 
     this.bg = scene.add.graphics();
     this.bg.setDepth(-10);
@@ -74,8 +80,7 @@ export abstract class CardBar extends GameObjects.Container {
       getItems: () => this.cards,
       getSlotPositions: (count) => {
         const positions = this.getCardXPositions(count);
-        const cy = this.barHeight / 2 - CARD_VERTICAL_OFFSET;
-        return positions.map((x) => ({ x, y: cy, rotation: 0 }));
+        return positions.map((x) => ({ x, y: this.cardCenterY, rotation: 0 }));
       },
       canStart: (card) => this.canStartCardDrag(card),
       getPointerOffset: (card, pointer) => ({
@@ -165,10 +170,8 @@ export abstract class CardBar extends GameObjects.Container {
     const spacing = this.getCardSpacing(count);
     const totalW = (count - 1) * spacing;
     const startX = this.barWidth / 2 - totalW / 2;
-    const cy = this.barHeight / 2 - CARD_VERTICAL_OFFSET;
-
     for (let i = 0; i < count; i++) {
-      const card = this.createCardForItem(startX + i * spacing, cy, i);
+      const card = this.createCardForItem(startX + i * spacing, this.cardCenterY, i);
       this.setupCardDragPointerDown(card);
       this.add(card);
       this.cards.push(card);
@@ -334,14 +337,13 @@ export abstract class CardBar extends GameObjects.Container {
 
     this.stopWobble(card);
     this.hoveredCard = null;
-    const cy = this.barHeight / 2 - CARD_VERTICAL_OFFSET;
-    this.tiltBaseY = cy;
+    this.tiltBaseY = this.cardCenterY;
     this.scene.tweens.add({
       targets: card,
       rotation: 0,
       scaleX: ANIM.CARD_TILT_LIFT,
       scaleY: ANIM.CARD_TILT_LIFT,
-      y: cy - 4,
+      y: this.cardCenterY - 4,
       duration: 150,
       ease: 'Back.easeOut',
     });
@@ -408,13 +410,12 @@ export abstract class CardBar extends GameObjects.Container {
 
       this.applyCardDepths();
 
-      const cy = this.barHeight / 2 - CARD_VERTICAL_OFFSET;
       this.scene.tweens.add({
         targets: card,
         rotation: 0,
         scaleX: 1,
         scaleY: 1,
-        y: cy,
+        y: this.cardCenterY,
         duration: 250,
         ease: 'Back.easeOut',
         onComplete: () => {

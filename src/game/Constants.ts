@@ -262,14 +262,36 @@ export const UI = {
   SIDEBAR_BORDER: 0x333355,
   SIDEBAR_SECTION_GAP: 8,
 
-  // Equipment bar (top of main area, left 80%)
-  EQUIP_BAR_HEIGHT: 250,
+  // Equipment + consumable card bars (shared sizing — see computeCardBarMetrics in SceneLayout)
   EQUIP_BAR_RATIO: 0.8,
-  EQUIP_CARD_SCALE: 0.9,
-  EQUIP_CARD_SPACING: 160,
+  /** Max share of content width for the consumable bar on compact layouts */
+  CONSUMABLE_BAR_COMPACT_MAX_RATIO: 0.38,
+  /** Gap between equipment and consumable bars */
+  CARD_BAR_GAP: 8,
+  /** Top inset for cards inside the bar background */
+  CARD_BAR_TOP_INSET: 8,
+  /** Base card scale for both equipment and consumable bars at full content width */
+  CARD_BAR_BASE_SCALE: 0.85,
+  CARD_BAR_SPACING: 150,
+  /** Center-to-center spacing as a fraction of card width when content is compact (creates overlap) */
+  CARD_BAR_COMPACT_SPACING_RATIO: 0.52,
+  CARD_BAR_PADDING: 18,
+  /** Room below card center for slot label, wobble, and action tabs */
+  CARD_BAR_HEIGHT_PAD: 52,
+  /** Shorter bar chrome when on-card hints are hidden (compact / mobile) */
+  CARD_BAR_HEIGHT_PAD_COMPACT: 34,
+  /** Display-scale floor when content is narrow (multiplies CARD_BAR_BASE_SCALE) */
+  CARD_BAR_SCALE_MIN: 0.66,
 
-  // Consumable bar (top of main area, right 20%)
+  /** @deprecated Use CARD_BAR_BASE_SCALE — kept for legacy references */
+  EQUIP_BAR_HEIGHT: 250,
+  /** @deprecated Use CARD_BAR_BASE_SCALE */
+  EQUIP_CARD_SCALE: 0.9,
+  /** @deprecated Use CARD_BAR_SPACING */
+  EQUIP_CARD_SPACING: 160,
+  /** @deprecated Use CARD_BAR_BASE_SCALE */
   CONSUMABLE_CARD_SCALE: 0.75,
+  /** @deprecated Use CARD_BAR_SPACING */
   CONSUMABLE_CARD_SPACING: 130,
 
   // Dice pouch (bottom-right indicator)
@@ -304,12 +326,31 @@ export const UI = {
   CARD_TOOLTIP_META_FONT_SIZE: 14,
 
   // Game scene (main content area — right of sidebar)
-  /** Bottom HUD: action buttons inset from screen bottom */
+  /** Bottom HUD: action buttons inset from screen bottom (landscape) */
   GAME_BOTTOM_BTN_MARGIN: 36,
   /** Gap between action buttons and instruction line */
   GAME_INSTRUCTION_ABOVE_BTN: 58,
   /** Gap between instruction line and sort controls */
   GAME_SORT_ABOVE_INSTRUCTION: 46,
+  /** Left reserve so roll-phase buttons avoid the loaded-die control */
+  GAME_HUD_LEFT_RESERVE: 100,
+  /** Max horizontal offset of score / reroll buttons from content center (landscape) */
+  GAME_HUD_BTN_SPREAD_MAX: 110,
+  /** Extra lift for portrait HUD above corner pouch / loaded-die */
+  GAME_HUD_PORTRAIT_LIFT: 28,
+  /** Portrait roll-phase button widths (fit between corner widgets) */
+  GAME_HUD_SCORE_BTN_W_PORTRAIT: 104,
+  GAME_HUD_REROLL_BTN_W_PORTRAIT: 104,
+  GAME_HUD_BTN_GAP_PORTRAIT: 10,
+  /** Dice row Y ratio on portrait (landscape uses ROLL_Y_RATIO) */
+  GAME_ROLL_Y_RATIO_PORTRAIT: 0.57,
+  /**
+   * Portrait: shift all dice play rows down together (px).
+   * Moves roll row, score row, filler kickers, and held dice as one stack.
+   */
+  GAME_PORTRAIT_DICE_Y_OFFSET: 80,
+  /** Extra pad between score row and roll row on portrait (px) */
+  SCORE_ROW_GAP_PAD: 24,
   /** Centered boss hand warning (e.g. river ford) */
   GAME_BOSS_WARNING_Y_RATIO: 0.5,
   HAND_Y_RATIO: 0.72,
@@ -388,6 +429,8 @@ export const ANIM = {
   ROLL_INTERVAL: 60,
   ROLL_BOUNCE_DURATION: 80,
   SCORE_HIGHLIGHT_DURATION: 150,
+  /** Scale multiplier for die punch during score playback (applied to current die scale). */
+  DICE_SCORE_PUNCH_MULT: 1.2,
   /** Tween duration when moving locked dice into the score line */
   DICE_SCORE_LAYOUT_DURATION: 400,
   SCORE_STEP_DELAY: 200, // ms between each scoring step (dice, equip, held)

@@ -36,7 +36,7 @@ import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
-import { createLayout } from '../ui/SceneLayout';
+import { computeGameHudLayout, createLayout } from '../ui/SceneLayout';
 import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
@@ -88,10 +88,14 @@ export class GameScene extends Scene {
   private selectedDiceIds: Set<string> = new Set();
   private rerollLockedDiceIds: Set<string> = new Set();
 
-  // Sort controls
-  private sortOrder: 'asc' | 'desc' = 'asc';
-  private sortAscBtn: Button;
-  private sortDescBtn: Button;
+  // Sort control
+  private sortBtn: Button;
+
+  // HUD layout (recomputed on resize)
+  private rollRowY = 0;
+  private scoreRowY = 0;
+  private hudBottomReserve: number = MARQUEE.BOTTOM_RESERVE;
+  private showRollInstruction = true;
 
   // Animation lock
   private animating: boolean = false;
@@ -159,6 +163,8 @@ export class GameScene extends Scene {
     this.scoreRowLayout = new ScoreRowLayout({
       scene: this,
       contentCenterX: () => this.contentCX,
+      getRollRowY: () => this.rollRowY,
+      getScoreRowY: () => this.scoreRowY,
       getDiceSpacing: (count) => this.getDiceSpacing(count),
       getDiceScale: () => this.getDiceScale(),
     });
@@ -188,10 +194,11 @@ export class GameScene extends Scene {
 
     this.rollRow = new RollRowController({
       scene: this,
+      getRollRowY: () => this.rollRowY,
       getDiceSpacing: (count) => this.getDiceSpacing(count),
       getDiceScale: () => this.getDiceScale(),
       getContentCenterX: () => this.contentCX,
-      getSortOrder: () => this.sortOrder,
+      getSortOrder: () => 'asc' as const,
       isAnimating: () => this.animating,
       isMarqueeActive: () => this.rollMarquee.isActive(),
       isConsumableTargeting: () => this.consumableTargeting.isActive(),
@@ -224,9 +231,9 @@ export class GameScene extends Scene {
       getRollSprites: () => this.rollRow.getRollSprites(),
       getZoneBounds: () => ({
         width: this.contentW,
-        height: this.scale.height - MARQUEE.BOTTOM_RESERVE,
+        height: this.scale.height - this.hudBottomReserve,
         cx: this.contentCX,
-        cy: (this.scale.height - MARQUEE.BOTTOM_RESERVE) / 2,
+        cy: (this.scale.height - this.hudBottomReserve) / 2,
       }),
       onSpriteHit: (sprite, playSound) => this.onRollDieClick(sprite, false, playSound, false),
       onSelectionComplete: () => this.updateRollButtons(),
@@ -319,9 +326,13 @@ export class GameScene extends Scene {
       void this.handleConsumableUsed(consumed);
     });
 
-    const btnY = height - UI.GAME_BOTTOM_BTN_MARGIN;
-    const instructionY = btnY - UI.GAME_INSTRUCTION_ABOVE_BTN;
-    const sortY = instructionY - UI.GAME_SORT_ABOVE_INSTRUCTION;
+    const hud = computeGameHudLayout(this.scale.width, height, this.contentCX, this.contentW);
+    this.rollRowY = hud.rollY;
+    this.scoreRowY = hud.scoreY;
+    this.hudBottomReserve = hud.bottomReserve;
+    this.showRollInstruction = hud.showInstruction;
+
+    const { btnY, sortY, instructionY } = hud;
     const playAreaW = this.contentW;
     const bossWarningY = height * UI.GAME_BOSS_WARNING_Y_RATIO;
 
@@ -356,30 +367,22 @@ export class GameScene extends Scene {
       this.onReadyToRoll(),
     );
     this.rollBtn = new Button(this, this.contentCX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
-    this.scoreBtn = new Button(this, this.contentCX - 110, btnY, 'Score Hand', 160, 40).onClick(() => this.onScore());
-    this.rerollBtn = new Button(this, this.contentCX + 110, btnY, 'Re-roll All', 200, 40).onClick(() =>
+    this.scoreBtn = new Button(this, hud.scoreBtnX, btnY, 'Score Hand', hud.scoreBtnW, 40).onClick(() =>
+      this.onScore(),
+    );
+    this.rerollBtn = new Button(this, hud.rerollBtnX, btnY, 'Re-roll All', hud.rerollBtnW, 40).onClick(() =>
       this.onReroll(),
     );
     this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
 
-    // Sort buttons (small, positioned above the main buttons)
-    this.sortAscBtn = new Button(this, this.contentCX - 50, sortY, '↑ Low', 80, 28).onClick(() =>
-      this.setSortOrder('asc'),
-    );
-    this.sortDescBtn = new Button(this, this.contentCX + 50, sortY, '↓ High', 80, 28).onClick(() =>
-      this.setSortOrder('desc'),
-    );
+    this.sortBtn = new Button(this, this.contentCX, sortY, 'Sort', 80, 28).onClick(() => this.onSortDice());
+    if (!hud.showInstruction) {
+      this.scoreBtn.setLabelFontSize(15);
+      this.rerollBtn.setLabelFontSize(15);
+    }
 
     const hudDepth = 50;
-    for (const btn of [
-      this.readyBtn,
-      this.rollBtn,
-      this.scoreBtn,
-      this.rerollBtn,
-      this.continueBtn,
-      this.sortAscBtn,
-      this.sortDescBtn,
-    ]) {
+    for (const btn of [this.readyBtn, this.rollBtn, this.scoreBtn, this.rerollBtn, this.continueBtn, this.sortBtn]) {
       btn.setDepth(hudDepth);
     }
 
@@ -453,14 +456,14 @@ export class GameScene extends Scene {
     carryoverPositions: Map<string, { x: number; y: number; rotation: number }> | null = null,
     options: { autoRoll?: boolean } = {},
   ): void {
-    const { height } = this.scale;
-    this.playArea.setY(height * UI.ROLL_Y_RATIO);
+    this.playArea.setY(this.rollRowY);
 
     const hand = selectHandDice();
     this.playArea.buildHand(hand);
     const playAreaSprites = this.playArea.getSprites();
 
     if (animateFromPouch && playAreaSprites.length > 0) {
+      const diceScale = this.getDiceScale();
       const launch = this.getDicePouchLaunchPoint();
       this.animating = true;
       let completed = 0;
@@ -480,12 +483,12 @@ export class GameScene extends Scene {
           sprite.setPosition(carry.x, carry.y);
           sprite.rotation = carry.rotation;
           sprite.setAlpha(1);
-          sprite.setScale(1);
+          sprite.setScale(diceScale);
         } else {
           sprite.setPosition(launch.x, launch.y);
           sprite.rotation = 0;
           sprite.setAlpha(0);
-          sprite.setScale(0.2);
+          sprite.setScale(diceScale * 0.2);
         }
 
         this.tweens.add({
@@ -494,8 +497,8 @@ export class GameScene extends Scene {
           y: finalY,
           rotation: finalRot,
           alpha: 1,
-          scaleX: 1,
-          scaleY: 1,
+          scaleX: diceScale,
+          scaleY: diceScale,
           duration: 320,
           delay: isCarryover ? 0 : newDiceIndex++ * 90,
           ease: 'Back.easeOut',
@@ -549,7 +552,7 @@ export class GameScene extends Scene {
 
     // Create sprites for rolled dice
     const rolled = selectRolledDice();
-    this.rollSprites = this.rollRow.createRollRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
+    this.rollSprites = this.rollRow.createRollRow(rolled, this.rollRowY);
 
     // Play roll animation
     this.animating = true;
@@ -561,10 +564,10 @@ export class GameScene extends Scene {
 
       this.rerollBtn.setVisible(true);
       this.scoreBtn.setVisible(true);
-      this.showSortButtons();
+      this.showSortButton();
       this.updateRollButtons();
 
-      this.instructionText.setText('Click to select for score · Right-click to lock against re-rolls');
+      this.instructionText.setText(this.getRollPhaseInstruction());
       this.applyBossRollDiceState();
     });
 
@@ -678,17 +681,17 @@ export class GameScene extends Scene {
     this.hideAllButtons();
 
     const rolled = selectRolledDice();
-    this.rollSprites = this.rollRow.createRollRow(rolled, this.scale.height * UI.ROLL_Y_RATIO);
+    this.rollSprites = this.rollRow.createRollRow(rolled, this.rollRowY);
     this.rollRow.setupInteraction();
     this.rollMarquee.setup();
 
     this.rerollBtn.setVisible(true);
     this.scoreBtn.setVisible(true);
-    this.showSortButtons();
+    this.showSortButton();
     this.rollRow.sortAndReposition();
     this.updateRollButtons();
 
-    this.instructionText.setText('Click to select for score · Right-click to lock against re-rolls');
+    this.instructionText.setText(this.getRollPhaseInstruction());
     this.applyBossRollDiceState();
     this.updateHUD();
   }
@@ -885,8 +888,7 @@ export class GameScene extends Scene {
     this.rerollBtn.setVisible(false);
     this.scoreBtn.setVisible(false);
     this.continueBtn.setVisible(false);
-    this.sortAscBtn.setVisible(false);
-    this.sortDescBtn.setVisible(false);
+    this.sortBtn.setVisible(false);
     this.bossWarningText.setVisible(false);
   }
 
@@ -906,18 +908,34 @@ export class GameScene extends Scene {
     const canUseReroll = gameFacade.round.canUseReroll();
 
     this.rerollBtn.setEnabled(rerollCount > 0 && canUseReroll);
-    this.rerollBtn.setText(
-      !hasRerolls
-        ? 'No Re-rolls'
-        : !canUseReroll
-          ? `Day 1: no re-rolls (${remaining} from Day 2)`
-          : rerollCount === totalCount
-            ? `Re-roll All (${remaining} remaining)`
-            : `Re-roll ${rerollCount} (${remaining} remaining)`,
-    );
+    if (this.showRollInstruction) {
+      this.rerollBtn.setText(
+        !hasRerolls
+          ? 'No Re-rolls'
+          : !canUseReroll
+            ? `Day 1: no re-rolls (${remaining} from Day 2)`
+            : rerollCount === totalCount
+              ? `Re-roll All (${remaining} remaining)`
+              : `Re-roll ${rerollCount} (${remaining} remaining)`,
+      );
+    } else {
+      this.rerollBtn.setText(
+        !hasRerolls
+          ? 'No Re-rolls'
+          : !canUseReroll
+            ? 'Day 1: no re-rolls'
+            : rerollCount === totalCount
+              ? 'Re-roll All'
+              : `Re-roll ${rerollCount}`,
+      );
+    }
 
     this.scoreBtn.setEnabled(selectedCount > 0);
-    this.scoreBtn.setText(selectedCount > 0 ? `Score ${selectedCount} Dice` : 'Select Dice to Score');
+    if (this.showRollInstruction) {
+      this.scoreBtn.setText(selectedCount > 0 ? `Score ${selectedCount} Dice` : 'Select Dice to Score');
+    } else {
+      this.scoreBtn.setText(selectedCount > 0 ? `Score ${selectedCount}` : 'Select Dice');
+    }
 
     const selectedIds = this.rollSprites.filter((s) => this.selectedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     const bossWarning = selectedCount > 0 ? gameFacade.round.getBossScoreWarning(selectedIds) : null;
@@ -945,21 +963,17 @@ export class GameScene extends Scene {
     gameFacade.round.syncRolledDiceFromFaces(this.rollSprites.map((s) => s.dieData));
   }
 
-  private setSortOrder(order: 'asc' | 'desc'): void {
-    this.sortOrder = order;
+  private onSortDice(): void {
     this.rollRow.sortAndReposition();
-    this.updateSortButtonStyles();
   }
 
-  private showSortButtons(): void {
-    this.sortAscBtn.setVisible(true);
-    this.sortDescBtn.setVisible(true);
-    this.updateSortButtonStyles();
+  private showSortButton(): void {
+    this.sortBtn.setVisible(true);
   }
 
-  private updateSortButtonStyles(): void {
-    this.sortAscBtn.setEnabled(this.sortOrder !== 'asc');
-    this.sortDescBtn.setEnabled(this.sortOrder !== 'desc');
+  private getRollPhaseInstruction(): string {
+    if (!this.showRollInstruction) return '';
+    return 'Click to select for score · Right-click to lock against re-rolls';
   }
 
   private updateHUD(): void {
@@ -1253,6 +1267,7 @@ export class GameScene extends Scene {
     const toAdd = refillPool.slice(0, needed);
     if (toAdd.length === 0) return Promise.resolve();
 
+    const diceScale = this.getDiceScale();
     const launch = this.getDicePouchLaunchPoint();
     const startingLength = this.playArea.getSprites().length;
     const nextHand = [...selectHandDice()];
@@ -1261,7 +1276,7 @@ export class GameScene extends Scene {
       const sprite = new DiceSprite(this, launch.x, launch.y, die);
       sprite.setDepth(20);
       sprite.setAlpha(0);
-      sprite.setScale(0.2);
+      sprite.setScale(diceScale * 0.2);
       this.playArea.addSprite(sprite);
     }
     gameFacade.round.setHandDice(nextHand.slice(0, selectRoundConfig().rollSize));
@@ -1270,7 +1285,7 @@ export class GameScene extends Scene {
     const playAreaY = this.playArea.getY();
     const playAreaSprites = this.playArea.getSprites();
     for (let i = 0; i < startingLength; i++) {
-      const arc = getArcOffset(i, playAreaSprites.length);
+      const arc = getArcOffset(i, playAreaSprites.length, diceScale);
       this.tweens.add({
         targets: playAreaSprites[i],
         x: positions[i],
@@ -1286,15 +1301,15 @@ export class GameScene extends Scene {
       for (let i = 0; i < toAdd.length; i++) {
         const sprite = playAreaSprites[startingLength + i];
         const idx = startingLength + i;
-        const arc = getArcOffset(idx, playAreaSprites.length);
+        const arc = getArcOffset(idx, playAreaSprites.length, diceScale);
         this.tweens.add({
           targets: sprite,
           x: positions[idx],
           y: playAreaY + arc.y,
           rotation: arc.rotation,
           alpha: 1,
-          scaleX: 1,
-          scaleY: 1,
+          scaleX: diceScale,
+          scaleY: diceScale,
           duration: 320,
           delay: i * 90,
           ease: 'Back.easeOut',
@@ -1317,7 +1332,7 @@ export class GameScene extends Scene {
     if (phase === 'ROLL') {
       this.rerollBtn.setVisible(true);
       this.scoreBtn.setVisible(true);
-      this.showSortButtons();
+      this.showSortButton();
       this.updateRollButtons();
     } else if (phase === 'SELECT') {
       this.playArea.setTargetingInteractive(false);
@@ -1332,7 +1347,7 @@ export class GameScene extends Scene {
     const affectedIds = new Set(selectedDice.map((d) => d.id));
 
     const text = this.add
-      .text(this.contentCX, this.scale.height * UI.ROLL_Y_RATIO - 60, resultMsg, {
+      .text(this.contentCX, this.rollRowY - 60, resultMsg, {
         fontFamily: FONTS.HEADING,
         fontSize: '24px',
         color: '#66ff66',

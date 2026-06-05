@@ -10,6 +10,7 @@ import { getArcOffset } from './diceRowGeometry';
 
 export type RollRowControllerDeps = {
   scene: Scene;
+  getRollRowY: () => number;
   getDiceSpacing: (count: number) => number;
   getDiceScale: () => number;
   getContentCenterX: () => number;
@@ -164,7 +165,7 @@ export class RollRowController {
   }
 
   getRollDieY(index: number, sprite: DiceSprite): number {
-    const rollY = this.deps.scene.scale.height * UI.ROLL_Y_RATIO;
+    const rollY = this.deps.getRollRowY();
     const scale = this.deps.getDiceScale();
     const arc = getArcOffset(index, this.rollSprites.length, scale);
     const lift = this.deps.isDieLifted(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;

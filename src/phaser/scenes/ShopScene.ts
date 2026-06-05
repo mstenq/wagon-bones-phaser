@@ -213,7 +213,7 @@ export class ShopScene extends Scene {
     // Show equipment hints with default (shop) context
     this.updateEquipHints();
 
-    const layoutMetrics = this.getShopLayoutMetrics(contentL, contentW);
+    const layoutMetrics = this.getShopLayoutMetrics(contentL, contentW, layout.equipBarH);
     this.buildShopStock(run, equipment, consumables, trailGuidesFree, layoutMetrics);
 
     // ─── Box 2: Voucher + Booster packs ───
@@ -396,7 +396,7 @@ export class ShopScene extends Scene {
 
     // Animate card shrinking toward consumable bar
     const targetX = this.consumableBar.x + this.consumableBar.width / 2;
-    const targetY = this.consumableBar.y + UI.EQUIP_BAR_HEIGHT / 2;
+    const targetY = this.consumableBar.y + this.consumableBar.height / 2;
     card.setDepth(200);
     this.tweens.add({
       targets: card,
@@ -580,8 +580,7 @@ export class ShopScene extends Scene {
     }
   }
 
-  private getShopLayoutMetrics(contentL: number, contentW: number) {
-    const equipBarH = UI.EQUIP_BAR_HEIGHT;
+  private getShopLayoutMetrics(contentL: number, contentW: number, equipBarH: number) {
     const BOX_RADIUS = 12;
     const BOX_PAD = 16;
     const BOX_GAP = 12;
@@ -771,7 +770,7 @@ export class ShopScene extends Scene {
     const layout = computeLayoutMetrics(width, this.scale.height);
     const contentL = layout.contentX;
     const contentW = layout.contentW;
-    const shopMetrics = this.getShopLayoutMetrics(contentL, contentW);
+    const shopMetrics = this.getShopLayoutMetrics(contentL, contentW, layout.equipBarH);
     this.buildShopStock(
       run,
       resolveEquipmentList(run),

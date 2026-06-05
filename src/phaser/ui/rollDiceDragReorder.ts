@@ -46,8 +46,8 @@ export class RollDiceDragReorder {
         sprite.emit('pointerout');
         DiceSprite.suppressTooltips = true;
         sprite.setDepth(30);
-        sprite.scaleX = 1.1;
-        sprite.scaleY = 1.1;
+        const dragScale = deps.getDiceScale() * 1.1;
+        sprite.setScale(dragScale);
       },
       onMoveItem: (sprite, pointer, ctx) => {
         sprite.rotation = ctx.swing;
@@ -77,6 +77,10 @@ export class RollDiceDragReorder {
           y: deps.getRollDieY(index, sprite),
           rotation: arc.rotation,
         };
+      },
+      getSettleScale: () => {
+        const scale = deps.getDiceScale();
+        return { scaleX: scale, scaleY: scale };
       },
       onSettleStart: (sprite) => {
         const lifted = deps.isDieLifted(sprite);
