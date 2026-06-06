@@ -30,7 +30,7 @@ import { Button } from '../ui/Button';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
-import { computeLayoutMetrics } from '../ui/SceneLayout';
+import { computeFittedRowSpacing, computeLayoutMetrics, type CardBarMetrics } from '../ui/SceneLayout';
 import {
   createShopActiveTabHandle,
   openShopCardTabs,
@@ -48,8 +48,6 @@ import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../ga
 import { bindStore } from '../store/subscribe';
 import type { ShopSceneState } from '../../game/store/types';
 import { appendShopStockForSlots, buildShopDieDisplayDef, buildShopPermitDisplayDef } from '../../game/store/shopStock';
-
-const CARD_SPACING = 185;
 
 /** A shop stock item — equipment, consumable, or dice */
 type ShopItem =
@@ -213,11 +211,12 @@ export class ShopScene extends Scene {
     // Show equipment hints with default (shop) context
     this.updateEquipHints();
 
-    const layoutMetrics = this.getShopLayoutMetrics(contentL, contentW, layout.equipBarH);
+    const layoutMetrics = this.getShopLayoutMetrics(contentL, contentW, layout.contentTop, layout.cardBar);
     this.buildShopStock(run, equipment, consumables, trailGuidesFree, layoutMetrics);
 
     // ─── Box 2: Voucher + Booster packs ───
-    const { box2Top, box2H, cardCY2, CARD_H, BOX_RADIUS, BOX_PAD, BTN_COL_W } = layoutMetrics;
+    const { box2Top, box2H, cardCY2, CARD_H, CARD_W, PREFERRED_SPACING, cardScale, BOX_RADIUS, BOX_PAD, BTN_COL_W } =
+      layoutMetrics;
     const packBox = this.add.graphics();
     packBox.fillStyle(0x0d0d1a, 0.75);
     packBox.fillRoundedRect(contentL, box2Top, contentW, box2H, BOX_RADIUS);
@@ -232,22 +231,24 @@ export class ShopScene extends Scene {
 
     this.permitCard = null;
     const permit = this.getOrGeneratePermit();
-    this.renderPermitCard(permit, voucherX, voucherY, voucherW, voucherH, 'FRONTIER PERMIT', true);
+    this.renderPermitCard(permit, voucherX, voucherY, voucherW, voucherH, cardScale, 'FRONTIER PERMIT', true);
     if (bonusPermit && bonusPermit.id !== permit?.id) {
-      const bonusX = voucherX + voucherW + 24;
-      this.renderPermitCard(bonusPermit, bonusX, voucherY, voucherW, voucherH, 'BONUS PERMIT', false);
+      const permitSpacing = computeFittedRowSpacing(2, voucherW * 2 + 48, CARD_W, PREFERRED_SPACING);
+      const bonusX = voucherX + CARD_W / 2 + permitSpacing + CARD_W / 2;
+      this.renderPermitCard(bonusPermit, bonusX, voucherY, voucherW, voucherH, cardScale, 'BONUS PERMIT', false);
     }
 
     // Booster packs (right side of box 2)
     this.packCards = [];
     const packAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
     const packAreaW = contentW - BOX_PAD * 2 - BTN_COL_W - 8;
-    const packTotalW = (this.packs.length - 1) * CARD_SPACING;
+    const packSpacing = computeFittedRowSpacing(this.packs.length, packAreaW, CARD_W, PREFERRED_SPACING);
+    const packTotalW = (this.packs.length - 1) * packSpacing;
     const packX0 = packAreaLeft + packAreaW / 2 - packTotalW / 2;
 
     for (let i = 0; i < this.packs.length; i++) {
       const packInst = this.packs[i];
-      const packCard = new BoosterPackCard(this, packX0 + i * CARD_SPACING, cardCY2, packInst);
+      const packCard = new BoosterPackCard(this, packX0 + i * packSpacing, cardCY2, packInst, CARD_H);
       packCard.setDepth(10);
       // Explorer's Guild: trail guide packs are free
       const isTrailGuidePack = packInst.def.category === 'trail_guide' && trailGuidesFree;
@@ -277,7 +278,7 @@ export class ShopScene extends Scene {
       for (let i = 0; i < this.packCards.length; i++) {
         const packCard = this.packCards[i];
         if (packCard.sold) continue;
-        this.addDevIcon(packX0 + i * CARD_SPACING + 60, cardCY2 - 125, () => this.devSwapPack(i));
+        this.addDevIcon(packX0 + i * packSpacing + CARD_H * 0.25, cardCY2 - CARD_H / 2 - 12, () => this.devSwapPack(i));
       }
     }
 
@@ -580,15 +581,18 @@ export class ShopScene extends Scene {
     }
   }
 
-  private getShopLayoutMetrics(contentL: number, contentW: number, equipBarH: number) {
+  private getShopLayoutMetrics(contentL: number, contentW: number, contentTop: number, cardBar: CardBarMetrics) {
     const BOX_RADIUS = 12;
     const BOX_PAD = 16;
     const BOX_GAP = 12;
-    const CARD_H = 235;
-    const PRICE_TAG_SPACE = 36;
-    const BTN_COL_W = 130;
+    const cardScale = cardBar.cardScale;
+    const CARD_H = UI.CARD_H * cardScale;
+    const CARD_W = UI.CARD_W * cardScale;
+    const PREFERRED_SPACING = cardBar.cardSpacing;
+    const PRICE_TAG_SPACE = Math.ceil(36 * cardBar.displayScale);
+    const BTN_COL_W = Math.max(96, Math.floor(130 * cardBar.displayScale));
     const rowInnerH = CARD_H + PRICE_TAG_SPACE + BOX_PAD * 2;
-    const box1Top = equipBarH + 20;
+    const box1Top = contentTop + 4;
     const box1H = rowInnerH;
     const box2Top = box1Top + box1H + BOX_GAP;
     const box2H = rowInnerH;
@@ -604,6 +608,9 @@ export class ShopScene extends Scene {
       cardCY1,
       cardCY2,
       CARD_H,
+      CARD_W,
+      PREFERRED_SPACING,
+      cardScale,
       BOX_RADIUS,
       BOX_PAD,
       BTN_COL_W,
@@ -634,7 +641,20 @@ export class ShopScene extends Scene {
     trailGuidesFree: boolean,
     metrics: ReturnType<typeof this.getShopLayoutMetrics>,
   ): void {
-    const { contentL, contentW, box1Top, box1H, cardCY1, BOX_RADIUS, BOX_PAD, BTN_COL_W } = metrics;
+    const {
+      contentL,
+      contentW,
+      box1Top,
+      box1H,
+      cardCY1,
+      CARD_H,
+      CARD_W,
+      PREFERRED_SPACING,
+      cardScale,
+      BOX_RADIUS,
+      BOX_PAD,
+      BTN_COL_W,
+    } = metrics;
     this.shopStockObjects = [];
 
     const shopBox = this.add.graphics();
@@ -646,7 +666,7 @@ export class ShopScene extends Scene {
 
     const btnColX = contentL + BOX_PAD + BTN_COL_W / 2 - 6;
     const btnW = BTN_COL_W - 16;
-    const btnH = 52;
+    const btnH = Math.max(44, Math.floor((52 * metrics.cardScale) / UI.CARD_BAR_BASE_SCALE));
 
     const hitTrailBtn = new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
       .setColor(0x8b2020, 0xb03030)
@@ -674,8 +694,9 @@ export class ShopScene extends Scene {
     this.cards = [];
     const cardAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
     const cardAreaW = contentW - BOX_PAD * 2 - BTN_COL_W - 8;
-    const equipTotalW = this.stockItems.length > 1 ? (this.stockItems.length - 1) * CARD_SPACING : 0;
-    const cardStartX = cardAreaLeft + cardAreaW / 2 - equipTotalW / 2;
+    const stockSpacing = computeFittedRowSpacing(this.stockItems.length, cardAreaW, CARD_W, PREFERRED_SPACING);
+    const stockTotalW = this.stockItems.length > 1 ? (this.stockItems.length - 1) * stockSpacing : 0;
+    const cardStartX = cardAreaLeft + cardAreaW / 2 - stockTotalW / 2;
     const shopDiscount = getPermitShopDiscount(run.purchasedPermits);
 
     for (let i = 0; i < this.stockItems.length; i++) {
@@ -700,9 +721,10 @@ export class ShopScene extends Scene {
         );
         displayDef = { ...shopItem.def, cost: purchaseCost };
       }
-      const card = new ItemCard(this, cardStartX + i * CARD_SPACING, cardCY1, displayDef as CardData, {
+      const card = new ItemCard(this, cardStartX + i * stockSpacing, cardCY1, displayDef as CardData, {
         mode: 'shop',
         showCost: true,
+        cardScale,
         ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
         ...(consumableTextureKey != null ? { textureKey: consumableTextureKey } : {}),
       });
@@ -758,7 +780,9 @@ export class ShopScene extends Scene {
       for (let i = 0; i < this.cards.length; i++) {
         const card = this.cards[i];
         if (card.sold) continue;
-        this.addDevIcon(cardStartX + i * CARD_SPACING + 60, cardCY1 - 125, () => this.devSwapShopItem(i));
+        this.addDevIcon(cardStartX + i * stockSpacing + CARD_H * 0.25, cardCY1 - CARD_H / 2 - 12, () =>
+          this.devSwapShopItem(i),
+        );
       }
     }
   }
@@ -770,7 +794,7 @@ export class ShopScene extends Scene {
     const layout = computeLayoutMetrics(width, this.scale.height);
     const contentL = layout.contentX;
     const contentW = layout.contentW;
-    const shopMetrics = this.getShopLayoutMetrics(contentL, contentW, layout.equipBarH);
+    const shopMetrics = this.getShopLayoutMetrics(contentL, contentW, layout.contentTop, layout.cardBar);
     this.buildShopStock(
       run,
       resolveEquipmentList(run),
@@ -915,6 +939,7 @@ export class ShopScene extends Scene {
     voucherY: number,
     voucherW: number,
     voucherH: number,
+    cardScale: number,
     label: string,
     isPrimary: boolean,
   ): void {
@@ -926,8 +951,8 @@ export class ShopScene extends Scene {
         showCost: true,
         textureKey: 'permits',
         transparentBg: true,
-        cardScale: 1.2,
-        tabAnchorX: 45,
+        cardScale,
+        tabAnchorX: (UI.CARD_W * cardScale) / 2,
       });
       permitItemCard.setTooltipContext(null, getItemDisplayContext());
       permitItemCard.setDepth(10);
@@ -936,17 +961,18 @@ export class ShopScene extends Scene {
       if (isPrimary) this.permitCard = permitItemCard;
 
       if (isDevMode() && isPrimary) {
-        this.addDevIcon(voucherX + 50, voucherY - 125, () => this.devSwapPermit());
+        this.addDevIcon(voucherX + voucherW * 0.35, voucherY - voucherH / 2 - 12, () => this.devSwapPermit());
       }
 
-      const labelX = voucherX - voucherW / 2 - 20;
+      const labelX = voucherX - voucherW / 2 - 14;
+      const labelFontSize = Math.max(10, Math.round(13 * (cardScale / UI.CARD_BAR_BASE_SCALE)));
       const permitLabel = this.add.text(labelX, voucherY, label, {
         fontFamily: 'Arial',
-        fontSize: '18px',
+        fontSize: `${labelFontSize}px`,
         color: '#ccccdd',
         fontStyle: 'bold',
         align: 'center',
-        letterSpacing: 1,
+        letterSpacing: 0.5,
       });
       permitLabel.setOrigin(0.5);
       permitLabel.setRotation(-Math.PI / 2);

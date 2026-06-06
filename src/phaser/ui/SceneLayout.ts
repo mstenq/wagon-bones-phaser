@@ -60,7 +60,7 @@ export function computeCardBarDisplayScale(contentWidth: number): number {
 /** Minimum consumable bar width to fit two overlapping cards with side padding. */
 export function computeMinConsumableBarWidth(cardBar: CardBarMetrics): number {
   const cardW = UI.CARD_W * cardBar.cardScale;
-  const twoCardSpan = cardW + cardBar.cardSpacing;
+  const twoCardSpan = cardW + computeCompactCardSpacing(cardW);
   return Math.ceil(twoCardSpan + cardBar.barPadding * 2);
 }
 
@@ -87,14 +87,33 @@ export function computeCardBarWidths(contentW: number, cardBar: CardBarMetrics):
   return { equipW: innerW - consumableW, consumableW, barGap };
 }
 
+/** Overlap spacing for consumable fan layout (supply / trail / frontier slots). */
+export function computeCompactCardSpacing(cardWidth: number): number {
+  return cardWidth * UI.CARD_BAR_COMPACT_SPACING_RATIO;
+}
+
+/** Spread cards in a row; shrink center-to-center spacing only when the row would overflow. */
+export function computeFittedRowSpacing(
+  count: number,
+  areaWidth: number,
+  cardWidth: number,
+  preferredSpacing: number,
+): number {
+  if (count <= 1) return 0;
+  const availableW = Math.max(0, areaWidth - cardWidth);
+  const neededW = (count - 1) * preferredSpacing;
+  if (neededW <= availableW) return preferredSpacing;
+  if (availableW <= 0) return preferredSpacing;
+  return availableW / (count - 1);
+}
+
 /** Unified equipment + consumable card sizing derived from content width. */
 export function computeCardBarMetrics(contentWidth: number): CardBarMetrics {
   const displayScale = computeCardBarDisplayScale(contentWidth);
   const cardScale = UI.CARD_BAR_BASE_SCALE * displayScale;
-  const cardWidth = UI.CARD_W * cardScale;
   const cardHeight = UI.CARD_H * cardScale;
   const isCompact = contentWidth < UI.DICE_ROW_COMPACT_WIDTH;
-  const cardSpacing = isCompact ? cardWidth * UI.CARD_BAR_COMPACT_SPACING_RATIO : UI.CARD_BAR_SPACING * displayScale;
+  const cardSpacing = UI.CARD_BAR_SPACING * displayScale;
   const topInset = Math.max(6, Math.floor(UI.CARD_BAR_TOP_INSET * displayScale));
   const bottomPad = isCompact ? UI.CARD_BAR_HEIGHT_PAD_COMPACT : UI.CARD_BAR_HEIGHT_PAD;
   const barPadding = Math.max(8, Math.floor(UI.CARD_BAR_PADDING * displayScale));

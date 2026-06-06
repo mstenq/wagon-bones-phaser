@@ -13,9 +13,10 @@ import {
   selectConsumableBarSlotLabel,
   selectConsumableBarSnapshot,
 } from '../../game/store/selectors/uiSelectors';
+import { UI } from '../../game/Constants';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { CardBar } from './CardBar';
-import type { CardBarMetrics } from './SceneLayout';
+import { computeCompactCardSpacing, type CardBarMetrics } from './SceneLayout';
 import { bindGameObject } from '../store/subscribe';
 
 export class ConsumableBar extends CardBar {
@@ -65,6 +66,17 @@ export class ConsumableBar extends CardBar {
   setCanUsePredicate(predicate: ((def: ConsumableDef) => boolean) | null): void {
     this.canUsePredicate = predicate;
     this.rebuildCards();
+  }
+
+  /** Consumables fan/overlap in a narrow bar; compress further only when slots exceed width. */
+  protected getCardSpacing(count: number): number {
+    if (count <= 1) return 0;
+    const cardW = UI.CARD_W * this.cardScale;
+    const availableW = this.barWidth - this.barPadding * 2 - cardW;
+    const compactSpacing = computeCompactCardSpacing(cardW);
+    const neededW = (count - 1) * compactSpacing;
+    if (neededW <= availableW) return compactSpacing;
+    return availableW / (count - 1);
   }
 
   protected getSlotLabel(): string {

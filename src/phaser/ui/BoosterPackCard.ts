@@ -13,7 +13,8 @@ const TOOLTIP_PAD = 10;
 const TOOLTIP_BG = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER = COLORS.TOOLTIP_BORDER;
 
-const PACK_DISPLAY_H = 235;
+/** Default pack art height when no explicit size is passed (legacy desktop shop). */
+const PACK_DISPLAY_H_DEFAULT = 235;
 
 const TIER_LABELS: Record<string, string> = {
   normal: 'Standard',
@@ -37,9 +38,9 @@ export class BoosterPackCard extends GameObjects.Container {
   private tooltip: GameObjects.Container | null = null;
   private packImage: GameObjects.Image | null = null;
   private _displayW: number = 120;
-  private _displayH: number = PACK_DISPLAY_H;
+  private _displayH: number = PACK_DISPLAY_H_DEFAULT;
 
-  constructor(scene: Scene, x: number, y: number, pack: PackInstance) {
+  constructor(scene: Scene, x: number, y: number, pack: PackInstance, displayHeight = PACK_DISPLAY_H_DEFAULT) {
     super(scene, x, y);
     this._pack = pack;
 
@@ -48,10 +49,10 @@ export class BoosterPackCard extends GameObjects.Container {
     if (scene.textures.getFrame('packs', atlasFrame)) {
       this.packImage = scene.add.image(0, 0, 'packs', atlasFrame);
       // Scale to fit within display height, maintaining aspect ratio
-      const imgScale = PACK_DISPLAY_H / this.packImage.height;
+      const imgScale = displayHeight / this.packImage.height;
       this.packImage.setScale(imgScale);
       this._displayW = this.packImage.width * imgScale;
-      this._displayH = PACK_DISPLAY_H;
+      this._displayH = displayHeight;
       this.add(this.packImage);
     }
 
