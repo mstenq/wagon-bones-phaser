@@ -9,7 +9,7 @@ import type { PayoutBreakdown } from './store/types';
 import type { RunState } from './store/types';
 import { resolveEquipmentList } from './store/resolve';
 import { selectProfession, selectRoundReward } from './store/selectors/runSelectors';
-import { forEachEquipmentResolved } from './effects/helpers';
+import { forEachEquipmentScoring } from './effects/helpers';
 import { resolveEffectParam, savingsAccountEligibleBalance } from './effectParams';
 
 /** Target miles for a leg/round (difficulty scaling, permit shortcuts, round multiplier). */
@@ -64,7 +64,7 @@ export function computePayoutBreakdown(
     const cappedMoney = Math.min(state.balance, state.interestCap);
     interest = Math.floor(cappedMoney / GAMEPLAY.INTEREST_PER);
     const equipment = resolveEquipmentList(state);
-    forEachEquipmentResolved(
+    forEachEquipmentScoring(
       equipment,
       (equip) => {
         if (equip.def.effectType !== 'SAVINGS_ACCOUNT_INTEREST') return;
@@ -76,7 +76,7 @@ export function computePayoutBreakdown(
         savingsAccountRate = perChunk;
         savingsAccountChunk = chunk;
       },
-      'skip',
+      { unresolvedCopy: 'skip', logResolution: false },
     );
   }
 

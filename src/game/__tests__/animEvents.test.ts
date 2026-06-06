@@ -366,6 +366,24 @@ describe('animEvents: enhance popup', () => {
     }
   });
 
+  test('Mirror Lake copies golden_spike gold chance on scored dice', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const d0 = die({ value: 5 });
+      const d1 = die({ value: 6 });
+      const { result } = calculateTestScore({
+        scoredDice: [d0, d1],
+        equipment: [item('mirror_lake'), item('golden_spike'), item('stacked_deck')],
+      });
+      const preScoreEnhance = result.animEvents.filter((e) => e.popupType === 'enhance');
+      expect(preScoreEnhance.some((e) => e.target.kind === 'both' && e.target.equipIndex === 0)).toBe(true);
+      expect(result.handResult.scoringDice.every((d) => d.enhancement === 'gold')).toBe(true);
+    } finally {
+      Math.random = original;
+    }
+  });
+
   test('golden_spike on stone die rolls a face when turned gold', () => {
     const original = Math.random;
     Math.random = () => 0;

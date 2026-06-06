@@ -1,7 +1,6 @@
 // ─── on-pack-skipped lifecycle handlers ───
 
-import { isEquipmentDisabledByBoss } from '../../BossEffectsSystem';
-import { resolveCopyTarget } from '../../equipmentUtils';
+import { walkEquipmentPerSlot } from '../../equipmentUtils';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { replaceEquipmentList } from '../../store/resolve';
 import { economyActions } from '../../store/actions/economyActions';
@@ -19,18 +18,8 @@ effectRegistry.registerLifecycle('on-pack-skipped', (equip) => {
 });
 
 export function processEquipmentOnPackSkipped(equipment: EquipmentInstance[]): void {
-  const maxCopyDepth = equipment.length;
-  for (let i = 0; i < equipment.length; i++) {
-    if (isEquipmentDisabledByBoss(i)) continue;
-
-    let equip = equipment[i];
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
-      if (!resolved) continue;
-      equip = resolved;
-    }
-
+  walkEquipmentPerSlot(equipment, ({ equip }) => {
     dispatchLifecycle('on-pack-skipped', equip);
-  }
+  });
   replaceEquipmentList(equipment);
 }

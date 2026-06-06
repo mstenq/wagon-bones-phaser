@@ -4,6 +4,7 @@ import type { EquipmentInstance } from '../../ItemsSystem';
 import { getItemAuraById } from '../../ItemsSystem';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
+import { walkEquipmentPerSlot } from '../../equipmentUtils';
 import { rngPick } from '../../RunRng';
 import { resolveConsumableList } from '../../store/resolve';
 import { consumableActions } from '../../store/actions/consumableActions';
@@ -22,7 +23,7 @@ effectRegistry.registerLifecycle('on-shop-end', (equip) => {
 });
 
 export function processEquipmentOnShopEnd(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentPerSlot(equipment, ({ equip }) => {
     dispatchLifecycle('on-shop-end', equip);
-  }
+  });
 }

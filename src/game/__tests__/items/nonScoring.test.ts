@@ -41,7 +41,8 @@ import { GAMEPLAY } from '../../Constants';
 
 beforeEach(() => resetDieIds());
 
-/** Mirror Lake must not alter scoring for lifecycle-only / NONE equipment. */
+/** Mirror Lake must not alter scoring for lifecycle-only / NONE equipment.
+ *  Does NOT verify that lifecycle copy wiring works — use mirrorLakeCoverage.test.ts for that. */
 function expectMirrorLakeDoesNotChangeScore(
   itemId: string,
   opts: {
@@ -649,6 +650,20 @@ describe('TRAIL_TAX: Trail Tax', () => {
     expect(player.equipment[0]?.state.mult).toBe(2);
   });
 
+  test('Mirror Lake doubles accumulated mult at score time', () => {
+    const tax = itemWithState('trail_tax', { mult: 8 });
+    const { result: alone } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [tax],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), tax],
+    });
+    expect(alone.mult).toBeMult(9);
+    expect(withMirror.mult).toBeMult(17);
+  });
+
   test('Mirror Lake does not change score vs trail tax alone', () => {
     expectMirrorLakeDoesNotChangeScore('trail_tax');
   });
@@ -688,6 +703,25 @@ describe('PACK_OPEN_SUPPLY_CHANCE: Leftovers', () => {
   test('returns false with no PACK_OPEN_SUPPLY_CHANCE equipment', () => {
     const result = processEquipmentOnPackOpened([item('horseshoe')]);
     expect(result).toBe(false);
+  });
+
+  test('Mirror Lake doubles pack-open supply roll attempts', () => {
+    setupGame({ equipment: [] });
+    let aloneGranted = 0;
+    let mirrorGranted = 0;
+    const runs = 5000;
+
+    for (let i = 0; i < runs; i++) {
+      if (processEquipmentOnPackOpened([item('leftovers')])) aloneGranted++;
+      if (processEquipmentOnPackOpened([item('mirror_lake'), item('leftovers')])) mirrorGranted++;
+    }
+
+    const aloneRate = aloneGranted / runs;
+    const mirrorRate = mirrorGranted / runs;
+    expect(aloneRate).toBeGreaterThan(0.43);
+    expect(aloneRate).toBeLessThan(0.57);
+    expect(mirrorRate).toBeGreaterThan(0.7);
+    expect(mirrorRate).toBeLessThan(0.8);
   });
 
   test('Mirror Lake does not change score vs leftovers alone', () => {
@@ -864,6 +898,38 @@ describe('ENHANCEMENT_COUNT_MILES: Quarry Mine', () => {
     expect(result.miles).toBeMiles(120);
   });
 
+  test('Mirror Lake doubles stone-die miles bonus', () => {
+    const stoneDice = [die({ value: 0, enhancement: 'stone' }), die({ value: 0, enhancement: 'stone' })];
+    const normalDice = diceWithValue(5, 2);
+    const allDice = [...normalDice, ...stoneDice, ...diceWithValue(1, 48)];
+    const { game: aloneGame } = setupGame({
+      equipment: [item('quarry_mine')],
+      dice: allDice,
+    });
+    aloneGame.startRound();
+    aloneGame.state.phase = 'ROLL';
+    aloneGame.state.rolledDice = normalDice;
+    aloneGame.state.selectedForRoll = normalDice;
+    aloneGame.state.rerollsRemaining = 6;
+    aloneGame.selectForScore(normalDice.map((d) => d.id));
+    const aloneResult = aloneGame.calculateScore()!;
+
+    const { game: mirrorGame } = setupGame({
+      equipment: [item('mirror_lake'), item('quarry_mine')],
+      dice: allDice,
+    });
+    mirrorGame.startRound();
+    mirrorGame.state.phase = 'ROLL';
+    mirrorGame.state.rolledDice = normalDice;
+    mirrorGame.state.selectedForRoll = normalDice;
+    mirrorGame.state.rerollsRemaining = 6;
+    mirrorGame.selectForScore(normalDice.map((d) => d.id));
+    const mirrorResult = mirrorGame.calculateScore()!;
+
+    expect(aloneResult.miles).toBeMiles(70);
+    expect(mirrorResult.miles).toBeMiles(120);
+  });
+
   test('Mirror Lake does not change score vs quarry mine alone', () => {
     expectMirrorLakeDoesNotChangeScore('quarry_mine');
   });
@@ -969,6 +1035,22 @@ describe('ENHANCED_RETRIGGER: Moonshine', () => {
     });
     // PAIR: both dice trigger 1x (no enhancement), totalValue=10
     expect(result.totalValue).toBe(10);
+  });
+
+  test('Mirror Lake doubles enhanced-die retrigger', () => {
+    const scoredDice = [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })];
+    const { result: alone } = calculateTestScore({
+      scoredDice,
+      equipment: [item('moonshine')],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice,
+      equipment: [item('mirror_lake'), item('moonshine')],
+    });
+    expect(alone.totalValue).toBe(15);
+    expect(alone.mult).toBeMult(9);
+    expect(withMirror.totalValue).toBe(20);
+    expect(withMirror.mult).toBeMult(13);
   });
 
   test('Mirror Lake does not change score vs moonshine alone', () => {
@@ -1447,6 +1529,20 @@ describe('SHOP_END_GHOST_CONSUMABLE: Ghost Lantern', () => {
     expect(player.consumables.length).toBe(0);
   });
 
+  test('Mirror Lake copying ghost lantern creates two ghost copies at shop end', () => {
+    const { player } = setupGame({ equipment: [item('mirror_lake'), item('ghost_lantern')] });
+    const supplyDef = getRandomSupplyDef();
+    player.addConsumable(supplyDef);
+    expect(player.consumables.length).toBe(1);
+
+    processEquipmentOnShopEnd(player.equipment);
+
+    expect(player.consumables.length).toBe(3);
+    const ghosts = player.consumables.filter((c) => c.def.aura?.id === 'ghost');
+    expect(ghosts.length).toBe(2);
+    expect(ghosts.every((g) => g.def.id === supplyDef.id)).toBe(true);
+  });
+
   test('Mirror Lake does not change score vs ghost lantern alone', () => {
     expectMirrorLakeDoesNotChangeScore('ghost_lantern');
   });
@@ -1576,6 +1672,21 @@ describe('New utility equipment lifecycle effects', () => {
     }
   });
 
+  test('Mirror Lake doubles sell-value gain on earn', () => {
+    const { player: alonePlayer } = setupGame({ equipment: [item('pawn_broker')], money: 0 });
+    const aloneBefore = alonePlayer.equipment[0]!.sellValue;
+    alonePlayer.economy.earn(10);
+    expect(alonePlayer.equipment[0]!.sellValue).toBe(aloneBefore + 1);
+
+    const { player: mirrorPlayer } = setupGame({
+      equipment: [item('mirror_lake'), item('pawn_broker')],
+      money: 0,
+    });
+    const mirrorBefore = mirrorPlayer.equipment[1]!.sellValue;
+    mirrorPlayer.economy.earn(10);
+    expect(mirrorPlayer.equipment[1]!.sellValue).toBe(mirrorBefore + 2);
+  });
+
   test('Mirror Lake does not change score vs pawn broker alone', () => {
     expectMirrorLakeDoesNotChangeScore('pawn_broker');
   });
@@ -1619,6 +1730,29 @@ describe('New utility equipment lifecycle effects', () => {
     expect((instEnd.state.miles ?? 0) > 0).toBe(true);
   });
 
+  test('Mirror Lake doubles leg-round-end state tick', () => {
+    const calendar = item('old_calendar');
+    const { game, player } = setupGame({ equipment: [calendar] });
+    game.startRound();
+    const round = getRoundState()!;
+    roundActions.patch({ rerollsRemaining: 3 });
+    processEndOfRound(player.equipment, { isLegRoundEnd: true });
+    const alone = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    const daysLeft = round.config.maxDays - round.day + 1;
+    expect(alone.state.mult).toBe(3);
+    expect(alone.state.miles).toBe(daysLeft);
+
+    const { game: game2, player: player2 } = setupGame({
+      equipment: [item('mirror_lake'), item('old_calendar')],
+    });
+    game2.startRound();
+    roundActions.patch({ rerollsRemaining: 3 });
+    processEndOfRound(player2.equipment, { isLegRoundEnd: true });
+    const withMirror = player2.equipment.find((e) => e.def.id === 'old_calendar')!;
+    expect(withMirror.state.mult).toBe(6);
+    expect(withMirror.state.miles).toBe(daysLeft * 2);
+  });
+
   test('Mirror Lake does not change score vs old calendar alone', () => {
     expectMirrorLakeDoesNotChangeScore('old_calendar');
   });
@@ -1641,6 +1775,20 @@ describe('New utility equipment lifecycle effects', () => {
     processEquipmentOnRoundStart([bowl]);
     expect(player.consumables.length).toBe(0);
     expect(bowl.state.mult ?? 0).toBe(0);
+  });
+
+  test('Mirror Lake doubles stored mult at score time', () => {
+    const bowl = itemWithState('offering_bowl', { mult: 4 });
+    const { result: alone } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [bowl],
+    });
+    const { result: withMirror } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), bowl],
+    });
+    expect(alone.mult).toBeMult(5);
+    expect(withMirror.mult).toBeMult(9);
   });
 
   test('Mirror Lake does not change score vs offering bowl alone', () => {
@@ -1736,6 +1884,13 @@ describe('SANDWICH', () => {
     expect(getRunState().pendingTags.length).toBe(before + 1);
     const added = getRunState().pendingTags[getRunState().pendingTags.length - 1]!;
     expect(['tag_dice_mega', 'tag_supply_mega', 'tag_trail_guide_mega', 'tag_equipment_mega']).toContain(added.tagId);
+  });
+
+  test('Mirror Lake doubles mega-pack tag grant at leg round end', () => {
+    const { player } = setupGame({ equipment: [item('mirror_lake'), item('sandwich')] });
+    const before = getRunState().pendingTags.length;
+    processEndOfRound(player.equipment, { isLegRoundEnd: true });
+    expect(getRunState().pendingTags.length).toBe(before + 2);
   });
 
   test('Mirror Lake does not change score vs sandwich alone', () => {

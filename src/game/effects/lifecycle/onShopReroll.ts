@@ -1,6 +1,7 @@
 // ─── on-shop-reroll lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 
@@ -13,7 +14,7 @@ effectRegistry.registerLifecycle('on-shop-reroll', (equip) => {
 });
 
 export function processEquipmentOnShopReroll(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-shop-reroll', equip);
-  }
+  });
 }

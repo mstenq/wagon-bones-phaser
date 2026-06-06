@@ -14,13 +14,18 @@ import { effectRegistry, type ScoringPipelineContext } from '../effects';
 import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from '../EquipmentEffects';
 import { dispatchLifecycle } from '../effects/lifecycle/dispatch';
 import { getRandomSupplyDef, getRandomFrontierDef } from '../ConsumablesSystem';
-import { resolveCopyTarget, checkLoadedChance } from '../equipmentUtils';
+import {
+  walkEquipmentLifecycle,
+  walkEquipmentPerSlot,
+  walkEquipmentScoring,
+  checkLoadedChance,
+} from '../equipmentUtils';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
 import { hasStackedDeck } from '../effects/helpers';
 import { computeScoredDieRetriggers } from '../effects/scoredRetrigger';
 import { pushRetriggerAgainEvent } from '../effects/retriggerAnim';
 import { multiplyScore, addScore, ZERO, ONE } from '../scoreMath';
-import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from '../BossEffectsSystem';
+import { isDiceScoringDisabledByBoss } from '../BossEffectsSystem';
 import { createEmptyScoringMutations } from '../effects/applyMutations';
 import type { TrailRoundEffects } from '../TrailEventsSystem';
 import { rngFloat } from '../RunRng';
@@ -39,14 +44,19 @@ export function resolveScoreDestroyChance(
   if (!die.enhancement) return null;
 
   if (die.enhancement === 'diamond') {
-    for (const equip of equipment) {
-      if (equip.def.effectType !== 'ENHANCED_RETRIGGER') continue;
-      const p = equip.def.effectParams as Record<string, unknown>;
+    let moonshineDiamond: [number, number] | undefined;
+    walkEquipmentPerSlot(equipment, (slot) => {
+      if (slot.equip.def.effectType !== 'ENHANCED_RETRIGGER') return;
+      const p = slot.equip.def.effectParams as Record<string, unknown>;
       const fromEquip = p.diamondDestroyChance as [number, number] | undefined;
       if (fromEquip) {
-        const [num, den] = fromEquip;
-        return trailRound.diamondCrackDoubled ? [num * 2, den] : [num, den];
+        moonshineDiamond = fromEquip;
+        return false;
       }
+    });
+    if (moonshineDiamond) {
+      const [num, den] = moonshineDiamond;
+      return trailRound.diamondCrackDoubled ? [num * 2, den] : [num, den];
     }
   }
 
@@ -291,26 +301,12 @@ export function scoreHand(
         console.log(`  [perDie] ${die.id}${triggerLabel}: sticker golden_dollar +$3`);
       }
 
-      // 'On scored' equipment — items that trigger per matching die (left to right)
-      for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
-        if (isEquipmentDisabledByBoss(eIdx)) continue;
-        const originalEquip = equipment[eIdx];
-        let equip = originalEquip;
-
-        if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-          const resolved = resolveCopyTarget(equipment, eIdx, equipment.length);
-          if (!resolved) {
-            console.log(`  [perDie] ${originalEquip.def.name}: copy target empty (per-die equipment)`);
-            continue;
-          }
-          equip = resolved;
-        }
-
-        const handler = effectRegistry.getPerDie(equip.def.effectType);
+      walkEquipmentScoring(equipment, (slot) => {
+        const handler = effectRegistry.getPerDie(slot.equip.def.effectType);
         if (handler) {
-          handler(pipelineCtx, equip, eIdx, die, t);
+          handler(pipelineCtx, slot.equip, slot.index, die, t);
         }
-      }
+      });
 
       // Sync locals back to pipeline context, preserving handler deltas
       const handlerDeltaTotalValue = pipelineCtx.totalValue - savedCtxTotalValue;
@@ -331,31 +327,20 @@ export function scoreHand(
 
   // FIRST_DAY_SOLO_COPY: Bloodline — copy the solo die if scored alone on day 1
   if (scoreContext && scoreContext.currentDay === 1 && handResult.scoringDice.length === 1) {
-    const maxCopyDepthSolo = equipment.length;
-    for (let ei = 0; ei < equipment.length; ei++) {
-      if (isEquipmentDisabledByBoss(ei)) continue;
-      let equip = equipment[ei];
-      // Resolve copy items
-      if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-        const resolved = resolveCopyTarget(equipment, ei, maxCopyDepthSolo);
-        if (!resolved) continue;
-        equip = resolved;
-      }
-      if (equip.def.effectType === 'FIRST_DAY_SOLO_COPY') {
-        // Bloodline: copy the solo die into the collection
-        const target = handResult.scoringDice[0];
-        const added = diceActions.addDie(
-          createDie({
-            value: target.value,
-            enhancement: target.enhancement,
-            sticker: target.sticker,
-            aura: target.aura,
-            bonusMiles: target.bonusMiles,
-          }),
-        );
-        console.log(`  [postScore] ${equip.def.name}: copied die ${target.id} → ${added.id}`);
-      }
-    }
+    walkEquipmentPerSlot(equipment, ({ equip }) => {
+      if (equip.def.effectType !== 'FIRST_DAY_SOLO_COPY') return;
+      const target = handResult.scoringDice[0];
+      const added = diceActions.addDie(
+        createDie({
+          value: target.value,
+          enhancement: target.enhancement,
+          sticker: target.sticker,
+          aura: target.aura,
+          bonusMiles: target.bonusMiles,
+        }),
+      );
+      console.log(`  [postScore] ${equip.def.name}: copied die ${target.id} → ${added.id}`);
+    });
   }
 
   // FIRST_HAND_ENHANCED_SIX: Hellfire Round — solo enhanced 6 on first hand → destroy, gain frontier card
@@ -368,25 +353,24 @@ export function scoreHand(
       : null;
 
   if (hellfireSoloDie) {
-    for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
-      const equip = equipment[eIdx];
-      if (equip.def.effectType !== 'FIRST_HAND_ENHANCED_SIX') continue;
-      if (!removeRunDie(hellfireSoloDie.id)) continue;
+    walkEquipmentPerSlot(equipment, (slot) => {
+      if (slot.equip.def.effectType !== 'FIRST_HAND_ENHANCED_SIX') return;
+      if (!removeRunDie(hellfireSoloDie.id)) return;
 
       console.log(
-        `  [postScore] ${equip.def.name}: destroyed enhanced 6 (${hellfireSoloDie.id}), frontier card granted`,
+        `  [postScore] ${slot.equip.def.name}: destroyed enhanced 6 (${hellfireSoloDie.id}), frontier card granted`,
       );
       const frontierDef = getRandomFrontierDef();
-      if (!frontierDef) continue;
+      if (!frontierDef) return;
 
       pipelineCtx.mutations.consumablesGranted.push(frontierDef.id);
       animEvents.push({
-        target: { kind: 'equip', equipIndex: eIdx },
+        target: { kind: 'equip', equipIndex: slot.index },
         popupType: 'supply',
         value: 0,
         consumableId: frontierDef.id,
       });
-    }
+    });
   }
 
   // Enhancement score destroy (e.g. diamond crack); Moonshine overrides diamond odds
@@ -403,7 +387,9 @@ export function scoreHand(
     const wasDiamond = scoredDie.enhancement === 'diamond';
     console.log(`  [postScore] crack (${scoredDie.enhancement}): destroyed ${scoredDie.id}`);
     if (wasDiamond) {
-      for (const e of equipment) dispatchLifecycle('on-diamond-destroyed', e);
+      walkEquipmentLifecycle(equipment, ({ equip }) => {
+        dispatchLifecycle('on-diamond-destroyed', equip);
+      });
     }
   }
 
@@ -421,8 +407,8 @@ export function scoreHand(
 
   // ENHANCED_RETRIGGER: Moonshine — enhanced dice have chance of being destroyed after scoring
   console.log('  [postScore] Moonshine enhanced-destroy pass');
-  for (const equip of equipment) {
-    if (equip.def.effectType !== 'ENHANCED_RETRIGGER') continue;
+  walkEquipmentPerSlot(equipment, ({ equip }) => {
+    if (equip.def.effectType !== 'ENHANCED_RETRIGGER') return;
 
     const p = equip.def.effectParams as Record<string, unknown>;
 
@@ -439,24 +425,15 @@ export function scoreHand(
       animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
       console.log(`  [postScore] ${equip.def.name}: destroyed ${scoredDie.id} (${scoredDie.enhancement})`);
     }
-  }
+  });
 
   // CURSED_DICE: loaded dice can shatter and grant a frontier encounter when scored
   console.log('  [postScore] Cursed dice (loaded shatter) pass');
-  const maxCopyDepthCursed = equipment.length;
-  for (let ei = 0; ei < equipment.length; ei++) {
-    if (isEquipmentDisabledByBoss(ei)) continue;
-    const originalEquip = equipment[ei];
-    let equip = originalEquip;
-    let triggeredViaEquipmentCopy = false;
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, ei, maxCopyDepthCursed);
-      if (!resolved) continue;
-      equip = resolved;
-      triggeredViaEquipmentCopy = true;
-    }
-    if (equip.def.effectType !== 'CURSED_DICE') continue;
-    const chanceTuple = ((equip.def.effectParams as Record<string, unknown>).chance as [number, number]) ?? [1, 7];
+  walkEquipmentPerSlot(equipment, (slot) => {
+    if (slot.equip.def.effectType !== 'CURSED_DICE') return;
+
+    const chanceTuple = ((slot.equip.def.effectParams as Record<string, unknown>).chance as [number, number]) ?? [1, 7];
+    const triggeredViaEquipmentCopy = slot.isCopy;
     for (const scoredDie of handResult.scoringDice) {
       if (scoredDie.enhancement !== 'loaded') continue;
       if (!checkLoadedChance(chanceTuple, equipment, 'loadedDice', { triggeredViaEquipmentCopy })) continue;
@@ -465,13 +442,13 @@ export function scoreHand(
       pipelineCtx.mutations.consumablesGranted.push(frontierDef.id);
       animEvents.push({ target: { kind: 'die', dieId: scoredDie.id }, popupType: 'crack', value: 0 });
       animEvents.push({
-        target: { kind: 'equip', equipIndex: ei },
+        target: { kind: 'equip', equipIndex: slot.index },
         popupType: 'supply',
         value: 0,
         consumableId: frontierDef.id,
       });
     }
-  }
+  });
 
   const mult = multiplyScore(addScore(handResult.baseMult, bonusMult), xMult);
   const miles = multiplyScore(addScore(handResult.baseMiles, totalValue), mult);

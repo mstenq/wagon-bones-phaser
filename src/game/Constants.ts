@@ -530,4 +530,16 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'ALCHEMY_KIT', // Alchemy Kit
   'SOLO_FIRST_DAY_ENHANCE', // Lucky Find
   'EXTRA_PACK_PICK', // Rustler
+  'POTLUCK', // Potluck - no need to copy, would have no effect
+  'PACK_MULE',
+]);
+
+/**
+ * Effect types that must dispatch from both copy and source slots when
+ * `walkEquipmentLifecycle` dedupes copied equipment. Most Mirror Lake doubling uses
+ * `walkEquipmentPerSlot` (round boundaries, scoring, economy) instead — do not add those here.
+ * Add an entry only when a lifecycle-dedupe hook grants a one-shot side effect per dispatch.
+ */
+export const LIFECYCLE_MIRROR_DOUBLES = new Set([
+  'LOW_MONEY_SUPPLY', // Emergency Supplies — afterHandScored grants a supply card
 ]);

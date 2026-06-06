@@ -4,7 +4,7 @@ export { effectRegistry, EffectRegistry } from './registry';
 export {
   getConfigModifiers,
   findDeathPrevention,
-  forEachEquipmentResolved,
+  forEachEquipmentScoring,
   applyEquipmentAuras,
   applyEquipmentAuraForSlot,
   applyHolyAuraXMult,

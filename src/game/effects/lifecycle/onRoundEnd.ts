@@ -1,7 +1,7 @@
 // ─── End-of-round lifecycle helpers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
-import { checkLoadedChance } from '../../equipmentUtils';
+import { checkLoadedChance, walkEquipmentPerSlot } from '../../equipmentUtils';
 import { getRunState, runActions } from '../../store/runStore';
 import { getRoundState } from '../../store/roundStore';
 import type { RoundRuntimeState, RunState } from '../../store/types';
@@ -21,6 +21,8 @@ export interface RoundEndContext {
   destroyedIndices: number[];
   index: number;
   professionId: string | null;
+  /** True when this slot is a copy item emulating another card's effect. */
+  isCopy: boolean;
   /** True when this day end finishes the leg round (win/loss), not a mid-round next day. */
   isLegRoundEnd: boolean;
 }
@@ -70,11 +72,13 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       break;
     }
     case 'ADD_MULT_RISKY':
+      if (ctx.isCopy) break;
       if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
         ctx.destroyedIndices.push(ctx.index);
       }
       break;
     case 'XMULT_RISKY':
+      if (ctx.isCopy) break;
       if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
         ctx.destroyedIndices.push(ctx.index);
       }
@@ -98,7 +102,7 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       equip.state.mult = (equip.state.mult ?? 0) - decay;
       equip.state.roundsPlayed = (equip.state.roundsPlayed ?? 0) + 1;
       if (equip.state.roundsPlayed >= (equip.def.effectParams.maxRounds as number)) {
-        ctx.destroyedIndices.push(ctx.index);
+        if (!ctx.isCopy) ctx.destroyedIndices.push(ctx.index);
       }
       break;
     }
@@ -121,7 +125,17 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
         if (tag) tagActions.addTag(tag);
         equip.state.roundsRemaining -= 1;
         if (equip.state.roundsRemaining <= 0) {
-          ctx.destroyedIndices.push(ctx.index);
+          if (!ctx.isCopy) ctx.destroyedIndices.push(ctx.index);
+        }
+      }
+      break;
+    }
+    case 'STEW': {
+      if (!ctx.isLegRoundEnd) break;
+      if ((equip.state.roundsRemaining ?? 0) > 0) {
+        equip.state.roundsRemaining -= 1;
+        if (equip.state.roundsRemaining <= 0) {
+          if (!ctx.isCopy) ctx.destroyedIndices.push(ctx.index);
         }
       }
       break;
@@ -131,16 +145,6 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       if (!selectIsBossRound(getRunState())) {
         const gain = (p.value as number) ?? 0.2;
         equip.state.xMult = (equip.state.xMult ?? 1) + gain;
-      }
-      break;
-    }
-    case 'STEW': {
-      if (!ctx.isLegRoundEnd) break;
-      if ((equip.state.roundsRemaining ?? 0) > 0) {
-        equip.state.roundsRemaining -= 1;
-        if (equip.state.roundsRemaining <= 0) {
-          ctx.destroyedIndices.push(ctx.index);
-        }
       }
       break;
     }
@@ -160,13 +164,16 @@ export function processEndOfRound(
     destroyedIndices: [],
     index: 0,
     professionId: getRunState().professionId,
+    isCopy: false,
     isLegRoundEnd: options?.isLegRoundEnd ?? false,
   };
 
-  for (let i = 0; i < equipment.length; i++) {
-    ctx.index = i;
-    dispatchLifecycle('on-round-end', equipment[i], ctx);
-  }
+  /** perSlot policy — see onRoundStart; lifecycleDedupe would skip source slots and break destruction effects. */
+  walkEquipmentPerSlot(equipment, (slot) => {
+    ctx.index = slot.index;
+    ctx.isCopy = slot.isCopy;
+    dispatchLifecycle('on-round-end', slot.equip, ctx);
+  });
 
   return { moneyEarned: ctx.moneyEarned, destroyedIndices: ctx.destroyedIndices };
 }

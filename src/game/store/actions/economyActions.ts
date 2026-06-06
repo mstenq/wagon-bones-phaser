@@ -1,6 +1,7 @@
 // ─── Run economy actions ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentPerSlot } from '../../equipmentUtils';
 import { canAfford, trySpendBalance, earnBalance } from '../economy';
 import { getRunState, runStore } from '../runStore';
 import { replaceEquipmentList, resolveEquipmentList } from '../resolve';
@@ -28,11 +29,11 @@ export const economyActions = {
     runStore.setState((s) => ({ balance: earnBalance(s.balance, amount) }));
     const equipment = resolveEquipmentList();
     let changed = false;
-    for (const equip of equipment) {
-      if (equip.def.effectType !== 'PAWN_BROKER') continue;
+    walkEquipmentPerSlot(equipment, ({ equip }) => {
+      if (equip.def.effectType !== 'PAWN_BROKER') return;
       equip.sellValue += 1;
       changed = true;
-    }
+    });
     if (changed) replaceEquipmentList(equipment);
   },
 

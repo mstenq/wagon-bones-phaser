@@ -3,7 +3,7 @@
 import { HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { resolveEffectParam } from '../../effectParams';
-import { resolveCopyTarget } from '../../equipmentUtils';
+import { walkEquipmentPerSlot } from '../../equipmentUtils';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 import { processEquipmentOnDiceDestroyed } from './onDiceDestroyed';
@@ -230,25 +230,14 @@ export function processEquipmentOnRoundStart(
     result,
   };
 
-  const maxCopyDepth = equipment.length;
-  for (let i = 0; i < equipment.length; i++) {
-    if (pendingAnimatedDestroy.has(i) || destroyedIndices.includes(i)) continue;
+  /** perSlot policy — every bar slot dispatches; handlers use ctx.isCopy for index-sensitive destruction. */
+  walkEquipmentPerSlot(equipment, (slot) => {
+    if (pendingAnimatedDestroy.has(slot.index) || destroyedIndices.includes(slot.index)) return;
 
-    const originalEquip = equipment[i];
-    let equip = originalEquip;
-    let isCopy = false;
-
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
-      if (!resolved) continue;
-      equip = resolved;
-      isCopy = true;
-    }
-
-    ctx.index = i;
-    ctx.isCopy = isCopy;
-    dispatchLifecycle('on-round-start', equip, ctx);
-  }
+    ctx.index = slot.index;
+    ctx.isCopy = slot.isCopy;
+    dispatchLifecycle('on-round-start', slot.equip, ctx);
+  });
 
   replaceEquipmentList(equipment);
 

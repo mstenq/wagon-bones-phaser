@@ -7,14 +7,14 @@ import { applyHandLevelUpgrade } from '../../handStatsHelpers';
 import { getRunState } from '../../store/runStore';
 import { getRoundState } from '../../store/roundStore';
 import type { HandType, HandUpgradeInfo } from '../../types';
-import { forEachEquipmentResolved, resolveChance } from '../helpers';
+import { forEachEquipmentScoring, resolveChance } from '../helpers';
 
 export function processPreScoreHandUpgrades(equipment: EquipmentInstance[], handType: HandType): HandUpgradeInfo[] {
   const upgrades: HandUpgradeInfo[] = [];
   const run = getRunState();
   const roundDay = getRoundState()?.day ?? 1;
 
-  forEachEquipmentResolved(
+  forEachEquipmentScoring(
     equipment,
     (equip) => {
       switch (equip.def.effectType) {
@@ -36,7 +36,7 @@ export function processPreScoreHandUpgrades(equipment: EquipmentInstance[], hand
         }
       }
     },
-    'skip',
+    { unresolvedCopy: 'skip', logResolution: false },
   );
 
   return upgrades;

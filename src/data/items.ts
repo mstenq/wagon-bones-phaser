@@ -936,10 +936,8 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'book_of_the_dead');
       const xm = equip?.state.xMult ?? 1;
-      const hint =
-        xm > 1 ? [[mult(`x${xm}`)]] : [[mult('x1'), condition('per enhanced destroyed')], [inactive('None')]];
       return {
-        hint,
+        hint: [[mult(`x${xm}`)], [condition('per enhanced destroyed', 'xs')]],
         tooltip: [[text('Gains '), mult('x1'), text(' mult for each destroyed enhanced dice')]],
       };
     },
@@ -1013,7 +1011,7 @@ const items: ItemDef[] = [
     effectType: 'SHOP_END_GHOST_CONSUMABLE',
     effectParams: {},
     display: (_round, _player) => ({
-      hint: [[active('Ghost copy'), condition('end of shop')]],
+      hint: [[active('Ghost copy')], [condition('end of shop', 'xs')]],
       tooltip: [
         [text('Creates a ghost copy of a random consumable card in your possession at the end of the shop phase')],
       ],

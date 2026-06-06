@@ -7,8 +7,8 @@ import { EquipmentInstance } from './ItemsSystem';
 import { getRunState } from './store/runStore';
 import { selectProfession } from './store/selectors/runSelectors';
 import { GAMEPLAY } from './Constants';
-import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from './BossEffectsSystem';
-import { resolveCopyTarget } from './equipmentUtils';
+import { isDiceScoringDisabledByBoss } from './BossEffectsSystem';
+import { walkEquipmentPerSlot } from './equipmentUtils';
 import {
   buildHeldRetriggerSources,
   heldDieHasRetriggerableEffects,
@@ -20,7 +20,7 @@ import type { ScoringMutations } from './effects/types';
 import {
   applyEquipmentAuraForSlot,
   applyHolyAuraXMult,
-  forEachEquipmentResolved,
+  forEachEquipmentScoring,
   hasStackedDeck,
   multiplyCtxXMult,
 } from './effects/helpers';
@@ -88,7 +88,7 @@ export function applyEquipmentEffects(
   const ctx = createEquipmentScoringContext(baseResult, equipment, context, animEvents);
 
   console.log('  [equip] Additive pass (bar order, fire/icy per slot)');
-  forEachEquipmentResolved(equipment, (equip, _original, i) => {
+  forEachEquipmentScoring(equipment, (equip, _original, i) => {
     effectRegistry.dispatchAdditive(equip.def.effectType, ctx, equip, i);
     applyEquipmentAuraForSlot(equipment, i, ctx);
   });
@@ -101,12 +101,12 @@ export function applyEquipmentEffects(
 
   console.log('  [equip] xMult pass (bar order)');
   ctx.xMult = ONE;
-  forEachEquipmentResolved(
+  forEachEquipmentScoring(
     equipment,
     (equip, _original, i) => {
       effectRegistry.dispatchXMult(equip.def.effectType, ctx, equip, i);
     },
-    'skip',
+    { unresolvedCopy: 'skip', logResolution: false },
   );
   finalMult = multiplyScore(finalMult, ctx.xMult);
   console.log(`  [equip] After xMult: equipment xMult ${ctx.xMult}, merged mult ${finalMult}`);
@@ -150,24 +150,6 @@ export { processEndOfRound, willEndLegRoundOnDayEnd } from './effects/lifecycle/
 
 // ─── Held-in-Hand Processing (SCORE Step 4) ───
 
-function countHeldDoubleDownRetriggers(equipment: EquipmentInstance[]): number {
-  const maxCopyDepthHeld = equipment.length;
-  let doubleDownCount = 0;
-  for (let i = 0; i < equipment.length; i++) {
-    if (isEquipmentDisabledByBoss(i)) continue;
-    let equip = equipment[i];
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, i, maxCopyDepthHeld);
-      if (!resolved) continue;
-      equip = resolved;
-    }
-    if (equip.def.effectType === 'HELD_RETRIGGER' || equip.def.effectType === 'ALL_RETRIGGER') {
-      doubleDownCount += (equip.def.effectParams.value as number) ?? 1;
-    }
-  }
-  return doubleDownCount;
-}
-
 function getHeldDieTriggerCount(die: Die, doubleDownCount: number): number {
   return 1 + (die.sticker === 'red_bullet' ? 1 : 0) + doubleDownCount;
 }
@@ -192,8 +174,8 @@ export function processHeldInHand(
 ): HeldInHandResult {
   const animEvents: ScoreAnimEvent[] = [];
 
-  const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
   const heldRetriggerSources = buildHeldRetriggerSources(equipment);
+  const doubleDownCount = heldRetriggerSources.length;
 
   const heldCtx: ScoringPipelineContext = {
     handResult: {
@@ -241,26 +223,16 @@ export function processHeldInHand(
       }
       const triggerLabel = t === 0 ? '' : ` (retrigger ${t})`;
 
-      // Equipment triggers on held dice (additive / conditional before steel xMult)
-      for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
-        if (isEquipmentDisabledByBoss(eIdx)) continue;
-        const originalEquip = equipment[eIdx];
-        let equip = originalEquip;
-
-        if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-          const resolved = resolveCopyTarget(equipment, eIdx, equipment.length);
-          if (!resolved) {
-            console.log(`  [held] ${originalEquip.def.name}: nothing to copy for held trigger`);
-            continue;
+      walkEquipmentPerSlot(
+        equipment,
+        (slot) => {
+          const handler = effectRegistry.getHeldDie(slot.equip.def.effectType);
+          if (handler) {
+            handler(heldCtx, slot.equip, slot.index, die, t);
           }
-          equip = resolved;
-        }
-
-        const handler = effectRegistry.getHeldDie(equip.def.effectType);
-        if (handler) {
-          handler(heldCtx, equip, eIdx, die, t);
-        }
-      }
+        },
+        { logResolution: true },
+      );
 
       // Steel enhancement (or gold with Alchemy Kit): x1.5 mult per trigger
       if (enhancementHeldSteelXMult(die.enhancement, alchemy)) {
@@ -286,8 +258,8 @@ export function processGoldHeldAtRoundEnd(
   heldDice: Die[],
   equipment: EquipmentInstance[],
 ): { moneyEarned: number; animEvents: ScoreAnimEvent[] } {
-  const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
   const heldRetriggerSources = buildHeldRetriggerSources(equipment);
+  const doubleDownCount = heldRetriggerSources.length;
   const animEvents: ScoreAnimEvent[] = [];
   let moneyEarned = 0;
   const perTrigger = GAMEPLAY.GOLD_DICE_HELD_MONEY;
@@ -319,8 +291,8 @@ export function processBlueMoonHeldAtRoundEnd(
 ): { consumablesGranted: string[]; animEvents: ScoreAnimEvent[] } {
   if (!scoredHandType) return { consumablesGranted: [], animEvents: [] };
 
-  const doubleDownCount = countHeldDoubleDownRetriggers(equipment);
   const heldRetriggerSources = buildHeldRetriggerSources(equipment);
+  const doubleDownCount = heldRetriggerSources.length;
   const animEvents: ScoreAnimEvent[] = [];
   const consumablesGranted: string[] = [];
   const tgDef = getTrailGuideDefForHand(scoredHandType);

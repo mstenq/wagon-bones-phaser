@@ -7,7 +7,7 @@ import type { EquipmentInstance } from '../../ItemsSystem';
 import type { ScoringMutations } from '../types';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
-import { forEachEquipmentResolved } from '../helpers';
+import { forEachEquipmentScoring } from '../helpers';
 import { checkLoadedChance } from '../../equipmentUtils';
 import { pickDiceAuraWeighted } from '../../auraRng';
 import { pickRandomSticker } from '../../BoosterPackSystem';
@@ -160,11 +160,11 @@ export function processEquipmentPreScoring(
     mutations,
     animEvents,
   };
-  forEachEquipmentResolved(
+  forEachEquipmentScoring(
     equipment,
     (equip, _original, index) => {
       dispatchLifecycle('on-pre-scoring', equip, ctx, index);
     },
-    'skip',
+    { unresolvedCopy: 'skip', logResolution: false },
   );
 }

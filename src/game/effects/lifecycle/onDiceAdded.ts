@@ -1,6 +1,7 @@
 // ─── on-dice-added lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { replaceEquipmentList } from '../../store/resolve';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
@@ -12,8 +13,8 @@ effectRegistry.registerLifecycle('on-dice-added', (equip) => {
 });
 
 export function processEquipmentOnDiceAdded(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-dice-added', equip);
-  }
+  });
   replaceEquipmentList(equipment);
 }

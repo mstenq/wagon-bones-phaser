@@ -1,9 +1,160 @@
 // ─── Equipment helpers (loaded dice, copy targets) ───
 // Pure logic — no Phaser. Kept separate from Constants.ts (values only).
 
-import { COPY_INCOMPATIBLE_EFFECTS } from './Constants';
+import { COPY_INCOMPATIBLE_EFFECTS, LIFECYCLE_MIRROR_DOUBLES } from './Constants';
+import { EquipmentInstance } from './ItemsSystem';
+import { isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { rngFloat, type RngStream } from './RunRng';
 import type { DiceEnhancement } from './types';
+
+export type UnresolvedCopyBehavior = 'none' | 'skip';
+
+export type ResolvedEquipmentSlot = {
+  /** Effect source after copy resolution (may be a shared instance when copied). */
+  equip: EquipmentInstance;
+  /** Card occupying this bar slot (Mirror Lake / Echo Chamber when isCopy). */
+  original: EquipmentInstance;
+  index: number;
+  isCopy: boolean;
+};
+
+/**
+ * How to walk the equipment bar when dispatching effects.
+ *
+ * - **perSlot** — every slot dispatches after copy resolution. Mirror Lake doubles by
+ *   visiting both the copy slot and the source slot. Handlers use `slot.isCopy` to guard
+ *   index-sensitive effects (round start/end destruction, risky item self-destruct).
+ *
+ * - **lifecycleDedupe** — copy slot always dispatches; the source slot is skipped when a
+ *   copy to its left already targets the same instance, unless the effect type is listed
+ *   in `LIFECYCLE_MIRROR_DOUBLES` (rare one-shot grants). Use for day-end, sell, reroll,
+ *   and similar hooks where most copied effects should fire once via the copy slot only.
+ *   Round boundaries and scoring use perSlot instead — see `LIFECYCLE_MIRROR_DOUBLES` comment.
+ *
+ * - **scoring** — perSlot with empty-copy NONE stubs and resolution logging enabled.
+ */
+export type EquipmentWalkPolicy = 'perSlot' | 'lifecycleDedupe' | 'scoring';
+
+export type ResolveEquipmentSlotOptions = {
+  unresolvedCopy?: UnresolvedCopyBehavior;
+  maxCopyDepth?: number;
+  logResolution?: boolean;
+  /** Apply canonical defaults for this walk policy when options are omitted. */
+  policy?: EquipmentWalkPolicy;
+};
+
+type WalkPreset = Required<Pick<ResolveEquipmentSlotOptions, 'unresolvedCopy' | 'logResolution'>>;
+
+export const EQUIPMENT_WALK_PRESETS: Record<EquipmentWalkPolicy, WalkPreset> = {
+  perSlot: { unresolvedCopy: 'skip', logResolution: false },
+  lifecycleDedupe: { unresolvedCopy: 'skip', logResolution: false },
+  scoring: { unresolvedCopy: 'none', logResolution: true },
+};
+
+function resolveWalkOptions(options: ResolveEquipmentSlotOptions = {}): WalkPreset {
+  const preset = EQUIPMENT_WALK_PRESETS[options.policy ?? 'perSlot'];
+  return {
+    unresolvedCopy: options.unresolvedCopy ?? preset.unresolvedCopy,
+    logResolution: options.logResolution ?? preset.logResolution,
+  };
+}
+
+/**
+ * Resolve one equipment bar slot for effect dispatch: boss skip, copy target, unresolved copy policy.
+ * Returns null when the slot is skipped (boss-disabled or unresolved copy with `skip`).
+ */
+export function resolveEquipmentSlotAtIndex(
+  equipment: EquipmentInstance[],
+  index: number,
+  options: ResolveEquipmentSlotOptions = {},
+): ResolvedEquipmentSlot | null {
+  if (isEquipmentDisabledByBoss(index)) return null;
+
+  const original = equipment[index];
+  const { unresolvedCopy, logResolution } = resolveWalkOptions(options);
+  const maxCopyDepth = options.maxCopyDepth ?? equipment.length;
+
+  if (original.def.effectType !== 'COPY_RIGHT' && original.def.effectType !== 'COPY_LEFTMOST') {
+    return { equip: original, original, index, isCopy: false };
+  }
+
+  const resolved = resolveCopyTarget(equipment, index, maxCopyDepth);
+  if (!resolved) {
+    if (logResolution) {
+      console.log(`  [equip] ${original.def.name}: nothing to copy`);
+    }
+    if (unresolvedCopy === 'skip') return null;
+    return {
+      equip: { ...original, def: { ...original.def, effectType: 'NONE' } } as EquipmentInstance,
+      original,
+      index,
+      isCopy: true,
+    };
+  }
+
+  if (logResolution) {
+    console.log(`  [equip] ${original.def.name}: copying ${resolved.def.name}`);
+  }
+  return { equip: resolved, original, index, isCopy: true };
+}
+
+function walkEquipmentWithPolicy(
+  equipment: EquipmentInstance[],
+  policy: EquipmentWalkPolicy,
+  fn: (slot: ResolvedEquipmentSlot) => boolean | void,
+  overrides: ResolveEquipmentSlotOptions = {},
+): void {
+  const options: ResolveEquipmentSlotOptions = { ...overrides, policy };
+  const maxCopyDepth = equipment.length;
+  for (let i = 0; i < equipment.length; i++) {
+    const slot = resolveEquipmentSlotAtIndex(equipment, i, { ...options, maxCopyDepth });
+    if (!slot) continue;
+    if (fn(slot) === false) break;
+  }
+}
+
+/**
+ * Walk every bar slot after copy resolution. Use for scoring-like passes, pack-open rolls,
+ * economy hooks, and round boundaries (round start/end) where handlers rely on `slot.isCopy`.
+ */
+export function walkEquipmentPerSlot(
+  equipment: EquipmentInstance[],
+  fn: (slot: ResolvedEquipmentSlot) => boolean | void,
+  overrides: ResolveEquipmentSlotOptions = {},
+): void {
+  walkEquipmentWithPolicy(equipment, 'perSlot', fn, overrides);
+}
+
+/**
+ * Walk bar slots with copy/source dedupe. See `EquipmentWalkPolicy.lifecycleDedupe`.
+ */
+export function walkEquipmentLifecycle(
+  equipment: EquipmentInstance[],
+  fn: (slot: ResolvedEquipmentSlot) => boolean | void,
+): void {
+  const copiedInstances = new Set<EquipmentInstance>();
+  walkEquipmentPerSlot(equipment, (slot) => {
+    if (slot.isCopy) copiedInstances.add(slot.equip);
+  });
+
+  walkEquipmentPerSlot(equipment, (slot) => {
+    if (!slot.isCopy && copiedInstances.has(slot.equip)) {
+      if (!LIFECYCLE_MIRROR_DOUBLES.has(slot.equip.def.effectType)) return;
+    }
+    return fn(slot);
+  });
+}
+
+/**
+ * Scoring pipeline walk — per-slot with NONE stubs for empty copies and resolution logging.
+ */
+export function walkEquipmentScoring(
+  equipment: EquipmentInstance[],
+  fn: (slot: ResolvedEquipmentSlot) => boolean | void,
+  overrides: ResolveEquipmentSlotOptions = {},
+): void {
+  walkEquipmentWithPolicy(equipment, 'scoring', fn, overrides);
+}
 
 /**
  * Count how many Loaded Dice are equipped and return the probability multiplier.

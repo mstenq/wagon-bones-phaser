@@ -364,9 +364,7 @@ export class GameScene extends Scene {
     this.devPanel.build();
 
     // Create buttons (all hidden initially)
-    this.readyBtn = new Button(this, btnCenterX, btnY, 'Roll Selected', 200, 40).onClick(() =>
-      this.onReadyToRoll(),
-    );
+    this.readyBtn = new Button(this, btnCenterX, btnY, 'Roll Selected', 200, 40).onClick(() => this.onReadyToRoll());
     this.rollBtn = new Button(this, btnCenterX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
     this.scoreBtn = new Button(this, hud.scoreBtnX, btnY, 'Score Hand', hud.scoreBtnW, 40).onClick(() =>
       this.onScore(),

@@ -1,6 +1,7 @@
 // ─── on-dice-destroyed lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 
@@ -28,7 +29,7 @@ export function processEquipmentOnDiceDestroyed(
   count: number = 1,
   enhancedCount: number = 0,
 ): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-dice-destroyed', equip, count, enhancedCount);
-  }
+  });
 }

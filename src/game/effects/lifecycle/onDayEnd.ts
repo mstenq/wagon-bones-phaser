@@ -1,6 +1,7 @@
 // ─── on-day-end lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
 import { rollRouletteWheelXMult } from './rouletteWheel';
@@ -24,7 +25,7 @@ effectRegistry.registerLifecycle('on-day-end', (equip) => {
 });
 
 export function processEquipmentOnDayEnd(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-day-end', equip);
-  }
+  });
 }

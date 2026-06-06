@@ -2,7 +2,8 @@
 
 import { Die, HandType, HandUpgradeInfo } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
-import { forEachEquipmentResolved, resolveEffectParam } from '../helpers';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
+import { resolveEffectParam } from '../helpers';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { getRunState } from '../../store/runStore';
 import { consumableActions } from '../../store/actions/consumableActions';
@@ -41,7 +42,7 @@ export function processEquipmentAfterHandScored(
 ): HandUpgradeInfo[] {
   const upgrades: HandUpgradeInfo[] = [];
 
-  forEachEquipmentResolved(equipment, (equip) => applyAfterHandScoredEffect(equip, handType), 'skip');
+  walkEquipmentLifecycle(equipment, ({ equip }) => applyAfterHandScoredEffect(equip, handType));
 
   return upgrades;
 }

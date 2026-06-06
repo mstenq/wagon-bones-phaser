@@ -2,6 +2,7 @@
 
 import type { Die, HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { replaceEquipmentList } from '../../store/resolve';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
@@ -98,8 +99,8 @@ export function processEquipmentOnHandPlayed(
   handType: HandType,
   scoringDice?: Die[],
 ): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-hand-played', equip, handType, scoringDice);
-  }
+  });
   replaceEquipmentList(equipment);
 }

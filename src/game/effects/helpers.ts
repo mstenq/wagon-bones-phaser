@@ -1,7 +1,7 @@
 // ─── Shared Utility Functions ───
 
 import { EquipmentInstance } from '../ItemsSystem';
-import { resolveCopyTarget } from '../equipmentUtils';
+import { walkEquipmentScoring, type ResolveEquipmentSlotOptions } from '../equipmentUtils';
 import { Die, HandType } from '../types';
 import type { ScoringPipelineContext } from './types';
 import { addScore, D, gte, multiplyScore, type Decimal, type DecimalSource } from '../scoreMath';
@@ -9,38 +9,20 @@ import { getRunState } from '../store/runStore';
 import { resolveEquipmentList } from '../store/resolve';
 import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
 
-export type UnresolvedCopyBehavior = 'none' | 'skip';
+export type { ResolveEquipmentSlotOptions, UnresolvedCopyBehavior } from '../equipmentUtils';
 
 /** Multiply pipeline xMult and round to avoid float drift. */
 export function multiplyCtxXMult(ctx: { xMult: Decimal }, factor: number): void {
   ctx.xMult = multiplyScore(ctx.xMult, factor);
 }
 
-export function forEachEquipmentResolved(
+/** Scoring pipeline iterator — uses scoring walk preset (NONE stubs, resolution logs). */
+export function forEachEquipmentScoring(
   equipment: EquipmentInstance[],
   fn: (equip: EquipmentInstance, original: EquipmentInstance, index: number) => void,
-  unresolvedCopy: UnresolvedCopyBehavior = 'none',
+  overrides: ResolveEquipmentSlotOptions = {},
 ): void {
-  const maxCopyDepth = equipment.length;
-  for (let i = 0; i < equipment.length; i++) {
-    if (isEquipmentDisabledByBoss(i)) continue;
-    const original = equipment[i];
-    let equip = original;
-
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, i, maxCopyDepth);
-      if (!resolved) {
-        console.log(`  [equip] ${equip.def.name}: nothing to copy`);
-        if (unresolvedCopy === 'skip') continue;
-        equip = { ...original, def: { ...original.def, effectType: 'NONE' } } as EquipmentInstance;
-      } else {
-        console.log(`  [equip] ${equip.def.name}: copying ${resolved.def.name}`);
-        equip = resolved;
-      }
-    }
-
-    fn(equip, original, i);
-  }
+  walkEquipmentScoring(equipment, ({ equip, original, index }) => fn(equip, original, index), overrides);
 }
 
 /** Fire/icy on one bar slot (original card, not copy target). Called right after that slot's additive pass. */

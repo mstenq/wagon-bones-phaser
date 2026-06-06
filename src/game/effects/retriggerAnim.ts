@@ -1,7 +1,7 @@
 import type { Die, HandType, ScoreAnimEvent } from '../types';
 import type { EquipmentInstance } from '../ItemsSystem';
-import { resolveCopyTarget } from '../equipmentUtils';
-import { isDiceScoringDisabledByBoss, isEquipmentDisabledByBoss } from '../BossEffectsSystem';
+import { walkEquipmentPerSlot } from '../equipmentUtils';
+import { isDiceScoringDisabledByBoss } from '../BossEffectsSystem';
 import { dieMatchesPip, hasStackedDeck, isLowestHeldDieTarget } from './helpers';
 import { enhancementHeldSteelXMult, hasAlchemyKit } from '../alchemyKit';
 
@@ -10,21 +10,13 @@ export type RetriggerEquipSource = { equipIndex: number };
 /** Equipment indices for held-in-hand / round-end held retriggers (Silver Bullets, Seventh Trumpet). */
 export function buildHeldRetriggerSources(equipment: EquipmentInstance[]): RetriggerEquipSource[] {
   const sources: RetriggerEquipSource[] = [];
-  const maxCopyDepth = equipment.length;
 
-  for (let ei = 0; ei < equipment.length; ei++) {
-    if (isEquipmentDisabledByBoss(ei)) continue;
-    let equip = equipment[ei];
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
-      if (!resolved) continue;
-      equip = resolved;
+  walkEquipmentPerSlot(equipment, (slot) => {
+    if (slot.equip.def.effectType === 'HELD_RETRIGGER' || slot.equip.def.effectType === 'ALL_RETRIGGER') {
+      const extra = (slot.equip.def.effectParams.value as number) ?? 1;
+      for (let i = 0; i < extra; i++) sources.push({ equipIndex: slot.index });
     }
-    if (equip.def.effectType === 'HELD_RETRIGGER' || equip.def.effectType === 'ALL_RETRIGGER') {
-      const extra = (equip.def.effectParams.value as number) ?? 1;
-      for (let i = 0; i < extra; i++) sources.push({ equipIndex: ei });
-    }
-  }
+  });
 
   return sources;
 }
@@ -44,30 +36,30 @@ export function heldDieHasRetriggerableEffects(
   if (enhancementHeldSteelXMult(die.enhancement, hasAlchemyKit(equipment))) return true;
 
   const stackedDeck = hasStackedDeck(equipment);
-  const maxCopyDepth = equipment.length;
+  let found = false;
 
-  for (let eIdx = 0; eIdx < equipment.length; eIdx++) {
-    if (isEquipmentDisabledByBoss(eIdx)) continue;
-    let equip = equipment[eIdx];
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, eIdx, maxCopyDepth);
-      if (!resolved) continue;
-      equip = resolved;
-    }
+  walkEquipmentPerSlot(equipment, (slot) => {
+    if (found) return false;
 
+    const equip = slot.equip;
     if (equip.def.effectType === 'HELD_LOWEST_MULT' && isLowestHeldDieTarget(die, heldDice)) {
-      return true;
+      found = true;
+      return false;
     }
     if (equip.def.effectType === 'HELD_PIP_XMULT' || equip.def.effectType === 'HELD_PIP_MULT') {
       const pip = equip.def.effectParams.pip as number;
-      if (dieMatchesPip(die, pip, equipment, stackedDeck)) return true;
+      if (dieMatchesPip(die, pip, equipment, stackedDeck)) {
+        found = true;
+        return false;
+      }
     }
     if (equip.def.effectType === 'HELD_ENHANCED_MONEY' && die.enhancement !== null) {
-      return true;
+      found = true;
+      return false;
     }
-  }
+  });
 
-  return false;
+  return found;
 }
 
 /** Push an "Again!" popup on the equipment card that caused this retrigger iteration. */

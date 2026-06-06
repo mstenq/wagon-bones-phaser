@@ -1,9 +1,9 @@
 // ─── on-pack-opened lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { checkLoadedChance, walkEquipmentPerSlot } from '../../equipmentUtils';
 import { getRunState } from '../../store/runStore';
 import { selectProfession } from '../../store/selectors/runSelectors';
-import { checkLoadedChance } from '../../equipmentUtils';
 import { resolveChance } from '../helpers';
 import { effectRegistry } from '../registry';
 import { dispatchLifecycle } from './dispatch';
@@ -26,9 +26,9 @@ effectRegistry.registerLifecycle('on-pack-opened', (equip, ctxUnknown) => {
 
 export function processEquipmentOnPackOpened(equipment: EquipmentInstance[]): boolean {
   const ctx: PackOpenedContext = { equipment, triggered: false };
-  for (const equip of equipment) {
+  walkEquipmentPerSlot(equipment, ({ equip }) => {
     dispatchLifecycle('on-pack-opened', equip, ctx);
-    if (ctx.triggered) return true;
-  }
-  return false;
+    if (ctx.triggered) return false;
+  });
+  return ctx.triggered;
 }

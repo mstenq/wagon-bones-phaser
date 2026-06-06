@@ -2,6 +2,7 @@
 
 import type { Die } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { replaceEquipmentList } from '../../store/resolve';
 import { getSupplyDefById } from '../../ConsumablesSystem';
 import { dispatchLifecycle } from './dispatch';
@@ -63,33 +64,33 @@ effectRegistry.registerLifecycle('on-diamond-destroyed', (equip) => {
 });
 
 export function processEquipmentOnSell(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-sell', equip);
-  }
+  });
   replaceEquipmentList(equipment);
 }
 
 export function processEquipmentOnBossDefeat(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-boss-defeat', equip);
-  }
+  });
   replaceEquipmentList(equipment);
 }
 
 export function processEquipmentOnDiceSpent(equipment: EquipmentInstance[], spentDice: Die[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-dice-spent', equip, spentDice);
-  }
+  });
 }
 
 export function processEquipmentOnLuckyTrigger(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-lucky-trigger', equip);
-  }
+  });
 }
 
 export function processEquipmentOnDiamondDestroyed(equipment: EquipmentInstance[]): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-diamond-destroyed', equip);
-  }
+  });
 }

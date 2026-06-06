@@ -1,7 +1,6 @@
 import type { Die } from '../types';
 import type { EquipmentInstance } from '../ItemsSystem';
-import { resolveCopyTarget } from '../equipmentUtils';
-import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
+import { walkEquipmentPerSlot } from '../equipmentUtils';
 import { dieMatchesPip, hasStackedDeck } from './helpers';
 import type { RetriggerEquipSource } from './retriggerAnim';
 
@@ -27,39 +26,22 @@ export type ScoredDieRetriggerResult = {
   equipSources: RetriggerEquipSource[];
 };
 
-function forEachResolvedEquipment(
-  equipment: EquipmentInstance[],
-  fn: (equip: EquipmentInstance, equipIndex: number) => void,
-): void {
-  const maxCopyDepth = equipment.length;
-  for (let ei = 0; ei < equipment.length; ei++) {
-    if (isEquipmentDisabledByBoss(ei)) continue;
-    let equip = equipment[ei];
-    if (equip.def.effectType === 'COPY_RIGHT' || equip.def.effectType === 'COPY_LEFTMOST') {
-      const resolved = resolveCopyTarget(equipment, ei, maxCopyDepth);
-      if (!resolved) continue;
-      equip = resolved;
-    }
-    fn(equip, ei);
-  }
-}
-
 /** Global scored-die retriggers (War Drums, Last Stand, Seventh Trumpet) in trigger/source order. */
 function collectGlobalScoredRetriggerSources(
   equipment: EquipmentInstance[],
   context?: ScoredRetriggerScoreContext,
 ): RetriggerEquipSource[] {
   const sources: RetriggerEquipSource[] = [];
-  forEachResolvedEquipment(equipment, (equip, ei) => {
+  walkEquipmentPerSlot(equipment, ({ equip, index }) => {
     if (equip.def.effectType === 'SCORED_RETRIGGER_TIMED' && (equip.state.daysRemaining ?? 0) > 0) {
-      sources.push({ equipIndex: ei });
+      sources.push({ equipIndex: index });
     }
     if (equip.def.effectType === 'SCORED_RETRIGGER_FINAL_DAY' && context && context.currentDay >= context.maxDays) {
-      sources.push({ equipIndex: ei });
+      sources.push({ equipIndex: index });
     }
     if (equip.def.effectType === 'ALL_RETRIGGER') {
       const extra = (equip.def.effectParams.value as number) ?? 1;
-      for (let i = 0; i < extra; i++) sources.push({ equipIndex: ei });
+      for (let i = 0; i < extra; i++) sources.push({ equipIndex: index });
     }
   });
   return sources;
@@ -95,23 +77,23 @@ function collectPerDieScoredRetriggerSources(options: {
   const equipSources: RetriggerEquipSource[] = [];
   let unattributedTriggerCount = 0;
 
-  forEachResolvedEquipment(equipment, (equip, ei) => {
+  walkEquipmentPerSlot(equipment, ({ equip, index }) => {
     if (
       equip.def.effectType === 'PIP_RETRIGGER' &&
       dieMatchesPip(die, equip.def.effectParams.pip as number, equipment, stackedDeck)
     ) {
-      equipSources.push({ equipIndex: ei });
+      equipSources.push({ equipIndex: index });
     }
     if (equip.def.effectType === 'FIRST_DICE_RETRIGGER' && die.id === firstDieId) {
       const extra = equip.def.effectParams.value as number;
-      for (let i = 0; i < extra; i++) equipSources.push({ equipIndex: ei });
+      for (let i = 0; i < extra; i++) equipSources.push({ equipIndex: index });
     }
     if (equip.def.effectType === 'LAST_DICE_RETRIGGER' && die.id === lastDieId) {
       const extra = equip.def.effectParams.value as number;
-      for (let i = 0; i < extra; i++) equipSources.push({ equipIndex: ei });
+      for (let i = 0; i < extra; i++) equipSources.push({ equipIndex: index });
     }
     if (equip.def.effectType === 'ENHANCED_RETRIGGER' && isEnhanced) {
-      equipSources.push({ equipIndex: ei });
+      equipSources.push({ equipIndex: index });
     }
     if (equip.def.effectType === 'LOADED_CHAMBER' && isLucky) {
       unattributedTriggerCount++;

@@ -1,6 +1,7 @@
 // ─── on-reroll lifecycle handlers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 
@@ -34,7 +35,7 @@ effectRegistry.registerLifecycle('on-reroll', (equip, diceCount) => {
 });
 
 export function processEquipmentOnReroll(equipment: EquipmentInstance[], diceCount: number): void {
-  for (const equip of equipment) {
+  walkEquipmentLifecycle(equipment, ({ equip }) => {
     dispatchLifecycle('on-reroll', equip, diceCount);
-  }
+  });
 }
