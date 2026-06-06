@@ -469,7 +469,7 @@ export const ANIM = {
   CARD_DRAG_SWING_FACTOR: 0.04, // rotation per px of velocity
   CARD_DRAG_SWING_MAX: 0.35, // radians, ~20° max swing
   CARD_DRAG_SWING_DAMPING: 0.75, // velocity damping per frame (lower = more responsive)
-  CARD_DRAG_SETTLE_DURATION: 500, // ms to settle back after drop
+  CARD_DRAG_SETTLE_DURATION: 300, // ms to settle back after drop (Back.easeOut — subtle overshoot)
   CARD_DRAG_LIFT_Y: -6, // Y offset while dragging (card lifts up)
 
   /** Equipment fire-destruction VFX (Haunted Totem, Dynamite, Nitro, …) */

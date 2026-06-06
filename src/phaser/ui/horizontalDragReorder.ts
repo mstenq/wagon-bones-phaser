@@ -58,7 +58,7 @@ type SettleTweenStep = {
 
 export function buildDragSettleTweens(
   slot: DragSlot,
-  overshoot: number,
+  _overshoot: number,
   scale: { scaleX: number; scaleY: number },
 ): SettleTweenStep[] {
   const baseRotation = slot.rotation ?? 0;
@@ -68,26 +68,11 @@ export function buildDragSettleTweens(
     {
       x: slot.x,
       y: slot.y,
-      rotation: overshoot + baseRotation,
+      rotation: baseRotation,
       scaleX: scale.scaleX,
       scaleY: scale.scaleY,
-      duration: dur * 0.3,
-      ease: 'Sine.easeOut',
-    },
-    {
-      rotation: -overshoot * 0.4 + baseRotation,
-      duration: dur * 0.25,
-      ease: 'Sine.easeInOut',
-    },
-    {
-      rotation: overshoot * 0.1 + baseRotation,
-      duration: dur * 0.2,
-      ease: 'Sine.easeInOut',
-    },
-    {
-      rotation: baseRotation,
-      duration: dur * 0.25,
-      ease: 'Sine.easeIn',
+      duration: dur,
+      ease: 'Back.easeOut',
     },
   ];
 }
