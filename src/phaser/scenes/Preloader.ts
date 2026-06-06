@@ -1,7 +1,6 @@
 import { Scene } from 'phaser';
 import allItems from '../../data/items';
 import pipEnhancements from '../../data/pip_enhancements';
-import diceEnhancements from '../../data/dice_enhancements';
 import * as Phaser from 'phaser';
 import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
 import { initAudioPreferences } from '../../game/AudioPreferences';
@@ -40,11 +39,8 @@ export class Preloader extends Scene {
       this.load.image(`sticker_${sticker.id}`, `assets/stickers/${filename}.png`);
     }
 
-    // Load dice images
-    this.load.image('dice_standard', 'assets/dice/standard.png');
-    for (const enh of diceEnhancements) {
-      this.load.image(`dice_${enh.id}`, `assets/dice/${enh.id}.png`);
-    }
+    // Load dice faces from TexturePacker single-atlas JSON
+    this.load.atlas('dice', 'assets/dice/dice.png', 'assets/dice/dice.json');
 
     // Load packs from TexturePacker single-atlas JSON
     this.load.atlas('packs', 'assets/packs/packs.png', 'assets/packs/packs.json');
@@ -143,10 +139,8 @@ export class Preloader extends Scene {
     initGameplayPreferences();
     patchGameAudio();
 
-    for (const key of ['dice_standard', ...diceEnhancements.map((e) => `dice_${e.id}`)]) {
-      if (this.textures.exists(key)) {
-        this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
-      }
+    if (this.textures.exists('dice')) {
+      this.textures.get('dice').setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
 
     hideLoadingOverlay();

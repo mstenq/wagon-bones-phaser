@@ -5,7 +5,7 @@
 
 import { Scene } from 'phaser';
 import { DiceSprite } from '../ui/DiceSprite';
-import { ScoreAnimEvent, ScoreResult, ScoreAnimPopupType } from '../../game/types';
+import { Die, ScoreAnimEvent, ScoreResult, ScoreAnimPopupType } from '../../game/types';
 import { ConsumableDef, getConsumableAtlasKey, getConsumableDefById } from '../../game/ConsumablesSystem';
 import diceEnhancements from '../../data/dice_enhancements';
 import { Sidebar } from '../ui/Sidebar';
@@ -13,6 +13,8 @@ import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { ANIM } from '../../game/Constants';
+import { getRoundState } from '../../game/store/roundStore';
+import { resolveDieById } from '../../game/store/roundResolve';
 import { formatScore } from '../../game/formatScore';
 import { endScoreAnimSession, pacingForFollowUp, pacingForHandScore, type ScoreAnimPacing } from './scoreAnimPacing';
 import { addScore, multiplyScore, D } from '../../game/scoreMath';
@@ -423,12 +425,20 @@ function animateDieCrack(scene: Scene, sprite: DiceSprite, onComplete: () => voi
   });
 }
 
+function syncDieSpriteFromScore(sprite: DiceSprite, dieId: string, scoringDieById: Map<string, Die>): void {
+  const round = getRoundState();
+  const die = scoringDieById.get(dieId) ?? (round ? resolveDieById(dieId, round) : undefined);
+  if (die) sprite.setDieData(die);
+}
+
 export function playScoreAnimation(config: ScoreAnimationConfig): void {
   const { scene, diceSprites, result, sidebar, equipBar, consumableBar, onComplete } = config;
 
   // Build sprite lookup maps
   const dieSpriteMap = new Map<string, DiceSprite>();
   for (const s of diceSprites) dieSpriteMap.set(s.dieData.id, s);
+
+  const scoringDieById = new Map(result.handResult.scoringDice.map((d) => [d.id, d]));
 
   beginScoring();
 
@@ -501,9 +511,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
               duration: 80,
               yoyo: true,
               ease: 'Sine.easeInOut',
-              onComplete: () => {
-                sprite.setDieData({ ...sprite.dieData, enhancement: null });
-              },
+              onComplete: () => syncDieSpriteFromScore(sprite, target.dieId, scoringDieById),
             });
           }
         }
@@ -521,14 +529,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             const enhancement = evt.enhancement ?? null;
             const label = enhancement ? (ENHANCEMENT_NAMES.get(enhancement) ?? enhancement) : 'Enhanced';
             floatingText(scene, sprite.x, sprite.y, `+${label}`, POPUP_ENHANCE_COLOR, 'up');
-            pacing.wait(scene, 120, () => {
-              sprite.setDieData({
-                ...sprite.dieData,
-                enhancement,
-                ...(evt.aura !== undefined ? { aura: evt.aura } : {}),
-                ...(evt.sticker !== undefined ? { sticker: evt.sticker } : {}),
-              });
-            });
+            pacing.wait(scene, 120, () => syncDieSpriteFromScore(sprite, target.dieId, scoringDieById));
           }
         }
         if (target.kind === 'equip' || target.kind === 'both') {

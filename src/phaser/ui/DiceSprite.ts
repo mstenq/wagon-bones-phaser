@@ -1,5 +1,5 @@
 // ─── DiceSprite ───
-// Phaser Container that renders a d12 die with a number on the front face.
+// Phaser Container that renders a d12 die from per-face atlas frames.
 // Reads from a Die data object — no game logic here.
 
 import * as Phaser from 'phaser';
@@ -8,6 +8,7 @@ import { Die } from '../../game/types';
 import { DICE, COLORS, UI } from '../../game/Constants';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
 import { applyAuraGlow, createAuraParticles, getAuraPrimary } from './AuraFX';
+import { DICE_ATLAS_KEY, resolveDiceAtlasFrame } from './diceAssets';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
 import pipEnhancements from '../../data/pip_enhancements';
@@ -18,16 +19,11 @@ const AURA_INFO = new Map(diceAuras.map((a) => [a.id, a]));
 const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
 
 const DICE_SIZE = DICE.SIZE;
-const PIP_COLOR = DICE.PIP_COLOR;
 const SELECTED_STROKE = DICE.SELECTED_STROKE;
 const FORCED_STROKE = DICE.FORCED_STROKE;
 const TOOLTIP_PAD = 10;
 const TOOLTIP_BG_COLOR = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
-
-function getDiceTextureKey(die: Die): string {
-  return die.enhancement ? `dice_${die.enhancement}` : 'dice_standard';
-}
 
 function setStickerOrbitPosition(image: GameObjects.Image, angleRad: number): void {
   const r = DICE.STICKER_ORBIT_RADIUS;
@@ -57,7 +53,6 @@ export class DiceSprite extends GameObjects.Container {
   }
   private dieImage: GameObjects.Image;
   private selectionGfx: GameObjects.Graphics;
-  private valueText: GameObjects.Text;
   private stickerImage: GameObjects.Image | null = null;
   private stickerOrbitAngle = { rad: 0 };
   private stickerOrbitTween: Phaser.Tweens.Tween | null = null;
@@ -91,19 +86,10 @@ export class DiceSprite extends GameObjects.Container {
     this._showAuraLabel = options?.showAuraLabel ?? false;
     this._showSelectedStroke = options?.showSelectedStroke ?? false;
 
-    this.dieImage = scene.add.image(0, 0, 'dice_standard').setOrigin(0.5, 0.5);
+    this.dieImage = scene.add.image(0, 0, DICE_ATLAS_KEY, 'standard-01.png').setOrigin(0.5, 0.5);
     this.selectionGfx = scene.add.graphics();
-    this.valueText = scene.add
-      .text(0, DICE.VALUE_Y_OFFSET, '', {
-        fontFamily: 'Arial Black',
-        fontSize: `${DICE.FONT_SIZE}px`,
-        color: '#222222',
-        stroke: '#00000033',
-        strokeThickness: 1,
-      })
-      .setOrigin(0.5, 0.5);
     this.disabledOverlay = scene.add.graphics();
-    this.add([this.dieImage, this.valueText, this.selectionGfx, this.disabledOverlay]);
+    this.add([this.dieImage, this.selectionGfx, this.disabledOverlay]);
 
     this.setSize(DICE_SIZE, DICE_SIZE);
     // Container origin is 0.5 — InputManager adds displayOriginX/Y before hit tests,
@@ -189,35 +175,13 @@ export class DiceSprite extends GameObjects.Container {
   }
 
   private redraw(): void {
-    const hasEnhancement = !!this._dieData.enhancement;
-
-    const key = getDiceTextureKey(this._dieData);
-    const textureKey = this.scene.textures.exists(key) ? key : 'dice_standard';
-    this.dieImage.setTexture(textureKey);
+    const frame = resolveDiceAtlasFrame(this.scene, this._dieData);
+    this.dieImage.setTexture(DICE_ATLAS_KEY, frame);
     this.dieImage.setDisplaySize(DICE_SIZE, DICE_SIZE);
     this.dieImage.clearTint();
 
     this.drawSelectionStroke();
     this.drawRerollLockLabel();
-
-    if (this._dieData.value > 0) {
-      const enhInfo = hasEnhancement ? ENHANCEMENT_INFO.get(this._dieData.enhancement!) : null;
-      const fontFamily = enhInfo?.fontFamily ?? 'Arial Black';
-      const textColor = enhInfo?.color ? `#${enhInfo.color}` : `#${PIP_COLOR.toString(16).padStart(6, '0')}`;
-      this.valueText.setStyle({
-        fontFamily,
-        fontSize: this._dieData.value >= 10 ? `${DICE.FONT_SIZE_TWO_DIGIT}px` : `${DICE.FONT_SIZE}px`,
-        color: textColor,
-        stroke: enhInfo?.strokeColor ? `#${enhInfo.strokeColor}` : '#00000000',
-        strokeThickness: enhInfo?.strokeWidth ?? 0,
-      });
-      this.valueText.setPosition(0, DICE.VALUE_Y_OFFSET);
-      this.valueText.setText(`${this._dieData.value}`);
-      this.valueText.setVisible(true);
-    } else {
-      this.valueText.setVisible(false);
-    }
-
     this.drawSticker();
   }
 
