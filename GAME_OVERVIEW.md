@@ -20,7 +20,7 @@ five of a kind      50      6
 # Main differences from balatro
 instead of having limited number of hands, you have a limited number of days you can travel. So you need to beat this round or reach your destination within a certain number of miles. Each round the number of miles increases just like balatro.
 
-Since we are using 6 sided dice, we don't have face cards/suits/fixed card numbers etc, so deck fixing is gonna be a little different and probably not as important. This will need to be tweaked. Also since we are dealing with dice, there will be an additional phase during rounds for doing re-rolls.
+Since we are using 6 sided dice, we don't have face cards/suits/fixed card numbers etc, so deck fixing is gonna be a little different and probably not as important. This will need to be tweaked. Also since we are dealing with dice, there will be an additional phase during rounds for doing rerolls.
 Instead of discards, you pick 5 dice from your hand to roll each day. Once dice are rolled and scored, they go to a "spent" pile. You must cycle through ALL your dice before any come back — even across days within a round. This means if you cherry-pick your best dice early, you'll be stuck with the worst ones later.
 Also since this is a journey I want to start with a shop and a bit of money to start so you can pick up supplies before starting your journey which just fits better with our theme.
 
@@ -40,7 +40,7 @@ We have 8 bosses we will face in order to reach each landmark. Balatro calls the
 # Phases of a Round
 days (4 days to get to destination by default) - each day has 2 phases
 1. pick phase - pick 5 dice from your hand to roll. You can see all available dice in your hand (drawn from your collection). Dice you've already used are in the spent pile and won't come back until you've cycled through all of them.
-2. roll phase - roll your 5 dice, by default you get 3 re-rolls per day (resets each day)
+2. roll phase - roll your 5 dice, by default you get 3 rerolls per day (resets each day)
 3. score phase - lock in the 1 to 5 dice you want to play. If hand matches multiple possible score targets, the more difficult hand to get wins.
 
 Dice cycling: When dice are scored, they move to a spent pile. Each day you draw fresh dice from the remaining pouch. If the pouch runs out, the spent pile is shuffled back in. This persists across days within a round.
@@ -57,12 +57,12 @@ Frontier encounter cards are what spectral cards are in Balatro. They can add en
 # Professions
 Instead of decks, we instead choose a character, and the character affects how the journey will go. Here is the list of characters and there affects.
 
-- Farmer Hank Caldwell = +1 re-roll per day 
+- Farmer Hank Caldwell = +1 reroll per day 
 - Surveyor Elias Mercer = +1 day of travel 
 - Banker Charles Whitlock = starts with $20
 - Outlaw Jesse Rawlins = Earns no interest on money, instead gets 
    - $1 per remaining day
-   - $1 per unused re-roll 
+   - $1 per unused reroll 
 - Merchant Abigail Turner = 1 extra slot for equipment, -1 day of travel
 - Cook Martha Delaney = Starts with extra supplies voucher and 2 copies of second helpings supply card
 - Scout Caleb Winters = Starts with binoculars voucher (Can always find most used trail knowledge card), -1 supply slot
@@ -72,7 +72,7 @@ Instead of decks, we instead choose a character, and the character affects how t
 - Hunter / Trapper Nathan Cole - After each boss gain a double tag (Doubles rewards from skipping a blind)
 - Accountant Henry Pritchard - Balance miles and mult before calculating total miles when scoring (x2 base blind size)
 - Doctor Dr. Eleanor Sykes - Start the game with 2 medicine cards in hand
-- Con Artist Victor Hale - +2 re-rolls per day, -1 hand size
+- Con Artist Victor Hale - +2 rerolls per day, -1 hand size
 
 
 ## Hand Sequence / Scoring

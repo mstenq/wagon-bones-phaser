@@ -251,7 +251,7 @@ const items: ItemDef[] = [
       const total = rerolls * 30;
       return {
         hint: total > 0 ? [[miles(`+${total}`), text('mi')]] : [[inactive(`+0`), text('mi')]],
-        tooltip: [[miles('+30'), text('miles per unused re-roll')]],
+        tooltip: [[miles('+30'), text('miles per unused reroll')]],
       };
     },
   },
@@ -286,7 +286,7 @@ const items: ItemDef[] = [
       if (!round) {
         return {
           hint: [[mult('+15'), condition('No rerolls')]],
-          tooltip: [[mult('+15'), text('mult when'), condition('0 re-rolls remaining')]],
+          tooltip: [[mult('+15'), text('mult when'), condition('0 rerolls remaining')]],
         };
       }
       const isActive = round.rerollsRemaining === 0;
@@ -294,7 +294,7 @@ const items: ItemDef[] = [
         hint: isActive
           ? [[mult('+15'), condition(`${round.rerollsRemaining}/0 rerolls`)], [active('Active!')]]
           : [[mult('+15'), condition(`${round.rerollsRemaining}/0 rerolls`)], [inactive('Inactive')]],
-        tooltip: [[mult('+15'), text('mult when'), condition('0 re-rolls remaining')]],
+        tooltip: [[mult('+15'), text('mult when'), condition('0 rerolls remaining')]],
       };
     },
   },
@@ -367,7 +367,7 @@ const items: ItemDef[] = [
     effectParams: { value: 1 },
     display: (_round, _player) => ({
       hint: [[active('+1 reroll')]],
-      tooltip: [[active('+1 re-roll'), text('per leg')]],
+      tooltip: [[active('+1 reroll'), text('per leg')]],
     }),
   },
   {
@@ -678,7 +678,7 @@ const items: ItemDef[] = [
       const hint = [[mult(`x${xm.toFixed(2)}`)]];
       return {
         hint,
-        tooltip: [[mult('x2'), text(' Mult. Loses '), mult('x0.01'), text(' mult per dice re-rolled')]],
+        tooltip: [[mult('x2'), text(' Mult. Loses '), mult('x0.01'), text(' mult per dice rerolled')]],
       };
     },
   },
@@ -967,7 +967,7 @@ const items: ItemDef[] = [
       return {
         hint: [[mult(`x${xm}`)], [text(`${total % 23}/23`)]],
         tooltip: [
-          [text('Item gains '), mult('x1'), text(' mult for every '), condition('23'), text(' dice re-rolled')],
+          [text('Item gains '), mult('x1'), text(' mult for every '), condition('23'), text(' dice rerolled')],
         ],
       };
     },
@@ -1328,7 +1328,7 @@ const items: ItemDef[] = [
         hint: round
           ? [[money(`$${rerolls}`)], [condition('unused rerolls', 'sm')]]
           : [[money('$1')], [condition('unused rerolls', 'sm')]],
-        tooltip: [[money('$1'), text('per unused re-roll at end of round')]],
+        tooltip: [[money('$1'), text('per unused reroll at end of round')]],
       };
     },
   },
@@ -1558,7 +1558,7 @@ const items: ItemDef[] = [
       const hint = [[mult(`+${m}`)]];
       return {
         hint,
-        tooltip: [[mult('+2'), text(' mult per day travelled, '), mult('-1'), text(' mult per re-roll used')]],
+        tooltip: [[mult('+2'), text(' mult per day travelled, '), mult('-1'), text(' mult per reroll used')]],
       };
     },
   },
@@ -2382,7 +2382,7 @@ const items: ItemDef[] = [
     effectParams: { rerollsBonus: 2, rollSizePenalty: 1 },
     display: (_round, _player) => ({
       hint: [[active('+2 rerolls')], [condition('-1 roll size')]],
-      tooltip: [[condition('+2 re-rolls'), text(' per day, '), condition('-1 dice'), text(' when rolling')]],
+      tooltip: [[condition('+2 rerolls'), text(' per day, '), condition('-1 dice'), text(' when rolling')]],
     }),
   },
   {
@@ -2475,7 +2475,7 @@ const items: ItemDef[] = [
     effectParams: { miles: 250, rerollsPenalty: 2 },
     display: (_round, _player) => ({
       hint: [[miles('+250')], [condition('-2 rerolls')]],
-      tooltip: [[miles('+250'), text(' miles, '), condition('-2 re-rolls')]],
+      tooltip: [[miles('+250'), text(' miles, '), condition('-2 rerolls')]],
     }),
   },
   {

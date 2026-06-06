@@ -146,7 +146,7 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_boss',
     name: 'Change of Guard',
-    description: "Re-roll the boss assigned to this leg's Showdown.",
+    description: "Reroll the boss assigned to this leg's Showdown.",
     category: 'boss',
     minLeg: 1,
     weight: 2,

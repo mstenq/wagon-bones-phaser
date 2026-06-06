@@ -5,7 +5,7 @@ This is essentially like balatro spectral packs.
 - Snake Oil Salesman - add purple pips to one dice (of 5 drawn at random) on 2 sides. Can be applied to same dice 3 times to make all pips purple.
 - Spirit Guide - add blue pips to one dice (of 5 drawn at random) on 1 sides. Can be applied to same dice 6 times to make all pips blue.
 - Deputize - add red pips to one dice (of 5 drawn at random) on 3 sides. Can be applied to same dice 2 times to make all pips red.
-- Blood Moon - add ghost/haunted to random piece of equipment - reduce re-roll amount by 1
+- Blood Moon - add ghost/haunted to random piece of equipment - reduce reroll amount by 1
 - Spirit Shaman - Bless one dice (of 5 drawn at random) with random aura (holy, fire, ice)
 - Raid - Destroy 5 random dice from your active dice pool (Won't target your spent pool unless you have less than 5 active dice in your pool), gain $20
 - Skin Walker - Copy a random piece of equipment, destroy all others (Except eternal equipment)

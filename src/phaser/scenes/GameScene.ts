@@ -371,7 +371,7 @@ export class GameScene extends Scene {
     this.scoreBtn = new Button(this, hud.scoreBtnX, btnY, 'Score Hand', hud.scoreBtnW, 40).onClick(() =>
       this.onScore(),
     );
-    this.rerollBtn = new Button(this, hud.rerollBtnX, btnY, 'Re-roll All', hud.rerollBtnW, 40).onClick(() =>
+    this.rerollBtn = new Button(this, hud.rerollBtnX, btnY, 'Reroll All', hud.rerollBtnW, 40).onClick(() =>
       this.onReroll(),
     );
     this.continueBtn = new Button(this, btnCenterX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
@@ -736,14 +736,14 @@ export class GameScene extends Scene {
   private onReroll(): void {
     if (this.animating) return;
 
-    // Re-roll dice that are neither selected for score nor pinned against re-rolls
+    // Reroll dice that are neither selected for score nor pinned against rerolls
     const allIds = selectRolledDice().map((d) => d.id);
     const idsToReroll = allIds.filter((id) => !this.selectedDiceIds.has(id) && !this.rerollLockedDiceIds.has(id));
     if (idsToReroll.length === 0) return;
 
     const success = gameFacade.round.rerollUnlockedDice(idsToReroll);
     if (!success && selectRerollsRemaining() > 0 && !gameFacade.round.canUseReroll()) {
-      this.showFloatingText('No re-rolls on Day 1', 0xffaa44);
+      this.showFloatingText('No rerolls on Day 1', 0xffaa44);
       return;
     }
     if (success) {
@@ -913,10 +913,10 @@ export class GameScene extends Scene {
     rerollCount: number,
     totalCount: number,
   ): string {
-    if (!hasRerolls) return 'No Re-rolls';
-    if (!canUseReroll) return 'Day 1: no re-rolls';
-    if (rerollCount === totalCount) return 'Re-roll All';
-    return `Re-roll ${rerollCount}`;
+    if (!hasRerolls) return 'No Rerolls';
+    if (!canUseReroll) return 'Day 1: no rerolls';
+    if (rerollCount === totalCount) return 'Reroll All';
+    return `Reroll ${rerollCount}`;
   }
 
   private getScoreButtonText(selectedCount: number): string {
@@ -978,7 +978,7 @@ export class GameScene extends Scene {
 
   private getRollPhaseInstruction(): string {
     if (!this.showRollInstruction) return '';
-    return 'Click to select for score · Right-click to lock against re-rolls';
+    return 'Click to select for score · Right-click to lock against rerolls';
   }
 
   private getSidebarOverlayTitle(phase: PhaseState | null, bossName: string | undefined): string {

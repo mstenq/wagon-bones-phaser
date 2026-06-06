@@ -121,7 +121,7 @@ export interface ScoreResult {
 
 export interface GameConfig {
   maxDays: number;
-  maxRerolls: number; // re-rolls per day (resets each day)
+  maxRerolls: number; // rerolls per day (resets each day)
   rollSize: number; // dice drawn from pouch and rolled (default 8)
   scoreSize: number; // max dice player selects to score (default 5)
   targetMiles: Decimal; // miles to beat this leg

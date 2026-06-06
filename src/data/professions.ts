@@ -53,7 +53,7 @@ const professions: ProfessionDef[] = [
     id: 'farmer',
     title: 'Farmer',
     name: 'Hank Caldwell',
-    description: '+1 re-roll per day',
+    description: '+1 reroll per day',
     modifiers: { rerolls: 1 },
     startingDice: ['wooden', 'wooden', 'wooden', 'steel', 'steel'],
     specialEquipment: {
@@ -92,7 +92,7 @@ const professions: ProfessionDef[] = [
     id: 'outlaw',
     title: 'Outlaw',
     name: 'Jesse Rawlins',
-    description: 'Earns no interest. $1 per remaining day and unused re-roll.',
+    description: 'Earns no interest. $1 per remaining day and unused reroll.',
     modifiers: { noInterest: true, endOfRoundBonusPerRemaining: 1 },
     startingDice: ['loaded', 'loaded', 'steel', 'steel', 'bone'],
     specialEquipment: {
@@ -238,7 +238,7 @@ const professions: ProfessionDef[] = [
     id: 'con_artist',
     title: 'Con Artist',
     name: 'Victor Hale',
-    description: '+2 re-rolls, -1 hand size',
+    description: '+2 rerolls, -1 hand size',
     modifiers: { rerolls: 2, handSize: -1 },
     startingDice: ['loaded', 'loaded', 'loaded', 'gold', 'diamond'],
     specialEquipment: {

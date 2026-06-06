@@ -30,13 +30,13 @@ Deputy Brothers - $4 - if played hand contains a 2 pair +10 mult
 Work Boots - $3 - if played hand contains pair +50 miles
 Buffalo Stampede - $4 - if played hand contains three of a kind +100 miles
 Deadeye - $5 - +20 mult if 3 or fewer dice are scored
-Trail Rations - $5 - +30 miles per unused re-roll
-Stubborn Mule - $5 - +15 mult when 0 re-rolls remaining
+Trail Rations - $5 - +30 miles per unused reroll
+Stubborn Mule - $5 - +15 mult when 0 rerolls remaining
 Toolbelt - $4 - +3 mult for each piece of equipment
 Dynamite - $5 - +15 mult - 1 in 6 chance to be destroyed at end of round
 Even Odds - $4 - +4 when an even pip is scored
 Odd Fellow - $4 - +31 miles when an odd pip is scored
-Spare Holster - $4 - +1 re-roll per round
+Spare Holster - $4 - +1 reroll per round
 Payday - $6 - Earn $4 at end of round. Jesse Rawlins (Outlaw) earns $12
 
 
@@ -48,7 +48,7 @@ Bargain Bin - $6 - item gains +2 mult per reroll in the shop
 Fading Memory - $5 - +20 mult, -4 mult per round played, is removed after 5 rounds
 Card Counter - $6 - Item gains +2 mult if played hand contains 2 pair. Victor Hale (Con Artist) gains +4 mult if played hand contains 2 pair.
 Lucky Number - $8 - Each played [number changes each round] gives x1.5mult when scored. Thomas "Tommy" Reeve (Gambler) gains x2mult when lucky number scores.
-Worn Deck - $6 - x2 Mult. Loses x0.01 mult per dice re-rolled
+Worn Deck - $6 - x2 Mult. Loses x0.01 mult per dice rerolled
 War Drums - $6 - retrigger all dice played for the next 10 days of travel
 Bone Collector - $6 - gains +3 miles per each enhanced dice that is spent
 Snake Oil Ledger - $9 - item gains x0.25mult for each card sold. Resets when boss is defeated.
@@ -75,7 +75,7 @@ Coupon Book - $4 - 1 free reroll per shop
 Last Stand - $5 - retrigger all played dice on final hand of round
 Lucky Find - $8 - if one dice is scored alone in first day add random enhancement
 Iron Furnace - $7 - gives x0.2 mult for each iron dice in collection
-Rainy Day Fund - $4 - gives $1 per unused re-roll at end of round
+Rainy Day Fund - $4 - gives $1 per unused reroll at end of round
 One-Eyed Jack - $6 - retrigger each played 1
 Gold Pan - $4 - 1 in 2 chance to give $2 when an enhanced dice scores. Davis Holler (Prospector) has a guaranteed chance.
 
@@ -89,7 +89,7 @@ Bloodline - $8 - if first day of round only scores one dice, add a permanent cop
 Open Palm - $3 - all dice count when scoring 
 Hellfire Round - $6 - if first hand of round is an enhanced 6, destroy it and gain a "Frontier Encounter" card
 Cowboy Boots - $5 - every played dice permanently gains +5 miles when scored
-Trail Tax - $4 - +2 mult per day travelled, -1 mult per re-roll used
+Trail Tax - $4 - +2 mult per day travelled, -1 mult per reroll used
 Wanted Poster - $4 - earn $4 if hand is [hand]. Changes each round of journey. Nathan Cole (Hunter) gains $8.
 
 ## Phase 5
@@ -139,13 +139,13 @@ Gambler's Dice Cup - $8 - all dice have 1 in 6 odds of rolling the selected load
 
 ## Phase 9
 5 Mile Marker - $8 - gains +5 miles each time a 5 pip is scored
-Trail Backpack - $7 - +2 re-rolls per day, -1 dice when rolling
+Trail Backpack - $7 - +2 rerolls per day, -1 dice when rolling
 Hitched Pair - $8 - x2 mult if hand contains a pair
 Hat Trick - $8 - x3 mult if hand contains a three of a kind
 Posse Wagon - $8 - x4 mult if hand contains a four of a kind
 Five Finger Fillet - $8 - x5 mult if hand contains a five of a kind
 Prairie Wind - $8 - x3 mult if hand contains a 5 straight
-Express Train - $7 - +250 miles, -2 re-rolls
+Express Train - $7 - +250 miles, -2 rerolls
 Phantom Wagon - $8 - after 2 rounds, sell this card to duplicate a random item (removes ghost aura)
 Trail Almanac - $6 - $1 at the end of round for every type of trail guide discovered
 Blessed Herd - $7 - x3 mult if you have at least 16 enhanced dice in collection
@@ -173,7 +173,7 @@ Stacked Deck - $10 - rare - Loaded dice are considered all pip values for equipm
 the following legendary items must be obtained from pandora's box frontier encounter cards
 Book of the Dead - $20 - Gains x1 mult for each destroyed enhanced dice
 The Devil’s Hand - $20 - Played 6's give x2 mult when scored
-The 23rd Psalm - $20 - Item gains x1 mult for every 23 dice re-rolled
+The 23rd Psalm - $20 - Item gains x1 mult for every 23 dice rerolled
 Saint Elmo’s Shield - $20 - Disables all boss round effects and all negative effects from trail events are prevented. Divine favor intervenes.
 Ghost Lantern - $20 - Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
 The Seventh Trumpet - $20 - Retriggers all played dice, and all held in hand effects

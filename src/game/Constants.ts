@@ -415,7 +415,7 @@ export const DICE = {
   PIP_COLOR: 0x222222,
   SELECTED_STROKE: 0xffcc00,
   FORCED_STROKE: 0xff4444,
-  /** Roll phase: 🔒 label below die when pinned against re-rolls (not scored) */
+  /** Roll phase: 🔒 label below die when pinned against rerolls (not scored) */
   REROLL_LOCK_LABEL_Y: 48,
   REROLL_LOCK_FONT_SIZE: 22,
 };

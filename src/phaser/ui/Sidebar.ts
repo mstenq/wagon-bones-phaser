@@ -34,7 +34,7 @@ export interface SidebarData {
   mult: DecimalSource;
   /** Travel days remaining */
   daysRemaining: number;
-  /** Re-rolls remaining */
+  /** Rerolls remaining */
   rerolls: number;
   /** Current leg number */
   leg: number;
@@ -525,7 +525,7 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer.add(this.multText);
     y += scoreDisplayH + UI.SIDEBAR_SECTION_GAP;
 
-    // ─── Days / Re-rolls Row ───
+    // ─── Days / Rerolls Row ───
     const rowH = 52;
     const halfW = (w - pad * 2 - UI.SIDEBAR_SECTION_GAP) / 2;
 
@@ -555,7 +555,7 @@ export class Sidebar extends GameObjects.Container {
       .setOrigin(0.5);
     this.mainContentContainer.add(this.daysText);
 
-    // Re-rolls
+    // Rerolls
     const rerollX = pad + halfW + UI.SIDEBAR_SECTION_GAP;
     const rerollBg = scene.add.graphics();
     rerollBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
@@ -565,7 +565,7 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer.add(rerollBg);
 
     const rerollLabel = scene.add
-      .text(rerollX + halfW / 2, y + 12, 'Re-rolls', {
+      .text(rerollX + halfW / 2, y + 12, 'Rerolls', {
         fontFamily: FONTS.PRIMARY,
         fontSize: '10px',
         color: TEXT_COLORS.MUTED,
@@ -870,7 +870,7 @@ export class Sidebar extends GameObjects.Container {
     const rerollCenterX = pad + 8 + slotW * 1.5;
     this.mainContentContainer.add(
       scene.add
-        .text(rerollCenterX, statY - 6, 'Re-rolls', {
+        .text(rerollCenterX, statY - 6, 'Rerolls', {
           fontFamily: FONTS.PRIMARY,
           fontSize: '8px',
           color: TEXT_COLORS.MUTED,

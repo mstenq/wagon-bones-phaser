@@ -9,7 +9,7 @@ Instead of playing cards, you roll **d12** dice (values 1–12). Each day you ro
 **Key differences from Balatro:**
 
 - **Dice instead of cards** — no suits or face cards; hand types are based on pairs, straights, and n-of-a-kind
-- **Days instead of hands** — you have a limited number of days to reach your destination, with re-rolls each day
+- **Days instead of hands** — you have a limited number of days to reach your destination, with rerolls each day
 - **Dice cycling** — scored dice go to a spent pile. You must use ALL your dice before any come back, even across days. Cherry-pick early and you'll suffer later
 - **Equipment order matters** — equipment effects apply left-to-right during scoring, and cards can be drag-reordered
 

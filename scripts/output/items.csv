@@ -5,14 +5,14 @@ town_choir,Town Choir,4,common,If played hand contains 3 of a Kind +12 mult
 deputy_brothers,Deputy Brothers,4,common,If played hand contains Two Pair +10 mult
 work_boots,Work Boots,3,common,If played hand contains Pair +50 miles
 buffalo_stampede,Buffalo Stampede,4,common,If played hand contains 3 of a Kind +100 miles
-trail_rations,Trail Rations,5,common,+30 miles per unused re-roll
+trail_rations,Trail Rations,5,common,+30 miles per unused reroll
 deadeye,Deadeye,5,common,+20 mult if 3 or fewer dice are scored
-stubborn_mule,Stubborn Mule,5,common,+15 mult when 0 re-rolls remaining
+stubborn_mule,Stubborn Mule,5,common,+15 mult when 0 rerolls remaining
 toolbelt,Toolbelt,4,common,+3 mult for each piece of equipment. Currently +0
 even_odds,Even Odds,4,common,+4 mult when an even value is scored
 odd_fellow,Odd Fellow,4,common,+31 miles when an odd value is scored
 dynamite,Dynamite,5,common,+15 mult. 1 in 6 chance to be destroyed at end of round.
-spare_holster,Spare Holster,4,common,+1 re-roll per leg
+spare_holster,Spare Holster,4,common,+1 reroll per leg
 payday,Payday,6,common,Earn $4 at end of round. Jesse Rawlins (Outlaw) earns $12
 bottom_dollar,Bottom Dollar,5,common,Adds double the rank of lowest held-in-hand die to mult
 ace_in_the_hole,Ace in the Hole,8,rare,Each 1 held in hand gives x1.5 mult
@@ -26,7 +26,7 @@ bargain_bin,Bargain Bin,6,uncommon,Item gains  +2  mult per reroll in the shop
 fading_memory,Fading Memory,5,common,"+20  mult,  -4  mult per round played, removed after  5 rounds"
 card_counter,Card Counter,6,uncommon,Item gains  +2  mult if played hand contains  Two Pair . Victor Hale (Con Artist) gains  +4  mult if played hand contains  Two Pair .
 lucky_number,Lucky Number,8,rare,Each played  7  gives  x1.5  mult when scored. Number changes each round.
-worn_deck,Worn Deck,6,uncommon,x2  Mult. Loses  x0.01  mult per dice re-rolled
+worn_deck,Worn Deck,6,uncommon,x2  Mult. Loses  x0.01  mult per dice rerolled
 war_drums,War Drums,6,uncommon,Retrigger all dice played for the next  10 days  of travel
 snake_oil_ledger,Snake Oil Ledger,9,rare,Item gains  x0.25  mult for each card sold. Resets when boss is defeated.
 gold_tooth,Gold Tooth,4,common,"Played gold dice earn  $4
@@ -41,7 +41,7 @@ Avoid to skip it, or investigate for  +20  stored miles and face the full event.
 saint_elmos_shield,Saint Elmo's Shield,20,legendary,Disables all boss effects and negative effects from trail events are prevented. Divine favor intervenes.
 book_of_the_dead,Book of the Dead,20,legendary,Gains  x1  mult for each destroyed enhanced dice
 devils_hand,The Devil's Hand,20,legendary,Played  6 's give  x2  mult when scored
-twenty_third_psalm,The 23rd Psalm,20,legendary,Item gains  x1  mult for every  23  dice re-rolled
+twenty_third_psalm,The 23rd Psalm,20,legendary,Item gains  x1  mult for every  23  dice rerolled
 sharpening_stone,Sharpening Stone,6,uncommon,x1  mult. Gains  x0.1  mult for every  10  dice scored
 ghost_lantern,Ghost Lantern,20,legendary,Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
 seventh_trumpet,The Seventh Trumpet,20,legendary,"Retriggers all played dice, and all held in hand effects"
@@ -61,7 +61,7 @@ lucky_find,Lucky Find,8,rare,"If one die is scored alone on day 1, give it a ran
 iron_furnace,Iron Furnace,7,uncommon,"x0.2  mult for each steel die in collection
 Also makes Coffee Tin supply cards 2 times more likely
 Currently in collection: 0 steel dice x1.0"
-rainy_day_fund,Rainy Day Fund,4,common,$1 per unused re-roll at end of round
+rainy_day_fund,Rainy Day Fund,4,common,$1 per unused reroll at end of round
 one_eyed_jack,One-Eyed Jack,6,uncommon,Retrigger each played 1
 gold_pan,Gold Pan,4,common,"1 in 2 chance to give $2 when an enhanced die scores.
 Davis Holler (Prospector) has a guaranteed chance."
@@ -75,7 +75,7 @@ bloodline,Bloodline,8,rare,"If first day of round only scores one die, add a per
 open_palm,Open Palm,3,common,All dice count when scoring
 hellfire_round,Hellfire Round,6,rare,"If first hand of round is a single enhanced 6, destroy it and gain a Frontier Encounter card"
 cowboy_boots,Cowboy Boots,5,uncommon,Every played die permanently gains  +5  miles when scored
-trail_tax,Trail Tax,4,common,"+2  mult per day travelled,  -1  mult per re-roll used"
+trail_tax,Trail Tax,4,common,"+2  mult per day travelled,  -1  mult per reroll used"
 wanted_poster,Wanted Poster,4,common,Earn  $4  when hand is  High Value
 nitro,Nitro,4,rare,x3  mult.  1 in 1000  chance to be destroyed at end of round.
 repeat_offender,Repeat Offender,6,uncommon,x3  mult if played hand has already been played this round
@@ -125,13 +125,13 @@ Nothing to copy"
 echo_chamber,Echo Chamber,10,rare,"Copies the leftmost ability: 
 Nothing to copy"
 five_mile_marker,5 Mile Marker,8,uncommon,Gains  +5  miles each time a  5  pip is scored
-trail_backpack,Trail Backpack,7,uncommon,"+2 re-rolls  per day,  -1 dice  when rolling"
+trail_backpack,Trail Backpack,7,uncommon,"+2 rerolls  per day,  -1 dice  when rolling"
 hitched_pair,Hitched Pair,8,uncommon,x2  mult if hand contains  Pair
 hat_trick,Hat Trick,8,uncommon,x3  mult if hand contains  3 of a Kind
 posse_wagon,Posse Wagon,8,uncommon,x4  mult if hand contains  4 of a Kind
 five_finger_fillet,Five Finger Fillet,8,uncommon,x5  mult if hand contains  5 of a Kind
 snake_river,Snake River,8,uncommon,x3  mult if hand contains  5 Straight
-express_train,Express Train,7,uncommon,"+250  miles,  -2 re-rolls"
+express_train,Express Train,7,uncommon,"+250  miles,  -2 rerolls"
 phantom_wagon,Phantom Wagon,8,rare,"After 2 rounds, sell this card to duplicate a random item (removes ghost aura)"
 trail_almanac,Trail Almanac,6,uncommon,$1  at end of round for every type of trail guide discovered
 blessed_herd,Blessed Herd,7,uncommon,x3  mult if you have at least  16  enhanced dice in collection

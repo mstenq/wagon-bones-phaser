@@ -72,7 +72,7 @@ Skipped rounds still advance `leg` / `round` counters and pay no round reward. T
 | `tag_holy` | **Gilded Cross** | Next base equipment in shop becomes **Holy** aura (×1.5 mult) and is free. | Polychrome | 1 | Stored if no base equipment. |
 | `tag_investment` | **Bounty Payout** | Gain **$25** after defeating the next boss (Showdown). | Investment | 1 | Stacks on one boss; each tag +$25. |
 | `tag_permit` | **Permit Stamp** | Adds a **Frontier Permit** to the next shop. | Voucher | 1 | Stacks until all available permits for this leg are shown (excludes already purchased and unrevealed stage-2 permits). Does not carry to later legs. |
-| `tag_boss` | **Change of Guard** | Re-roll the boss assigned to this leg's Showdown. | Boss | 1 | Uses **Bounty Board** / **Wanted Dead or Alive** reroll if redeemed. |
+| `tag_boss` | **Change of Guard** | Reroll the boss assigned to this leg's Showdown. | Boss | 1 | Uses **Bounty Board** / **Wanted Dead or Alive** reroll if redeemed. |
 | `tag_dice_mega` | **Wagon Load** | Immediately open a free **Mega Dice Grab Bag** (pick 2 of 5). | Standard | 2+ | Triggers pack-open side effects (Leftovers, Tight Fist, etc.). |
 | `tag_supply_mega` | **Supply Drop** | Immediately open a free **Mega Supply Pack** (pick 2 of 5). | Charm | 1 | |
 | `tag_trail_guide_mega` | **Surveyor's Cache** | Immediately open a free **Mega Trail Guide Pack** (pick 2 of 5). | Meteor | 2+ | |

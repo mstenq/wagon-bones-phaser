@@ -136,7 +136,7 @@ Persistent **glow + particles** on cards/dice come from `AuraFX.ts` (`ItemCard`,
 | Trigger | Effect | Attached to |
 |---------|--------|-------------|
 | Ready to roll → `enterRollPhase` | `playRollAnimation` on all roll sprites | Dice row |
-| Re-roll subset | `playRollAnimation` on unlocked sprites only | Dice row |
+| Reroll subset | `playRollAnimation` on unlocked sprites only | Dice row |
 | Score hand | `layoutDiceForScoring` — selected dice to score Y; held dice to roll arc | `DiceSprite` tweens; releases `scoreLayoutGate` |
 | Next day draw | `enterDrawPhase(true)` — new dice from pouch launch point; carryover dice keep position | Pouch → play area |
 | `dice-added` playback + pending IDs | `animateNewDiceAppearing` — scale pop-in, Mystery Crate card wiggle, “✨ New Die Added!” | Play area + equip bar |

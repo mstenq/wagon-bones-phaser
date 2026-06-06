@@ -1,8 +1,8 @@
 id,name,description,title
-farmer,Hank Caldwell,+1 re-roll per day,Farmer
+farmer,Hank Caldwell,+1 reroll per day,Farmer
 surveyor,Elias Mercer,+1 day of travel,Surveyor
 banker,Charles Whitlock,Starts with and extra $10,Banker
-outlaw,Jesse Rawlins,Earns no interest. $1 per remaining day and unused re-roll.,Outlaw
+outlaw,Jesse Rawlins,Earns no interest. $1 per remaining day and unused reroll.,Outlaw
 merchant,Abigail Turner,"1 extra equipment slot, -1 day of travel",Merchant
 cook,Martha Delaney,Starts with the Camp Merchant permit (Supply cards appear 2x more frequently in the shop) and 2 copies of second helpings supply card,Cook
 scout,Caleb Winters,"Starts with Binoculars permit (Trail guide packs always contain the trail guide for your most played hand), -1 supply slot",Scout
@@ -12,6 +12,6 @@ gambler,"Thomas ""Tommy"" Reeve",Start with +2 hand size and -1 equipment slot,G
 hunter,Nathan Cole,After each boss gain a Twin Wagon tag (Doubles your next trail tag reward),Hunter
 accountant,Henry Pritchard,Balance miles and mult before calculating. x2 base blind size.,Accountant
 doctor,Dr. Eleanor Sykes,"Start with 2 medicine cards with ghost aura, receive 1 free medicine card  with ghost aura after each boss",Doctor
-con_artist,Victor Hale,"+2 re-rolls, -1 hand size",Con Artist
+con_artist,Victor Hale,"+2 rerolls, -1 hand size",Con Artist
 occult_trader,Vivian Crowe,"Starts with permits for Spiritual Ritual,Sacred Ceremony, and Bargain Bin (Makes aura 4x more likely and 25% off all shop items)",Occult Trader
 developer,Dev Mode,Starts with $999. For testing purposes.,Developer

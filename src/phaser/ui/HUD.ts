@@ -39,7 +39,7 @@ export class HUD extends GameObjects.Container {
 
     this.dayText = this.createField(scene, w * 0.08, 'Day', '1 / 4');
     this.diceRemainingText = this.createField(scene, w * 0.24, 'Dice Left', '10');
-    this.rerollsText = this.createField(scene, w * 0.4, 'Re-rolls', '3');
+    this.rerollsText = this.createField(scene, w * 0.4, 'Rerolls', '3');
     this.milesText = this.createField(scene, w * 0.6, 'Miles', '0 / 300');
     this.phaseText = this.createField(scene, w * 0.82, 'Phase', 'DRAW');
 
