@@ -122,6 +122,24 @@ Always call `setSize(w, h)` before `setInteractive(...)`. When adding nested int
 
 **Scene placement:** if children are top-left drawn, the container’s `(x, y)` is still its transform center in Phaser — the project often places that at the visual top-left and accepts the offset. If you center-draw instead, position the container at the visual center (`topLeft + w/2`, `topLeft + h/2`).
 
+#### Responsive run scenes
+
+Canvas is `Scale.RESIZE` — use **`SceneLayout.ts`**, not `scene.scale.width` alone, for run-scene UI bounds.
+
+- **Shell:** `createRunSceneShell(scene, opts)` → `layout` with sidebar/top bar, equip/consumable bars, pouch, and `modalRegion`.
+- **Metrics only** (partial relayout): `computeLayoutMetrics(width, height)`.
+- **Portrait** (`height > width`): `layoutMode === 'topbar'`; chrome uses `uiScale` (`width / UI_SCALE_REF_WIDTH`, min `UI_SCALE_MIN`). **Narrow content** (`contentW < 650`): card bars auto-shrink via `layout.cardBar` — reuse `cardBar.cardScale` for shop/pack cards, not deprecated `EQUIP_CARD_SCALE` constants.
+
+**Lay out scene content inside the content box:**
+
+- Horizontal: `layout.contentX`, `layout.contentW`, `layout.contentCX`
+- Vertical: `layout.contentTop` … `layout.contentBottom` (between card bars and dice pouch)
+- Modals: `layout.modalRegion` (`y` is below top bar in portrait); `modalShell` `contentY` = `modalRegion.y`
+
+**Resize:** persist state to store if needed → `children.removeAll(true)` or `scene.restart({})` → rebuild through the same `createRunSceneShell` / `createLayout` path. See `ShopScene`, `BoosterPackScene`, `TrailEventScene` for patterns.
+
+**New layout numbers → `Constants.ts` `UI` block only.** Game-scene dice/HUD helpers (`computeGameHudLayout`, `diceRowGeometry`) live in the same file but are not needed for shop/pack/trail work.
+
 ### Data Layer (`src/data/`)
 
 | Module | Contents |

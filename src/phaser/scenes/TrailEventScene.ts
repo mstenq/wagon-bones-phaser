@@ -224,13 +224,15 @@ export class TrailEventScene extends Scene {
     });
   }
 
-  private buildEventDisplay(layout: Pick<LayoutResult, 'contentX' | 'contentW' | 'contentCX' | 'equipBarH'>): void {
-    const { contentW, contentCX, equipBarH } = layout;
+  private buildEventDisplay(
+    layout: Pick<LayoutResult, 'contentX' | 'contentW' | 'contentCX' | 'contentTop' | 'contentBottom'>,
+  ): void {
+    const { contentW, contentCX, contentTop } = layout;
     const event = this.currentEvent;
     // ─── Event card panel ───
     const panelW = Math.min(560, contentW - 40);
     const panelX = contentCX - panelW / 2;
-    const panelTop = equipBarH + 20;
+    const panelTop = contentTop + 4;
 
     const categoryColor = CATEGORY_COLORS[event.category] ?? 0x555588;
 
@@ -353,12 +355,11 @@ export class TrailEventScene extends Scene {
     equipmentBeforeResolve: EquipmentInstance[],
   ): void {
     const equipmentBeforeCount = equipmentBeforeResolve.length;
-    const { height } = this.scale;
     const layout = this.getContentLayout();
-    const contentCX = layout.contentCX;
+    const { contentCX, contentTop, contentBottom } = layout;
 
-    // Determine panel bottom to position result below choices
-    const resultY = height * 0.72;
+    // Position results in the lower content band (below event card, above pouch)
+    const resultY = contentTop + (contentBottom - contentTop) * 0.62;
 
     this.resultContainer = this.add.container(0, 0);
     this.resultContainer.setAlpha(0);
@@ -487,18 +488,18 @@ export class TrailEventScene extends Scene {
         this.showEquipmentPicker(
           loseEquipEffect.count ?? 1,
           contentCX,
-          Math.min(resultY + yOffset + 20, height - 180),
+          Math.min(resultY + yOffset + 20, contentBottom - 180),
           equipmentBeforeResolve,
           () => {
             // After equipment chosen, show continue
-            const continueY2 = Math.min(resultY + yOffset + 80, height - 60);
+            const continueY2 = Math.min(resultY + yOffset + 80, contentBottom - 28);
             new Button(this, contentCX, continueY2, 'Continue', 200, 44).onClick(() => {
               this.proceedToNextScene();
             });
           },
         );
       } else {
-        const continueY = Math.min(resultY + yOffset + 80, height - 60);
+        const continueY = Math.min(resultY + yOffset + 80, contentBottom - 28);
         new Button(this, contentCX, continueY, 'Continue', 200, 44).onClick(() => {
           this.proceedToNextScene();
         });
@@ -889,11 +890,11 @@ export class TrailEventScene extends Scene {
     return { text, color, negative };
   }
 
-  private showResolvedContinue(layout: { contentCX: number }): void {
+  private showResolvedContinue(layout: Pick<LayoutResult, 'contentCX' | 'contentBottom'>): void {
     for (const btn of this.choiceButtons) {
       btn.setEnabled(false);
     }
-    const continueBtn = new Button(this, layout.contentCX, this.scale.height - 48, 'Continue', 200, 44);
+    const continueBtn = new Button(this, layout.contentCX, layout.contentBottom - 28, 'Continue', 200, 44);
     continueBtn.onClick(() => this.proceedToNextScene());
   }
 

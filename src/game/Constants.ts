@@ -279,7 +279,7 @@ export const UI = {
   /** Room below card center for slot label, wobble, and action tabs */
   CARD_BAR_HEIGHT_PAD: 52,
   /** Shorter bar chrome when on-card hints are hidden (compact / mobile) */
-  CARD_BAR_HEIGHT_PAD_COMPACT: 34,
+  CARD_BAR_HEIGHT_PAD_COMPACT: 10,
   /** Display-scale floor when content is narrow (multiplies CARD_BAR_BASE_SCALE) */
   CARD_BAR_SCALE_MIN: 0.66,
 
