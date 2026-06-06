@@ -83,6 +83,8 @@ export class Preloader extends Scene {
     this.load.image('icon_sort', 'assets/icons/sort.svg');
     this.load.image('icon_chevron_left', 'assets/icons/chevron-left.svg');
     this.load.image('icon_chevron_right', 'assets/icons/chevron-right.svg');
+    this.load.image('icon_menu', 'assets/icons/menu.svg');
+    this.load.image('icon_book', 'assets/icons/book-open-text.svg');
 
     // Load difficulty stake icons
     for (let level = 1; level <= 8; level++) {

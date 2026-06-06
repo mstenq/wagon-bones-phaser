@@ -16,7 +16,6 @@ import { getRunProfession } from '../../game/store/runReads';
 import { selectRunSidebarModel, selectSidebarOverlayRevision } from '../../game/store/selectors/uiSelectors';
 import { selectRoundTotalMiles } from '../../game/store/selectors/roundSelectors';
 import { Button } from './Button';
-import { isDevMode } from '../../game/DevMode';
 import { addDifficultyImage, getDifficultyDef } from './DifficultyAssets';
 import { DifficultyTooltip } from './DifficultyTooltip';
 import { bindGameObject } from '../store/subscribe';
@@ -77,7 +76,6 @@ export class Sidebar extends GameObjects.Container {
   private targetText: GameObjects.Text;
 
   private journeyInfoBtn: Button;
-  private testBossBtn: Button | null = null;
   private optionsBtn: Button;
 
   private mainContentContainer: GameObjects.Container;
@@ -98,7 +96,6 @@ export class Sidebar extends GameObjects.Container {
   private titleSectionH = 44;
 
   private onJourneyInfo: (() => void) | null = null;
-  private onDevBossTest: (() => void) | null = null;
   private onOptions: (() => void) | null = null;
   private onModifiersModal: (() => void) | null = null;
   private subscribedDifficulty = 1;
@@ -591,15 +588,6 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer.add(this.journeyInfoBtn);
     y += 46;
 
-    if (isDevMode()) {
-      this.testBossBtn = new Button(scene, cx, y + 20, 'Test Boss', w - pad * 2 - 8, 34);
-      this.testBossBtn.onClick(() => {
-        if (this.onDevBossTest) this.onDevBossTest();
-      });
-      this.mainContentContainer.add(this.testBossBtn);
-      y += 46;
-    }
-
     // ─── Options Button ───
     this.optionsBtn = new Button(scene, cx, y + 20, 'Options', w - pad * 2 - 8, 34);
     this.optionsBtn.onClick(() => {
@@ -623,30 +611,34 @@ export class Sidebar extends GameObjects.Container {
   }
 
   private buildTopBarContent(scene: Scene, w: number, _h: number): void {
-    const pad = 8;
-    const titleH = 32;
-    let y = 4;
+    const pad = 10;
+    const applyIcon = (btn: Button, key: string, size = 22): void => {
+      if (scene.textures.exists(key)) btn.setIcon(key, size);
+    };
 
-    // ─── Row 1: difficulty + title + round score ───
-    this.titleSectionY = y;
-    this.titleSectionH = titleH;
-    const titleIconSize = 28;
-    const titleIconX = pad + 14;
-    const titleIconY = y + titleH / 2;
+    // ─── Header band: difficulty + title + profession | round score ───
+    const headerY = 10;
+    const headerH = 40;
+    this.titleSectionY = headerY;
+    this.titleSectionH = headerH;
+    const headerCY = headerY + headerH / 2;
+
+    const titleIconSize = 32;
+    const titleIconX = pad + 18;
     this.difficultyIcon = addDifficultyImage(
       scene,
       this,
       selectRunSidebarModel().difficulty,
       titleIconX,
-      titleIconY,
+      headerCY,
       titleIconSize,
     );
 
-    const titleX = pad + 32;
+    const titleX = pad + 40;
     this.titleText = scene.add
-      .text(titleX, titleIconY, 'SHOP', {
+      .text(titleX, headerCY, 'SHOP', {
         fontFamily: FONTS.HEADING,
-        fontSize: '16px',
+        fontSize: '20px',
         color: TEXT_COLORS.GOLD,
       })
       .setOrigin(0, 0.5);
@@ -656,38 +648,38 @@ export class Sidebar extends GameObjects.Container {
     this.add(this.professionContainer);
     const prof = getRunProfession();
     if (prof) {
-      const miniSize = 24;
-      const miniX = titleX + 120;
+      const miniSize = 28;
+      const miniX = titleX + 132;
       const atlasFrame = `${prof.id}.png`;
       const profTexture = scene.textures.get('professions');
       const canUseAtlas = scene.textures.exists('professions') && profTexture.has(atlasFrame);
       if (canUseAtlas) {
-        const profImg = scene.add.image(miniX, titleIconY, 'professions', atlasFrame);
+        const profImg = scene.add.image(miniX, headerCY, 'professions', atlasFrame);
         const imgScale = miniSize / Math.max(profImg.width, profImg.height);
         profImg.setScale(imgScale);
         this.professionContainer.add(profImg);
       }
-      const profLabel = scene.add.text(miniX + miniSize + 4, titleIconY, prof.title, {
+      const profLabel = scene.add.text(miniX + miniSize + 6, headerCY, prof.title, {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '11px',
+        fontSize: '13px',
         color: TEXT_COLORS.SECONDARY,
       });
       profLabel.setOrigin(0, 0.5);
       this.professionContainer.add(profLabel);
 
       const hitZone = scene.add
-        .zone(miniX - 4, titleIconY, miniSize + profLabel.width + 12, titleH)
+        .zone(miniX - 6, headerCY, miniSize + profLabel.width + 16, headerH)
         .setInteractive({ useHandCursor: true });
       this.professionContainer.add(hitZone);
       hitZone.on('pointerover', () => {
-        this.showProfTooltip(scene, w, y + titleH + 4, prof);
+        this.showProfTooltip(scene, w, headerY + headerH + 4, prof);
       });
       hitZone.on('pointerout', () => this.hideProfTooltip());
     }
 
     if (this.difficultyIcon) {
       const iconHit = scene.add
-        .zone(titleIconX, titleIconY, titleIconSize + 8, titleIconSize + 8)
+        .zone(titleIconX, headerCY, titleIconSize + 8, titleIconSize + 8)
         .setInteractive({ useHandCursor: true });
       this.add(iconHit);
       iconHit.on('pointerover', () => {
@@ -696,8 +688,8 @@ export class Sidebar extends GameObjects.Container {
           this.scene,
           def,
           titleIconX,
-          titleIconY + titleIconSize / 2 + 4,
-          { minX: pad, maxX: w - pad, minY: y + titleH + 4 },
+          headerCY + titleIconSize / 2 + 4,
+          { minX: pad, maxX: w - pad, minY: headerY + headerH + 4 },
           400,
           this,
         );
@@ -706,34 +698,59 @@ export class Sidebar extends GameObjects.Container {
     }
 
     const scoreBlockRight = w - pad;
-    const scoreBlockCY = y + titleH / 2;
+    const roundScoreReserve = 108;
+    const metaRight = scoreBlockRight - roundScoreReserve;
 
-    this.roundScoreText = scene.add
-      .text(scoreBlockRight, scoreBlockCY + 7, '0', {
+    this.moneyText = scene.add
+      .text(metaRight, headerCY - 8, '$10', {
         fontFamily: FONTS.HEADING,
-        fontSize: '14px',
+        fontSize: '15px',
+        color: TEXT_COLORS.MONEY,
+        align: 'right',
+      })
+      .setOrigin(1, 0.5);
+    this.add(this.moneyText);
+
+    this.legText = scene.add
+      .text(metaRight, headerCY + 10, '1·1/3', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '12px',
         color: TEXT_COLORS.PRIMARY,
         align: 'right',
       })
       .setOrigin(1, 0.5);
-    this.add(this.roundScoreText);
+    this.add(this.legText);
+
+    this.daysText = scene.add.text(0, 0, '').setVisible(false);
+    this.add(this.daysText);
+    this.rerollsText = scene.add.text(0, 0, '').setVisible(false);
+    this.add(this.rerollsText);
 
     const scoreLabel = scene.add
-      .text(scoreBlockRight, scoreBlockCY - 9, 'Round score', {
+      .text(scoreBlockRight, headerCY - 11, 'ROUND SCORE', {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '8px',
+        fontSize: '10px',
         color: TEXT_COLORS.MUTED,
         align: 'right',
       })
       .setOrigin(1, 0.5);
     this.add(scoreLabel);
 
-    this.modifiersIndicator = scene.add.container(w - pad - 98, titleIconY);
+    this.roundScoreText = scene.add
+      .text(scoreBlockRight, headerCY + 9, '0', {
+        fontFamily: FONTS.HEADING,
+        fontSize: '20px',
+        color: TEXT_COLORS.PRIMARY,
+        align: 'right',
+      })
+      .setOrigin(1, 0.5);
+    this.add(this.roundScoreText);
+
+    this.modifiersIndicator = scene.add.container(metaRight - 28, headerCY);
     this.modifiersIndicator.setVisible(false);
     this.add(this.modifiersIndicator);
 
-    y += titleH + 2;
-    this.contentStartY = y;
+    this.contentStartY = headerY + headerH + 8;
 
     // Top bar: boss/traits shown via dot indicator + modal (not inline panels).
     this.statusPanelsContainer = scene.add.container(0, 0);
@@ -748,48 +765,57 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer = scene.add.container(0, this.contentStartY);
     this.add(this.mainContentContainer);
 
+    const innerW = w - pad * 2;
     let localY = 0;
 
-    // ─── Row 2: target | hand | miles × mult ───
-    const scoreRowH = 36;
+    // ─── Score band: target | hand | miles × mult ───
+    const scoreRowH = 56;
     const scoreRowBg = scene.add.graphics();
     scoreRowBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    scoreRowBg.fillRoundedRect(pad, localY, w - pad * 2, scoreRowH, 4);
+    scoreRowBg.fillRoundedRect(pad, localY, innerW, scoreRowH, 6);
     scoreRowBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    scoreRowBg.strokeRoundedRect(pad, localY, w - pad * 2, scoreRowH, 4);
+    scoreRowBg.strokeRoundedRect(pad, localY, innerW, scoreRowH, 6);
     this.mainContentContainer.add(scoreRowBg);
 
-    this.targetText = scene.add.text(pad + 8, localY + 6, '300 mi', {
-      fontFamily: FONTS.HEADING,
-      fontSize: '12px',
-      color: TEXT_COLORS.SCORE_GREEN,
-    });
-    this.mainContentContainer.add(this.targetText);
-
-    const targetLabel = scene.add.text(pad + 8, localY + 22, 'Target', {
+    const targetLabel = scene.add.text(pad + 12, localY + 11, 'TARGET', {
       fontFamily: FONTS.PRIMARY,
-      fontSize: '8px',
+      fontSize: '10px',
       color: TEXT_COLORS.MUTED,
     });
     this.mainContentContainer.add(targetLabel);
 
-    this.handDisplayLocalY = localY + 6;
+    this.targetText = scene.add.text(pad + 12, localY + 26, '300 mi', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '18px',
+      color: TEXT_COLORS.SCORE_GREEN,
+    });
+    this.mainContentContainer.add(this.targetText);
+
+    const ctrlBtnW = 44;
+    const ctrlBtnH = 38;
+    const ctrlGap = 6;
+    const ctrlBlockW = ctrlBtnW * 2 + ctrlGap;
+    const scoreRowCY = localY + scoreRowH / 2;
+
+    const pillW = 58;
+    const pillH = 24;
+    const multX = w - pad - 12 - ctrlBlockW - 8 - pillW;
+    const milesX = multX - pillW - 20;
+    const scoreClusterCX = (milesX + multX + pillW) / 2;
+    const pillY = localY + scoreRowH - pillH - 8;
+    const handY = pillY - 4;
+
+    this.handDisplayLocalY = handY;
     this.handNameText = scene.add
-      .text(w / 2, localY + scoreRowH / 2, '', {
+      .text(scoreClusterCX, handY, '', {
         fontFamily: FONTS.HEADING,
-        fontSize: '13px',
+        fontSize: '12px',
         color: TEXT_COLORS.GOLD,
         align: 'center',
       })
-      .setOrigin(0.5)
+      .setOrigin(0.5, 1)
       .setVisible(false);
     this.mainContentContainer.add(this.handNameText);
-
-    const pillW = 56;
-    const pillH = 24;
-    const pillY = localY + (scoreRowH - pillH) / 2;
-    const multX = w - pad - 8 - pillW;
-    const milesX = multX - pillW - 18;
 
     this.milesBaseBg = scene.add.graphics();
     this.milesBaseBg.fillStyle(COLORS.MILES_BG, 1);
@@ -799,14 +825,14 @@ export class Sidebar extends GameObjects.Container {
     this.milesBaseText = scene.add
       .text(milesX + pillW / 2, pillY + pillH / 2, '0', {
         fontFamily: FONTS.HEADING,
-        fontSize: '14px',
+        fontSize: '15px',
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(this.milesBaseText);
 
     const xText = scene.add
-      .text(multX - 9, pillY + pillH / 2, '×', {
+      .text(multX - 10, pillY + pillH / 2, '×', {
         fontFamily: FONTS.HEADING,
         fontSize: '14px',
         color: TEXT_COLORS.SECONDARY,
@@ -822,117 +848,24 @@ export class Sidebar extends GameObjects.Container {
     this.multText = scene.add
       .text(multX + pillW / 2, pillY + pillH / 2, '0', {
         fontFamily: FONTS.HEADING,
-        fontSize: '14px',
+        fontSize: '15px',
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(this.multText);
 
-    localY += scoreRowH + 2;
+    const optsCX = w - pad - 6 - ctrlBtnW / 2;
+    const infoCX = optsCX - ctrlBtnW - ctrlGap;
 
-    // ─── Row 3: days · rerolls · money · leg · buttons ───
-    const statsH = 24;
-    const statsBg = scene.add.graphics();
-    statsBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    statsBg.fillRoundedRect(pad, localY, w - pad * 2, statsH, 4);
-    statsBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    statsBg.strokeRoundedRect(pad, localY, w - pad * 2, statsH, 4);
-    this.mainContentContainer.add(statsBg);
-
-    const statY = localY + statsH / 2;
-    const statSlots = 4;
-    const btnW = isDevMode() ? 48 : 52;
-    const btnCount = isDevMode() ? 3 : 2;
-    const btnTotalW = btnCount * btnW + (btnCount - 1) * 4;
-    const statsW = w - pad * 2 - btnTotalW - 8;
-    const slotW = statsW / statSlots;
-    const btnH = 22;
-
-    const daysCenterX = pad + 8 + slotW * 0.5;
-    this.mainContentContainer.add(
-      scene.add
-        .text(daysCenterX, statY - 6, 'Days', {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '8px',
-          color: TEXT_COLORS.MUTED,
-        })
-        .setOrigin(0.5),
-    );
-    this.daysText = scene.add
-      .text(daysCenterX, statY + 5, '4', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '13px',
-        color: '#66aaff',
-      })
-      .setOrigin(0.5);
-    this.mainContentContainer.add(this.daysText);
-
-    const rerollCenterX = pad + 8 + slotW * 1.5;
-    this.mainContentContainer.add(
-      scene.add
-        .text(rerollCenterX, statY - 6, 'Rerolls', {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '8px',
-          color: TEXT_COLORS.MUTED,
-        })
-        .setOrigin(0.5),
-    );
-    this.rerollsText = scene.add
-      .text(rerollCenterX, statY + 5, '3', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '13px',
-        color: '#ff6666',
-      })
-      .setOrigin(0.5);
-    this.mainContentContainer.add(this.rerollsText);
-
-    const moneyCenterX = pad + 8 + slotW * 2.5;
-    this.moneyText = scene.add
-      .text(moneyCenterX, statY + 1, '$10', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '13px',
-        color: TEXT_COLORS.MONEY,
-      })
-      .setOrigin(0.5);
-    this.mainContentContainer.add(this.moneyText);
-
-    const legCenterX = pad + 8 + slotW * 3.5;
-    this.mainContentContainer.add(
-      scene.add
-        .text(legCenterX, statY - 6, 'Leg', {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '8px',
-          color: TEXT_COLORS.MUTED,
-        })
-        .setOrigin(0.5),
-    );
-    this.legText = scene.add
-      .text(legCenterX, statY + 5, '1/3', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '12px',
-        color: TEXT_COLORS.PRIMARY,
-      })
-      .setOrigin(0.5);
-    this.mainContentContainer.add(this.legText);
-
-    let btnX = w - pad - btnTotalW + btnW / 2;
-    this.journeyInfoBtn = new Button(scene, btnX, statY, 'Info', btnW, btnH);
+    this.journeyInfoBtn = new Button(scene, infoCX, scoreRowCY, 'Info', ctrlBtnW, ctrlBtnH);
+    applyIcon(this.journeyInfoBtn, 'icon_book');
     this.journeyInfoBtn.onClick(() => {
       if (this.onJourneyInfo) this.onJourneyInfo();
     });
     this.mainContentContainer.add(this.journeyInfoBtn);
-    btnX += btnW + 4;
 
-    if (isDevMode()) {
-      this.testBossBtn = new Button(scene, btnX, statY, 'Boss', btnW, btnH);
-      this.testBossBtn.onClick(() => {
-        if (this.onDevBossTest) this.onDevBossTest();
-      });
-      this.mainContentContainer.add(this.testBossBtn);
-      btnX += btnW + 4;
-    }
-
-    this.optionsBtn = new Button(scene, btnX, statY, 'Opts', btnW, btnH);
+    this.optionsBtn = new Button(scene, optsCX, scoreRowCY, 'Opts', ctrlBtnW, ctrlBtnH);
+    applyIcon(this.optionsBtn, 'icon_menu');
     this.optionsBtn.onClick(() => {
       if (this.onOptions) this.onOptions();
     });
@@ -984,8 +917,10 @@ export class Sidebar extends GameObjects.Container {
 
   private applyRunModel(model: ReturnType<typeof selectRunSidebarModel>): void {
     this.moneyText.setText(`$${model.balance}`);
-    this.daysText.setText(`${model.daysRemaining}`);
-    this.rerollsText.setText(`${model.rerolls}`);
+    if (this.layoutMode !== 'topbar') {
+      this.daysText.setText(`${model.daysRemaining}`);
+      this.rerollsText.setText(`${model.rerolls}`);
+    }
     if (this.layoutMode === 'topbar') {
       this.legText.setText(`${model.leg}·${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
     } else {
@@ -1051,11 +986,13 @@ export class Sidebar extends GameObjects.Container {
         this.handNameText.setVisible(false);
       }
     }
-    if (data.daysRemaining !== undefined) {
-      this.daysText.setText(`${data.daysRemaining}`);
-    }
-    if (data.rerolls !== undefined) {
-      this.rerollsText.setText(`${data.rerolls}`);
+    if (this.layoutMode !== 'topbar') {
+      if (data.daysRemaining !== undefined) {
+        this.daysText.setText(`${data.daysRemaining}`);
+      }
+      if (data.rerolls !== undefined) {
+        this.rerollsText.setText(`${data.rerolls}`);
+      }
     }
     if (data.leg !== undefined) {
       let roundLabel: string;
@@ -1208,10 +1145,6 @@ export class Sidebar extends GameObjects.Container {
     this.onJourneyInfo = cb;
   }
 
-  setDevBossTestCallback(cb: () => void): void {
-    this.onDevBossTest = cb;
-  }
-
   setOptionsCallback(cb: () => void): void {
     this.onOptions = cb;
   }
@@ -1271,10 +1204,10 @@ export class Sidebar extends GameObjects.Container {
 
   private fitTopBarRoundScore(): void {
     if (this.layoutMode !== 'topbar') return;
-    const maxW = 84;
-    let size = 14;
+    const maxW = 150;
+    let size = 20;
     this.roundScoreText.setFontSize(`${size}px`);
-    while (this.roundScoreText.width > maxW && size > 9) {
+    while (this.roundScoreText.width > maxW && size > 11) {
       size -= 1;
       this.roundScoreText.setFontSize(`${size}px`);
     }

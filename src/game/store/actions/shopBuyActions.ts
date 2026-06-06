@@ -55,7 +55,7 @@ export const shopBuyActions = {
 
   buyConsumable(def: ConsumableDef, cost: number): ShopBuyResult {
     const state = getRunState();
-    if (state.consumables.length >= state.maxConsumableSlots) {
+    if (!consumableActions.canAddConsumable(def, state)) {
       return { ok: false, reason: 'no_space' };
     }
     if (!economyActions.trySpend(cost)) return { ok: false, reason: 'cant_afford' };

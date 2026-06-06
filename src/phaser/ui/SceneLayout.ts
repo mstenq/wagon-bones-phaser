@@ -18,9 +18,7 @@ import { TagStack } from './TagStack';
 import { DicePouchModal } from './DicePouchModal';
 import { JourneyInfoModal } from './JourneyInfoModal';
 import { OptionsModal } from './OptionsModal';
-import { BossTestModal } from './BossTestModal';
 import { RoundModificationsModal } from './RoundModificationsModal';
-import { isDevMode } from '../../game/DevMode';
 import { startAutoSaveLoop } from '../AutoSaveManager';
 import { ensureBackgroundMusic } from '../BackgroundMusic';
 
@@ -479,11 +477,6 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   sidebar.setModifiersCallback(() => {
     new RoundModificationsModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y);
   });
-  if (isDevMode()) {
-    sidebar.setDevBossTestCallback(() => {
-      new BossTestModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y);
-    });
-  }
 
   // ─── Felt overlay ───
   if (opts.felt !== false) {

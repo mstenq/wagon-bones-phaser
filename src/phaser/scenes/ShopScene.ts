@@ -496,7 +496,6 @@ export class ShopScene extends Scene {
             label: 'BUY\n& USE',
             color: canBuyAndUse ? 0x338833 : 0x555555,
             textColor: canBuyAndUse ? '#ffffff' : '#bbbbbb',
-            position: 'right',
             disabled: !canBuyAndUse,
             callback: () => {
               this.activeTab.dismiss();
@@ -507,7 +506,6 @@ export class ShopScene extends Scene {
           tabs.push({
             label: 'BUY\n& USE',
             color: 0x338833,
-            position: 'right',
             callback: () => {
               this.activeTab.dismiss();
               this.onBuyAndUseConsumable(card, shopItem.def);

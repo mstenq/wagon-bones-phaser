@@ -46,8 +46,8 @@ export interface CardActionTabConfig {
   color: number;
   textColor?: string;
   callback: () => void;
-  /** Tab position: 'right' slides out from right side, 'bottom' appears below card */
-  position?: 'right' | 'bottom';
+  /** 'bottom' for below-card tabs; omit for side tabs (auto left/right from screen space). */
+  position?: 'bottom';
   /** Grayed-out tab with no action (e.g. cursed equipment) */
   disabled?: boolean;
 }

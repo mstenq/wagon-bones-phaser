@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, die, item, equipWithModifiers, calculateTestScore } from './testHelpers';
+import { resetDieIds, setupGame, setBoss, die, item, equipWithModifiers, calculateTestScore } from './testHelpers';
 import { resetPlayerState } from './testRunPlayer';
 import {
   createSupplyConsumableDef,
@@ -20,6 +20,7 @@ import {
 } from '../ConsumablesSystem';
 import { getRunState } from '../store/runStore';
 import { selectRunStatusTraits } from '../runStatusTraits';
+import { shouldPromptRoundModifications } from '../store/selectors/uiSelectors';
 import { initRunRng } from '../RunRng';
 import { isEquipmentCursed } from '../ItemsSystem';
 import { shopBuyActions } from '../store/actions/shopBuyActions';
@@ -149,6 +150,27 @@ describe('PlayerState consumable management', () => {
     expect(player.addConsumable(ghostDef)).toBe(true);
     expect(player.consumables).toHaveLength(3);
     expect(player.usedConsumableSlots).toBe(2); // ghost doesn't count
+  });
+
+  test('shop buy consumable allows ghost aura when non-ghost slots are full', () => {
+    const { player } = setupGame({ money: 100 });
+    const ghostAura = {
+      id: 'ghost' as const,
+      name: 'Ghost',
+      description: 'test',
+      costIncrease: 0,
+      equipmentChance: 0,
+    };
+    player.maxConsumableSlots = 2;
+    player.addConsumable(getSupplyDefById('coffee_tin')!);
+    player.addConsumable(getSupplyDefById('treasure_map')!);
+    expect(player.usedConsumableSlots).toBe(2);
+
+    const ghostDef = getSupplyDefById('medicine', ghostAura)!;
+    const result = shopBuyActions.buyConsumable(ghostDef, 3);
+    expect(result).toEqual({ ok: true });
+    expect(player.consumables).toHaveLength(3);
+    expect(player.usedConsumableSlots).toBe(2);
   });
 
   test('sellConsumable earns money and removes card', () => {
@@ -959,14 +981,14 @@ describe('shop consumable use gating', () => {
     expect(canBuyAndUseConsumableInShop(getFrontierDefById('all_in')!)).toBe(true);
     expect(canBuyAndUseConsumableInShop(getFrontierDefById('echo_of_the_damned')!)).toBe(true);
     expect(canBuyAndUseConsumableInShop(getFrontierDefById('magic_beans')!)).toBe(true);
-    expect(canBuyAndUseConsumableInShop(getFrontierDefById('blood_moon')!)).toBe(false);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('blood_moon')!)).toBe(true);
   });
 
   test('shop buy-and-use works with full consumable slots for non-targeting supply/frontier cards', () => {
     const { player } = setupGame({ money: 100, equipment: [item('horseshoe')] });
     player.maxConsumableSlots = 0;
     const supplyIds = ['omen_stone', 'shop_pass', 'fools_gold', 'trading_post'] as const;
-    const frontierIds = ['all_in', 'echo_of_the_damned'] as const;
+    const frontierIds = ['all_in', 'echo_of_the_damned', 'blood_moon'] as const;
 
     // Seed one consumable so Trading Post has a consumable sell value target
     player.maxConsumableSlots = 1;
@@ -996,6 +1018,8 @@ describe('shop consumable use gating', () => {
     expect(getRunState().statusTraitTokens.find((t) => t.id === 'shop_pass')?.copies).toBe(1);
     expect(getRunState().statusTraitTokens.find((t) => t.id === 'all_in')?.copies).toBe(1);
     expect(getRunState().statusTraitTokens.find((t) => t.id === 'echo_of_the_damned')?.copies).toBe(1);
+    expect(player.equipment.some((e) => e.def.aura?.id === 'ghost')).toBe(true);
+    expect(getRunState().trailEventModifiers.rerollPenalty).toBe(1);
 
     // Trading Post still executes via buy-and-use path.
     expect(player.equipment[0]!.sellValue).toBe(eqBefore + 1);
@@ -1246,5 +1270,27 @@ describe('roll phase value preservation policy', () => {
 
   test('BUMP_VALUE is allowed to change displayed rolled face value', () => {
     expect(shouldUpdateDisplayedDiceValue('BUMP_VALUE')).toBe(true);
+  });
+});
+
+describe('shouldPromptRoundModifications', () => {
+  test('false when only positive traits like omen_stone', () => {
+    resetPlayerState();
+    const def = getSupplyDefById('omen_stone')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(shouldPromptRoundModifications()).toBe(false);
+  });
+
+  test('true when a negative trait is active', () => {
+    resetPlayerState();
+    const def = getFrontierDefById('all_in')!;
+    executeConsumableEffect(createConsumableInstance(def));
+    expect(shouldPromptRoundModifications()).toBe(true);
+  });
+
+  test('true on boss round even without negative traits', () => {
+    const { run } = setupGame({ profession: 'farmer' });
+    setBoss(run, 'the_land_slide');
+    expect(shouldPromptRoundModifications()).toBe(true);
   });
 });

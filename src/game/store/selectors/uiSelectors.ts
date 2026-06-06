@@ -50,6 +50,12 @@ export function selectTagStackModel(state: RunState = getRunState()) {
   };
 }
 
+/** Portrait GameScene entry: show round-modifiers modal for boss rounds or negative traits only. */
+export function shouldPromptRoundModifications(state: RunState = getRunState()): boolean {
+  if (selectCurrentBoss(state)) return true;
+  return selectRunStatusTraits(state).some((trait) => trait.polarity === 'negative');
+}
+
 export function selectRunSidebarModel(state: RunState = getRunState()) {
   const round = getRoundState();
   const daysRerolls = round

@@ -38,6 +38,8 @@ import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
 import { computeGameHudLayout, createLayout } from '../ui/SceneLayout';
+import { RoundModificationsModal } from '../ui/RoundModificationsModal';
+import { shouldPromptRoundModifications } from '../../game/store/selectors/uiSelectors';
 import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
@@ -398,6 +400,10 @@ export class GameScene extends Scene {
 
     if (!isRelayout) {
       this.flashLeasedBadgeReminders();
+      if (layout.layoutMode === 'topbar' && shouldPromptRoundModifications()) {
+        const { modalRegion } = layout;
+        new RoundModificationsModal(this, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y);
+      }
     }
 
     EventBus.emit(Events.SCENE_READY, this);

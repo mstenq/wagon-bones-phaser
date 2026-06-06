@@ -3,7 +3,9 @@
 
 import { GameObjects, Scene } from 'phaser';
 import { resetAllGameStores } from '../../game/store';
+import { isDevMode } from '../../game/DevMode';
 import { Button } from './Button';
+import { BossTestModal } from './BossTestModal';
 import { EquipmentCatalogModal } from './EquipmentCatalogModal';
 import { SoundsSettingsModal } from './SoundsSettingsModal';
 import { PreferencesSettingsModal } from './PreferencesSettingsModal';
@@ -107,6 +109,15 @@ export class OptionsModal extends GameObjects.Container {
       scene.scene.start('MainMenu', {});
     });
     this.add(menuBtn);
+
+    if (isDevMode()) {
+      const bossBtn = new Button(scene, panelX + panelW / 2, panelY + 478, 'Test Boss', panelW - 60, 40);
+      bossBtn.onClick(() => {
+        this.destroy();
+        new BossTestModal(scene, contentX, width, height, contentY);
+      });
+      this.add(bossBtn);
+    }
 
     const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 30, 'Close', 120, 34);
     closeBtn.onClick(() => this.destroy());

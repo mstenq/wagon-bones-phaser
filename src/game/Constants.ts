@@ -253,7 +253,7 @@ export type LayoutMode = 'sidebar' | 'topbar';
 export const UI = {
   // Sidebar (Balatro-style left panel) / portrait top bar
   SIDEBAR_WIDTH_RATIO: 0.24, // 24% of screen width
-  TOP_BAR_BASE_HEIGHT: 172,
+  TOP_BAR_BASE_HEIGHT: 120,
   /** Portrait reference width for UI scale (typical phone) */
   UI_SCALE_REF_WIDTH: 420,
   UI_SCALE_MIN: 0.72,
@@ -312,6 +312,11 @@ export const UI = {
   MODIFIER_BADGE_SIZE: 30,
   MODIFIER_BADGE_GAP: 2,
   MODIFIER_BADGE_OFFSET: 4,
+
+  /** Minimum width/height for card action tabs (Apple HIG / touch accessibility). */
+  ACTION_TAB_MIN_SIZE: 44,
+  /** Screen-edge margin when auto-picking side-tab direction. */
+  ACTION_TAB_SCREEN_MARGIN: 8,
 
   CARD_W: 133,
   CARD_H: 200,
