@@ -48,6 +48,12 @@ const STACK_EMBLEM_R = 15;
 const STACK_DIVIDER_GAP = 6;
 /** Gap below divider before the score/reward row. */
 const STACK_STATS_GAP = 8;
+/** Portrait stacked row heights — per round, not derived from viewport. */
+const STACKED_PANEL_H_REGULAR = 110;
+const STACKED_PANEL_H_REGULAR_ACTIVE = 132;
+const STACKED_PANEL_H_BOSS = 180;
+/** Stats block: label line + value line. */
+const STACK_STATS_ROW_H = 26;
 /** Boss portrait on round-select boss column (~2× former circle diameter). */
 const BOSS_PORTRAIT_SIZE = { compact: 64, normal: 96, stacked: 44 } as const;
 /** Extra space below round title before boss portrait (avoids overlapping heading). */
@@ -138,26 +144,48 @@ export interface LegRoundPanelsConfig {
   onTagHoverEnd?: () => void;
 }
 
+function stackedPanelHeight(round: number, currentRound: number, showActions: boolean): number {
+  if (round === GAMEPLAY.ROUNDS_PER_LEG) return STACKED_PANEL_H_BOSS;
+  if (showActions && round === currentRound) return STACKED_PANEL_H_REGULAR_ACTIVE;
+  return STACKED_PANEL_H_REGULAR;
+}
+
 /** Compute panel slots for three leg rounds within a bounding box. */
 export function computeLegRoundPanelGeometry(
   bounds: LegRoundPanelsConfig['bounds'],
-  options: { gap?: number; compact?: boolean; layout?: LegRoundPanelLayout } = {},
+  options: {
+    gap?: number;
+    compact?: boolean;
+    layout?: LegRoundPanelLayout;
+    currentRound?: number;
+    showActions?: boolean;
+  } = {},
 ): LegRoundPanelGeometry {
   const layout = options.layout ?? 'columns';
   const compact = options.compact ?? layout === 'rows';
   const gap = options.gap ?? (layout === 'rows' ? 8 : compact ? 10 : 20);
 
   if (layout === 'rows') {
-    const panelH = Math.floor((bounds.height - gap * (GAMEPLAY.ROUNDS_PER_LEG - 1)) / GAMEPLAY.ROUNDS_PER_LEG);
+    const currentRound = options.currentRound ?? 1;
+    const showActions = options.showActions ?? false;
+    const panelHeights = Array.from({ length: GAMEPLAY.ROUNDS_PER_LEG }, (_, i) =>
+      stackedPanelHeight(i + 1, currentRound, showActions),
+    );
+    const totalStackH =
+      panelHeights.reduce((sum, h) => sum + h, 0) + gap * (GAMEPLAY.ROUNDS_PER_LEG - 1);
+    const startY = bounds.y + Math.max(0, Math.floor((bounds.height - totalStackH) / 2));
     const panels: LegRoundPanelSlot[] = [];
+    let y = startY;
     for (let r = 1; r <= GAMEPLAY.ROUNDS_PER_LEG; r++) {
+      const panelH = panelHeights[r - 1]!;
       panels.push({
         round: r,
         x: bounds.x,
-        y: bounds.y + (r - 1) * (panelH + gap),
+        y,
         width: bounds.width,
         height: panelH,
       });
+      y += panelH + gap;
     }
     return { panels, layout, compact, gap };
   }
@@ -184,6 +212,8 @@ export function createLegRoundPanels(scene: Scene, config: LegRoundPanelsConfig)
     gap: config.gap,
     compact: config.compact,
     layout: config.layout,
+    currentRound: config.currentRound,
+    showActions: config.showActions,
   });
   const panels: RoundInfoPanel[] = [];
 
@@ -462,6 +492,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     const { depth, round, isBoss, isSkipped, isUpcoming, showRoundActions, showBossReroll } = ctx;
     const hasSkip = showRoundActions && !isBoss && !!config.skipPreviewTag;
     const hasActionRow = showRoundActions || showBossReroll;
+    const actionBlockH = hasActionRow ? STACK_BTN_H + STACK_STATS_GAP : 0;
     const textMaxW = width - STACK_PAD * 2 - STACK_ART - 10;
     const headerLabels = this.headerLabels();
     const headerColors = this.headerColors();
@@ -474,34 +505,48 @@ export class RoundInfoPanel extends GameObjects.Container {
       color: headerColors[config.state],
     });
     ty += 13;
-    this.addLeftLabel(STACK_PAD, ty, ROUND_NAMES[round - 1], {
-      fontFamily: FONTS.HEADING,
-      fontSize: '14px',
-      color: isUpcoming ? TEXT_COLORS.MUTED : TEXT_COLORS.PRIMARY,
-      wordWrap: { width: textMaxW },
-    });
-    ty += 18;
+
+    let dividerY: number;
+    let statsLabelY: number;
 
     if (isBoss) {
+      const statsBottom = height - STACK_PAD - actionBlockH;
+      statsLabelY = statsBottom - STACK_STATS_ROW_H;
+      dividerY = statsLabelY - STACK_STATS_GAP;
+      const headerBottom = dividerY - STACK_DIVIDER_GAP;
+
+      ty += this.addStackedWrappedLabel(STACK_PAD, ty, ROUND_NAMES[round - 1], headerBottom, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: isUpcoming ? TEXT_COLORS.MUTED : TEXT_COLORS.PRIMARY,
+        wordWrap: { width: textMaxW },
+      });
+
       const boss = selectBossForLeg(getRunState(), config.leg);
       if (boss) {
-        this.addLeftLabel(STACK_PAD, ty, boss.name, {
+        ty += this.addStackedWrappedLabel(STACK_PAD, ty, boss.name, headerBottom, {
           fontFamily: FONTS.HEADING,
           fontSize: '11px',
           color: TEXT_COLORS.GOLD,
           wordWrap: { width: textMaxW },
         });
-        ty += 13;
-        this.addLeftLabel(STACK_PAD, ty, boss.description, {
+        ty += this.addStackedWrappedLabel(STACK_PAD, ty, boss.description, headerBottom, {
           fontSize: '10px',
           color: TEXT_COLORS.SECONDARY,
           wordWrap: { width: textMaxW },
         });
-        ty += 22;
       }
+    } else {
+      ty += this.addStackedWrappedLabel(STACK_PAD, ty, ROUND_NAMES[round - 1], height, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '14px',
+        color: isUpcoming ? TEXT_COLORS.MUTED : TEXT_COLORS.PRIMARY,
+        wordWrap: { width: textMaxW },
+      });
+      dividerY = ty + STACK_DIVIDER_GAP;
+      statsLabelY = dividerY + STACK_STATS_GAP;
     }
 
-    const dividerY = ty + STACK_DIVIDER_GAP;
     const divider = scene.add.graphics();
     divider.lineStyle(1, 0x444466, 0.45);
     divider.lineBetween(STACK_PAD, dividerY, width - STACK_PAD, dividerY);
@@ -509,8 +554,8 @@ export class RoundInfoPanel extends GameObjects.Container {
 
     const target = targetMilesForRound(config.leg, round, config.permitScoreReduction, config.difficulty);
     const showPreviewTag = !hasActionRow && !isBoss && !!config.skipPreviewTag;
-    const scoreX = showPreviewTag ? STACK_PAD + ROW_TAG_SIZE + 20 : STACK_PAD;
-    const statsLabelY = dividerY + STACK_STATS_GAP;
+    const hasStatsRowTag = showPreviewTag || (isSkipped && !!config.skippedTag);
+    const scoreX = hasStatsRowTag ? STACK_PAD + ROW_TAG_SIZE + 20 : STACK_PAD;
     this.addLeftLabel(scoreX, statsLabelY, 'Score at least', {
       fontSize: '10px',
       color: TEXT_COLORS.SECONDARY,
@@ -853,6 +898,30 @@ export class RoundInfoPanel extends GameObjects.Container {
       })
       .setOrigin(0, 0);
     this.add(text);
+  }
+
+  /** Left-aligned label that advances layout by measured height, clamped to a header ceiling. */
+  private addStackedWrappedLabel(
+    x: number,
+    y: number,
+    content: string,
+    headerBottom: number,
+    style: Phaser.Types.GameObjects.Text.TextStyle,
+  ): number {
+    if (y >= headerBottom) return 0;
+
+    const text = this.scene.add
+      .text(x, y, content, {
+        fontFamily: FONTS.PRIMARY,
+        ...style,
+      })
+      .setOrigin(0, 0);
+    const maxH = headerBottom - y;
+    if (text.height > maxH) {
+      text.setCrop(0, 0, text.width, maxH);
+    }
+    this.add(text);
+    return Math.min(text.height, maxH) + 4;
   }
 
   private addRightLabel(x: number, y: number, content: string, style: Phaser.Types.GameObjects.Text.TextStyle): void {

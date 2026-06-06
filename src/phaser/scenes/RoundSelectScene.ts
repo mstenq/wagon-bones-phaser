@@ -238,7 +238,12 @@ export class RoundSelectScene extends Scene {
 
   private getRoundColumnCenter(round: number): { x: number; y: number } {
     const panelLayout = this.getRoundPanelLayout();
-    const geometry = computeLegRoundPanelGeometry(panelLayout.bounds, { layout: panelLayout.layout });
+    const run = getRunState();
+    const geometry = computeLegRoundPanelGeometry(panelLayout.bounds, {
+      layout: panelLayout.layout,
+      currentRound: run.round,
+      showActions: true,
+    });
     const slot = geometry.panels.find((panel) => panel.round === round);
     if (!slot) {
       return { x: this.layout.contentCX, y: panelLayout.bounds.y + panelLayout.bounds.height / 2 };
