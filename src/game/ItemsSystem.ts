@@ -8,8 +8,15 @@ import {
 } from './equipmentCatalog';
 import { type ItemAura } from '../data/item_auras';
 
-export type { HintSegment, HintStyle, HintSize, ItemDisplayResult, CardTemplate } from '../data/items';
-import type { ItemDisplayResult } from '../data/items';
+export type {
+  EquipmentAlertType,
+  HintSegment,
+  HintStyle,
+  HintSize,
+  ItemDisplayResult,
+  CardTemplate,
+} from '../data/items';
+import type { EquipmentAlertType, ItemDisplayResult } from '../data/items';
 
 import type { EquipmentModifier } from './types';
 import { getDiscountedShopPrice, getPermitAuraMultiplier } from './PermitsSystem';
@@ -41,6 +48,7 @@ export interface EquipmentDef {
   effectParams: Record<string, unknown>;
   initialState?: Record<string, number>;
   aura?: ItemAura | null;
+  alertType?: EquipmentAlertType;
   display: (round: RoundHintContext | null, player: ItemDisplayContext) => ItemDisplayResult;
   unlockCondition?: (round: RoundHintContext | null, player: ItemDisplayContext) => boolean;
   modifierImmunity?: EquipmentModifier[];

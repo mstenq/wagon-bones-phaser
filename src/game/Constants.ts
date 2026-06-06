@@ -472,6 +472,14 @@ export const ANIM = {
   CARD_DRAG_SETTLE_DURATION: 300, // ms to settle back after drop (Back.easeOut — subtle overshoot)
   CARD_DRAG_LIFT_Y: -6, // Y offset while dragging (card lifts up)
 
+  /** Card-bar alert wiggle (timing-sensitive equipment) */
+  CARD_ALERT_WIGGLE_INTERVAL: 2000,
+  CARD_ALERT_WIGGLE_SCALE: 1.08,
+  CARD_ALERT_SHAKE_OFFSET: 3,
+  CARD_ALERT_SHAKE_DURATION: 50,
+  CARD_ALERT_SHAKE_REPEATS: 5,
+  CARD_ALERT_SCALE_DURATION: 180,
+
   /** Equipment fire-destruction VFX (Haunted Totem, Dynamite, Nitro, …) */
   EQUIP_FIRE_DESTROY_BUILDUP_MS: 600,
   EQUIP_FIRE_DESTROY_SLICE_MS: 400,

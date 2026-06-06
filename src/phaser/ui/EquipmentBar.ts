@@ -6,6 +6,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { getItemDisplayContext } from '../../game/displayContext';
+import { isEquipmentTimingAlertActive } from '../../game/equipmentAlertWiggle';
 import { equipmentActions } from '../../game/store/actions/equipmentActions';
 import { resolveEquipmentList } from '../../game/store/resolve';
 import { runStore } from '../../game/store/runStore';
@@ -111,6 +112,16 @@ export class EquipmentBar extends CardBar {
       card.setTooltipContext(this.hintRound, player);
       if (!hintsHidden) card.updateHints(this.hintRound, player);
     }
+    this.syncCardWobbleModes();
+  }
+
+  protected shouldUseAlertWobble(card: ItemCard, _index: number): boolean {
+    if (isBossEquipmentHidden()) return false;
+    const equipIndex = card.getData('equipIndex') as number;
+    if (isEquipmentDisabledByBoss(equipIndex)) return false;
+    const equip = resolveEquipmentList()[equipIndex];
+    if (!equip) return false;
+    return isEquipmentTimingAlertActive(equip, this.hintRound);
   }
 
   /** Animate perished/repossessed cards, then apply destruction and refresh. */

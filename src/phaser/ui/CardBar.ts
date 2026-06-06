@@ -12,6 +12,15 @@ import { createHorizontalDragReorder, type HorizontalDragReorder } from './horiz
 import { wireTapOnlySession } from './pointerDragSession';
 import type { CardBarMetrics } from './SceneLayout';
 
+type CardWobbleMode = 'normal' | 'alert';
+
+interface CardWobbleState {
+  mode: CardWobbleMode;
+  rotationTween: Phaser.Tweens.Tween;
+  alertTimer?: Phaser.Time.TimerEvent;
+  paused: boolean;
+}
+
 export abstract class CardBar extends GameObjects.Container {
   protected bg: GameObjects.Graphics;
   protected cards: ItemCard[] = [];
@@ -32,8 +41,8 @@ export abstract class CardBar extends GameObjects.Container {
   private pendingRebuild = false;
   private cardDragReorder: HorizontalDragReorder<ItemCard>;
 
-  // Per-card wobble tweens
-  private wobbleTweens: Phaser.Tweens.Tween[] = [];
+  // Per-card wobble state (rotation + optional alert pulse timer)
+  private cardWobbleStates = new Map<ItemCard, CardWobbleState>();
 
   // Hover tilt tracking
   private hoveredCard: ItemCard | null = null;
@@ -96,6 +105,9 @@ export abstract class CardBar extends GameObjects.Container {
         card.y = pointer.worldY - this.y - ctx.offsetY;
         card.x = pointer.worldX - this.x - ctx.offsetX;
       },
+      onReorder: (fromIndex, toIndex) => {
+        this.onReorder(fromIndex, toIndex);
+      },
       onSettleStart: (card) => {
         card.setDepth(0);
         this.applyCardDepths();
@@ -135,6 +147,11 @@ export abstract class CardBar extends GameObjects.Container {
   protected abstract buildActionTabs(card: ItemCard, index: number): CardActionTabConfig[] | null;
   protected abstract onReorder(fromIndex: number, toIndex: number): void;
   protected abstract onSellComplete(index: number): void;
+
+  /** Subclasses enable aggressive alert wobble when timing-sensitive effects are active. */
+  protected shouldUseAlertWobble(_card: ItemCard, _index: number): boolean {
+    return false;
+  }
 
   /** Subclasses may disable drag-reorder (e.g. Land Slide hidden equipment) */
   protected isDragReorderEnabled(): boolean {
@@ -179,8 +196,7 @@ export abstract class CardBar extends GameObjects.Container {
   }
 
   protected rebuildCardsNow(): void {
-    for (const t of this.wobbleTweens) t.destroy();
-    this.wobbleTweens = [];
+    this.clearAllCardWobbles();
     this.hoveredCard = null;
     this.dismissActiveTab();
 
@@ -204,11 +220,27 @@ export abstract class CardBar extends GameObjects.Container {
       this.setupCardDragPointerDown(card);
       this.cards.push(card);
 
-      this.startWobble(card, i);
+      this.startWobbleForCard(card, i);
       this.setupHoverTilt(card);
     }
 
     this.applyCardDepths();
+  }
+
+  /** Reconcile alert vs normal wobble when card conditions change without a rebuild. */
+  protected syncCardWobbleModes(): void {
+    for (let i = 0; i < this.cards.length; i++) {
+      const card = this.cards[i];
+      if (!card) continue;
+      const wantAlert = this.shouldUseAlertWobble(card, i);
+      const state = this.cardWobbleStates.get(card);
+      const hasAlert = state?.mode === 'alert';
+      if (wantAlert === hasAlert) continue;
+
+      const wasPaused = state?.paused ?? false;
+      this.startWobbleForCard(card, i);
+      if (wasPaused) this.stopWobble(card);
+    }
   }
 
   // ─── Background ───
@@ -223,14 +255,31 @@ export abstract class CardBar extends GameObjects.Container {
 
   // ─── Idle Wobble ───
 
-  private startWobble(card: ItemCard, index: number): void {
+  private clearAllCardWobbles(): void {
+    for (const card of [...this.cardWobbleStates.keys()]) {
+      this.destroyCardWobble(card);
+    }
+  }
+
+  private destroyCardWobble(card: ItemCard): void {
+    const state = this.cardWobbleStates.get(card);
+    if (!state) return;
+    state.rotationTween.destroy();
+    state.alertTimer?.destroy();
+    this.cardWobbleStates.delete(card);
+  }
+
+  protected startWobbleForCard(card: ItemCard, index: number): void {
+    this.destroyCardWobble(card);
+
     const duration =
       ANIM.CARD_WOBBLE_DURATION_MIN + Math.random() * (ANIM.CARD_WOBBLE_DURATION_MAX - ANIM.CARD_WOBBLE_DURATION_MIN);
     const delay = index * 120 + Math.random() * 200;
     const startAngle = (Math.random() - 0.5) * ANIM.CARD_WOBBLE_ANGLE;
     card.rotation = startAngle;
 
-    const tween = this.scene.tweens.add({
+    const mode: CardWobbleMode = this.shouldUseAlertWobble(card, index) ? 'alert' : 'normal';
+    const rotationTween = this.scene.tweens.add({
       targets: card,
       rotation: { from: -ANIM.CARD_WOBBLE_ANGLE, to: ANIM.CARD_WOBBLE_ANGLE },
       duration,
@@ -239,24 +288,69 @@ export abstract class CardBar extends GameObjects.Container {
       ease: 'Sine.easeInOut',
       delay,
     });
-    this.wobbleTweens.push(tween);
+
+    const state: CardWobbleState = { mode, rotationTween, paused: false };
+    if (mode === 'alert') {
+      state.alertTimer = this.scene.time.addEvent({
+        delay: ANIM.CARD_ALERT_WIGGLE_INTERVAL + index * 120 + Math.random() * 200,
+        loop: true,
+        callback: () => this.playAlertPulse(card),
+      });
+    }
+    this.cardWobbleStates.set(card, state);
+  }
+
+  private canCardAcceptAlertPulse(card: ItemCard): boolean {
+    if (!card.scene) return false;
+    if (this.draggingCard === card) return false;
+    if (this.dragSettling) return false;
+    if (this.hoveredCard === card) return false;
+    if (this.activeTabCard === card) return false;
+    const state = this.cardWobbleStates.get(card);
+    if (!state || state.paused) return false;
+    return state.mode === 'alert';
+  }
+
+  private playAlertPulse(card: ItemCard): void {
+    if (!this.canCardAcceptAlertPulse(card)) return;
+
+    const origX = card.x;
+    this.scene.tweens.add({
+      targets: card,
+      x: origX - ANIM.CARD_ALERT_SHAKE_OFFSET,
+      duration: ANIM.CARD_ALERT_SHAKE_DURATION,
+      yoyo: true,
+      repeat: ANIM.CARD_ALERT_SHAKE_REPEATS,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        card.x = origX;
+      },
+    });
+    this.scene.tweens.add({
+      targets: card,
+      scaleX: ANIM.CARD_ALERT_WIGGLE_SCALE,
+      scaleY: ANIM.CARD_ALERT_WIGGLE_SCALE,
+      duration: ANIM.CARD_ALERT_SCALE_DURATION / 2,
+      yoyo: true,
+      ease: 'Back.easeOut',
+    });
   }
 
   private stopWobble(card: ItemCard): void {
-    for (const t of this.wobbleTweens) {
-      if ((t as any).targets && (t as any).targets.includes(card)) {
-        t.pause();
-      }
-    }
+    const state = this.cardWobbleStates.get(card);
+    if (!state || state.paused) return;
+    state.paused = true;
+    state.rotationTween.pause();
+    if (state.alertTimer) state.alertTimer.paused = true;
   }
 
   private resumeWobble(card: ItemCard): void {
     if (!card.scene) return;
-    for (const t of this.wobbleTweens) {
-      if ((t as any).targets && (t as any).targets.includes(card)) {
-        t.resume();
-      }
-    }
+    const state = this.cardWobbleStates.get(card);
+    if (!state || !state.paused) return;
+    state.paused = false;
+    state.rotationTween.resume();
+    if (state.alertTimer) state.alertTimer.paused = false;
   }
 
   // ─── Hover Tilt (faux 3D perspective) ───
@@ -536,7 +630,7 @@ export abstract class CardBar extends GameObjects.Container {
       card.rotation = 0;
       card.scaleX = 1;
       card.scaleY = 1;
-      this.resumeWobble(card);
+      this.startWobbleForCard(card, i);
     }
     this.applyCardDepths();
     this.dragSettling = false;

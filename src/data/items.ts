@@ -62,6 +62,9 @@ import {
 } from '../game/equipmentUnlock';
 import { enhancementMatchesTarget, hasAlchemyKit } from '../game/alchemyKit';
 
+/** Card-bar alert wiggle when a time-based effect is currently relevant */
+export type EquipmentAlertType = 'firstDay' | 'lastDay' | 'readyToSell';
+
 /** Equipment definition shape (static data + optional `display` for live hints) */
 export interface ItemDef {
   id: string;
@@ -72,6 +75,8 @@ export interface ItemDef {
   cardTemplate?: CardTemplate;
   effectParams: Record<string, unknown>;
   initialState?: Record<string, number>;
+  /** Opt-in card-bar alert wiggle when timing condition is met (see equipmentAlertWiggle.ts). */
+  alertType?: EquipmentAlertType;
   display: (round: RoundHintContext | null, player: ItemDisplayContext) => ItemDisplayResult;
   unlockCondition?: EquipmentUnlockCondition;
   /** Immune to difficulty modifier rolls (cursed / perishable / leased), not instance state. */
@@ -788,6 +793,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'FINAL_DAY_XMULT',
     effectParams: { value: 3 },
+    alertType: 'lastDay',
     display: (round, _player) => {
       const hint =
         round && round.day >= round.maxDays
@@ -966,9 +972,7 @@ const items: ItemDef[] = [
       const total = equip?.state.rerollsTotal ?? 0;
       return {
         hint: [[mult(`x${xm}`)], [text(`${total % 23}/23`)]],
-        tooltip: [
-          [text('Item gains '), mult('x1'), text(' mult for every '), condition('23'), text(' dice rerolled')],
-        ],
+        tooltip: [[text('Item gains '), mult('x1'), text(' mult for every '), condition('23'), text(' dice rerolled')]],
       };
     },
   },
@@ -1260,6 +1264,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'SCORED_RETRIGGER_FINAL_DAY',
     effectParams: {},
+    alertType: 'lastDay',
     display: (round, _player) => ({
       hint:
         round && round.day >= round.maxDays
@@ -1276,6 +1281,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'SOLO_FIRST_DAY_ENHANCE',
     effectParams: {},
+    alertType: 'firstDay',
     display: (round, _player) => ({
       hint:
         round && round.day === 1 && round.selectedForScore?.length === 1
@@ -1492,6 +1498,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'FIRST_DAY_SOLO_COPY',
     effectParams: {},
+    alertType: 'firstDay',
     display: (round, _player) => ({
       hint:
         round && round.day === 1 && round.selectedForScore?.length === 1
@@ -1521,6 +1528,7 @@ const items: ItemDef[] = [
     rarity: 'rare',
     effectType: 'FIRST_HAND_ENHANCED_SIX',
     effectParams: {},
+    alertType: 'firstDay',
     display: (round, _player) => ({
       hint:
         round && round.day === 1
@@ -2488,6 +2496,7 @@ const items: ItemDef[] = [
     effectType: 'PHANTOM_WAGON',
     effectParams: { roundsNeeded: 2 },
     initialState: { roundsHeld: 0 },
+    alertType: 'readyToSell',
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'phantom_wagon');
       const held = equip?.state.roundsHeld ?? 0;
@@ -2944,6 +2953,7 @@ const items: ItemDef[] = [
     effectType: 'STEW',
     effectParams: { chance: [1, 2], rounds: 5 },
     initialState: { roundsRemaining: 5 },
+    alertType: 'firstDay',
     modifierImmunity: ['cursed'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'stew');
