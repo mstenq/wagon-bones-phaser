@@ -2,6 +2,8 @@
 // Reusable Phaser Container that displays any game card (equipment, trail guide,
 // supply card, frontier encounter, etc.) as a worn card with rounded corners,
 // drop shadow, item image, and hover tooltip.
+//
+// Caller must add the card to a Container or the scene display list after construction.
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
@@ -93,8 +95,6 @@ export class ItemCard extends GameObjects.Container {
 
     this.on('pointerover', this.onPointerOver, this);
     this.on('pointerout', this.onPointerOut, this);
-
-    scene.add.existing(this);
   }
 
   get def(): CardData {
@@ -233,10 +233,16 @@ export class ItemCard extends GameObjects.Container {
 
   showActionTabs(tabs: CardActionTabConfig[]): void {
     this.actionTabs.show(tabs);
+    this.tooltip.showActive((r, p) => this.resolveDisplay(r, p));
   }
 
   hideActionTabs(animate: boolean = false): void {
     this.actionTabs.hide(animate);
+    this.tooltip.hide();
+  }
+
+  hideTooltip(): void {
+    this.tooltip.hide();
   }
 
   getActionTabContainers(): GameObjects.Container[] {
@@ -244,6 +250,9 @@ export class ItemCard extends GameObjects.Container {
   }
 
   destroy(fromScene?: boolean): void {
+    if (!this.scene) return;
+    this.disableInteractive();
+    this.removeAllListeners();
     this.tooltip.destroy();
     this.actionTabs.hide();
     this.badges.destroy();
@@ -252,12 +261,13 @@ export class ItemCard extends GameObjects.Container {
     super.destroy(fromScene);
   }
 
-  private onPointerOver(): void {
-    this.tooltip.show((r, p) => this.resolveDisplay(r, p));
+  private onPointerOver(pointer: Phaser.Input.Pointer): void {
+    if (pointer.wasTouch || this.actionTabs.visible) return;
+    this.tooltip.showHover((r, p) => this.resolveDisplay(r, p));
   }
 
   private onPointerOut(): void {
-    this.tooltip.hide();
+    this.tooltip.hideHover();
   }
 
   private resolveDisplay(round: RoundHintContext | null, player: ItemDisplayContext): ItemDisplayResult {

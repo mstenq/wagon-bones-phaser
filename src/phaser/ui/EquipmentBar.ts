@@ -58,12 +58,19 @@ export class EquipmentBar extends CardBar {
   }
 
   private rebuildFromStore(): void {
-    if (this.isDragSettling()) return;
+    if (this.isCardInteractionBusy()) {
+      this.rebuildCards();
+      return;
+    }
+    this.syncCardsFromStore();
+  }
+
+  protected syncCardsFromStore(): void {
     syncEquipmentDisplayOrder();
     for (const icon of this.devIcons) icon.destroy();
     this.devIcons = [];
     if (!this.tryRefreshCardsInPlace()) {
-      super.rebuildCards();
+      this.rebuildCardsNow();
     }
     this.addDevIconsIfNeeded();
     this.syncHintsFromStore();

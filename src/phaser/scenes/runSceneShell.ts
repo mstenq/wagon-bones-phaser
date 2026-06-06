@@ -2,6 +2,7 @@
 // Shared layout, consumable bar, and playback wiring for run scenes.
 
 import type { Scene } from 'phaser';
+import type Phaser from 'phaser';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableDef, ConsumableInstance, UseConsumableResult } from '../../game/facade/consumable';
 import { canUseConsumableInShop } from '../../game/facade/consumable';
@@ -64,6 +65,21 @@ export function bindRunScenePlayback(
   });
 }
 
+function destroyGameObjectIfActive(obj: Phaser.GameObjects.GameObject): void {
+  if (obj.scene) {
+    obj.destroy();
+  }
+}
+
+/** Tear down shared run-scene chrome before rebuilding layout. */
+export function destroyRunSceneLayout(layout: LayoutResult): void {
+  destroyGameObjectIfActive(layout.tagStack);
+  destroyGameObjectIfActive(layout.dicePouch);
+  destroyGameObjectIfActive(layout.consumableBar);
+  destroyGameObjectIfActive(layout.equipBar);
+  destroyGameObjectIfActive(layout.sidebar);
+}
+
 export function createRunSceneShell(scene: Scene, options: RunSceneShellOptions): RunSceneShell {
   const layout = createLayout(scene, options.layout);
   const canUse = options.canUseConsumable ?? canUseConsumableInShop;
@@ -105,6 +121,7 @@ export function createRunSceneShell(scene: Scene, options: RunSceneShellOptions)
     destroyed = true;
     layout.consumableBar.off('consumable-used', onConsumableUsed);
     playbackRunner.unbind();
+    destroyRunSceneLayout(layout);
   };
 
   if (options.autoDestroyOnShutdown !== false) {

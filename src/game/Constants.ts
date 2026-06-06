@@ -324,6 +324,12 @@ export const UI = {
   CARD_TOOLTIP_TITLE_FONT_SIZE: 16,
   CARD_TOOLTIP_FONT_SIZE: 14,
   CARD_TOOLTIP_META_FONT_SIZE: 14,
+  /** Max tooltip content width before word-wrap (clamped to viewport on narrow screens). */
+  CARD_TOOLTIP_MAX_WIDTH: 280,
+  /** Hover tooltip depth (scene root). */
+  CARD_TOOLTIP_DEPTH: 1000,
+  /** Active/pinned tooltip depth — must render above sidebar/topbar (depth 200). */
+  CARD_TOOLTIP_ACTIVE_DEPTH: 2500,
 
   // Game scene (main content area — right of sidebar)
   /** Bottom HUD: action buttons inset from screen bottom (landscape) */

@@ -35,8 +35,9 @@ import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
 import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
+import { computeFittedRowSpacing } from '../ui/SceneLayout';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
-import { getArcOffset, getRowXPositions } from './game/diceRowGeometry';
+import { computeDiceRowLayout, getArcOffset, getRowXPositions } from './game/diceRowGeometry';
 import { resolvePackCardUse } from './boosterPack/packCardUseDispatcher';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
@@ -47,11 +48,7 @@ import trailGuidesData from '../../data/trail_guides';
 import supplyCardsData from '../../data/supply_cards';
 import frontierEncountersData from '../../data/frontier_encounters';
 
-const CARD_W = UI.CARD_W;
-const CARD_H = UI.CARD_H;
-const CARD_SPACING = 185;
 const CARD_RADIUS = UI.CARD_RADIUS;
-const DICE_SPACING = UI.DICE_SPACING;
 
 const CATEGORY_COLORS: Record<string, number> = {
   dice: 0x8b4513,
@@ -91,6 +88,12 @@ export class BoosterPackScene extends Scene {
 
   // Layout helpers
   private contentCX: number = 0;
+  private contentW: number = 0;
+  private contentTop: number = 0;
+  private contentBottom: number = 0;
+  private cardScale: number = 1;
+  private cardW: number = UI.CARD_W;
+  private cardH: number = UI.CARD_H;
   private cardY: number = 0;
   private hasDiceSelectionLineup: boolean = false;
 
@@ -210,9 +213,10 @@ export class BoosterPackScene extends Scene {
       scene: this,
       getItems: () => this.lineupSprites,
       getSlotPositions: (count) => {
-        const positions = getRowXPositions(count, this.contentCX, DICE_SPACING);
+        const diceLayout = computeDiceRowLayout(count, this.contentW);
+        const positions = getRowXPositions(count, this.contentCX, diceLayout.spacing);
         return positions.map((x, i) => {
-          const arc = getArcOffset(i, count);
+          const arc = getArcOffset(i, count, diceLayout.scale);
           return { x, y: this.lineupY + arc.y, rotation: arc.rotation };
         });
       },
@@ -250,11 +254,12 @@ export class BoosterPackScene extends Scene {
           duration: 150,
           ease: 'Power2',
         });
-        this.lineupLockIcons[index]?.setPosition(slot.x, slot.y + 46);
+        this.lineupLockIcons[index]?.setPosition(slot.x, slot.y + this.getLineupLockIconOffsetY());
       },
       getSettleSlot: (_sprite, index, count) => {
-        const positions = getRowXPositions(count, this.contentCX, DICE_SPACING);
-        const arc = getArcOffset(index, count);
+        const diceLayout = computeDiceRowLayout(count, this.contentW);
+        const positions = getRowXPositions(count, this.contentCX, diceLayout.spacing);
+        const arc = getArcOffset(index, count, diceLayout.scale);
         return {
           x: positions[index],
           y: this.lineupY + arc.y,
@@ -267,10 +272,12 @@ export class BoosterPackScene extends Scene {
       },
       onDragEnd: (sprite) => {
         const idx = this.lineupSprites.indexOf(sprite);
-        const positions = getRowXPositions(this.lineupSprites.length, this.contentCX, DICE_SPACING);
-        const arc = getArcOffset(idx, this.lineupSprites.length);
+        const count = this.lineupSprites.length;
+        const diceLayout = computeDiceRowLayout(count, this.contentW);
+        const positions = getRowXPositions(count, this.contentCX, diceLayout.spacing);
+        const arc = getArcOffset(idx, count, diceLayout.scale);
         const settleY = this.lineupY + arc.y;
-        this.lineupLockIcons[idx]?.setPosition(positions[idx], settleY + 46);
+        this.lineupLockIcons[idx]?.setPosition(positions[idx], settleY + this.getLineupLockIconOffsetY());
       },
       playSettleSound: true,
       onReleaseWithoutDrag: (sprite) => {
@@ -280,8 +287,6 @@ export class BoosterPackScene extends Scene {
   }
 
   private buildLayout(): void {
-    const { height } = this.scale;
-
     this.runShell?.destroy();
     this.runShell = createRunSceneShell(this, {
       layout: { bgKey: null, felt: true, sidebarTitle: 'BOOSTER PACK' },
@@ -298,6 +303,12 @@ export class BoosterPackScene extends Scene {
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;
     this.contentCX = layout.contentCX;
+    this.contentW = layout.contentW;
+    this.contentTop = layout.contentTop;
+    this.contentBottom = layout.contentBottom;
+    this.cardScale = layout.cardBar.cardScale;
+    this.cardW = UI.CARD_W * this.cardScale;
+    this.cardH = UI.CARD_H * this.cardScale;
 
     this.equipBar.on('equipment-changed', () => this.updateEquipHints());
     this.consumableBar.on('consumable-changed', () => this.updateEquipHints());
@@ -305,12 +316,16 @@ export class BoosterPackScene extends Scene {
     // Show equipment hints
     this.updateEquipHints();
 
-    // ─── Pack name ───
-    const titleY = layout.equipBarH + 16;
+    const uiScale = layout.uiScale;
+    const titleFontSize = Math.max(20, Math.floor(28 * uiScale));
+    const picksFontSize = Math.max(13, Math.floor(16 * uiScale));
+
+    // ─── Pack name (below equip/consumable bars, inside content area) ───
+    const titleY = this.contentTop + Math.floor(8 * uiScale);
     this.add
       .text(this.contentCX, titleY, this.packDef.name, {
         fontFamily: FONTS.HEADING,
-        fontSize: '28px',
+        fontSize: `${titleFontSize}px`,
         color: TEXT_COLORS.PRIMARY,
         stroke: '#000000',
         strokeThickness: 3,
@@ -319,59 +334,78 @@ export class BoosterPackScene extends Scene {
 
     // Instructions / picks remaining
     this.picksText = this.add
-      .text(this.contentCX, titleY + 36, '', {
+      .text(this.contentCX, titleY + Math.floor(32 * uiScale), '', {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '16px',
+        fontSize: `${picksFontSize}px`,
         color: TEXT_COLORS.SECONDARY,
       })
       .setOrigin(0.5);
     this.updatePicksText();
 
+    const headerBottom = titleY + Math.floor(52 * uiScale);
+
     // ─── Dice lineup (above cards) — only for packs with dice-selection cards ───
     const showLineup = this.contents.some((item) => !!item.diceSelection);
     this.hasDiceSelectionLineup = showLineup;
+    let cardsAreaTop = headerBottom + Math.floor(16 * uiScale);
     if (showLineup) {
-      this.lineupY = titleY + 80 + 40;
+      const run = getRunState();
+      const spent = new Set(run.spentDiceIds);
+      const lineupCount = Math.min(run.handSize, run.dice.filter((d) => !spent.has(d.id)).length);
+      const diceLayout = computeDiceRowLayout(Math.max(1, lineupCount), this.contentW);
+      this.lineupY = headerBottom + diceLayout.dieSize / 2 + Math.floor(8 * uiScale);
       this.buildDiceLineup();
 
-      // Instruction text for dice selection
+      const instructionY = this.lineupY + diceLayout.dieSize / 2 + UI.DICE_ARC_HEIGHT * diceLayout.scale + 12;
       this.instructionText = this.add
-        .text(this.contentCX, this.lineupY + 50, '', {
+        .text(this.contentCX, instructionY, '', {
           fontFamily: FONTS.PRIMARY,
-          fontSize: '14px',
+          fontSize: `${Math.max(12, Math.floor(14 * uiScale))}px`,
           color: TEXT_COLORS.MUTED,
         })
         .setOrigin(0.5)
         .setDepth(15);
+      cardsAreaTop = instructionY + Math.floor(20 * uiScale);
     } else {
       this.lineupY = 0;
       this.instructionText = this.add.text(0, 0, '').setVisible(false);
     }
 
-    // ─── Cards ───
-    const totalCardsWidth = (this.contents.length - 1) * CARD_SPACING;
+    // ─── Cards (inventory-sized, shrink spacing to fit up to 4+ across on narrow screens) ───
+    const packPad = Math.max(8, Math.floor(12 * uiScale));
+    const cardAreaW = this.contentW - packPad * 2;
+    const cardSpacing = computeFittedRowSpacing(
+      this.contents.length,
+      cardAreaW,
+      this.cardW,
+      layout.cardBar.cardSpacing,
+    );
+    const totalCardsWidth = this.contents.length > 1 ? (this.contents.length - 1) * cardSpacing : 0;
     const startX = this.contentCX - totalCardsWidth / 2;
-    this.cardY = showLineup ? this.lineupY + 70 + CARD_H / 2 : titleY + 70 + CARD_H / 2;
+
+    const skipBtnY = this.contentBottom - Math.floor(36 * uiScale);
+    const cardsAreaBottom = skipBtnY - Math.floor(28 * uiScale);
+    this.cardY = cardsAreaTop + Math.max(this.cardH / 2, (cardsAreaBottom - cardsAreaTop) / 2);
 
     for (let i = 0; i < this.contents.length; i++) {
       const item = this.contents[i];
-      const x = startX + i * CARD_SPACING;
+      const x = startX + i * cardSpacing;
       const { container, diceSprite, itemCard } = this.createCardDisplay(x, this.cardY, item);
 
       const actionTabs =
         itemCard === null
           ? createActionTabs({
-            scene: this,
-            parent: container,
-            layout: {
-              cardW: CARD_W,
-              cardH: CARD_H,
-              cardScale: 1,
-              tabAnchorX: CARD_W / 2,
-              rightTabYOffset: 20,
-            },
-            liftParentForBottomTabs: false,
-          })
+              scene: this,
+              parent: container,
+              layout: {
+                cardW: this.cardW,
+                cardH: this.cardH,
+                cardScale: this.cardScale,
+                tabAnchorX: this.cardW / 2,
+                rightTabYOffset: 20,
+              },
+              liftParentForBottomTabs: false,
+            })
           : undefined;
 
       const sprite: CardSprite = {
@@ -395,9 +429,14 @@ export class BoosterPackScene extends Scene {
     this.pendingUsedCardIndices = [];
 
     // Skip button
-    const btnY = height - 36;
-    this.skipBtn = new Button(this, this.contentCX, btnY, 'Skip', 140, 44);
+    this.skipBtn = new Button(this, this.contentCX, skipBtnY, 'Skip', 140, 44);
     this.skipBtn.onClick(() => this.onSkip());
+  }
+
+  private getLineupLockIconOffsetY(): number {
+    const count = Math.max(1, this.lineupSprites.length);
+    const { scale } = computeDiceRowLayout(count, this.contentW);
+    return DICE.SIZE * scale * 0.62;
   }
 
   // ─── Dice Lineup ───
@@ -419,21 +458,24 @@ export class BoosterPackScene extends Scene {
 
     if (this.lineupDice.length === 0) return;
 
-    const positions = getRowXPositions(this.lineupDice.length, this.contentCX, DICE_SPACING);
+    const diceLayout = computeDiceRowLayout(this.lineupDice.length, this.contentW);
+    const positions = getRowXPositions(this.lineupDice.length, this.contentCX, diceLayout.spacing);
+    const lockOffsetY = DICE.SIZE * diceLayout.scale * 0.62;
 
     for (let i = 0; i < this.lineupDice.length; i++) {
       const die = this.lineupDice[i]!;
-      const arc = getArcOffset(i, this.lineupDice.length);
+      const arc = getArcOffset(i, this.lineupDice.length, diceLayout.scale);
       const x = positions[i];
       const y = this.lineupY + arc.y;
 
       const sprite = new DiceSprite(this, x, y, die, { showSelectedStroke: true });
+      sprite.setScale(diceLayout.scale);
       sprite.rotation = arc.rotation;
       sprite.setDepth(10);
       this.lineupSprites.push(sprite);
 
       const lockIcon = this.add
-        .text(x, y + 46, '🔒', { fontSize: '14px' })
+        .text(x, y + lockOffsetY, '🔒', { fontSize: `${Math.max(11, Math.floor(14 * diceLayout.scale))}px` })
         .setOrigin(0.5)
         .setDepth(11)
         .setVisible(false);
@@ -499,7 +541,9 @@ export class BoosterPackScene extends Scene {
   }
 
   private setLineupInteractive(enabled: boolean): void {
-    const hitArea = new Phaser.Geom.Rectangle(0, 0, DICE.SIZE, DICE.SIZE);
+    const count = Math.max(1, this.lineupSprites.length);
+    const dieSize = computeDiceRowLayout(count, this.contentW).dieSize;
+    const hitArea = new Phaser.Geom.Rectangle(0, 0, dieSize, dieSize);
 
     for (const sprite of this.lineupSprites) {
       sprite.setDisabled(!enabled);
@@ -570,22 +614,22 @@ export class BoosterPackScene extends Scene {
     // Card background
     const cardBg = this.add.graphics();
     cardBg.fillStyle(color, 1);
-    cardBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
+    cardBg.fillRoundedRect(-this.cardW / 2, -this.cardH / 2, this.cardW, this.cardH, CARD_RADIUS);
     cardBg.lineStyle(2, 0x888888, 0.7);
-    cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
+    cardBg.strokeRoundedRect(-this.cardW / 2, -this.cardH / 2, this.cardW, this.cardH, CARD_RADIUS);
     container.add(cardBg);
 
     if (item.category === 'dice' && item.die) {
       // ─── Dice card layout ───
       const diceBg = this.add.graphics();
       diceBg.fillStyle(0x2a2a3a, 1);
-      diceBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
+      diceBg.fillRoundedRect(-this.cardW / 2, -this.cardH / 2, this.cardW, this.cardH, CARD_RADIUS);
       diceBg.lineStyle(2, 0x555577, 0.9);
-      diceBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
+      diceBg.strokeRoundedRect(-this.cardW / 2, -this.cardH / 2, this.cardW, this.cardH, CARD_RADIUS);
       container.add(diceBg);
       const visual = addDiceCardVisual(this, container, item.die, {
-        cardWidth: CARD_W,
-        cardHeight: CARD_H,
+        cardWidth: this.cardW,
+        cardHeight: this.cardH,
         cornerRadius: CARD_RADIUS,
         showAuraLabel: true,
         showStickerLabel: true,
@@ -596,6 +640,7 @@ export class BoosterPackScene extends Scene {
       itemCard = new ItemCard(this, 0, 0, item.equipmentDef, {
         mode: 'inventory',
         equipment: item.equipmentPreview,
+        cardScale: this.cardScale,
       });
       itemCard.setTooltipContext(null, null);
       container.add(itemCard);
@@ -604,13 +649,14 @@ export class BoosterPackScene extends Scene {
       const trailGuideDef = trailGuideData
         ? createTrailGuideConsumableDef(trailGuideData)
         : {
-          ...item,
-          id: item.trailGuideId,
-          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-        };
+            ...item,
+            id: item.trailGuideId,
+            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+          };
       itemCard = new ItemCard(this, 0, 0, trailGuideDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('trail_guide'),
+        cardScale: this.cardScale,
       });
       itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
@@ -619,13 +665,14 @@ export class BoosterPackScene extends Scene {
       const supplyDef = supplyCardData
         ? createSupplyConsumableDef(supplyCardData)
         : {
-          ...item,
-          id: item.supplyCardId,
-          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-        };
+            ...item,
+            id: item.supplyCardId,
+            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+          };
       itemCard = new ItemCard(this, 0, 0, supplyDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('supply'),
+        cardScale: this.cardScale,
       });
       itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
@@ -634,20 +681,21 @@ export class BoosterPackScene extends Scene {
       const frontierDef = frontierData
         ? createFrontierConsumableDef(frontierData)
         : {
-          ...item,
-          id: item.frontierEncounterId,
-          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-        };
+            ...item,
+            id: item.frontierEncounterId,
+            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+          };
       itemCard = new ItemCard(this, 0, 0, frontierDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('frontier'),
+        cardScale: this.cardScale,
       });
       itemCard.setTooltipContext(null, getItemDisplayContext());
       container.add(itemCard);
     } else {
       const catLabel = item.category.replace('_', ' ').toUpperCase();
       const catText = this.add
-        .text(0, -CARD_H / 2 + 14, catLabel, {
+        .text(0, -this.cardH / 2 + 14, catLabel, {
           fontFamily: FONTS.PRIMARY,
           fontSize: '10px',
           color: TEXT_COLORS.MUTED,
@@ -661,7 +709,7 @@ export class BoosterPackScene extends Scene {
           fontSize: '14px',
           color: TEXT_COLORS.PRIMARY,
           align: 'center',
-          wordWrap: { width: CARD_W - 16 },
+          wordWrap: { width: this.cardW - 16 },
         })
         .setOrigin(0.5, 0.5);
       container.add(nameText);
@@ -672,14 +720,14 @@ export class BoosterPackScene extends Scene {
           fontSize: '11px',
           color: TEXT_COLORS.SECONDARY,
           align: 'center',
-          wordWrap: { width: CARD_W - 16 },
+          wordWrap: { width: this.cardW - 16 },
         })
         .setOrigin(0.5, 0);
       container.add(descText);
     }
 
-    container.setSize(CARD_W, CARD_H);
-    container.setInteractive(new Phaser.Geom.Rectangle(0, 0, CARD_W, CARD_H), Phaser.Geom.Rectangle.Contains);
+    container.setSize(this.cardW, this.cardH);
+    container.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.cardW, this.cardH), Phaser.Geom.Rectangle.Contains);
     container.setDepth(10);
 
     return { container, diceSprite, itemCard };
@@ -1049,7 +1097,7 @@ export class BoosterPackScene extends Scene {
       // Manual gray overlay for dice/generic cards
       const overlay = this.add.graphics();
       overlay.fillStyle(0x000000, 0.6);
-      overlay.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, CARD_RADIUS);
+      overlay.fillRoundedRect(-this.cardW / 2, -this.cardH / 2, this.cardW, this.cardH, CARD_RADIUS);
       container.add(overlay);
 
       const usedLabel = this.add
@@ -1156,6 +1204,8 @@ export class BoosterPackScene extends Scene {
     this.cardSprites = [];
     this.activeTabCard = null;
     this.clearDismissClickAway();
+    this.runShell?.destroy();
+    this.runShell = null;
     this.children.removeAll(true);
     this.buildLayout();
   }

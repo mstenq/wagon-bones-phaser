@@ -43,9 +43,17 @@ export class ConsumableBar extends CardBar {
   }
 
   private onStoreConsumablesChanged(): void {
-    if (this.suppressStoreRebuild || this.isDragSettling()) return;
-    if (!this.tryRefreshCardsInPlace()) {
+    if (this.suppressStoreRebuild) return;
+    if (this.isCardInteractionBusy()) {
       this.rebuildCards();
+      return;
+    }
+    this.syncCardsFromStore();
+  }
+
+  protected syncCardsFromStore(): void {
+    if (!this.tryRefreshCardsInPlace()) {
+      this.rebuildCardsNow();
     }
   }
 
@@ -156,7 +164,7 @@ export class ConsumableBar extends CardBar {
       ease: 'Power2',
       onComplete: () => {
         this.suppressStoreRebuild = false;
-        card.destroy();
+        if (card.scene) card.destroy();
         this.emit('consumable-used', consumed);
         this.rebuildCards();
       },

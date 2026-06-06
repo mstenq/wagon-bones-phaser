@@ -176,20 +176,32 @@ export function createHorizontalDragReorder<T extends DraggableGameObject>(
 
   const finishDrag = (item: T): void => {
     if (!draggingItem) return;
-    const list = config.getItems();
-    if (list.length === 0) return;
 
     const finalVelocity = velocityX;
     const fromIndex = dragStartIndex;
-    const toIndex = list.indexOf(item);
     draggingItem = null;
     velocityX = 0;
     dragStartIndex = -1;
+
+    const list = config.getItems();
+    const itemScene = (item as Phaser.GameObjects.GameObject).scene;
+    const toIndex = list.indexOf(item);
+
+    if (list.length === 0 || toIndex === -1 || !itemScene) {
+      config.onDragEnd?.(item, fromIndex, toIndex);
+      return;
+    }
 
     config.onDragEnd?.(item, fromIndex, toIndex);
 
     const slots = config.getSlotPositions(list.length);
     const settleSlot = config.getSettleSlot?.(item, toIndex, list.length) ?? slots[toIndex];
+    if (!settleSlot) {
+      config.onSettleStart?.(item, fromIndex, toIndex);
+      config.onSettleComplete?.(item, fromIndex, toIndex);
+      return;
+    }
+
     const scale = config.getSettleScale?.(item) ?? { scaleX: 1, scaleY: 1 };
 
     const overshoot = Phaser.Math.Clamp(

@@ -1,5 +1,6 @@
 // ─── ItemCard tooltip layout and rendering helpers ───
 
+import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../../game/Constants';
 import type { EquipmentInstance, HintSegment } from '../../../game/ItemsSystem';
@@ -13,6 +14,8 @@ const TOOLTIP_BG = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER = COLORS.TOOLTIP_BORDER;
 const SEG_GAP = 4;
 const CHIP_RADIUS = 3;
+
+export type TooltipPlacement = 'side' | 'above';
 
 export type TooltipLine =
   | { kind: 'segments'; row: HintSegment[] }
@@ -32,6 +35,12 @@ export interface TooltipLayout {
   bottomY: number;
   contentWidth: number;
   children: GameObjects.GameObject[];
+}
+
+export function getTooltipMaxWidth(scale: Phaser.Scale.ScaleManager): number {
+  const configured = UI.CARD_TOOLTIP_MAX_WIDTH;
+  const viewportMax = scale.width - 16;
+  return Math.min(configured, viewportMax);
 }
 
 export function buildTooltipLines(
@@ -89,13 +98,19 @@ export function getTooltipTitleColor(rarity: string | undefined): string {
   return (rarity && RARITY_LABEL_COLORS[rarity]) || '#ffffff';
 }
 
-export function createTooltipTitle(scene: Scene, name: string, color: string): GameObjects.Text {
+export function createTooltipTitle(
+  scene: Scene,
+  name: string,
+  color: string,
+  maxContentWidth: number,
+): GameObjects.Text {
   return scene.add
     .text(TOOLTIP_PAD, TOOLTIP_PAD, name, {
       fontFamily: 'Arial',
       fontSize: `${UI.CARD_TOOLTIP_TITLE_FONT_SIZE}px`,
       color,
       fontStyle: 'bold',
+      wordWrap: { width: maxContentWidth, useAdvancedWrap: true },
     })
     .setOrigin(0, 0);
 }
@@ -108,34 +123,66 @@ export function createTooltipLayout(title: GameObjects.Text): TooltipLayout {
   };
 }
 
+function measureSingleSegment(scene: Scene, seg: HintSegment): SegmentMeasurement {
+  const metrics = getTooltipMetrics(seg);
+  const colors = tooltipSegmentColors(seg.style);
+  const hasBg = colors.bg !== undefined;
+  const tmpText = scene.add.text(0, 0, seg.text, {
+    fontFamily: 'Arial',
+    fontSize: `${metrics.fontSize}px`,
+  });
+  const tw = tmpText.width;
+  const th = tmpText.height;
+  tmpText.destroy();
+  const w = hasBg ? tw + metrics.padX * 2 : tw;
+  const h = hasBg ? th + metrics.padY * 2 : th;
+  return { ...metrics, w, h, hasBg };
+}
+
 export function measureSegmentRow(
   scene: Scene,
   row: HintSegment[],
 ): { measurements: SegmentMeasurement[]; rowWidth: number; rowHeight: number } {
-  const measurements: SegmentMeasurement[] = [];
+  const measurements = row.map((seg) => measureSingleSegment(scene, seg));
   let rowWidth = 0;
   let rowHeight = 0;
 
-  for (const seg of row) {
-    const metrics = getTooltipMetrics(seg);
-    const colors = tooltipSegmentColors(seg.style);
-    const hasBg = colors.bg !== undefined;
-    const tmpText = scene.add.text(0, 0, seg.text, {
-      fontFamily: 'Arial',
-      fontSize: `${metrics.fontSize}px`,
-    });
-    const tw = tmpText.width;
-    const th = tmpText.height;
-    tmpText.destroy();
-    const w = hasBg ? tw + metrics.padX * 2 : tw;
-    const h = hasBg ? th + metrics.padY * 2 : th;
-    measurements.push({ ...metrics, w, h, hasBg });
-    rowWidth += w;
-    rowHeight = Math.max(rowHeight, h);
+  for (const measurement of measurements) {
+    rowWidth += measurement.w;
+    rowHeight = Math.max(rowHeight, measurement.h);
   }
 
   rowWidth += SEG_GAP * Math.max(0, row.length - 1);
   return { measurements, rowWidth, rowHeight };
+}
+
+function splitSegmentRowIntoLines(scene: Scene, row: HintSegment[], maxContentWidth: number): HintSegment[][] {
+  if (row.length === 0) return [];
+
+  const lines: HintSegment[][] = [];
+  let currentLine: HintSegment[] = [];
+  let currentWidth = 0;
+
+  for (const seg of row) {
+    const measurement = measureSingleSegment(scene, seg);
+    const gap = currentLine.length > 0 ? SEG_GAP : 0;
+
+    if (currentLine.length > 0 && currentWidth + gap + measurement.w > maxContentWidth) {
+      lines.push(currentLine);
+      currentLine = [seg];
+      currentWidth = measurement.w;
+      continue;
+    }
+
+    currentLine.push(seg);
+    currentWidth += gap + measurement.w;
+  }
+
+  if (currentLine.length > 0) {
+    lines.push(currentLine);
+  }
+
+  return lines;
 }
 
 export function renderSegmentRow(
@@ -178,20 +225,33 @@ export function appendSpacer(layout: TooltipLayout, height: number): TooltipLayo
   return { ...layout, bottomY: layout.bottomY + height };
 }
 
-export function appendSegmentRow(scene: Scene, layout: TooltipLayout, row: HintSegment[]): TooltipLayout {
-  const { measurements, rowWidth, rowHeight } = measureSegmentRow(scene, row);
-  const children = renderSegmentRow(scene, row, measurements, layout.bottomY);
-  return {
-    bottomY: layout.bottomY + rowHeight + 5,
-    contentWidth: Math.max(layout.contentWidth, rowWidth),
-    children: [...layout.children, ...children],
-  };
+export function appendSegmentRow(
+  scene: Scene,
+  layout: TooltipLayout,
+  row: HintSegment[],
+  maxContentWidth: number,
+): TooltipLayout {
+  const subRows = splitSegmentRowIntoLines(scene, row, maxContentWidth);
+  let currentLayout = layout;
+
+  for (const subRow of subRows) {
+    const { measurements, rowWidth, rowHeight } = measureSegmentRow(scene, subRow);
+    const children = renderSegmentRow(scene, subRow, measurements, currentLayout.bottomY);
+    currentLayout = {
+      bottomY: currentLayout.bottomY + rowHeight + 5,
+      contentWidth: Math.max(currentLayout.contentWidth, rowWidth),
+      children: [...currentLayout.children, ...children],
+    };
+  }
+
+  return currentLayout;
 }
 
 export function appendTextLine(
   scene: Scene,
   layout: TooltipLayout,
   line: Extract<TooltipLine, { kind: 'text' }>,
+  maxContentWidth: number,
 ): TooltipLayout {
   const y = layout.bottomY + line.gapTop;
   const text = scene.add
@@ -200,6 +260,7 @@ export function appendTextLine(
       fontSize: `${UI.CARD_TOOLTIP_META_FONT_SIZE}px`,
       color: line.color,
       fontStyle: line.fontStyle,
+      wordWrap: { width: maxContentWidth, useAdvancedWrap: true },
     })
     .setOrigin(0, 0);
   return {
@@ -209,10 +270,15 @@ export function appendTextLine(
   };
 }
 
-export function appendTooltipLine(scene: Scene, layout: TooltipLayout, line: TooltipLine): TooltipLayout {
+export function appendTooltipLine(
+  scene: Scene,
+  layout: TooltipLayout,
+  line: TooltipLine,
+  maxContentWidth: number,
+): TooltipLayout {
   if (line.kind === 'spacer') return appendSpacer(layout, line.height);
-  if (line.kind === 'segments') return appendSegmentRow(scene, layout, line.row);
-  return appendTextLine(scene, layout, line);
+  if (line.kind === 'segments') return appendSegmentRow(scene, layout, line.row, maxContentWidth);
+  return appendTextLine(scene, layout, line, maxContentWidth);
 }
 
 export function createTooltipBackground(scene: Scene, width: number, height: number): GameObjects.Graphics {
@@ -224,6 +290,19 @@ export function createTooltipBackground(scene: Scene, width: number, height: num
   return bg;
 }
 
+export function getCardWorldHalfExtents(
+  card: GameObjects.Container,
+  layout: ItemCardLayout,
+): { halfW: number; halfH: number } {
+  const matrix = card.getWorldTransformMatrix();
+  const scratch = new Phaser.Math.Vector2();
+  matrix.transformPoint(-layout.cardW / 2, 0, scratch);
+  const halfW = Math.abs(scratch.x - matrix.tx);
+  matrix.transformPoint(0, -layout.cardH / 2, scratch);
+  const halfH = Math.abs(scratch.y - matrix.ty);
+  return { halfW, halfH };
+}
+
 export function computeTooltipPosition(
   worldX: number,
   worldY: number,
@@ -231,17 +310,35 @@ export function computeTooltipPosition(
   tooltipW: number,
   tooltipH: number,
   scale: Phaser.Scale.ScaleManager,
+  placement: TooltipPlacement = 'side',
+  worldHalfExtents?: { halfW: number; halfH: number },
 ): { x: number; y: number } {
-  const hw = layout.cardW / 2;
-  let tx = worldX - hw - tooltipW - 10;
-  let ty = worldY - tooltipH / 2;
+  const hw = worldHalfExtents?.halfW ?? layout.cardW / 2;
+  const hh = worldHalfExtents?.halfH ?? layout.cardH / 2;
+  let tx: number;
+  let ty: number;
+
+  if (placement === 'above') {
+    tx = worldX - tooltipW / 2;
+    ty = worldY - hh - tooltipH - 10;
+  } else {
+    tx = worldX - hw - tooltipW - 10;
+    ty = worldY - tooltipH / 2;
+  }
 
   const { width: sw, height: sh } = scale;
-  if (tx < 8) {
+  if (placement === 'side' && tx < 8) {
     tx = worldX + hw + 10;
   }
+  if (tx < 8) tx = 8;
   if (tx + tooltipW > sw - 8) tx = sw - 8 - tooltipW;
-  if (ty < 8) ty = 8;
+  if (ty < 8) {
+    if (placement === 'above') {
+      ty = worldY + hh + 12;
+    } else {
+      ty = 8;
+    }
+  }
   if (ty + tooltipH > sh - 8) ty = sh - 8 - tooltipH;
 
   return { x: tx, y: ty };

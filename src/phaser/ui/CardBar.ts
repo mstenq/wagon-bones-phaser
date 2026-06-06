@@ -9,6 +9,7 @@ import { COLORS, TEXT_COLORS, FONTS, UI, ANIM } from '../../game/Constants';
 import { ItemCard, CardActionTabConfig } from './ItemCard';
 import { hitIncludesObjectOrChild, installClickAwayDismiss } from './clickAwayDismiss';
 import { createHorizontalDragReorder, type HorizontalDragReorder } from './horizontalDragReorder';
+import { wireTapOnlySession } from './pointerDragSession';
 import type { CardBarMetrics } from './SceneLayout';
 
 export abstract class CardBar extends GameObjects.Container {
@@ -28,7 +29,7 @@ export abstract class CardBar extends GameObjects.Container {
   // Drag state (manual pointer tracking — Phaser setDraggable is unreliable on touch)
   private draggingCard: ItemCard | null = null;
   private dragSettling: boolean = false;
-  private cardDragMoved: boolean = false;
+  private pendingRebuild = false;
   private cardDragReorder: HorizontalDragReorder<ItemCard>;
 
   // Per-card wobble tweens
@@ -88,7 +89,6 @@ export abstract class CardBar extends GameObjects.Container {
         y: pointer.worldY - (this.y + card.y),
       }),
       onBegin: (card) => {
-        this.cardDragMoved = true;
         this.beginCardDrag(card);
       },
       onMoveItem: (card, pointer, ctx) => {
@@ -102,15 +102,13 @@ export abstract class CardBar extends GameObjects.Container {
         this.draggingCard = null;
         this.dragSettling = true;
       },
-      onSettleComplete: (card, fromIndex, toIndex) => {
-        if (fromIndex !== toIndex) {
-          this.onReorder(fromIndex, toIndex);
-        }
+      onSettleComplete: (card, _fromIndex, _toIndex) => {
         this.dragSettling = false;
         this.setAllCardTooltipsSuppressed(false);
         this.resumeWobble(card);
+        this.flushPendingRebuild();
       },
-      onTap: (card) => {
+      onReleaseWithoutDrag: (card) => {
         const index = this.cards.indexOf(card);
         if (index !== -1) this.openActionTabsForCard(card, index);
       },
@@ -123,6 +121,8 @@ export abstract class CardBar extends GameObjects.Container {
       this.scene.input.off('pointermove', this.moveHandler);
       this.moveHandler = null;
     }
+    this.hoveredCard = null;
+    this.dismissActiveTab();
     this.clearDismissClickAway();
     super.destroy(fromScene);
   }
@@ -141,6 +141,11 @@ export abstract class CardBar extends GameObjects.Container {
     return true;
   }
 
+  /** True while dragging or a settle-back tween is playing. */
+  protected isCardInteractionBusy(): boolean {
+    return this.draggingCard !== null || this.cardDragReorder.isDragging() || this.dragSettling;
+  }
+
   /** True while the dropped card is playing its settle-back tween (store reorder is deferred). */
   protected isDragSettling(): boolean {
     return this.dragSettling;
@@ -154,12 +159,35 @@ export abstract class CardBar extends GameObjects.Container {
 
   /** Rebuild card row from current store-backed model (subclasses provide counts via getItemCount). */
   protected rebuildCards(): void {
+    if (this.isCardInteractionBusy()) {
+      this.pendingRebuild = true;
+      return;
+    }
+    this.pendingRebuild = false;
+    this.rebuildCardsNow();
+  }
+
+  /** Subclasses override to sync from store (e.g. in-place refresh before full rebuild). */
+  protected syncCardsFromStore(): void {
+    this.rebuildCardsNow();
+  }
+
+  private flushPendingRebuild(): void {
+    if (!this.pendingRebuild || this.isCardInteractionBusy()) return;
+    this.pendingRebuild = false;
+    this.syncCardsFromStore();
+  }
+
+  protected rebuildCardsNow(): void {
     for (const t of this.wobbleTweens) t.destroy();
     this.wobbleTweens = [];
     this.hoveredCard = null;
     this.dismissActiveTab();
 
-    for (const card of this.cards) card.destroy();
+    for (const card of this.cards) {
+      card.hideTooltip();
+      card.destroy();
+    }
     this.cards = [];
 
     this.slotCountText.setText(this.getSlotLabel());
@@ -172,13 +200,12 @@ export abstract class CardBar extends GameObjects.Container {
     const startX = this.barWidth / 2 - totalW / 2;
     for (let i = 0; i < count; i++) {
       const card = this.createCardForItem(startX + i * spacing, this.cardCenterY, i);
-      this.setupCardDragPointerDown(card);
       this.add(card);
+      this.setupCardDragPointerDown(card);
       this.cards.push(card);
 
       this.startWobble(card, i);
       this.setupHoverTilt(card);
-      this.setupClickActions(card, i);
     }
 
     this.applyCardDepths();
@@ -309,20 +336,6 @@ export abstract class CardBar extends GameObjects.Container {
   }
 
   // ─── Click Actions (action tabs) ───
-
-  private setupClickActions(card: ItemCard, index: number): void {
-    card.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      // Touch taps are finalized by the drag session onTap (game-object pointerup fires first).
-      if (pointer.wasTouch) return;
-
-      if (this.cardDragMoved) {
-        this.cardDragMoved = false;
-        return;
-      }
-
-      this.openActionTabsForCard(card, index);
-    });
-  }
 
   private openActionTabsForCard(card: ItemCard, index: number): void {
     if (this.activeTabCard === card) {
@@ -469,9 +482,27 @@ export abstract class CardBar extends GameObjects.Container {
 
   private setupCardDragPointerDown(card: ItemCard): void {
     card.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.cardDragMoved = false;
+      if (this.activeTabCard === card) {
+        wireTapOnlySession(this.scene, card, pointer, card, {
+          canTap: () => this.activeTabCard === card,
+          onTap: (activeCard, upPointer) => {
+            const hitObjects = this.scene.input.hitTestPointer(upPointer);
+            if (this.hitIncludesActionTab(hitObjects, activeCard)) return;
+            this.dismissActiveTab();
+          },
+        });
+        return;
+      }
+
       this.cardDragReorder.wirePointerDown(card, pointer, card);
     });
+  }
+
+  private hitIncludesActionTab(hitObjects: Phaser.GameObjects.GameObject[], card: ItemCard): boolean {
+    for (const tab of card.getActionTabContainers()) {
+      if (hitIncludesObjectOrChild(hitObjects, tab)) return true;
+    }
+    return false;
   }
 
   private beginCardDrag(card: ItemCard): void {
@@ -479,8 +510,7 @@ export abstract class CardBar extends GameObjects.Container {
     if (idx === -1) return;
 
     if (this.dragSettling) {
-      this.scene.tweens.killTweensOf(card);
-      this.dragSettling = false;
+      this.interruptSettleAnimations();
     }
 
     this.draggingCard = card;
@@ -493,5 +523,23 @@ export abstract class CardBar extends GameObjects.Container {
     this.bringToTop(card);
     card.scaleX = 1.03;
     card.scaleY = 1.03;
+  }
+
+  /** Snap all cards to slot positions when a new drag interrupts settle tweens. */
+  private interruptSettleAnimations(): void {
+    const positions = this.getCardXPositions(this.cards.length);
+    for (let i = 0; i < this.cards.length; i++) {
+      const card = this.cards[i]!;
+      this.scene.tweens.killTweensOf(card);
+      card.x = positions[i] ?? card.x;
+      card.y = this.cardCenterY;
+      card.rotation = 0;
+      card.scaleX = 1;
+      card.scaleY = 1;
+      this.resumeWobble(card);
+    }
+    this.applyCardDepths();
+    this.dragSettling = false;
+    this.setAllCardTooltipsSuppressed(false);
   }
 }

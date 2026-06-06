@@ -107,3 +107,34 @@ export function createPointerDragSession<T>(
 
   return session;
 }
+
+/** Pointer up without crossing drag threshold — no drag branch. */
+export function wireTapOnlySession<T>(
+  scene: Phaser.Scene,
+  target: T,
+  pointer: Phaser.Input.Pointer,
+  trackTarget: Phaser.GameObjects.GameObject | null,
+  handlers: {
+    canTap?: () => boolean;
+    onTap: (target: T, pointer: Phaser.Input.Pointer) => void;
+  },
+): void {
+  const pointerId = pointer.id;
+  const startX = pointer.worldX;
+  const startY = pointer.worldY;
+
+  const onEnd = (upPointer: Phaser.Input.Pointer) => {
+    if (upPointer.id !== pointerId) return;
+    detach();
+
+    if (handlers.canTap && !handlers.canTap()) return;
+
+    const dx = upPointer.worldX - startX;
+    const dy = upPointer.worldY - startY;
+    if (Math.hypot(dx, dy) >= getPointerDragDistance(upPointer)) return;
+
+    handlers.onTap(target, upPointer);
+  };
+
+  const detach = attachPointerDragTrack(scene, trackTarget, { onMove: () => {}, onEnd });
+}

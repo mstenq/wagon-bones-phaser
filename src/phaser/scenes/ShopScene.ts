@@ -355,7 +355,9 @@ export class ShopScene extends Scene {
       alpha: 0,
       duration: 400,
       ease: 'Power3',
-      onComplete: () => card.destroy(),
+      onComplete: () => {
+        if (card.scene) card.destroy();
+      },
     });
   }
 
@@ -379,7 +381,9 @@ export class ShopScene extends Scene {
       alpha: 0,
       duration: 400,
       ease: 'Power3',
-      onComplete: () => card.destroy(),
+      onComplete: () => {
+        if (card.scene) card.destroy();
+      },
     });
   }
 
@@ -408,7 +412,9 @@ export class ShopScene extends Scene {
       alpha: 0,
       duration: 400,
       ease: 'Power3',
-      onComplete: () => card.destroy(),
+      onComplete: () => {
+        if (card.scene) card.destroy();
+      },
     });
   }
 
@@ -429,7 +435,9 @@ export class ShopScene extends Scene {
       scaleY: 0.9,
       duration: 350,
       ease: 'Power2',
-      onComplete: () => card.destroy(),
+      onComplete: () => {
+        if (card.scene) card.destroy();
+      },
     });
 
     const result = gameFacade.shop.buyAndUseConsumable(def, cost);
@@ -728,6 +736,7 @@ export class ShopScene extends Scene {
         ...(shopItem.type === 'equipment' ? { equipment: shopItem.preview } : {}),
         ...(consumableTextureKey != null ? { textureKey: consumableTextureKey } : {}),
       });
+      this.add.existing(card);
       if (shopItem.type === 'dice') {
         addDiceCardVisual(this, card, shopItem.die, {
           cardWidth: card.cardWidth,
@@ -910,6 +919,8 @@ export class ShopScene extends Scene {
       }
     }
     this.shopStockObjects = [];
+    this.runShell?.destroy();
+    this.runShell = null;
     this.children.removeAll(true);
     this.cards = [];
     this.packCards = [];
@@ -954,6 +965,7 @@ export class ShopScene extends Scene {
         cardScale,
         tabAnchorX: (UI.CARD_W * cardScale) / 2,
       });
+      this.add.existing(permitItemCard);
       permitItemCard.setTooltipContext(null, getItemDisplayContext());
       permitItemCard.setDepth(10);
       permitItemCard.setAffordable(canAfford(getRunState(), permitDisplayDef.cost));
