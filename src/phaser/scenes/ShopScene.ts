@@ -25,7 +25,6 @@ import { TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { ItemCard, CardActionTabConfig, type CardData } from '../ui/ItemCard';
 import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { getItemDisplayContext } from '../../game/displayContext';
-import { BoosterPackCard } from '../ui/BoosterPackCard';
 import { Button } from '../ui/Button';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
@@ -47,7 +46,12 @@ import { sceneStore } from '../../game/store/sceneStore';
 import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../game/store/selectors/sceneSelectors';
 import { bindStore } from '../store/subscribe';
 import type { ShopSceneState } from '../../game/store/types';
-import { appendShopStockForSlots, buildShopDieDisplayDef, buildShopPermitDisplayDef } from '../../game/store/shopStock';
+import {
+  appendShopStockForSlots,
+  buildShopDieDisplayDef,
+  buildShopPackDisplayDef,
+  buildShopPermitDisplayDef,
+} from '../../game/store/shopStock';
 import { clearSceneCardTooltips } from '../ui/itemCard/cardTooltipRegistry';
 
 /** A shop stock item — equipment, consumable, or dice */
@@ -60,7 +64,7 @@ export class ShopScene extends Scene {
   private stockItems: ShopItem[];
   private packs: PackInstance[];
   private cards: ItemCard[] = [];
-  private packCards: BoosterPackCard[] = [];
+  private packCards: ItemCard[] = [];
   private permitCard: ItemCard | null = null;
   private rerollBtn: Button;
   private displayStoreUnsubs: Array<() => void> = [];
@@ -249,26 +253,26 @@ export class ShopScene extends Scene {
 
     for (let i = 0; i < this.packs.length; i++) {
       const packInst = this.packs[i];
-      const packCard = new BoosterPackCard(this, packX0 + i * packSpacing, cardCY2, packInst, CARD_H);
-      packCard.setDepth(10);
-      // Explorer's Guild: trail guide packs are free
       const isTrailGuidePack = packInst.def.category === 'trail_guide' && trailGuidesFree;
       const discountedPackCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packInst.def.cost);
-      if (discountedPackCost !== packInst.def.cost) {
-        packCard.setCostDisplay(discountedPackCost);
-      }
+      const packDisplayDef = buildShopPackDisplayDef(packInst.def, discountedPackCost);
+
+      const packCard = new ItemCard(this, packX0 + i * packSpacing, cardCY2, packDisplayDef, {
+        mode: 'shop',
+        showCost: true,
+        textureKey: 'packs',
+        transparentBg: true,
+        cardScale,
+      });
+      this.add.existing(packCard);
+      packCard.setTooltipContext(null, getItemDisplayContext());
+      packCard.setDepth(10);
 
       if (this.isPackOpened(packInst)) {
         packCard.markSold();
       } else {
         packCard.setAffordable(canAfford(run, discountedPackCost));
-        packCard.on('pointerdown', () => this.onBuyPack(packCard, i));
-        packCard.on('pointerover', () => {
-          if (!packCard.sold) this.tweens.add({ targets: packCard, scaleX: 1.05, scaleY: 1.05, duration: 100 });
-        });
-        packCard.on('pointerout', () => {
-          if (!packCard.sold) this.tweens.add({ targets: packCard, scaleX: 1, scaleY: 1, duration: 100 });
-        });
+        this.setupPackCardClick(packCard, i);
       }
 
       this.packCards.push(packCard);
@@ -279,7 +283,9 @@ export class ShopScene extends Scene {
       for (let i = 0; i < this.packCards.length; i++) {
         const packCard = this.packCards[i];
         if (packCard.sold) continue;
-        this.addDevIcon(packX0 + i * packSpacing + CARD_H * 0.25, cardCY2 - CARD_H / 2 - 12, () => this.devSwapPack(i));
+        this.addDevIcon(packX0 + i * packSpacing + packCard.cardWidth * 0.25, cardCY2 - CARD_H / 2 - 12, () =>
+          this.devSwapPack(i),
+        );
       }
     }
 
@@ -296,7 +302,7 @@ export class ShopScene extends Scene {
     ];
   }
 
-  private onBuyPack(card: BoosterPackCard, packIndex: number): void {
+  private onBuyPack(card: ItemCard, packIndex: number): void {
     if (card.sold) return;
     const pack = this.packs[packIndex];
     if (!pack) return;
@@ -523,7 +529,7 @@ export class ShopScene extends Scene {
   }
 
   /** Show a brief floating text popup above a card with a cancel sound */
-  private showCardPopup(card: ItemCard | BoosterPackCard, message: string): void {
+  private showCardPopup(card: ItemCard, message: string): void {
     this.sound.play('sfx_cancel', { volume: 0.5 });
 
     const matrix = card.getWorldTransformMatrix();
@@ -895,12 +901,14 @@ export class ShopScene extends Scene {
       card.setTooltipContext(null, tooltipPlayer);
     }
 
-    for (const packCard of this.packCards) {
-      if (!packCard.sold) {
-        const isTrailGuidePack = packCard.pack.def.category === 'trail_guide' && shopInputs.trailGuidesFree;
-        const packCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packCard.pack.def.cost);
-        packCard.setAffordable(canAfford(run, packCost));
-      }
+    for (let i = 0; i < this.packCards.length; i++) {
+      const packCard = this.packCards[i];
+      if (packCard.sold) continue;
+      const pack = this.packs[i];
+      if (!pack) continue;
+      const isTrailGuidePack = pack.def.category === 'trail_guide' && shopInputs.trailGuidesFree;
+      const packCost = isTrailGuidePack ? 0 : this.getDiscountedCost(pack.def.cost);
+      packCard.setAffordable(canAfford(run, packCost));
     }
 
     if (this.permitCard && !this.permitCard.sold) {
@@ -1049,6 +1057,29 @@ export class ShopScene extends Scene {
   /** Get the discounted cost for any shop item */
   private getDiscountedCost(baseCost: number): number {
     return getDiscountedShopPrice(baseCost, getRunState().purchasedPermits);
+  }
+
+  /** Set up click-to-buy on a booster pack card */
+  private setupPackCardClick(card: ItemCard, packIndex: number): void {
+    wireShopCardHover(this, card, this.activeTab);
+
+    card.on('pointerup', () => {
+      if (card.sold) return;
+
+      const tabs: CardActionTabConfig[] = [
+        {
+          label: 'BUY',
+          color: 0x2255aa,
+          position: 'bottom',
+          callback: () => {
+            this.activeTab.dismiss();
+            this.onBuyPack(card, packIndex);
+          },
+        },
+      ];
+
+      openShopCardTabs(this, card, tabs, this.activeTab);
+    });
   }
 
   /** Set up click-to-buy on the permit card */

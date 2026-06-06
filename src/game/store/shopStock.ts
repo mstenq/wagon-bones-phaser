@@ -15,6 +15,7 @@ import {
   type ConsumableDef,
 } from '../ConsumablesSystem';
 import { applyRandomSticker, generateShopPacks } from '../BoosterPackSystem';
+import type { PackDef } from '../../data/packs';
 import { getPermitAuraMultiplier, hasPermitDiceInShop, type PermitDef } from '../PermitsSystem';
 import { rollShopEquipmentPreview } from '../EquipmentModifiers';
 import { getProfessionById } from '../../data/professions';
@@ -74,6 +75,42 @@ export function buildShopPermitDisplayDef(permit: PermitDef, cost: number): Equi
     display: () => ({
       hint: [],
       tooltip: [[{ text: permit.description, style: 'text' }]],
+    }),
+  };
+}
+
+const PACK_TIER_LABELS: Record<string, string> = {
+  normal: 'Standard',
+  jumbo: 'Jumbo',
+  mega: 'Mega',
+};
+
+const PACK_CATEGORY_LABELS: Record<string, string> = {
+  dice: 'Dice',
+  supply: 'Supply',
+  trail_guide: 'Trail Guide',
+  frontier: 'Frontier',
+  equipment: 'Equipment',
+};
+
+/** Equipment-shaped display metadata for shop booster pack cards (name, cost, tooltip). */
+export function buildShopPackDisplayDef(pack: PackDef, cost: number): EquipmentDef {
+  const tierLabel = PACK_TIER_LABELS[pack.tier] ?? pack.tier;
+  const catLabel = PACK_CATEGORY_LABELS[pack.category] ?? pack.category;
+  const subtitle = `${tierLabel} ${catLabel} Pack`;
+  const pickInfo = `Pick ${pack.pickCount} of ${pack.totalCards}`;
+  const tooltipText = `${subtitle}\n${pickInfo}`;
+
+  return {
+    id: pack.id,
+    name: pack.name,
+    cost,
+    rarity: 'pack',
+    effectType: 'PACK',
+    effectParams: {},
+    display: () => ({
+      hint: [],
+      tooltip: [[{ text: tooltipText, style: 'text' }]],
     }),
   };
 }

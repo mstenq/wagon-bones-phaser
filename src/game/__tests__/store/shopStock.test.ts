@@ -10,11 +10,13 @@ import {
   shopRowsToStored,
   buildShopDieDisplayDef,
   buildShopPermitDisplayDef,
+  buildShopPackDisplayDef,
   DICE_SHOP_COST,
 } from '../../store/shopStock';
 import { createDie } from '../../DiceSystem';
 import { getItemDisplayContext } from '../../displayContext';
 import { getPermitById } from '../../PermitsSystem';
+import { getPackById } from '../../../data/packs';
 import { shopSceneActions } from '../../store/actions/shopSceneActions';
 import { selectShopStockRevision } from '../../store/selectors/sceneSelectors';
 import { initRunRng } from '../../RunRng';
@@ -282,5 +284,19 @@ describe('buildShopPermitDisplayDef', () => {
     expect(displayDef.rarity).toBe('permit');
     const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
     expect(tooltip).toBe(permit!.description);
+  });
+});
+
+describe('buildShopPackDisplayDef', () => {
+  test('pack card uses pack metadata, cost, and pick info tooltip', () => {
+    const pack = getPackById('dice_standard');
+    expect(pack).toBeDefined();
+    const displayDef = buildShopPackDisplayDef(pack!, 3);
+    expect(displayDef.id).toBe('dice_standard');
+    expect(displayDef.name).toBe(pack!.name);
+    expect(displayDef.cost).toBe(3);
+    expect(displayDef.rarity).toBe('pack');
+    const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
+    expect(tooltip).toBe(`Standard Dice Pack\nPick ${pack!.pickCount} of ${pack!.totalCards}`);
   });
 });
