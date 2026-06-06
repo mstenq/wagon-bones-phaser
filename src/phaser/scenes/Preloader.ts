@@ -81,6 +81,8 @@ export class Preloader extends Scene {
     this.load.atlas('bosses', 'assets/bosses/bosses.png', 'assets/bosses/bosses.json');
 
     this.load.image('icon_sort', 'assets/icons/sort.svg');
+    this.load.image('icon_chevron_left', 'assets/icons/chevron-left.svg');
+    this.load.image('icon_chevron_right', 'assets/icons/chevron-right.svg');
 
     // Load difficulty stake icons
     for (let level = 1; level <= 8; level++) {

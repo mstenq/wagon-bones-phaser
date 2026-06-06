@@ -188,12 +188,13 @@ export class ProfessionSelectScene extends Scene {
 
       const navY = DETAIL_TOP_PAD + PORTRAIT_DETAIL_TOP_Y + PORTRAIT_DETAIL_IMAGE_SIZE / 2;
       const navOffsetX = PORTRAIT_DETAIL_IMAGE_SIZE / 2 + PROF_NAV_GAP + PROF_NAV_BTN_SIZE / 2;
-      this.prevProfBtn = new Button(this, width / 2 - navOffsetX, navY, '◀', PROF_NAV_BTN_SIZE, PROF_NAV_BTN_SIZE);
-      this.nextProfBtn = new Button(this, width / 2 + navOffsetX, navY, '▶', PROF_NAV_BTN_SIZE, PROF_NAV_BTN_SIZE);
+      this.prevProfBtn = new Button(this, width / 2 - navOffsetX, navY, '', PROF_NAV_BTN_SIZE, PROF_NAV_BTN_SIZE)
+        .setIcon('icon_chevron_left', 22);
+      this.nextProfBtn = new Button(this, width / 2 + navOffsetX, navY, '', PROF_NAV_BTN_SIZE, PROF_NAV_BTN_SIZE)
+        .setIcon('icon_chevron_right', 22);
       for (const navBtn of [this.prevProfBtn, this.nextProfBtn]) {
         navBtn.setDepth(101);
         navBtn.setVisible(false);
-        navBtn.setLabelFontSize('22px');
       }
       this.prevProfBtn.onClick(() => this.navigateProfession(-1));
       this.nextProfBtn.onClick(() => this.navigateProfession(1));
