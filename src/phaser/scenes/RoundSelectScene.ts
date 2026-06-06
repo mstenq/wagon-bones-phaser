@@ -103,7 +103,7 @@ export class RoundSelectScene extends Scene {
     const run = getRunState();
     const { contentCX, contentX, contentW, contentTop } = this.layout;
     const panelLayout = this.getRoundPanelLayout();
-    const titleFontSize = panelLayout.isPortrait ? `${Math.max(18, Math.floor(22 * this.layout.uiScale))}px` : '30px';
+    const titleFontSize = panelLayout.isPortrait ? `${Math.max(16, Math.floor(16 * this.layout.uiScale))}px` : '30px';
 
     this.add
       .text(contentCX, panelLayout.titleY, 'Choose Your Next Round', {
@@ -243,6 +243,7 @@ export class RoundSelectScene extends Scene {
       layout: panelLayout.layout,
       currentRound: run.round,
       showActions: true,
+      skippedRoundsThisLeg: run.skippedRoundsThisLeg,
     });
     const slot = geometry.panels.find((panel) => panel.round === round);
     if (!slot) {

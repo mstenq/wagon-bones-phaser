@@ -80,6 +80,8 @@ export class Preloader extends Scene {
     // Load boss portraits from TexturePacker single-atlas JSON
     this.load.atlas('bosses', 'assets/bosses/bosses.png', 'assets/bosses/bosses.json');
 
+    this.load.image('icon_sort', 'assets/icons/sort.svg');
+
     // Load difficulty stake icons
     for (let level = 1; level <= 8; level++) {
       this.load.image(`difficulty_${level}`, `assets/difficulty/difficulty_${level}.png`);

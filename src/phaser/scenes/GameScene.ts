@@ -18,7 +18,7 @@ import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
 import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
 import { prepareScoreSidebar } from '../playback/handlers';
 import { enqueueDayEndDestructions } from '../../game/store/playbackEnqueue';
-import { Die, ScoreResult } from '../../game/types';
+import { Die, ScoreResult, type PhaseState } from '../../game/types';
 import {
   selectHandDice,
   selectRolledDice,
@@ -26,6 +26,7 @@ import {
   selectRoundPhase,
   selectRoundTotalMiles,
   selectRerollsRemaining,
+  selectRoundDay,
 } from '../../game/store/selectors/roundSelectors';
 import { selectAvailableDice, selectCurrentBoss, selectSpentDice } from '../../game/store/selectors/runSelectors';
 import { D } from '../../game/scoreMath';
@@ -332,7 +333,7 @@ export class GameScene extends Scene {
     this.hudBottomReserve = hud.bottomReserve;
     this.showRollInstruction = hud.showInstruction;
 
-    const { btnY, sortY, instructionY } = hud;
+    const { btnY, btnCenterX, instructionY } = hud;
     const playAreaW = this.contentW;
     const bossWarningY = height * UI.GAME_BOSS_WARNING_Y_RATIO;
 
@@ -363,19 +364,21 @@ export class GameScene extends Scene {
     this.devPanel.build();
 
     // Create buttons (all hidden initially)
-    this.readyBtn = new Button(this, this.contentCX, btnY, 'Roll Selected', 200, 40).onClick(() =>
+    this.readyBtn = new Button(this, btnCenterX, btnY, 'Roll Selected', 200, 40).onClick(() =>
       this.onReadyToRoll(),
     );
-    this.rollBtn = new Button(this, this.contentCX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
+    this.rollBtn = new Button(this, btnCenterX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
     this.scoreBtn = new Button(this, hud.scoreBtnX, btnY, 'Score Hand', hud.scoreBtnW, 40).onClick(() =>
       this.onScore(),
     );
     this.rerollBtn = new Button(this, hud.rerollBtnX, btnY, 'Re-roll All', hud.rerollBtnW, 40).onClick(() =>
       this.onReroll(),
     );
-    this.continueBtn = new Button(this, this.contentCX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
+    this.continueBtn = new Button(this, btnCenterX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
 
-    this.sortBtn = new Button(this, this.contentCX, sortY, 'Sort', 80, 28).onClick(() => this.onSortDice());
+    this.sortBtn = new Button(this, hud.sortBtnX, btnY, '', hud.sortBtnW, 40)
+      .setIcon('icon_sort', 20)
+      .onClick(() => this.onSortDice());
     if (!hud.showInstruction) {
       this.scoreBtn.setLabelFontSize(15);
       this.rerollBtn.setLabelFontSize(15);
@@ -637,9 +640,15 @@ export class GameScene extends Scene {
     let next: 'unselected' | 'selected' | 'rerollLocked';
     if (isRightClick) {
       if (gameFacade.boss.isDiceLocked(id)) return;
-      next = state === 'unselected' ? 'rerollLocked' : state === 'rerollLocked' ? 'unselected' : 'rerollLocked';
+      if (state === 'unselected') next = 'rerollLocked';
+      else if (state === 'rerollLocked') next = 'unselected';
+      else next = 'rerollLocked';
+    } else if (state === 'unselected') {
+      next = 'selected';
+    } else if (state === 'rerollLocked') {
+      next = 'selected';
     } else {
-      next = state === 'unselected' ? 'selected' : state === 'rerollLocked' ? 'selected' : 'unselected';
+      next = 'unselected';
     }
 
     this.applyRollDieUiState(sprite, next);
@@ -898,6 +907,23 @@ export class GameScene extends Scene {
     this.readyBtn.setEnabled(drawCount > 0);
   }
 
+  private getRerollButtonText(
+    hasRerolls: boolean,
+    canUseReroll: boolean,
+    rerollCount: number,
+    totalCount: number,
+  ): string {
+    if (!hasRerolls) return 'No Re-rolls';
+    if (!canUseReroll) return 'Day 1: no re-rolls';
+    if (rerollCount === totalCount) return 'Re-roll All';
+    return `Re-roll ${rerollCount}`;
+  }
+
+  private getScoreButtonText(selectedCount: number): string {
+    if (selectedCount > 0) return `Score ${selectedCount}`;
+    return 'Select Dice';
+  }
+
   private updateRollButtons(): void {
     const selectedCount = this.selectedDiceIds.size;
     const pinnedCount = this.rerollLockedDiceIds.size;
@@ -908,34 +934,13 @@ export class GameScene extends Scene {
     const canUseReroll = gameFacade.round.canUseReroll();
 
     this.rerollBtn.setEnabled(rerollCount > 0 && canUseReroll);
-    if (this.showRollInstruction) {
-      this.rerollBtn.setText(
-        !hasRerolls
-          ? 'No Re-rolls'
-          : !canUseReroll
-            ? `Day 1: no re-rolls (${remaining} from Day 2)`
-            : rerollCount === totalCount
-              ? `Re-roll All (${remaining} remaining)`
-              : `Re-roll ${rerollCount} (${remaining} remaining)`,
-      );
-    } else {
-      this.rerollBtn.setText(
-        !hasRerolls
-          ? 'No Re-rolls'
-          : !canUseReroll
-            ? 'Day 1: no re-rolls'
-            : rerollCount === totalCount
-              ? 'Re-roll All'
-              : `Re-roll ${rerollCount}`,
-      );
-    }
+    this.rerollBtn.setText(this.getRerollButtonText(hasRerolls, canUseReroll, rerollCount, totalCount));
+    this.rerollBtn.setCornerBadge(hasRerolls && canUseReroll ? remaining : null);
 
     this.scoreBtn.setEnabled(selectedCount > 0);
-    if (this.showRollInstruction) {
-      this.scoreBtn.setText(selectedCount > 0 ? `Score ${selectedCount} Dice` : 'Select Dice to Score');
-    } else {
-      this.scoreBtn.setText(selectedCount > 0 ? `Score ${selectedCount}` : 'Select Dice');
-    }
+    const daysRemaining = selectRoundConfig().maxDays - selectRoundDay() + 1;
+    this.scoreBtn.setText(this.getScoreButtonText(selectedCount));
+    this.scoreBtn.setCornerBadge(daysRemaining, COLORS.MILES_BG);
 
     const selectedIds = this.rollSprites.filter((s) => this.selectedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     const bossWarning = selectedCount > 0 ? gameFacade.round.getBossScoreWarning(selectedIds) : null;
@@ -976,21 +981,20 @@ export class GameScene extends Scene {
     return 'Click to select for score · Right-click to lock against re-rolls';
   }
 
+  private getSidebarOverlayTitle(phase: PhaseState | null, bossName: string | undefined): string {
+    if (bossName) return bossName;
+    if (phase === 'SELECT') return 'READY TO ROLL';
+    if (phase === 'ROLL') return 'ROLL PHASE';
+    if (phase === 'SCORE') return 'SCORING';
+    if (phase === 'DAY_END') return 'DAY COMPLETE';
+    return 'GAME';
+  }
+
   private updateHUD(): void {
     const phase = selectRoundPhase();
     const boss = selectCurrentBoss(getRunState());
     gameFacade.round.setSidebarOverlay({
-      title: boss
-        ? boss.name
-        : phase === 'SELECT'
-          ? 'READY TO ROLL'
-          : phase === 'ROLL'
-            ? 'ROLL PHASE'
-            : phase === 'SCORE'
-              ? 'SCORING'
-              : phase === 'DAY_END'
-                ? 'DAY COMPLETE'
-                : 'GAME',
+      title: this.getSidebarOverlayTitle(phase, boss?.name),
     });
     this.equipBar.setHintRound(getRoundHintContext());
     this.devPanel.update();

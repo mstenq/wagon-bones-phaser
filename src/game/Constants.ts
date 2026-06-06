@@ -336,16 +336,16 @@ export const UI = {
   GAME_BOTTOM_BTN_MARGIN: 36,
   /** Gap between action buttons and instruction line */
   GAME_INSTRUCTION_ABOVE_BTN: 58,
-  /** Gap between instruction line and sort controls */
-  GAME_SORT_ABOVE_INSTRUCTION: 46,
-  /** Left reserve so roll-phase buttons avoid the loaded-die control */
-  GAME_HUD_LEFT_RESERVE: 100,
-  /** Max horizontal offset of score / reroll buttons from content center (landscape) */
-  GAME_HUD_BTN_SPREAD_MAX: 110,
+  /** Square sort button between score and reroll (matches action button height) */
+  GAME_HUD_SORT_BTN_SIZE: 40,
+  /** Gap between score / sort / reroll buttons */
+  GAME_HUD_BTN_GAP: 10,
   /** Extra lift for portrait HUD above corner pouch / loaded-die */
   GAME_HUD_PORTRAIT_LIFT: 28,
   /** Portrait roll-phase button widths (fit between corner widgets) */
   GAME_HUD_SCORE_BTN_W_PORTRAIT: 104,
+  /** Landscape reroll button — short label + corner badge for remaining count */
+  GAME_HUD_REROLL_BTN_W: 140,
   GAME_HUD_REROLL_BTN_W_PORTRAIT: 104,
   GAME_HUD_BTN_GAP_PORTRAIT: 10,
   /** Dice row Y ratio on portrait (landscape uses ROLL_Y_RATIO) */

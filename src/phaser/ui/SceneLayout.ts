@@ -282,15 +282,18 @@ export function computeLayoutMetricsFromScene(scene: Scene): LayoutMetrics {
 /** Bottom HUD positions for GameScene — keeps corner pouch / loaded-die clear. */
 export interface GameHudLayout {
   btnY: number;
-  sortY: number;
+  /** Center X for solo action buttons (roll / continue) inside the corner-widget band */
+  btnCenterX: number;
   instructionY: number;
   showInstruction: boolean;
   rollY: number;
   scoreY: number;
   bottomReserve: number;
   scoreBtnX: number;
+  sortBtnX: number;
   rerollBtnX: number;
   scoreBtnW: number;
+  sortBtnW: number;
   rerollBtnW: number;
 }
 
@@ -306,41 +309,51 @@ export function computeScoreRowY(height: number, rollY: number, portrait: boolea
   return rollY - gap;
 }
 
-function computePortraitRollButtonPositions(
+function computeRollPhaseButtonBand(
   width: number,
-  scoreW: number,
-  rerollW: number,
-): { scoreBtnX: number; rerollBtnX: number } {
-  const rightReserve = UI.POUCH_MARGIN + UI.POUCH_SIZE;
-  const leftEdge = UI.GAME_HUD_LEFT_RESERVE;
-  const rightEdge = width - rightReserve;
-  const available = rightEdge - leftEdge;
-  const gap = UI.GAME_HUD_BTN_GAP_PORTRAIT;
-  const pairW = scoreW + gap + rerollW;
-
-  if (pairW <= available) {
-    const startX = leftEdge + (available - pairW) / 2;
-    return {
-      scoreBtnX: startX + scoreW / 2,
-      rerollBtnX: startX + scoreW + gap + rerollW / 2,
-    };
+  portrait: boolean,
+  metrics: Pick<LayoutMetrics, 'contentX' | 'contentCX' | 'pouchMargin'>,
+): { left: number; right: number; centerX: number } {
+  if (portrait) {
+    // Buttons sit above corner widgets — use content padding, not loaded-die width.
+    const left = metrics.contentX;
+    const right = width - metrics.contentX;
+    return { left, right, centerX: (left + right) / 2 };
   }
+  const left = metrics.contentX;
+  const right = width - metrics.pouchMargin - UI.POUCH_SIZE;
+  return { left, right, centerX: metrics.contentCX };
+}
 
-  const scoreBtnX = leftEdge + scoreW / 2;
-  const rerollBtnX = rightEdge - rerollW / 2;
-  return { scoreBtnX, rerollBtnX };
+function computeRollPhaseButtonPositions(
+  left: number,
+  right: number,
+  centerX: number,
+  scoreW: number,
+  sortW: number,
+  rerollW: number,
+  gap: number,
+): { scoreBtnX: number; sortBtnX: number; rerollBtnX: number } {
+  const trioW = scoreW + gap + sortW + gap + rerollW;
+  const startX = Math.max(left, Math.min(right - trioW, centerX - trioW / 2));
+
+  return {
+    scoreBtnX: startX + scoreW / 2,
+    sortBtnX: startX + scoreW + gap + sortW / 2,
+    rerollBtnX: startX + scoreW + gap + sortW + gap + rerollW / 2,
+  };
 }
 
 export function computeGameHudLayout(
   width: number,
   height: number,
-  contentCX: number,
+  _contentCX: number,
   contentWidth: number,
 ): GameHudLayout {
   const portrait = isPortraitLayout(width, height);
-  const cornerH = UI.POUCH_MARGIN + UI.POUCH_SIZE;
+  const metrics = computeLayoutMetrics(width, height);
+  const cornerH = metrics.pouchMargin + UI.POUCH_SIZE;
   const btnHalfH = 20;
-  const sortHalfH = 14;
 
   let btnY: number;
   if (portrait) {
@@ -351,12 +364,6 @@ export function computeGameHudLayout(
 
   const showInstruction = !portrait;
   const instructionY = btnY - UI.GAME_INSTRUCTION_ABOVE_BTN;
-  let sortY: number;
-  if (showInstruction) {
-    sortY = instructionY - UI.GAME_SORT_ABOVE_INSTRUCTION;
-  } else {
-    sortY = btnY - btnHalfH - sortHalfH - 16;
-  }
 
   const rollYRatio = portrait ? UI.GAME_ROLL_Y_RATIO_PORTRAIT : UI.ROLL_Y_RATIO;
   const diceYOffset = portrait ? UI.GAME_PORTRAIT_DICE_Y_OFFSET : 0;
@@ -364,37 +371,38 @@ export function computeGameHudLayout(
   const scoreY = computeScoreRowY(height, rollY, portrait, contentWidth);
 
   const scoreBtnW = portrait ? UI.GAME_HUD_SCORE_BTN_W_PORTRAIT : 160;
-  const rerollBtnW = portrait ? UI.GAME_HUD_REROLL_BTN_W_PORTRAIT : 200;
+  const sortBtnW = UI.GAME_HUD_SORT_BTN_SIZE;
+  const rerollBtnW = portrait ? UI.GAME_HUD_REROLL_BTN_W_PORTRAIT : UI.GAME_HUD_REROLL_BTN_W;
+  const btnGap = portrait ? UI.GAME_HUD_BTN_GAP_PORTRAIT : UI.GAME_HUD_BTN_GAP;
+  const { left, right, centerX } = computeRollPhaseButtonBand(width, portrait, metrics);
+  const btnCenterX = centerX;
 
-  let scoreBtnX: number;
-  let rerollBtnX: number;
-  if (portrait) {
-    ({ scoreBtnX, rerollBtnX } = computePortraitRollButtonPositions(width, scoreBtnW, rerollBtnW));
-  } else {
-    const rightReserve = UI.POUCH_MARGIN + UI.POUCH_SIZE;
-    const spread = Math.min(
-      UI.GAME_HUD_BTN_SPREAD_MAX,
-      contentCX - UI.GAME_HUD_LEFT_RESERVE - scoreBtnW / 2,
-      width - rightReserve - contentCX - rerollBtnW / 2,
-    );
-    scoreBtnX = contentCX - spread;
-    rerollBtnX = contentCX + spread;
-  }
+  const { scoreBtnX, sortBtnX, rerollBtnX } = computeRollPhaseButtonPositions(
+    left,
+    right,
+    centerX,
+    scoreBtnW,
+    sortBtnW,
+    rerollBtnW,
+    btnGap,
+  );
 
-  const hudTop = sortY - sortHalfH;
+  const hudTop = btnY - btnHalfH;
   const bottomReserve = height - hudTop + 16;
 
   return {
     btnY,
-    sortY,
+    btnCenterX,
     instructionY,
     showInstruction,
     rollY,
     scoreY,
     bottomReserve,
     scoreBtnX,
+    sortBtnX,
     rerollBtnX,
     scoreBtnW,
+    sortBtnW,
     rerollBtnW,
   };
 }

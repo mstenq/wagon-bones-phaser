@@ -48,12 +48,18 @@ const STACK_EMBLEM_R = 15;
 const STACK_DIVIDER_GAP = 6;
 /** Gap below divider before the score/reward row. */
 const STACK_STATS_GAP = 8;
+/** Stats block: label line + value line. */
+const STACK_STATS_ROW_H = 26;
 /** Portrait stacked row heights — per round, not derived from viewport. */
 const STACKED_PANEL_H_REGULAR = 110;
 const STACKED_PANEL_H_REGULAR_ACTIVE = 132;
+/** Complete/skipped regular rounds — no action row or bottom preview tag slot. */
+const STACKED_PANEL_H_REGULAR_DONE =
+  STACK_PAD + 2 + 13 + 18 + STACK_DIVIDER_GAP + STACK_STATS_GAP + STACK_STATS_ROW_H + STACK_PAD;
 const STACKED_PANEL_H_BOSS = 180;
-/** Stats block: label line + value line. */
-const STACK_STATS_ROW_H = 26;
+/** Nudge top-right emblem / boss portrait toward the card edge. */
+const STACK_TOP_ART_X_OFFSET = 5;
+const STACK_TOP_ART_Y_OFFSET = -5;
 /** Boss portrait on round-select boss column (~2× former circle diameter). */
 const BOSS_PORTRAIT_SIZE = { compact: 64, normal: 96, stacked: 44 } as const;
 /** Extra space below round title before boss portrait (avoids overlapping heading). */
@@ -144,9 +150,16 @@ export interface LegRoundPanelsConfig {
   onTagHoverEnd?: () => void;
 }
 
-function stackedPanelHeight(round: number, currentRound: number, showActions: boolean): number {
+function stackedPanelHeight(
+  round: number,
+  currentRound: number,
+  showActions: boolean,
+  skippedRoundsThisLeg: number[] = [],
+): number {
   if (round === GAMEPLAY.ROUNDS_PER_LEG) return STACKED_PANEL_H_BOSS;
   if (showActions && round === currentRound) return STACKED_PANEL_H_REGULAR_ACTIVE;
+  const state = getRoundColumnState(round, currentRound, skippedRoundsThisLeg);
+  if (state === 'complete' || state === 'skipped') return STACKED_PANEL_H_REGULAR_DONE;
   return STACKED_PANEL_H_REGULAR;
 }
 
@@ -159,6 +172,7 @@ export function computeLegRoundPanelGeometry(
     layout?: LegRoundPanelLayout;
     currentRound?: number;
     showActions?: boolean;
+    skippedRoundsThisLeg?: number[];
   } = {},
 ): LegRoundPanelGeometry {
   const layout = options.layout ?? 'columns';
@@ -168,8 +182,9 @@ export function computeLegRoundPanelGeometry(
   if (layout === 'rows') {
     const currentRound = options.currentRound ?? 1;
     const showActions = options.showActions ?? false;
+    const skippedRoundsThisLeg = options.skippedRoundsThisLeg ?? [];
     const panelHeights = Array.from({ length: GAMEPLAY.ROUNDS_PER_LEG }, (_, i) =>
-      stackedPanelHeight(i + 1, currentRound, showActions),
+      stackedPanelHeight(i + 1, currentRound, showActions, skippedRoundsThisLeg),
     );
     const totalStackH = panelHeights.reduce((sum, h) => sum + h, 0) + gap * (GAMEPLAY.ROUNDS_PER_LEG - 1);
     const startY = bounds.y + Math.max(0, Math.floor((bounds.height - totalStackH) / 2));
@@ -213,6 +228,7 @@ export function createLegRoundPanels(scene: Scene, config: LegRoundPanelsConfig)
     layout: config.layout,
     currentRound: config.currentRound,
     showActions: config.showActions,
+    skippedRoundsThisLeg: config.skippedRoundsThisLeg,
   });
   const panels: RoundInfoPanel[] = [];
 
@@ -554,7 +570,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     const target = targetMilesForRound(config.leg, round, config.permitScoreReduction, config.difficulty);
     const showPreviewTag = !hasActionRow && !isBoss && !!config.skipPreviewTag;
     const hasStatsRowTag = showPreviewTag || (isSkipped && !!config.skippedTag);
-    const scoreX = hasStatsRowTag ? STACK_PAD + ROW_TAG_SIZE + 20 : STACK_PAD;
+    const scoreX = hasStatsRowTag ? STACK_PAD + ROW_TAG_SIZE + 10 : STACK_PAD;
     this.addLeftLabel(scoreX, statsLabelY, 'Score at least', {
       fontSize: '10px',
       color: TEXT_COLORS.SECONDARY,
@@ -593,8 +609,8 @@ export class RoundInfoPanel extends GameObjects.Container {
   }
 
   private addStackedTopRightArt(scene: Scene, width: number, round: number, isBoss: boolean, leg: number): void {
-    const artCx = width - STACK_PAD - STACK_ART / 2;
-    const artCy = STACK_PAD + STACK_ART / 2;
+    const artCx = width - STACK_PAD - STACK_ART / 2 + STACK_TOP_ART_X_OFFSET;
+    const artCy = STACK_PAD + STACK_ART / 2 + STACK_TOP_ART_Y_OFFSET;
 
     if (isBoss) {
       const boss = selectBossForLeg(getRunState(), leg);
@@ -855,7 +871,7 @@ export class RoundInfoPanel extends GameObjects.Container {
 
   private addRoundTagDisplay(tag: TrailTagDef, config: RoundInfoConfig, tagY: number, compact: boolean): void {
     const size = compact ? 28 : TAG_SIZE;
-    const tagX = 16;
+    const tagX = 10;
     this.addTagBadge(tagX, tagY, tag, size, config);
   }
 
