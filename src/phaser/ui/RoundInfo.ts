@@ -171,8 +171,7 @@ export function computeLegRoundPanelGeometry(
     const panelHeights = Array.from({ length: GAMEPLAY.ROUNDS_PER_LEG }, (_, i) =>
       stackedPanelHeight(i + 1, currentRound, showActions),
     );
-    const totalStackH =
-      panelHeights.reduce((sum, h) => sum + h, 0) + gap * (GAMEPLAY.ROUNDS_PER_LEG - 1);
+    const totalStackH = panelHeights.reduce((sum, h) => sum + h, 0) + gap * (GAMEPLAY.ROUNDS_PER_LEG - 1);
     const startY = bounds.y + Math.max(0, Math.floor((bounds.height - totalStackH) / 2));
     const panels: LegRoundPanelSlot[] = [];
     let y = startY;

@@ -20,7 +20,7 @@ export class PlayAreaDiceController {
   private sprites: DiceSprite[] = [];
   private rowY = 0;
 
-  constructor(private readonly deps: PlayAreaDiceControllerDeps) { }
+  constructor(private readonly deps: PlayAreaDiceControllerDeps) {}
 
   getSprites(): DiceSprite[] {
     return this.sprites;

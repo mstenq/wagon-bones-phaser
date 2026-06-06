@@ -8,6 +8,7 @@ import { getModifierTooltipLines } from '../../../game/EquipmentModifierDisplay'
 import type { CardData, ItemCardLayout } from './itemCardTypes';
 import { RARITY_LABELS, RARITY_LABEL_COLORS } from './itemCardTypes';
 import { getTooltipMetrics, tooltipSegmentColors } from './itemCardHintStyles';
+import { expandSegmentRowToTokens, mergeAdjacentSegments } from './itemCardTooltipFlow';
 
 const TOOLTIP_PAD = UI.CARD_TOOLTIP_PAD;
 const TOOLTIP_BG = COLORS.TOOLTIP_BG;
@@ -159,27 +160,28 @@ export function measureSegmentRow(
 function splitSegmentRowIntoLines(scene: Scene, row: HintSegment[], maxContentWidth: number): HintSegment[][] {
   if (row.length === 0) return [];
 
+  const tokens = expandSegmentRowToTokens(row);
   const lines: HintSegment[][] = [];
   let currentLine: HintSegment[] = [];
   let currentWidth = 0;
 
-  for (const seg of row) {
-    const measurement = measureSingleSegment(scene, seg);
+  for (const token of tokens) {
+    const measurement = measureSingleSegment(scene, token);
     const gap = currentLine.length > 0 ? SEG_GAP : 0;
 
     if (currentLine.length > 0 && currentWidth + gap + measurement.w > maxContentWidth) {
-      lines.push(currentLine);
-      currentLine = [seg];
+      lines.push(mergeAdjacentSegments(currentLine));
+      currentLine = [token];
       currentWidth = measurement.w;
       continue;
     }
 
-    currentLine.push(seg);
+    currentLine.push(token);
     currentWidth += gap + measurement.w;
   }
 
   if (currentLine.length > 0) {
-    lines.push(currentLine);
+    lines.push(mergeAdjacentSegments(currentLine));
   }
 
   return lines;

@@ -372,10 +372,7 @@ export class ProfessionSelectScene extends Scene {
     };
   }
 
-  private drawProfessionCardBg(
-    cardBg: Phaser.GameObjects.Graphics,
-    style: 'default' | 'hover' | 'selected',
-  ): void {
+  private drawProfessionCardBg(cardBg: Phaser.GameObjects.Graphics, style: 'default' | 'hover' | 'selected'): void {
     const { cardW, cardH } = this.gridLayout;
     const halfW = cardW / 2;
     const halfH = cardH / 2;
