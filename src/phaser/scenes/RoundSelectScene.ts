@@ -7,7 +7,7 @@ import { runStore } from '../../game/store/runStore';
 import { bindStore } from '../store/subscribe';
 import { TEXT_COLORS, FONTS, GAMEPLAY } from '../../game/Constants';
 import type { LayoutResult } from '../ui/SceneLayout';
-import { createLegRoundPanels } from '../ui/RoundInfo';
+import { createLegRoundPanels, computeLegRoundPanelGeometry } from '../ui/RoundInfo';
 import { TagTooltip } from '../ui/TagTooltip';
 import { createRunSceneShell } from './runSceneShell';
 import { gameFacade } from '../../game/facade';
@@ -80,29 +80,43 @@ export class RoundSelectScene extends Scene {
     this.scene.restart();
   }
 
+  private getRoundPanelLayout() {
+    const { contentCX, contentW, contentTop, contentBottom } = this.layout;
+    const isPortrait = this.layout.layoutMode === 'topbar';
+    const titleY = contentTop + (isPortrait ? 14 : 28);
+    const panelsY = titleY + (isPortrait ? 28 : 44);
+    const panelsH = contentBottom - panelsY - (isPortrait ? 8 : 14);
+    return {
+      isPortrait,
+      titleY,
+      bounds: {
+        x: contentCX - contentW / 2,
+        y: panelsY,
+        width: contentW,
+        height: panelsH,
+      },
+      layout: isPortrait ? ('rows' as const) : ('columns' as const),
+    };
+  }
+
   private buildRoundColumns(): void {
     const run = getRunState();
-    const { contentCX, contentW, contentTop, contentBottom, contentX } = this.layout;
-    const titleY = contentTop + 28;
+    const { contentCX, contentX, contentW, contentTop } = this.layout;
+    const panelLayout = this.getRoundPanelLayout();
+    const titleFontSize = panelLayout.isPortrait ? `${Math.max(18, Math.floor(22 * this.layout.uiScale))}px` : '30px';
+
     this.add
-      .text(contentCX, titleY, 'Choose Your Next Round', {
+      .text(contentCX, panelLayout.titleY, 'Choose Your Next Round', {
         fontFamily: FONTS.HEADING,
-        fontSize: '30px',
+        fontSize: titleFontSize,
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0.5)
       .setDepth(COL_DEPTH);
 
-    const colY = titleY + 44;
-    const colH = contentBottom - colY - 14;
-
     createLegRoundPanels(this, {
-      bounds: {
-        x: contentCX - contentW / 2,
-        y: colY,
-        width: contentW,
-        height: colH,
-      },
+      bounds: panelLayout.bounds,
+      layout: panelLayout.layout,
       currentRound: run.round,
       leg: run.leg,
       difficulty: run.difficulty,
@@ -223,16 +237,13 @@ export class RoundSelectScene extends Scene {
   }
 
   private getRoundColumnCenter(round: number): { x: number; y: number } {
-    const { contentCX, contentW, contentTop, contentBottom } = this.layout;
-    const gap = 20;
-    const colW = Math.min(220, (contentW - gap * 2) / 3);
-    const totalW = colW * 3 + gap * 2;
-    const startX = contentCX - contentW / 2 + (contentW - totalW) / 2;
-    const colX = startX + (round - 1) * (colW + gap);
-    const titleY = contentTop + 28;
-    const colY = titleY + 44;
-    const colH = contentBottom - colY - 14;
-    return { x: colX + colW / 2, y: colY + colH / 2 };
+    const panelLayout = this.getRoundPanelLayout();
+    const geometry = computeLegRoundPanelGeometry(panelLayout.bounds, { layout: panelLayout.layout });
+    const slot = geometry.panels.find((panel) => panel.round === round);
+    if (!slot) {
+      return { x: this.layout.contentCX, y: panelLayout.bounds.y + panelLayout.bounds.height / 2 };
+    }
+    return { x: slot.x + slot.width / 2, y: slot.y + slot.height / 2 };
   }
 
   private showImmediateResult(result: ImmediateTagResult): void {

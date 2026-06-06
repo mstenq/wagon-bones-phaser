@@ -1,5 +1,6 @@
 // ─── ProfessionSelectScene ───
-// Split view: compact profession grid (left) + detail panel (right).
+// Landscape: split view — profession grid (left) + detail panel (right).
+// Portrait: full-width grid; tap opens detail overlay with bottom action bar.
 
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
@@ -12,6 +13,9 @@ import { performLoadGame } from '../SaveLoadIO';
 import { getDifficultyBeatColor, getDifficultyBeatStrokeColor, getHighestDifficultyBeaten } from '../../game/UserStats';
 import { DiceSprite } from '../ui/DiceSprite';
 import { getDiceGroupDisplayLabel, groupDiceByVisualIdentity } from '../ui/diceGrouping';
+import { isPortraitLayout } from '../ui/SceneLayout';
+import { wireTapOnlySession } from '../ui/pointerDragSession';
+import { getPointerDragDistance } from '../ui/pointerDragTrack';
 
 const GRID_CARD_W = 148;
 const GRID_CARD_H = 148;
@@ -25,23 +29,60 @@ const DICE_ROW_HEIGHT = 82;
 const LEFT_HEADER_TOP = 36;
 const LEFT_HEADER_SUB = 70;
 const GRID_TOP_MARGIN = 100;
+const GRID_TOP_MARGIN_PORTRAIT = 92;
 const DETAIL_TOP_PAD = 12;
+const PORTRAIT_BOTTOM_BAR_H = 72;
+const PORTRAIT_GRID_PAD = 12;
+const PORTRAIT_GRID_GAP = 10;
+const PORTRAIT_DETAIL_IMAGE_SIZE = 140;
+const PORTRAIT_DETAIL_TOP_Y = 24;
+const PROF_NAV_BTN_SIZE = 44;
+const PROF_NAV_GAP = 10;
+
+type PortraitViewMode = 'grid' | 'detail';
+
+type GridLayoutMetrics = {
+  panelPad: number;
+  cols: number;
+  cardW: number;
+  cardH: number;
+  cardGap: number;
+  imageSize: number;
+  titleFontSize: string;
+  topMargin: number;
+};
 
 export class ProfessionSelectScene extends Scene {
   private selectedId: string | null = null;
   private cards: Phaser.GameObjects.Container[] = [];
   private confirmBtn: Button;
+  private backBtn: Button | null = null;
+  private prevProfBtn: Button | null = null;
+  private nextProfBtn: Button | null = null;
   private scrollContainer: Phaser.GameObjects.Container;
   private detailContainer: Phaser.GameObjects.Container;
   private contentHeight = 0;
   private gridOffsetY = 0;
-  private isDragging = false;
+  private gridScrollPending = false;
+  private gridScrollDragging = false;
+  private gridScrollPointerId: number | null = null;
+  private gridScrollStartX = 0;
+  private gridScrollStartY = 0;
   private dragStartY = 0;
   private scrollStartY = 0;
   private leftPanelW = 0;
   private rightPanelX = 0;
   private rightPanelW = 0;
   private diceSprites: DiceSprite[] = [];
+  private isPortrait = false;
+  private portraitViewMode: PortraitViewMode = 'grid';
+  private gridChrome: Array<{ setVisible(visible: boolean): unknown }> = [];
+  private divider: Phaser.GameObjects.Graphics | null = null;
+  private loadBtn: Button | null = null;
+  private sceneHeight = 0;
+  private detailScrollMinY = DETAIL_TOP_PAD;
+  private isDetailDragging = false;
+  private gridLayout: GridLayoutMetrics;
 
   constructor() {
     super('ProfessionSelect');
@@ -49,9 +90,19 @@ export class ProfessionSelectScene extends Scene {
 
   create() {
     const { width, height } = this.scale;
-    this.leftPanelW = Math.floor(width * (2 / 3));
-    this.rightPanelX = this.leftPanelW;
-    this.rightPanelW = width - this.leftPanelW;
+    this.sceneHeight = height;
+    this.isPortrait = isPortraitLayout(width, height);
+    this.portraitViewMode = 'grid';
+
+    if (this.isPortrait) {
+      this.leftPanelW = width;
+      this.rightPanelX = 0;
+      this.rightPanelW = width;
+    } else {
+      this.leftPanelW = Math.floor(width * (2 / 3));
+      this.rightPanelX = this.leftPanelW;
+      this.rightPanelW = width - this.leftPanelW;
+    }
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
@@ -64,11 +115,13 @@ export class ProfessionSelectScene extends Scene {
     bg.fillRect(0, 0, width, height);
 
     const leftCenterX = this.leftPanelW / 2;
+    const headerTitleSize = this.isPortrait ? '28px' : '36px';
+    const headerSubSize = this.isPortrait ? '13px' : '15px';
 
-    this.add
+    const headerTitle = this.add
       .text(leftCenterX, LEFT_HEADER_TOP, 'Choose Your Profession', {
         fontFamily: FONTS.HEADING,
-        fontSize: '36px',
+        fontSize: headerTitleSize,
         color: TEXT_COLORS.GOLD,
         stroke: '#000000',
         strokeThickness: 4,
@@ -76,31 +129,46 @@ export class ProfessionSelectScene extends Scene {
       })
       .setOrigin(0.5)
       .setDepth(60);
+    this.gridChrome.push(headerTitle);
 
-    this.add
+    const headerSub = this.add
       .text(leftCenterX, LEFT_HEADER_SUB, 'Each profession grants unique bonuses for the journey ahead', {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '15px',
+        fontSize: headerSubSize,
         color: TEXT_COLORS.MUTED,
         align: 'center',
-        wordWrap: { width: this.leftPanelW - 32 },
+        wordWrap: { width: this.leftPanelW - (this.isPortrait ? 24 : 32) },
       })
       .setOrigin(0.5)
       .setDepth(60);
+    this.gridChrome.push(headerSub);
 
-    const divider = this.add.graphics();
-    divider.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 0.6);
-    divider.lineBetween(this.rightPanelX, 0, this.rightPanelX, height - 16);
-    divider.setDepth(55);
+    if (!this.isPortrait) {
+      this.divider = this.add.graphics();
+      this.divider.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 0.6);
+      this.divider.lineBetween(this.rightPanelX, 0, this.rightPanelX, height - 16);
+      this.divider.setDepth(55);
+    }
 
-    const loadBtn = new Button(this, 120, height - 40, 'Load Game', 160, 48);
-    loadBtn.setDepth(100);
-    loadBtn.onClick(() => {
+    this.loadBtn = new Button(this, 120, height - 40, 'Load Game', 160, 48);
+    this.loadBtn.setDepth(100);
+    this.loadBtn.onClick(() => {
       void performLoadGame(this, { confirmOverwrite: false });
     });
+    this.gridChrome.push(this.loadBtn);
 
-    const confirmX = this.rightPanelX + this.rightPanelW / 2;
-    this.confirmBtn = new Button(this, confirmX, height - 40, 'Select Difficulty', 220, 48);
+    const btnY = height - PORTRAIT_BOTTOM_BAR_H / 2;
+    const backW = 120;
+    const confirmW = 200;
+    const btnGap = 12;
+    const actionBarW = backW + btnGap + confirmW;
+    const actionBarStartX = (width - actionBarW) / 2;
+
+    const confirmX = this.isPortrait
+      ? actionBarStartX + backW + btnGap + confirmW / 2
+      : this.rightPanelX + this.rightPanelW / 2;
+    const confirmY = this.isPortrait ? btnY : height - 40;
+    this.confirmBtn = new Button(this, confirmX, confirmY, 'Select Difficulty', confirmW, 48);
     this.confirmBtn.setEnabled(false);
     this.confirmBtn.setVisible(false);
     this.confirmBtn.setDepth(100);
@@ -111,26 +179,50 @@ export class ProfessionSelectScene extends Scene {
       this.scene.start('DifficultySelect', {});
     });
 
+    if (this.isPortrait) {
+      const backX = actionBarStartX + backW / 2;
+      this.backBtn = new Button(this, backX, btnY, 'Back', backW, 48);
+      this.backBtn.setDepth(100);
+      this.backBtn.setVisible(false);
+      this.backBtn.onClick(() => this.showPortraitGrid());
+
+      const navY = DETAIL_TOP_PAD + PORTRAIT_DETAIL_TOP_Y + PORTRAIT_DETAIL_IMAGE_SIZE / 2;
+      const navOffsetX = PORTRAIT_DETAIL_IMAGE_SIZE / 2 + PROF_NAV_GAP + PROF_NAV_BTN_SIZE / 2;
+      this.prevProfBtn = new Button(this, width / 2 - navOffsetX, navY, '◀', PROF_NAV_BTN_SIZE, PROF_NAV_BTN_SIZE);
+      this.nextProfBtn = new Button(this, width / 2 + navOffsetX, navY, '▶', PROF_NAV_BTN_SIZE, PROF_NAV_BTN_SIZE);
+      for (const navBtn of [this.prevProfBtn, this.nextProfBtn]) {
+        navBtn.setDepth(101);
+        navBtn.setVisible(false);
+        navBtn.setLabelFontSize('22px');
+      }
+      this.prevProfBtn.onClick(() => this.navigateProfession(-1));
+      this.nextProfBtn.onClick(() => this.navigateProfession(1));
+    }
+
     this.detailContainer = this.add.container(this.rightPanelX, DETAIL_TOP_PAD);
     this.detailContainer.setDepth(70);
+    if (this.isPortrait) {
+      this.detailContainer.setVisible(false);
+    }
 
     this.buildGrid(height);
-    this.refreshDetailPanel();
+    if (!this.isPortrait) {
+      this.refreshDetailPanel();
+    }
 
     EventBus.emit(Events.SCENE_READY, this);
   }
 
   private buildGrid(height: number): void {
     const profs = professionsData;
-    const panelPad = 20;
+    this.gridLayout = this.computeGridLayout();
+    const { panelPad, cols, cardW, cardH, cardGap, topMargin } = this.gridLayout;
     const usableW = this.leftPanelW - panelPad * 2;
-    const cols = Math.max(3, Math.floor((usableW + GRID_CARD_GAP) / (GRID_CARD_W + GRID_CARD_GAP)));
     const rows = Math.ceil(profs.length / cols);
 
-    const totalGridW = cols * GRID_CARD_W + (cols - 1) * GRID_CARD_GAP;
-    const startX = panelPad + GRID_CARD_W / 2 + (usableW - totalGridW) / 2;
-    const topMargin = GRID_TOP_MARGIN;
-    this.contentHeight = rows * GRID_CARD_H + (rows - 1) * GRID_CARD_GAP;
+    const totalGridW = cols * cardW + (cols - 1) * cardGap;
+    const startX = panelPad + cardW / 2 + (usableW - totalGridW) / 2;
+    this.contentHeight = rows * cardH + (rows - 1) * cardGap;
 
     const scrollAreaTop = topMargin;
     const scrollAreaBottom = height - 80;
@@ -147,8 +239,8 @@ export class ProfessionSelectScene extends Scene {
     profs.forEach((prof, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const cx = startX + col * (GRID_CARD_W + GRID_CARD_GAP);
-      const cy = GRID_CARD_H / 2 + row * (GRID_CARD_H + GRID_CARD_GAP);
+      const cx = startX + col * (cardW + cardGap);
+      const cy = cardH / 2 + row * (cardH + cardGap);
       const card = this.createProfessionCard(prof, cx, cy);
       this.scrollContainer.add(card);
       this.cards.push(card);
@@ -158,37 +250,81 @@ export class ProfessionSelectScene extends Scene {
     clipTop.fillStyle(COLORS.BG_PRIMARY, 1);
     clipTop.fillRect(0, 0, this.leftPanelW, scrollAreaTop);
     clipTop.setDepth(50);
+    this.gridChrome.push(clipTop);
 
     const clipBottom = this.add.graphics();
     clipBottom.fillStyle(COLORS.BG_PRIMARY, 1);
     clipBottom.fillRect(0, scrollAreaBottom, this.leftPanelW, height - scrollAreaBottom);
     clipBottom.setDepth(50);
+    this.gridChrome.push(clipBottom);
+    this.gridChrome.push(this.scrollContainer);
 
     if (this.contentHeight > scrollAreaH) {
       this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gos: unknown[], _dx: number, dy: number) => {
-        if (_pointer.x > this.leftPanelW) return;
+        if (!this.isGridScrollActive()) return;
         this.doScroll(dy, scrollAreaTop, scrollAreaH);
       });
+    }
+
+    if (this.isPortrait || this.contentHeight > scrollAreaH) {
+      const resetGridScroll = (pointer: Phaser.Input.Pointer) => {
+        if (this.gridScrollPointerId !== pointer.id) return;
+        this.gridScrollPending = false;
+        this.gridScrollDragging = false;
+        this.gridScrollPointerId = null;
+      };
 
       this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        if (pointer.x > this.leftPanelW) return;
-        this.isDragging = true;
+        if (this.isPortrait && this.portraitViewMode === 'detail') {
+          if (pointer.y >= this.sceneHeight - PORTRAIT_BOTTOM_BAR_H) return;
+          this.isDetailDragging = true;
+          this.dragStartY = pointer.y;
+          this.scrollStartY = this.detailContainer.y;
+          return;
+        }
+        if (!this.isGridScrollActive()) return;
+        if (pointer.y < scrollAreaTop || pointer.y > scrollAreaBottom) return;
+
+        this.gridScrollPending = true;
+        this.gridScrollDragging = false;
+        this.gridScrollPointerId = pointer.id;
+        this.gridScrollStartX = pointer.worldX;
+        this.gridScrollStartY = pointer.worldY;
         this.dragStartY = pointer.y;
         this.scrollStartY = this.scrollContainer.y;
       });
       this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-        if (!this.isDragging) return;
+        if (this.isDetailDragging) {
+          const dy = pointer.y - this.dragStartY;
+          this.detailContainer.y = Phaser.Math.Clamp(this.scrollStartY + dy, this.detailScrollMinY, DETAIL_TOP_PAD);
+          this.repositionDiceSprites();
+          return;
+        }
+
+        if (this.gridScrollPointerId !== pointer.id) return;
+        if (!this.gridScrollPending && !this.gridScrollDragging) return;
+
+        if (!this.gridScrollDragging) {
+          const dx = pointer.worldX - this.gridScrollStartX;
+          const dy = pointer.worldY - this.gridScrollStartY;
+          if (Math.hypot(dx, dy) < getPointerDragDistance(pointer)) return;
+          this.gridScrollDragging = true;
+          this.gridScrollPending = false;
+        }
+
         const dy = pointer.y - this.dragStartY;
-        const newY = this.scrollStartY + dy;
         this.scrollContainer.y = Phaser.Math.Clamp(
-          newY,
+          this.scrollStartY + dy,
           scrollAreaTop + scrollAreaH - this.contentHeight,
           scrollAreaTop,
         );
       });
-      this.input.on('pointerup', () => {
-        this.isDragging = false;
-      });
+      const onPointerEnd = (pointer: Phaser.Input.Pointer) => {
+        resetGridScroll(pointer);
+        this.isDetailDragging = false;
+      };
+      this.input.on('pointerup', onPointerEnd);
+      this.input.on('pointerupoutside', onPointerEnd);
     }
   }
 
@@ -197,16 +333,79 @@ export class ProfessionSelectScene extends Scene {
     this.scrollContainer.y = Phaser.Math.Clamp(newY, scrollAreaTop + scrollAreaH - this.contentHeight, scrollAreaTop);
   }
 
+  private computeGridLayout(): GridLayoutMetrics {
+    if (!this.isPortrait) {
+      const panelPad = 20;
+      const usableW = this.leftPanelW - panelPad * 2;
+      const cols = Math.max(3, Math.floor((usableW + GRID_CARD_GAP) / (GRID_CARD_W + GRID_CARD_GAP)));
+      return {
+        panelPad,
+        cols,
+        cardW: GRID_CARD_W,
+        cardH: GRID_CARD_H,
+        cardGap: GRID_CARD_GAP,
+        imageSize: GRID_IMAGE_SIZE,
+        titleFontSize: '15px',
+        topMargin: GRID_TOP_MARGIN,
+      };
+    }
+
+    const panelPad = PORTRAIT_GRID_PAD;
+    const cardGap = PORTRAIT_GRID_GAP;
+    const usableW = this.leftPanelW - panelPad * 2;
+    const threeColWidth = 3 * GRID_CARD_W + 2 * cardGap;
+    const cols = usableW >= threeColWidth ? 3 : 2;
+    const cardW = Math.floor((usableW - (cols - 1) * cardGap) / cols);
+    const cardH = cardW;
+    const imageSize = Math.floor(cardW * (GRID_IMAGE_SIZE / GRID_CARD_W));
+    const titleFontSize = cardW < 130 ? '13px' : '14px';
+
+    return {
+      panelPad,
+      cols,
+      cardW,
+      cardH,
+      cardGap,
+      imageSize,
+      titleFontSize,
+      topMargin: GRID_TOP_MARGIN_PORTRAIT,
+    };
+  }
+
+  private drawProfessionCardBg(
+    cardBg: Phaser.GameObjects.Graphics,
+    style: 'default' | 'hover' | 'selected',
+  ): void {
+    const { cardW, cardH } = this.gridLayout;
+    const halfW = cardW / 2;
+    const halfH = cardH / 2;
+
+    cardBg.clear();
+    if (style === 'selected') {
+      cardBg.fillStyle(0x2a3a2a, 1);
+      cardBg.fillRoundedRect(-halfW, -halfH, cardW, cardH, 10);
+      cardBg.lineStyle(3, COLORS.GOLD, 1);
+      cardBg.strokeRoundedRect(-halfW, -halfH, cardW, cardH, 10);
+      return;
+    }
+
+    cardBg.fillStyle(COLORS.BG_CARD, 1);
+    cardBg.fillRoundedRect(-halfW, -halfH, cardW, cardH, 10);
+    const borderColor = style === 'hover' ? COLORS.BTN_HOVER : COLORS.SIDEBAR_SECTION_BORDER;
+    const borderWidth = style === 'hover' ? 2 : 2;
+    cardBg.lineStyle(borderWidth, borderColor, 1);
+    cardBg.strokeRoundedRect(-halfW, -halfH, cardW, cardH, 10);
+  }
+
   private createProfessionCard(prof: ProfessionDef, cx: number, cy: number): Phaser.GameObjects.Container {
+    const { cardW, cardH, imageSize, titleFontSize } = this.gridLayout;
     const container = this.add.container(cx, cy);
-    const beatDotX = GRID_CARD_W / 2 - 12;
-    const beatDotY = -GRID_CARD_H / 2 + 12;
+    const beatDotX = cardW / 2 - 10;
+    const beatDotY = -cardH / 2 + 10;
+    const imageTopPad = 8;
 
     const cardBg = this.add.graphics();
-    cardBg.fillStyle(COLORS.BG_CARD, 1);
-    cardBg.fillRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
-    cardBg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
-    cardBg.strokeRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
+    this.drawProfessionCardBg(cardBg, 'default');
     container.add(cardBg);
 
     this.addBeatIndicatorDot(container, prof.id, beatDotX, beatDotY);
@@ -215,49 +414,44 @@ export class ProfessionSelectScene extends Scene {
     const professionTexture = this.textures.get('professions');
     const canUseAtlas = this.textures.exists('professions') && professionTexture.has(atlasFrame);
     if (canUseAtlas) {
-      const img = this.add.image(0, -GRID_CARD_H / 2 + 10 + GRID_IMAGE_SIZE / 2, 'professions', atlasFrame);
-      const scale = GRID_IMAGE_SIZE / Math.max(img.width, img.height);
+      const img = this.add.image(0, -cardH / 2 + imageTopPad + imageSize / 2, 'professions', atlasFrame);
+      const scale = imageSize / Math.max(img.width, img.height);
       img.setScale(scale);
       container.add(img);
     }
 
     const titleText = this.add
-      .text(0, -GRID_CARD_H / 2 + GRID_IMAGE_SIZE + 22, prof.title, {
+      .text(0, -cardH / 2 + imageTopPad + imageSize + 16, prof.title, {
         fontFamily: FONTS.HEADING,
-        fontSize: '15px',
+        fontSize: titleFontSize,
         color: TEXT_COLORS.GOLD,
         align: 'center',
-        wordWrap: { width: GRID_CARD_W - 12 },
+        wordWrap: { width: cardW - 10 },
       })
       .setOrigin(0.5);
     container.add(titleText);
 
-    const hitZone = this.add.rectangle(0, 0, GRID_CARD_W, GRID_CARD_H, 0x000000, 0);
+    const hitZone = this.add.rectangle(0, 0, cardW, cardH, 0x000000, 0);
     container.add(hitZone);
     hitZone.setInteractive({ useHandCursor: true });
 
     hitZone.on('pointerover', () => {
       if (this.selectedId !== prof.id) {
-        cardBg.clear();
-        cardBg.fillStyle(COLORS.BG_CARD, 1);
-        cardBg.fillRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
-        cardBg.lineStyle(2, COLORS.BTN_HOVER, 1);
-        cardBg.strokeRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
+        this.drawProfessionCardBg(cardBg, 'hover');
       }
     });
 
     hitZone.on('pointerout', () => {
       if (this.selectedId !== prof.id) {
-        cardBg.clear();
-        cardBg.fillStyle(COLORS.BG_CARD, 1);
-        cardBg.fillRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
-        cardBg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
-        cardBg.strokeRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
+        this.drawProfessionCardBg(cardBg, 'default');
       }
     });
 
-    hitZone.on('pointerdown', () => {
-      this.selectProfession(prof.id);
+    hitZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      wireTapOnlySession(this, prof.id, pointer, hitZone, {
+        canTap: () => this.isGridScrollActive(),
+        onTap: () => this.selectProfession(prof.id),
+      });
     });
 
     container.setData('profId', prof.id);
@@ -286,34 +480,75 @@ export class ProfessionSelectScene extends Scene {
     container.add(dot);
   }
 
-  private selectProfession(id: string): void {
+  private selectProfession(id: string, playSfx = true): void {
     this.selectedId = id;
 
-    if (this.cache?.audio?.exists('sfx_button')) {
+    if (playSfx && this.cache?.audio?.exists('sfx_button')) {
       this.sound.play('sfx_button', { volume: 0.4 });
     }
 
     for (const card of this.cards) {
       const cardBg = card.getData('cardBg') as Phaser.GameObjects.Graphics;
       const profId = card.getData('profId') as string;
-
-      cardBg.clear();
-      if (profId === id) {
-        cardBg.fillStyle(0x2a3a2a, 1);
-        cardBg.fillRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
-        cardBg.lineStyle(3, COLORS.GOLD, 1);
-        cardBg.strokeRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
-      } else {
-        cardBg.fillStyle(COLORS.BG_CARD, 1);
-        cardBg.fillRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
-        cardBg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
-        cardBg.strokeRoundedRect(-GRID_CARD_W / 2, -GRID_CARD_H / 2, GRID_CARD_W, GRID_CARD_H, 10);
-      }
+      this.drawProfessionCardBg(cardBg, profId === id ? 'selected' : 'default');
     }
 
     this.confirmBtn.setEnabled(true);
+    if (this.isPortrait) {
+      this.showPortraitDetail();
+      return;
+    }
+
     this.confirmBtn.setVisible(true);
     this.refreshDetailPanel();
+  }
+
+  private isGridScrollActive(): boolean {
+    if (!this.isPortrait) {
+      return true;
+    }
+    return this.portraitViewMode === 'grid';
+  }
+
+  private showPortraitGrid(): void {
+    this.portraitViewMode = 'grid';
+    this.isDetailDragging = false;
+    this.detailContainer.y = DETAIL_TOP_PAD;
+    this.setGridChromeVisible(true);
+    this.detailContainer.setVisible(false);
+    this.destroyDiceSprites();
+    this.backBtn?.setVisible(false);
+    this.prevProfBtn?.setVisible(false);
+    this.nextProfBtn?.setVisible(false);
+    this.confirmBtn.setVisible(false);
+  }
+
+  private showPortraitDetail(): void {
+    this.portraitViewMode = 'detail';
+    this.setGridChromeVisible(false);
+    this.detailContainer.setVisible(true);
+    this.detailContainer.y = DETAIL_TOP_PAD;
+    this.refreshDetailPanel();
+    this.backBtn?.setVisible(true);
+    this.prevProfBtn?.setVisible(true);
+    this.nextProfBtn?.setVisible(true);
+    this.confirmBtn.setEnabled(true);
+    this.confirmBtn.setVisible(true);
+  }
+
+  private navigateProfession(delta: number): void {
+    if (!this.selectedId) return;
+    const ids = professionsData.map((p) => p.id);
+    const idx = ids.indexOf(this.selectedId);
+    if (idx < 0) return;
+    const nextIdx = (idx + delta + ids.length) % ids.length;
+    this.selectProfession(ids[nextIdx], false);
+  }
+
+  private setGridChromeVisible(visible: boolean): void {
+    for (const obj of this.gridChrome) {
+      obj.setVisible(visible);
+    }
   }
 
   private refreshDetailPanel(): void {
@@ -323,6 +558,9 @@ export class ProfessionSelectScene extends Scene {
     const panelPad = 16;
     const contentW = this.rightPanelW - panelPad * 2;
     const centerX = this.rightPanelW / 2;
+    const detailImageSize = this.isPortrait ? PORTRAIT_DETAIL_IMAGE_SIZE : DETAIL_IMAGE_SIZE;
+    const titleFontSize = this.isPortrait ? '24px' : '28px';
+    const detailTopY = this.isPortrait ? PORTRAIT_DETAIL_TOP_Y : 100;
 
     if (!this.selectedId) {
       const placeholder = this.add
@@ -340,23 +578,23 @@ export class ProfessionSelectScene extends Scene {
     const prof = getProfessionById(this.selectedId);
     if (!prof) return;
 
-    let y = 100;
+    let y = detailTopY;
 
     const atlasFrame = `${prof.id}.png`;
     const professionTexture = this.textures.get('professions');
     const canUseAtlas = this.textures.exists('professions') && professionTexture.has(atlasFrame);
     if (canUseAtlas) {
-      const img = this.add.image(centerX, y + DETAIL_IMAGE_SIZE / 2, 'professions', atlasFrame);
-      const scale = DETAIL_IMAGE_SIZE / Math.max(img.width, img.height);
+      const img = this.add.image(centerX, y + detailImageSize / 2, 'professions', atlasFrame);
+      const scale = detailImageSize / Math.max(img.width, img.height);
       img.setScale(scale);
       this.detailContainer.add(img);
-      y += DETAIL_IMAGE_SIZE + 12;
+      y += detailImageSize + 12;
     }
 
     const title = this.add
       .text(centerX, y, prof.title, {
         fontFamily: FONTS.HEADING,
-        fontSize: '28px',
+        fontSize: titleFontSize,
         color: TEXT_COLORS.GOLD,
         align: 'center',
       })
@@ -441,6 +679,15 @@ export class ProfessionSelectScene extends Scene {
       })
       .setOrigin(0.5, 0);
     this.detailContainer.add(beatValue);
+
+    if (this.isPortrait) {
+      const bottomPad = PORTRAIT_BOTTOM_BAR_H + 12;
+      const availableH = this.sceneHeight - DETAIL_TOP_PAD - bottomPad;
+      const contentH = y + beatValue.height;
+      const overflow = contentH - availableH;
+      this.detailScrollMinY = overflow > 0 ? DETAIL_TOP_PAD - overflow : DETAIL_TOP_PAD;
+      this.detailContainer.y = DETAIL_TOP_PAD;
+    }
   }
 
   private addStartingDiceSection(prof: ProfessionDef, centerX: number, startY: number, contentW: number): number {
@@ -502,8 +749,11 @@ export class ProfessionSelectScene extends Scene {
     this.detailContainer.add(subtitle);
 
     let y = startY + header.height + subtitle.height + 14;
-    const cols = Math.min(displayGroups.length, 4);
-    const gridStartX = centerX - ((cols - 1) * DICE_GROUP_SPACING) / 2;
+    const diceGroupSpacing = this.isPortrait ? 68 : DICE_GROUP_SPACING;
+    const dicePreviewScale = this.isPortrait ? 0.58 : DICE_PREVIEW_SCALE;
+    const maxCols = this.isPortrait ? 3 : 4;
+    const cols = Math.min(displayGroups.length, maxCols);
+    const gridStartX = centerX - ((cols - 1) * diceGroupSpacing) / 2;
 
     DiceSprite.suppressTooltips = true;
 
@@ -511,11 +761,12 @@ export class ProfessionSelectScene extends Scene {
       const group = displayGroups[i];
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = gridStartX + col * DICE_GROUP_SPACING;
+      const x = gridStartX + col * diceGroupSpacing;
       const dieY = y + row * DICE_ROW_HEIGHT + 22;
 
       const sprite = new DiceSprite(this, this.rightPanelX + x, this.detailContainer.y + dieY, group.representative);
-      sprite.setScale(DICE_PREVIEW_SCALE);
+      sprite.setData('detailLocalY', dieY);
+      sprite.setScale(dicePreviewScale);
       sprite.setDepth(71);
       this.diceSprites.push(sprite);
 
@@ -532,6 +783,13 @@ export class ProfessionSelectScene extends Scene {
 
     const rows = Math.ceil(displayGroups.length / cols);
     return y + rows * DICE_ROW_HEIGHT;
+  }
+
+  private repositionDiceSprites(): void {
+    for (const sprite of this.diceSprites) {
+      const localY = sprite.getData('detailLocalY') as number;
+      sprite.y = this.detailContainer.y + localY;
+    }
   }
 
   private destroyDiceSprites(): void {

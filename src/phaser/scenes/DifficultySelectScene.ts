@@ -12,23 +12,53 @@ import { Button } from '../ui/Button';
 import { addDifficultyImage } from '../ui/DifficultyAssets';
 import { startAutoSaveLoop } from '../AutoSaveManager';
 import { getHighestUnlockedDifficulty, isDifficultyUnlocked } from '../../game/UserStats';
+import { isPortraitLayout } from '../ui/SceneLayout';
+import { SeededRunModal } from '../ui/SeededRunModal';
 
-const CARD_W = 230;
-const CARD_H = 288;
-const CARD_GAP = 14;
-const COLS = 4;
-const ICON_SIZE = 72;
+const BASE_CARD_W = 230;
+const BASE_CARD_H = 250;
+const BASE_ICON_SIZE = 72;
 const ICON_TOP_PAD = 14;
 const EFFECTS_PAD = 26;
-const EFFECTS_TEXT_W = CARD_W - EFFECTS_PAD * 2;
+const FOOTER_RESERVE = 80;
+const ONE_COL_MAX_WIDTH = 500;
+
+type HeaderLayout = {
+  titleY: number;
+  subtitleY: number;
+  gridTop: number;
+  titleSize: string;
+  subtitleSize: string;
+  subtitleWrapW: number;
+};
+
+type GridLayoutMetrics = {
+  panelPad: number;
+  cols: number;
+  cardW: number;
+  cardGap: number;
+  iconSize: number;
+  titleFontSize: string;
+  descFontSize: string;
+  effectsFontSize: string;
+  effectsPad: number;
+};
 
 export class DifficultySelectScene extends Scene {
   private selectedLevel: DifficultyLevel = 1;
   private maxUnlocked: DifficultyLevel = 1;
   private professionId: string | null = null;
   private cards: Phaser.GameObjects.Container[] = [];
-  private seededRunEnabled = false;
-  private seedInput: HTMLInputElement | null = null;
+  private gridLayout: GridLayoutMetrics;
+  private scrollContainer: Phaser.GameObjects.Container | null = null;
+  private contentHeight = 0;
+  private scrollAreaTop = 0;
+  private scrollAreaH = 0;
+  private scrollDragging = false;
+  private scrollPointerId: number | null = null;
+  private scrollStartY = 0;
+  private dragStartY = 0;
+  private seededRunModal: SeededRunModal | null = null;
 
   constructor() {
     super('DifficultySelect');
@@ -38,16 +68,22 @@ export class DifficultySelectScene extends Scene {
     const { width, height } = this.scale;
 
     this.scale.on('resize', this.onResize, this);
-    this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
+    this.events.on('shutdown', () => {
+      this.scale.off('resize', this.onResize, this);
+      this.seededRunModal?.destroy();
+      this.seededRunModal = null;
+    });
 
     const bg = this.add.graphics();
     bg.fillStyle(COLORS.BG_PRIMARY, 1);
     bg.fillRect(0, 0, width, height);
 
+    const header = this.computeHeaderLayout(width, height);
+
     this.add
-      .text(width / 2, 36, 'Choose Your Trail', {
+      .text(width / 2, header.titleY, 'Choose Your Trail', {
         fontFamily: FONTS.HEADING,
-        fontSize: '36px',
+        fontSize: header.titleSize,
         color: TEXT_COLORS.GOLD,
         stroke: '#000000',
         strokeThickness: 4,
@@ -57,11 +93,12 @@ export class DifficultySelectScene extends Scene {
       .setDepth(60);
 
     this.add
-      .text(width / 2, 70, 'Higher stakes stack penalties — pick how harsh the frontier will be', {
+      .text(width / 2, header.subtitleY, 'Higher stakes stack penalties — pick how harsh the frontier will be', {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '15px',
+        fontSize: header.subtitleSize,
         color: TEXT_COLORS.MUTED,
         align: 'center',
+        wordWrap: { width: header.subtitleWrapW },
       })
       .setOrigin(0.5)
       .setDepth(60);
@@ -69,48 +106,250 @@ export class DifficultySelectScene extends Scene {
     const backBtn = new Button(this, 72, 40, '← Back', 120, 36);
     backBtn.setDepth(100);
     backBtn.onClick(() => {
-      this.destroySeedInput();
       this.scene.start('ProfessionSelect', {});
     });
 
-    const confirmBtn = new Button(this, width / 2, height - 40, 'Embark', 220, 48);
-    confirmBtn.setDepth(100);
-    confirmBtn.onClick(() => {
-      if (!this.professionId || !isDifficultyUnlocked(this.professionId, this.selectedLevel)) return;
-
-      gameFacade.meta.setDifficulty(this.selectedLevel);
-      const typedSeed = this.seedInput?.value.trim() ?? '';
-      const seed = this.seededRunEnabled
-        ? typedSeed || gameFacade.meta.generateRunSeed()
-        : gameFacade.meta.generateRunSeed();
-      gameFacade.meta.initRunRng(seed);
-      gameFacade.meta.assignBosses();
-      startAutoSaveLoop();
-      this.destroySeedInput();
-      this.scene.start('RoundSelect', {});
-    });
+    this.buildActionButtons(width, height);
 
     this.professionId = getRunState().professionId;
     this.maxUnlocked = this.professionId ? getHighestUnlockedDifficulty(this.professionId) : 1;
 
-    this.buildGrid(width);
-    this.buildSeedControls(width, height);
+    this.gridLayout = this.computeGridLayout(width);
+    this.buildGrid(width, height, header.gridTop);
     this.selectDifficulty(this.maxUnlocked);
 
     EventBus.emit(Events.SCENE_READY, this);
   }
 
-  private buildGrid(width: number): void {
-    const totalGridW = COLS * CARD_W + (COLS - 1) * CARD_GAP;
-    const startX = (width - totalGridW) / 2 + CARD_W / 2;
-    const startY = 118 + CARD_H / 2;
+  private buildActionButtons(width: number, height: number): void {
+    const btnY = height - 40;
+    const btnGap = 12;
+    const seedBtnW = width < 400 ? 120 : 140;
+    const embarkW = width < 400 ? 160 : 200;
+    const totalW = seedBtnW + btnGap + embarkW;
+    const startX = (width - totalW) / 2;
+
+    const seedBtn = new Button(this, startX + seedBtnW / 2, btnY, 'Seeded Run', seedBtnW, 48);
+    seedBtn.setDepth(100);
+    seedBtn.onClick(() => this.openSeededRunModal());
+
+    const embarkBtn = new Button(this, startX + seedBtnW + btnGap + embarkW / 2, btnY, 'Embark', embarkW, 48);
+    embarkBtn.setDepth(100);
+    embarkBtn.onClick(() => this.embarkWithSeed(''));
+  }
+
+  private openSeededRunModal(): void {
+    this.seededRunModal?.destroy();
+    const { width, height } = this.scale;
+    this.seededRunModal = new SeededRunModal(this, width, height, (seed) => {
+      this.seededRunModal = null;
+      this.embarkWithSeed(seed);
+    });
+  }
+
+  private embarkWithSeed(seed: string): void {
+    if (!this.professionId || !isDifficultyUnlocked(this.professionId, this.selectedLevel)) return;
+
+    gameFacade.meta.setDifficulty(this.selectedLevel);
+    const finalSeed = seed.trim() || gameFacade.meta.generateRunSeed();
+    gameFacade.meta.initRunRng(finalSeed);
+    gameFacade.meta.assignBosses();
+    startAutoSaveLoop();
+    this.scene.start('RoundSelect', {});
+  }
+
+  private computeHeaderLayout(width: number, _height: number): HeaderLayout {
+    const stacked = isPortraitLayout(width, _height) || width < 640;
+
+    if (stacked) {
+      return {
+        titleY: 78,
+        subtitleY: 108,
+        gridTop: 132,
+        titleSize: '28px',
+        subtitleSize: '13px',
+        subtitleWrapW: width - 24,
+      };
+    }
+
+    return {
+      titleY: 36,
+      subtitleY: 70,
+      gridTop: 118,
+      titleSize: '36px',
+      subtitleSize: '15px',
+      subtitleWrapW: width - 48,
+    };
+  }
+
+  private computeGridLayout(width: number): GridLayoutMetrics {
+    const panelPad = width < 500 ? 12 : 20;
+    const cardGap = width < 500 ? 10 : 14;
+    const usableW = width - panelPad * 2;
+
+    const fourColMin = 4 * BASE_CARD_W + 3 * cardGap;
+    const threeColMin = 3 * BASE_CARD_W + 2 * cardGap;
+    const twoColMin = 2 * 170 + cardGap;
+
+    let cols = 1;
+    if (width > ONE_COL_MAX_WIDTH) {
+      if (usableW >= fourColMin) cols = 4;
+      else if (usableW >= threeColMin) cols = 3;
+      else if (usableW >= twoColMin) cols = 2;
+    }
+
+    const cardW = Math.floor((usableW - (cols - 1) * cardGap) / cols);
+    const iconSize = Math.floor(BASE_ICON_SIZE * (cardW / BASE_CARD_W));
+    const titleFontSize = cardW < 190 ? '13px' : '15px';
+    const descFontSize = cardW < 190 ? '12px' : '14px';
+    const effectsFontSize = cardW < 190 ? '12px' : '14px';
+    const effectsPad = Math.max(16, Math.floor(EFFECTS_PAD * (cardW / BASE_CARD_W)));
+
+    return {
+      panelPad,
+      cols,
+      cardW,
+      cardGap,
+      iconSize,
+      titleFontSize,
+      descFontSize,
+      effectsFontSize,
+      effectsPad,
+    };
+  }
+
+  private measureCardHeight(
+    level: DifficultyLevel,
+    name: string,
+    description: string,
+    effects: string[],
+    locked: boolean,
+  ): number {
+    const { cardW, iconSize, titleFontSize, descFontSize, effectsFontSize, effectsPad } = this.gridLayout;
+    const effectsTextW = cardW - effectsPad * 2;
+    const bottomPad = locked ? 34 : 16;
+    let y = ICON_TOP_PAD + iconSize + 10;
+
+    const title = this.add
+      .text(0, 0, `${level}. ${name}`, {
+        fontFamily: FONTS.HEADING,
+        fontSize: titleFontSize,
+        color: TEXT_COLORS.GOLD,
+        align: 'center',
+        wordWrap: { width: cardW - 24 },
+      })
+      .setVisible(false);
+    y += title.height + 8;
+    title.destroy();
+
+    const desc = this.add
+      .text(0, 0, description, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: descFontSize,
+        color: TEXT_COLORS.MUTED,
+        align: 'center',
+        wordWrap: { width: cardW - 24 },
+        lineSpacing: 2,
+      })
+      .setVisible(false);
+    y += desc.height + 10;
+    desc.destroy();
+
+    y += this.measureEffectsHeight(effects, effectsTextW, effectsFontSize);
+    y += bottomPad;
+
+    if (this.gridLayout.cols === 1) {
+      return y;
+    }
+
+    const minH = Math.floor(cardW * (BASE_CARD_H / BASE_CARD_W));
+    return Math.max(y, minH);
+  }
+
+  private measureEffectsHeight(effects: string[], effectsTextW: number, effectsFontSize: string): number {
+    if (effects.length === 0) {
+      const line = this.add
+        .text(0, 0, 'No extra penalties', {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: effectsFontSize,
+          color: TEXT_COLORS.DISABLED,
+          align: 'left',
+          wordWrap: { width: effectsTextW },
+        })
+        .setVisible(false);
+      const h = line.height;
+      line.destroy();
+      return h;
+    }
+
+    let y = 0;
+    effects.forEach((effect) => {
+      const line = this.add
+        .text(0, 0, `• ${effect}`, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: effectsFontSize,
+          color: TEXT_COLORS.PRIMARY,
+          align: 'left',
+          wordWrap: { width: effectsTextW },
+          lineSpacing: 1,
+        })
+        .setVisible(false);
+      y += line.height + 3;
+      line.destroy();
+    });
+    return y;
+  }
+
+  private buildGrid(width: number, height: number, gridTop: number): void {
+    const { panelPad, cols, cardW, cardGap } = this.gridLayout;
+    const usableW = width - panelPad * 2;
+    const rowCount = Math.ceil(DIFFICULTIES.length / cols);
+
+    const cardHeights = DIFFICULTIES.map((diff) =>
+      this.measureCardHeight(diff.level, diff.name, diff.description, diff.effects, diff.level > this.maxUnlocked),
+    );
+
+    const rowHeights: number[] = [];
+    for (let row = 0; row < rowCount; row++) {
+      let maxH = 0;
+      for (let col = 0; col < cols; col++) {
+        const index = row * cols + col;
+        if (index < cardHeights.length) {
+          maxH = Math.max(maxH, cardHeights[index]);
+        }
+      }
+      rowHeights.push(maxH);
+    }
+
+    const totalGridW = cols * cardW + (cols - 1) * cardGap;
+    const startX = panelPad + cardW / 2 + (usableW - totalGridW) / 2;
+    this.contentHeight = rowHeights.reduce((sum, h, i) => sum + h + (i < rowHeights.length - 1 ? cardGap : 0), 0);
+
+    this.scrollAreaTop = gridTop;
+    this.scrollAreaH = height - FOOTER_RESERVE - gridTop;
+
+    const scrollContainer = this.add.container(0, gridTop);
+    scrollContainer.setDepth(40);
+    this.scrollContainer = scrollContainer;
+
+    let gridOffsetY = 0;
+    if (this.contentHeight <= this.scrollAreaH) {
+      gridOffsetY = (this.scrollAreaH - this.contentHeight) / 2;
+      scrollContainer.y = gridTop + gridOffsetY;
+    }
 
     this.cards = [];
+    let rowY = 0;
     DIFFICULTIES.forEach((diff, i) => {
-      const col = i % COLS;
-      const row = Math.floor(i / COLS);
-      const cx = startX + col * (CARD_W + CARD_GAP);
-      const cy = startY + row * (CARD_H + CARD_GAP);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      if (col === 0 && row > 0) {
+        rowY += rowHeights[row - 1] + cardGap;
+      }
+
+      const cx = startX + col * (cardW + cardGap);
+      const cardH = cols === 1 ? cardHeights[i] : rowHeights[row];
+      const cy = rowY + cardH / 2;
       const card = this.createDifficultyCard(
         diff.level,
         diff.name,
@@ -118,10 +357,74 @@ export class DifficultySelectScene extends Scene {
         diff.effects,
         cx,
         cy,
+        cardH,
         diff.level > this.maxUnlocked,
       );
+      scrollContainer.add(card);
       this.cards.push(card);
     });
+
+    const clipTop = this.add.graphics();
+    clipTop.fillStyle(COLORS.BG_PRIMARY, 1);
+    clipTop.fillRect(0, 0, width, gridTop);
+    clipTop.setDepth(50);
+
+    const clipBottomY = height - FOOTER_RESERVE;
+    const clipBottom = this.add.graphics();
+    clipBottom.fillStyle(COLORS.BG_PRIMARY, 1);
+    clipBottom.fillRect(0, clipBottomY, width, height - clipBottomY);
+    clipBottom.setDepth(50);
+
+    if (this.contentHeight > this.scrollAreaH) {
+      this.bindGridScroll();
+    }
+  }
+
+  private bindGridScroll(): void {
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gos: unknown[], _dx: number, dy: number) => {
+      this.doGridScroll(dy);
+    });
+
+    const resetScroll = (pointer: Phaser.Input.Pointer) => {
+      if (this.scrollPointerId !== pointer.id) return;
+      this.scrollDragging = false;
+      this.scrollPointerId = null;
+    };
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.scrollContainer) return;
+      if (pointer.y < this.scrollAreaTop || pointer.y > this.scrollAreaTop + this.scrollAreaH) return;
+
+      this.scrollDragging = true;
+      this.scrollPointerId = pointer.id;
+      this.dragStartY = pointer.y;
+      this.scrollStartY = this.scrollContainer.y;
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!this.scrollDragging || this.scrollPointerId !== pointer.id || !this.scrollContainer) return;
+
+      const dy = pointer.y - this.dragStartY;
+      this.scrollContainer.y = Phaser.Math.Clamp(
+        this.scrollStartY + dy,
+        this.scrollAreaTop + this.scrollAreaH - this.contentHeight,
+        this.scrollAreaTop,
+      );
+    });
+
+    this.input.on('pointerup', resetScroll);
+    this.input.on('pointerupoutside', resetScroll);
+  }
+
+  private doGridScroll(dy: number): void {
+    if (!this.scrollContainer || this.contentHeight <= this.scrollAreaH) return;
+
+    const nextY = this.scrollContainer.y - dy * 0.5;
+    this.scrollContainer.y = Phaser.Math.Clamp(
+      nextY,
+      this.scrollAreaTop + this.scrollAreaH - this.contentHeight,
+      this.scrollAreaTop,
+    );
   }
 
   private createDifficultyCard(
@@ -131,22 +434,26 @@ export class DifficultySelectScene extends Scene {
     effects: string[],
     cx: number,
     cy: number,
+    cardH: number,
     locked: boolean,
   ): Phaser.GameObjects.Container {
+    const { cardW, iconSize, titleFontSize, descFontSize, effectsFontSize, effectsPad } = this.gridLayout;
+    const effectsTextW = cardW - effectsPad * 2;
+
     const container = this.add.container(cx, cy);
 
     const cardBg = this.add.graphics();
-    this.drawDifficultyCardBackground(cardBg, locked);
+    this.drawDifficultyCardBackground(cardBg, cardW, cardH, locked);
     container.add(cardBg);
 
     if (locked) {
       const lockOverlay = this.add.graphics();
       lockOverlay.fillStyle(0x000000, 0.45);
-      lockOverlay.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+      lockOverlay.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
       container.add(lockOverlay);
 
       const lockedLabel = this.add
-        .text(0, CARD_H / 2 - 18, 'Locked', {
+        .text(0, cardH / 2 - 18, 'Locked', {
           fontFamily: FONTS.HEADING,
           fontSize: '13px',
           color: TEXT_COLORS.DISABLED,
@@ -156,17 +463,18 @@ export class DifficultySelectScene extends Scene {
       container.add(lockedLabel);
     }
 
-    const cardTop = -CARD_H / 2;
-    const iconY = cardTop + ICON_TOP_PAD + ICON_SIZE / 2;
-    addDifficultyImage(this, container, level, 0, iconY, ICON_SIZE);
+    const cardTop = -cardH / 2;
+    const iconY = cardTop + ICON_TOP_PAD + iconSize / 2;
+    addDifficultyImage(this, container, level, 0, iconY, iconSize);
 
-    const titleY = iconY + ICON_SIZE / 2 + 10;
+    const titleY = iconY + iconSize / 2 + 10;
     const levelLabel = this.add
       .text(0, titleY, `${level}. ${name}`, {
         fontFamily: FONTS.HEADING,
-        fontSize: '15px',
+        fontSize: titleFontSize,
         color: TEXT_COLORS.GOLD,
         align: 'center',
+        wordWrap: { width: cardW - 24 },
       })
       .setOrigin(0.5, 0);
     container.add(levelLabel);
@@ -174,21 +482,21 @@ export class DifficultySelectScene extends Scene {
     const desc = this.add
       .text(0, titleY + levelLabel.height + 8, description, {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
+        fontSize: descFontSize,
         color: TEXT_COLORS.MUTED,
         align: 'center',
-        wordWrap: { width: CARD_W - 24 },
+        wordWrap: { width: cardW - 24 },
         lineSpacing: 2,
       })
       .setOrigin(0.5, 0);
     container.add(desc);
 
     const effectsY = desc.y + desc.height + 10;
-    const effectsBlock = this.buildEffectsText(effects);
-    effectsBlock.setPosition(-CARD_W / 2 + EFFECTS_PAD, effectsY);
+    const effectsBlock = this.buildEffectsText(effects, effectsTextW, effectsFontSize);
+    effectsBlock.setPosition(-cardW / 2 + effectsPad, effectsY);
     container.add(effectsBlock);
 
-    const hitZone = this.add.rectangle(0, 0, CARD_W, CARD_H, 0x000000, 0);
+    const hitZone = this.add.rectangle(0, 0, cardW, cardH, 0x000000, 0);
     container.add(hitZone);
 
     if (!locked) {
@@ -196,13 +504,13 @@ export class DifficultySelectScene extends Scene {
 
       hitZone.on('pointerover', () => {
         if (this.selectedLevel !== level) {
-          this.drawCardBorder(cardBg, COLORS.BTN_HOVER, 2, false);
+          this.drawCardBorder(cardBg, cardW, cardH, COLORS.BTN_HOVER, 2, false);
         }
       });
 
       hitZone.on('pointerout', () => {
         if (this.selectedLevel !== level) {
-          this.drawCardBorder(cardBg, COLORS.SIDEBAR_SECTION_BORDER, 2, false);
+          this.drawCardBorder(cardBg, cardW, cardH, COLORS.SIDEBAR_SECTION_BORDER, 2, false);
         }
       });
 
@@ -211,20 +519,26 @@ export class DifficultySelectScene extends Scene {
 
     container.setData('level', level);
     container.setData('cardBg', cardBg);
+    container.setData('cardW', cardW);
+    container.setData('cardH', cardH);
     container.setData('locked', locked);
 
     return container;
   }
 
-  private buildEffectsText(effects: string[]): Phaser.GameObjects.Container {
+  private buildEffectsText(
+    effects: string[],
+    effectsTextW: number,
+    effectsFontSize: string,
+  ): Phaser.GameObjects.Container {
     const block = this.add.container(0, 0);
     if (effects.length === 0) {
       const line = this.add.text(0, 0, 'No extra penalties', {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
+        fontSize: effectsFontSize,
         color: TEXT_COLORS.DISABLED,
         align: 'left',
-        wordWrap: { width: EFFECTS_TEXT_W },
+        wordWrap: { width: effectsTextW },
       });
       line.setOrigin(0, 0);
       block.add(line);
@@ -236,10 +550,10 @@ export class DifficultySelectScene extends Scene {
       const isNew = i === effects.length - 1;
       const line = this.add.text(0, y, `• ${effect}`, {
         fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
+        fontSize: effectsFontSize,
         color: isNew ? TEXT_COLORS.PRIMARY : TEXT_COLORS.DISABLED,
         align: 'left',
-        wordWrap: { width: EFFECTS_TEXT_W },
+        wordWrap: { width: effectsTextW },
         lineSpacing: 1,
       });
       line.setOrigin(0, 0);
@@ -249,23 +563,30 @@ export class DifficultySelectScene extends Scene {
     return block;
   }
 
-  private drawDifficultyCardBackground(cardBg: Phaser.GameObjects.Graphics, locked: boolean): void {
+  private drawDifficultyCardBackground(
+    cardBg: Phaser.GameObjects.Graphics,
+    cardW: number,
+    cardH: number,
+    locked: boolean,
+  ): void {
     cardBg.clear();
     cardBg.fillStyle(locked ? 0x1a1612 : COLORS.BG_CARD, 1);
-    cardBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+    cardBg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
     cardBg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
-    cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+    cardBg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
   }
 
   private drawCardBorder(
     cardBg: Phaser.GameObjects.Graphics,
+    cardW: number,
+    cardH: number,
     borderColor: number,
     width: number,
     locked: boolean,
   ): void {
-    this.drawDifficultyCardBackground(cardBg, locked);
+    this.drawDifficultyCardBackground(cardBg, cardW, cardH, locked);
     cardBg.lineStyle(width, borderColor, 1);
-    cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+    cardBg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
   }
 
   private selectDifficulty(level: DifficultyLevel): void {
@@ -280,133 +601,25 @@ export class DifficultySelectScene extends Scene {
     for (const card of this.cards) {
       const cardBg = card.getData('cardBg') as Phaser.GameObjects.Graphics;
       const cardLevel = card.getData('level') as DifficultyLevel;
+      const cardW = card.getData('cardW') as number;
+      const cardH = card.getData('cardH') as number;
       const locked = card.getData('locked') as boolean;
 
       cardBg.clear();
       if (cardLevel === level) {
         cardBg.fillStyle(0x2a3a2a, 1);
-        cardBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+        cardBg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
         cardBg.lineStyle(3, COLORS.SELECTION, 1);
-        cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10);
+        cardBg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 10);
       } else {
-        this.drawCardBorder(cardBg, COLORS.SIDEBAR_SECTION_BORDER, 2, locked);
+        this.drawCardBorder(cardBg, cardW, cardH, COLORS.SIDEBAR_SECTION_BORDER, 2, locked);
       }
     }
   }
 
   private onResize(): void {
-    this.destroySeedInput();
+    this.seededRunModal?.destroy();
+    this.seededRunModal = null;
     this.scene.restart();
-  }
-
-  private buildSeedControls(width: number, height: number): void {
-    const rowY = height - 124;
-    const checkboxSize = 22;
-    const checkboxX = width / 2 - 210;
-    const labelX = checkboxX + checkboxSize + 10;
-    const seedLabelX = width / 2 + 56;
-    const seedInputX = seedLabelX + 8;
-    const seedInputW = 240;
-
-    const checkboxBg = this.add.graphics().setDepth(90);
-    const checkboxMark = this.add.graphics().setDepth(91);
-    const seedLabel = this.add
-      .text(seedLabelX, rowY, 'Seed', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '14px',
-        color: TEXT_COLORS.MUTED,
-      })
-      .setOrigin(1, 0.5)
-      .setDepth(92);
-    const redraw = () => {
-      checkboxBg.clear();
-      checkboxMark.clear();
-      checkboxBg.fillStyle(this.seededRunEnabled ? COLORS.SCORE_GREEN : COLORS.BTN_DEFAULT, 1);
-      checkboxBg.fillRoundedRect(checkboxX, rowY - checkboxSize / 2, checkboxSize, checkboxSize, 4);
-      checkboxBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 1);
-      checkboxBg.strokeRoundedRect(checkboxX, rowY - checkboxSize / 2, checkboxSize, checkboxSize, 4);
-      if (this.seededRunEnabled) {
-        checkboxMark.lineStyle(3, 0xffffff, 1);
-        checkboxMark.beginPath();
-        checkboxMark.moveTo(checkboxX + 5, rowY);
-        checkboxMark.lineTo(checkboxX + 9, rowY + 5);
-        checkboxMark.lineTo(checkboxX + 17, rowY - 6);
-        checkboxMark.strokePath();
-      }
-      seedLabel.setVisible(this.seededRunEnabled);
-      if (this.seedInput) {
-        this.seedInput.style.display = this.seededRunEnabled ? 'block' : 'none';
-      }
-    };
-
-    redraw();
-
-    const hit = this.add.rectangle(
-      checkboxX + checkboxSize / 2,
-      rowY,
-      checkboxSize + 10,
-      checkboxSize + 10,
-      0x000000,
-      0,
-    );
-    hit.setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => {
-      this.seededRunEnabled = !this.seededRunEnabled;
-      redraw();
-    });
-
-    const label = this.add
-      .text(labelX, rowY, 'Seeded run?', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '16px',
-        color: TEXT_COLORS.PRIMARY,
-      })
-      .setOrigin(0, 0.5)
-      .setDepth(92);
-    label.setInteractive({ useHandCursor: true });
-    label.on('pointerdown', () => {
-      this.seededRunEnabled = !this.seededRunEnabled;
-      redraw();
-    });
-
-    this.seedInput = this.createSeedInput(seedInputX, rowY - 16, seedInputW, 32);
-    this.seedInput.value = '';
-    this.seedInput.placeholder = 'Type a run seed';
-    this.seedInput.maxLength = 32;
-    this.seedInput.style.display = 'none';
-
-    this.events.once('shutdown', () => this.destroySeedInput());
-  }
-
-  private createSeedInput(x: number, y: number, w: number, h: number): HTMLInputElement {
-    const container = this.game.canvas.parentElement ?? document.body;
-    const containerRect = container.getBoundingClientRect();
-    const canvasRect = this.game.canvas.getBoundingClientRect();
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.autocomplete = 'off';
-    input.spellcheck = false;
-    input.style.position = 'absolute';
-    input.style.left = `${canvasRect.left - containerRect.left + x}px`;
-    input.style.top = `${canvasRect.top - containerRect.top + y}px`;
-    input.style.width = `${w}px`;
-    input.style.height = `${h}px`;
-    input.style.padding = '6px 10px';
-    input.style.border = '1px solid #5a4a3a';
-    input.style.borderRadius = '6px';
-    input.style.background = '#1f1a14';
-    input.style.color = '#e5d9c5';
-    input.style.fontFamily = FONTS.PRIMARY;
-    input.style.fontSize = '14px';
-    input.style.zIndex = '5';
-    container.appendChild(input);
-    return input;
-  }
-
-  private destroySeedInput(): void {
-    if (!this.seedInput) return;
-    this.seedInput.remove();
-    this.seedInput = null;
   }
 }

@@ -39,10 +39,36 @@ const BTN_H = 44;
 const BTN_GAP = 10;
 const COL_PAD = 14;
 const TAG_SIZE = 36;
+const ROW_TAG_SIZE = 30;
+const STACK_PAD = 10;
+const STACK_BTN_H = 32;
+const STACK_ART = 44;
+const STACK_EMBLEM_R = 15;
+/** Gap below header text before the divider line (portrait stacked cards). */
+const STACK_DIVIDER_GAP = 6;
+/** Gap below divider before the score/reward row. */
+const STACK_STATS_GAP = 8;
 /** Boss portrait on round-select boss column (~2× former circle diameter). */
-const BOSS_PORTRAIT_SIZE = { compact: 64, normal: 96 } as const;
+const BOSS_PORTRAIT_SIZE = { compact: 64, normal: 96, stacked: 44 } as const;
 /** Extra space below round title before boss portrait (avoids overlapping heading). */
 const BOSS_PORTRAIT_TOP_GAP = { compact: 20, normal: 28 } as const;
+
+export type LegRoundPanelLayout = 'columns' | 'rows';
+
+export interface LegRoundPanelSlot {
+  round: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface LegRoundPanelGeometry {
+  panels: LegRoundPanelSlot[];
+  layout: LegRoundPanelLayout;
+  compact: boolean;
+  gap: number;
+}
 
 export function targetMilesForRound(
   leg: number,
@@ -77,6 +103,8 @@ export interface RoundInfoConfig {
   skipPreviewTag?: TrailTagDef;
   showActions?: boolean;
   compact?: boolean;
+  /** Portrait stacked rows — horizontal content within each panel. */
+  stacked?: boolean;
   depth?: number;
   onPlay?: () => void;
   onSkip?: () => void;
@@ -91,6 +119,7 @@ export interface LegRoundPanelsConfig {
   /** When set, panels are added to this container instead of the scene root. */
   parent?: GameObjects.Container;
   gap?: number;
+  layout?: LegRoundPanelLayout;
   currentRound: number;
   leg: number;
   difficulty: DifficultyLevel;
@@ -109,21 +138,62 @@ export interface LegRoundPanelsConfig {
   onTagHoverEnd?: () => void;
 }
 
+/** Compute panel slots for three leg rounds within a bounding box. */
+export function computeLegRoundPanelGeometry(
+  bounds: LegRoundPanelsConfig['bounds'],
+  options: { gap?: number; compact?: boolean; layout?: LegRoundPanelLayout } = {},
+): LegRoundPanelGeometry {
+  const layout = options.layout ?? 'columns';
+  const compact = options.compact ?? layout === 'rows';
+  const gap = options.gap ?? (layout === 'rows' ? 8 : compact ? 10 : 20);
+
+  if (layout === 'rows') {
+    const panelH = Math.floor((bounds.height - gap * (GAMEPLAY.ROUNDS_PER_LEG - 1)) / GAMEPLAY.ROUNDS_PER_LEG);
+    const panels: LegRoundPanelSlot[] = [];
+    for (let r = 1; r <= GAMEPLAY.ROUNDS_PER_LEG; r++) {
+      panels.push({
+        round: r,
+        x: bounds.x,
+        y: bounds.y + (r - 1) * (panelH + gap),
+        width: bounds.width,
+        height: panelH,
+      });
+    }
+    return { panels, layout, compact, gap };
+  }
+
+  const colW = Math.min(compact ? 170 : 220, (bounds.width - gap * 2) / 3);
+  const totalW = colW * 3 + gap * 2;
+  const startX = bounds.x + (bounds.width - totalW) / 2;
+  const panels: LegRoundPanelSlot[] = [];
+  for (let r = 1; r <= GAMEPLAY.ROUNDS_PER_LEG; r++) {
+    panels.push({
+      round: r,
+      x: startX + (r - 1) * (colW + gap),
+      y: bounds.y,
+      width: colW,
+      height: bounds.height,
+    });
+  }
+  return { panels, layout, compact, gap };
+}
+
 /** Build three round columns for the current leg within a bounding box. */
 export function createLegRoundPanels(scene: Scene, config: LegRoundPanelsConfig): RoundInfoPanel[] {
-  const gap = config.gap ?? (config.compact ? 10 : 20);
-  const colW = Math.min(config.compact ? 170 : 220, (config.bounds.width - gap * 2) / 3);
-  const totalW = colW * 3 + gap * 2;
-  const startX = config.bounds.x + (config.bounds.width - totalW) / 2;
+  const geometry = computeLegRoundPanelGeometry(config.bounds, {
+    gap: config.gap,
+    compact: config.compact,
+    layout: config.layout,
+  });
   const panels: RoundInfoPanel[] = [];
 
-  for (let r = 1; r <= GAMEPLAY.ROUNDS_PER_LEG; r++) {
-    const x = startX + (r - 1) * (colW + gap);
+  for (const slot of geometry.panels) {
+    const r = slot.round;
     const state = getRoundColumnState(r, config.currentRound, config.skippedRoundsThisLeg);
     const isSkippable = r <= 2;
     const skipPreviewTag =
       isSkippable && !config.skippedRoundsThisLeg.includes(r) ? config.getSkipPreviewTagForRound?.(r) : undefined;
-    const panel = new RoundInfoPanel(scene, x, config.bounds.y, colW, config.bounds.height, {
+    const panel = new RoundInfoPanel(scene, slot.x, slot.y, slot.width, slot.height, {
       round: r,
       state,
       leg: config.leg,
@@ -132,7 +202,8 @@ export function createLegRoundPanels(scene: Scene, config: LegRoundPanelsConfig)
       skippedTag: config.getSkippedTagForRound(r),
       skipPreviewTag,
       showActions: config.showActions,
-      compact: config.compact,
+      compact: geometry.compact,
+      stacked: geometry.layout === 'rows',
       depth: config.depth,
       onPlay: config.onPlay,
       onSkip: config.onSkip,
@@ -189,6 +260,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     this.setDepth(depth);
 
     const compact = config.compact ?? false;
+    const stacked = config.stacked ?? false;
     const round = config.round;
     const isBoss = round === GAMEPLAY.ROUNDS_PER_LEG;
     const isSkipped = config.state === 'skipped';
@@ -203,6 +275,41 @@ export class RoundInfoPanel extends GameObjects.Container {
       !!config.onRerollBoss &&
       selectBossPermitRerollLimit(getRunState()) !== 0;
 
+    this.drawPanelBackground(scene, width, height, isActive, isSkipped);
+
+    if (stacked) {
+      this.buildStackedContent(scene, x, y, width, height, config, {
+        depth,
+        round,
+        isBoss,
+        isSkipped,
+        isUpcoming,
+        showRoundActions,
+        showBossReroll,
+      });
+      return;
+    }
+
+    this.buildColumnContent(scene, x, y, width, height, config, {
+      depth,
+      compact,
+      round,
+      isBoss,
+      isSkipped,
+      isActive,
+      isUpcoming,
+      showRoundActions,
+      showBossReroll,
+    });
+  }
+
+  private drawPanelBackground(
+    scene: Scene,
+    width: number,
+    height: number,
+    isActive: boolean,
+    isSkipped: boolean,
+  ): void {
     const bg = scene.add.graphics();
     const bgColor = isActive ? 0x1a2a1a : isSkipped ? 0x151520 : 0x0d0d1a;
     const borderColor = isActive ? 0xcc7722 : isSkipped ? 0x444466 : 0x333355;
@@ -211,22 +318,33 @@ export class RoundInfoPanel extends GameObjects.Container {
     bg.lineStyle(isActive ? 3 : 2, borderColor, isActive ? 1 : 0.55);
     bg.strokeRoundedRect(0, 0, width, height, 12);
     this.add(bg);
+  }
 
+  private buildColumnContent(
+    scene: Scene,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    config: RoundInfoConfig,
+    ctx: {
+      depth: number;
+      compact: boolean;
+      round: number;
+      isBoss: boolean;
+      isSkipped: boolean;
+      isActive: boolean;
+      isUpcoming: boolean;
+      showRoundActions: boolean;
+      showBossReroll: boolean;
+    },
+  ): void {
+    const { depth, compact, round, isBoss, isSkipped, isUpcoming, showRoundActions, showBossReroll } = ctx;
     const cx = width / 2;
     let cy = compact ? 16 : 22;
 
-    const headerLabels: Record<RoundColumnState, string> = {
-      skipped: 'Skipped',
-      complete: 'Complete',
-      select: 'Select',
-      upcoming: 'Upcoming',
-    };
-    const headerColors: Record<RoundColumnState, string> = {
-      skipped: TEXT_COLORS.ERROR_RED,
-      complete: TEXT_COLORS.SCORE_GREEN,
-      select: '#ffaa44',
-      upcoming: TEXT_COLORS.SECONDARY,
-    };
+    const headerLabels = this.headerLabels();
+    const headerColors = this.headerColors();
 
     this.addLabel(cx, cy, headerLabels[config.state], {
       fontSize: compact ? '12px' : '14px',
@@ -292,19 +410,7 @@ export class RoundInfoPanel extends GameObjects.Container {
     });
     cy += compact ? 20 : 24;
 
-    const roundReward = computeRoundReward(round, config.difficulty);
-    if (roundReward === 0) {
-      this.addLabel(cx, cy, 'Thin Supplies: No reward', {
-        fontSize: compact ? '11px' : '12px',
-        color: TEXT_COLORS.ERROR_RED,
-      });
-    } else {
-      const rewardDollars = '$'.repeat(roundReward);
-      this.addLabel(cx, cy, `Reward: ${rewardDollars}+`, {
-        fontSize: compact ? '11px' : '12px',
-        color: TEXT_COLORS.MONEY,
-      });
-    }
+    this.addRewardLabel(cx, cy, round, config.difficulty, compact);
 
     if (isSkipped) {
       const stampY = height * 0.52;
@@ -328,58 +434,372 @@ export class RoundInfoPanel extends GameObjects.Container {
       this.addRoundTagDisplay(config.skipPreviewTag, config, footerY, compact);
     }
 
-    if (showBossReroll || showRoundActions) {
-      const bottomY = height - COL_PAD;
-      const hasSkip = showRoundActions && !isBoss && !!config.skipPreviewTag;
-      let actionY = bottomY - BTN_H / 2;
-      const absX = x + cx;
+    this.addColumnActions(scene, x, y, width, height, config, {
+      depth,
+      isBoss,
+      showRoundActions,
+      showBossReroll,
+    });
+  }
 
-      if (showRoundActions) {
-        const playY = hasSkip ? actionY - BTN_H - BTN_GAP : actionY;
+  private buildStackedContent(
+    scene: Scene,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    config: RoundInfoConfig,
+    ctx: {
+      depth: number;
+      round: number;
+      isBoss: boolean;
+      isSkipped: boolean;
+      isUpcoming: boolean;
+      showRoundActions: boolean;
+      showBossReroll: boolean;
+    },
+  ): void {
+    const { depth, round, isBoss, isSkipped, isUpcoming, showRoundActions, showBossReroll } = ctx;
+    const hasSkip = showRoundActions && !isBoss && !!config.skipPreviewTag;
+    const hasActionRow = showRoundActions || showBossReroll;
+    const textMaxW = width - STACK_PAD * 2 - STACK_ART - 10;
+    const headerLabels = this.headerLabels();
+    const headerColors = this.headerColors();
 
-        const playBtn = new Button(scene, absX, y + playY, 'Play Round', width - 30, BTN_H)
-          .setColor(0x2d6b2d, 0x3d8b3d)
+    this.addStackedTopRightArt(scene, width, round, isBoss, config.leg);
+
+    let ty = STACK_PAD + 2;
+    this.addLeftLabel(STACK_PAD, ty, headerLabels[config.state], {
+      fontSize: '10px',
+      color: headerColors[config.state],
+    });
+    ty += 13;
+    this.addLeftLabel(STACK_PAD, ty, ROUND_NAMES[round - 1], {
+      fontFamily: FONTS.HEADING,
+      fontSize: '14px',
+      color: isUpcoming ? TEXT_COLORS.MUTED : TEXT_COLORS.PRIMARY,
+      wordWrap: { width: textMaxW },
+    });
+    ty += 18;
+
+    if (isBoss) {
+      const boss = selectBossForLeg(getRunState(), config.leg);
+      if (boss) {
+        this.addLeftLabel(STACK_PAD, ty, boss.name, {
+          fontFamily: FONTS.HEADING,
+          fontSize: '11px',
+          color: TEXT_COLORS.GOLD,
+          wordWrap: { width: textMaxW },
+        });
+        ty += 13;
+        this.addLeftLabel(STACK_PAD, ty, boss.description, {
+          fontSize: '10px',
+          color: TEXT_COLORS.SECONDARY,
+          wordWrap: { width: textMaxW },
+        });
+        ty += 22;
+      }
+    }
+
+    const dividerY = ty + STACK_DIVIDER_GAP;
+    const divider = scene.add.graphics();
+    divider.lineStyle(1, 0x444466, 0.45);
+    divider.lineBetween(STACK_PAD, dividerY, width - STACK_PAD, dividerY);
+    this.add(divider);
+
+    const target = targetMilesForRound(config.leg, round, config.permitScoreReduction, config.difficulty);
+    const showPreviewTag = !hasActionRow && !isBoss && !!config.skipPreviewTag;
+    const scoreX = showPreviewTag ? STACK_PAD + ROW_TAG_SIZE + 20 : STACK_PAD;
+    const statsLabelY = dividerY + STACK_STATS_GAP;
+    this.addLeftLabel(scoreX, statsLabelY, 'Score at least', {
+      fontSize: '10px',
+      color: TEXT_COLORS.SECONDARY,
+    });
+    this.addLeftLabel(scoreX, statsLabelY + 13, formatScore(target), {
+      fontFamily: FONTS.HEADING,
+      fontSize: '15px',
+      color: TEXT_COLORS.SCORE_GREEN,
+    });
+    this.addStackedRewardLabel(width - STACK_PAD, statsLabelY, round, config.difficulty);
+
+    if (isSkipped) {
+      if (config.skippedTag) {
+        this.addRoundTagDisplay(config.skippedTag, config, statsLabelY - 2, true);
+      }
+      const stamp = scene.add
+        .text(width * 0.62, statsLabelY + 8, 'SKIPPED', {
+          fontFamily: FONTS.HEADING,
+          fontSize: '16px',
+          color: TEXT_COLORS.ERROR_RED,
+        })
+        .setOrigin(0.5)
+        .setRotation(-0.25)
+        .setAlpha(0.75);
+      this.add(stamp);
+    } else if (showPreviewTag) {
+      this.addRoundTagDisplay(config.skipPreviewTag!, config, height - STACK_PAD - ROW_TAG_SIZE, true);
+    }
+
+    this.addStackedActions(scene, x, y, width, height, config, {
+      depth,
+      showRoundActions,
+      showBossReroll,
+      hasSkip,
+    });
+  }
+
+  private addStackedTopRightArt(scene: Scene, width: number, round: number, isBoss: boolean, leg: number): void {
+    const artCx = width - STACK_PAD - STACK_ART / 2;
+    const artCy = STACK_PAD + STACK_ART / 2;
+
+    if (isBoss) {
+      const boss = selectBossForLeg(getRunState(), leg);
+      if (boss) {
+        this.addBossPortrait(artCx, artCy, boss.id, BOSS_PORTRAIT_SIZE.stacked);
+      }
+      return;
+    }
+
+    const emblem = scene.add.graphics();
+    const emblemColor = round === 1 ? 0x666688 : 0x448866;
+    emblem.fillStyle(emblemColor, 1);
+    emblem.fillCircle(artCx, artCy, STACK_EMBLEM_R);
+    emblem.lineStyle(2, 0xffffff, 0.4);
+    emblem.strokeCircle(artCx, artCy, STACK_EMBLEM_R);
+    this.add(emblem);
+  }
+
+  private addStackedRewardLabel(rightX: number, y: number, round: number, difficulty: DifficultyLevel): void {
+    const roundReward = computeRoundReward(round, difficulty);
+    if (roundReward === 0) {
+      this.addRightLabel(rightX, y, 'No reward', {
+        fontSize: '10px',
+        color: TEXT_COLORS.ERROR_RED,
+      });
+      this.addRightLabel(rightX, y + 13, 'Thin Supplies', {
+        fontSize: '10px',
+        color: TEXT_COLORS.ERROR_RED,
+      });
+      return;
+    }
+
+    this.addRightLabel(rightX, y, 'Reward', {
+      fontSize: '10px',
+      color: TEXT_COLORS.SECONDARY,
+    });
+    const rewardDollars = '$'.repeat(roundReward);
+    this.addRightLabel(rightX, y + 13, `${rewardDollars}+`, {
+      fontFamily: FONTS.HEADING,
+      fontSize: '14px',
+      color: TEXT_COLORS.MONEY,
+    });
+  }
+
+  private addColumnActions(
+    scene: Scene,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    config: RoundInfoConfig,
+    ctx: { depth: number; isBoss: boolean; showRoundActions: boolean; showBossReroll: boolean },
+  ): void {
+    const { depth, isBoss, showRoundActions, showBossReroll } = ctx;
+    if (!showBossReroll && !showRoundActions) return;
+
+    const bottomY = height - COL_PAD;
+    const hasSkip = showRoundActions && !isBoss && !!config.skipPreviewTag;
+    let actionY = bottomY - BTN_H / 2;
+    const absX = x + width / 2;
+
+    if (showRoundActions) {
+      const playY = hasSkip ? actionY - BTN_H - BTN_GAP : actionY;
+
+      const playBtn = new Button(scene, absX, y + playY, 'Play Round', width - 30, BTN_H)
+        .setColor(0x2d6b2d, 0x3d8b3d)
+        .setDepth(depth + 5);
+      if (config.onPlay) playBtn.onClick(config.onPlay);
+      this.registerButton(playBtn);
+
+      if (hasSkip && config.skipPreviewTag) {
+        const skipY = actionY;
+        const tag = config.skipPreviewTag;
+        const tagX = 14;
+        const tagY = skipY - TAG_SIZE / 2;
+        const skipBtnW = width - 30 - TAG_SIZE - 10;
+        const skipBtnX = x + tagX + TAG_SIZE + 10 + skipBtnW / 2;
+
+        this.addTagBadge(tagX, tagY, tag, TAG_SIZE, config);
+        const skipBtn = new Button(scene, skipBtnX, y + skipY, 'Skip Round', skipBtnW, BTN_H)
+          .setColor(0x8b2020, 0xb03030)
           .setDepth(depth + 5);
-        if (config.onPlay) playBtn.onClick(config.onPlay);
-        this.registerButton(playBtn);
+        if (config.onSkip) skipBtn.onClick(config.onSkip);
+        this.registerButton(skipBtn);
 
-        if (hasSkip && config.skipPreviewTag) {
-          const skipY = actionY;
-          const tag = config.skipPreviewTag;
-          const tagX = 14;
-          const tagY = skipY - TAG_SIZE / 2;
-          const skipBtnW = width - 30 - TAG_SIZE - 10;
-          const skipBtnX = x + tagX + TAG_SIZE + 10 + skipBtnW / 2;
-
-          this.addTagBadge(tagX, tagY, tag, TAG_SIZE, config);
-          const skipBtn = new Button(scene, skipBtnX, y + skipY, 'Skip Round', skipBtnW, BTN_H)
-            .setColor(0x8b2020, 0xb03030)
-            .setDepth(depth + 5);
-          if (config.onSkip) skipBtn.onClick(config.onSkip);
-          this.registerButton(skipBtn);
-
-          if (config.onTagHover) {
-            const ax = x + tagX + TAG_SIZE / 2;
-            const ay = y + tagY;
-            skipBtn.on('pointerover', () => config.onTagHover!(tag, config.round, ax, ay));
-            skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
-          }
-        }
-
-        if (showBossReroll) {
-          actionY = (hasSkip ? actionY : playY) - BTN_H - BTN_GAP;
+        if (config.onTagHover) {
+          const ax = x + tagX + TAG_SIZE / 2;
+          const ay = y + tagY;
+          skipBtn.on('pointerover', () => config.onTagHover!(tag, config.round, ax, ay));
+          skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
         }
       }
 
       if (showBossReroll) {
-        const rerollBtn = new Button(scene, absX, y + actionY, 'Reroll $10', width - 30, BTN_H)
-          .setColor(0x6b2d6b, 0x8b3d8b)
-          .setDepth(depth + 5);
-        const rerollEnabled = config.canRerollBoss?.() ?? true;
-        rerollBtn.setEnabled(rerollEnabled);
-        rerollBtn.onClick(config.onRerollBoss!);
-        this.registerButton(rerollBtn);
+        actionY = (hasSkip ? actionY : playY) - BTN_H - BTN_GAP;
       }
+    }
+
+    if (showBossReroll) {
+      const rerollBtn = new Button(scene, absX, y + actionY, 'Reroll $10', width - 30, BTN_H)
+        .setColor(0x6b2d6b, 0x8b3d8b)
+        .setDepth(depth + 5);
+      const rerollEnabled = config.canRerollBoss?.() ?? true;
+      rerollBtn.setEnabled(rerollEnabled);
+      rerollBtn.onClick(config.onRerollBoss!);
+      this.registerButton(rerollBtn);
+    }
+  }
+
+  private addStackedActions(
+    scene: Scene,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    config: RoundInfoConfig,
+    ctx: {
+      depth: number;
+      showRoundActions: boolean;
+      showBossReroll: boolean;
+      hasSkip: boolean;
+    },
+  ): void {
+    const { depth, showRoundActions, showBossReroll, hasSkip } = ctx;
+    if (!showBossReroll && !showRoundActions) return;
+
+    const btnH = STACK_BTN_H;
+    const actionY = y + height - STACK_PAD - btnH / 2;
+    const innerLeft = x + STACK_PAD;
+    const innerW = width - STACK_PAD * 2;
+    const gap = 6;
+
+    if (showRoundActions && hasSkip && config.skipPreviewTag) {
+      const tag = config.skipPreviewTag;
+      const tagX = STACK_PAD;
+      const tagY = height - STACK_PAD - btnH;
+      const buttonsW = innerW - ROW_TAG_SIZE - gap;
+      const skipW = Math.floor(buttonsW * 0.4);
+      const playW = buttonsW - skipW - gap;
+      const skipCenterX = innerLeft + ROW_TAG_SIZE + gap + skipW / 2;
+      const playCenterX = innerLeft + ROW_TAG_SIZE + gap + skipW + gap + playW / 2;
+
+      this.addTagBadge(tagX, tagY, tag, ROW_TAG_SIZE, config);
+      const skipBtn = new Button(scene, skipCenterX, actionY, 'Skip', skipW, btnH)
+        .setColor(0x8b2020, 0xb03030)
+        .setDepth(depth + 5);
+      if (config.onSkip) skipBtn.onClick(config.onSkip);
+      this.registerButton(skipBtn);
+
+      const playBtn = new Button(scene, playCenterX, actionY, 'Play Round', playW, btnH)
+        .setColor(0x2d6b2d, 0x3d8b3d)
+        .setDepth(depth + 5);
+      if (config.onPlay) playBtn.onClick(config.onPlay);
+      this.registerButton(playBtn);
+
+      if (config.onTagHover) {
+        const ax = x + tagX + ROW_TAG_SIZE / 2;
+        const ay = y + tagY;
+        skipBtn.on('pointerover', () => config.onTagHover!(tag, config.round, ax, ay));
+        skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
+      }
+      return;
+    }
+
+    if (showRoundActions && showBossReroll) {
+      const btnW = (innerW - gap) / 2;
+      const rerollCenterX = innerLeft + btnW / 2;
+      const playCenterX = innerLeft + btnW + gap + btnW / 2;
+
+      const rerollBtn = new Button(scene, rerollCenterX, actionY, 'Reroll $10', btnW, btnH)
+        .setColor(0x6b2d6b, 0x8b3d8b)
+        .setDepth(depth + 5);
+      rerollBtn.setEnabled(config.canRerollBoss?.() ?? true);
+      rerollBtn.onClick(config.onRerollBoss!);
+      this.registerButton(rerollBtn);
+
+      const playBtn = new Button(scene, playCenterX, actionY, 'Play Round', btnW, btnH)
+        .setColor(0x2d6b2d, 0x3d8b3d)
+        .setDepth(depth + 5);
+      if (config.onPlay) playBtn.onClick(config.onPlay);
+      this.registerButton(playBtn);
+      return;
+    }
+
+    if (showRoundActions) {
+      const playBtn = new Button(scene, x + width / 2, actionY, 'Play Round', innerW, btnH)
+        .setColor(0x2d6b2d, 0x3d8b3d)
+        .setDepth(depth + 5);
+      if (config.onPlay) playBtn.onClick(config.onPlay);
+      this.registerButton(playBtn);
+      return;
+    }
+
+    if (showBossReroll) {
+      const rerollBtn = new Button(scene, x + width / 2, actionY, 'Reroll $10', innerW, btnH)
+        .setColor(0x6b2d6b, 0x8b3d8b)
+        .setDepth(depth + 5);
+      rerollBtn.setEnabled(config.canRerollBoss?.() ?? true);
+      rerollBtn.onClick(config.onRerollBoss!);
+      this.registerButton(rerollBtn);
+    }
+  }
+
+  private headerLabels(): Record<RoundColumnState, string> {
+    return {
+      skipped: 'Skipped',
+      complete: 'Complete',
+      select: 'Select',
+      upcoming: 'Upcoming',
+    };
+  }
+
+  private headerColors(): Record<RoundColumnState, string> {
+    return {
+      skipped: TEXT_COLORS.ERROR_RED,
+      complete: TEXT_COLORS.SCORE_GREEN,
+      select: '#ffaa44',
+      upcoming: TEXT_COLORS.SECONDARY,
+    };
+  }
+
+  private addRewardLabel(
+    x: number,
+    y: number,
+    round: number,
+    difficulty: DifficultyLevel,
+    compact: boolean,
+    align: 'center' | 'left' = 'center',
+  ): void {
+    const roundReward = computeRoundReward(round, difficulty);
+    const style = {
+      fontSize: compact ? '11px' : '12px',
+    };
+    if (roundReward === 0) {
+      const label = 'Thin Supplies: No reward';
+      if (align === 'left') {
+        this.addLeftLabel(x, y, label, { ...style, color: TEXT_COLORS.ERROR_RED });
+      } else {
+        this.addLabel(x, y, label, { ...style, color: TEXT_COLORS.ERROR_RED });
+      }
+      return;
+    }
+
+    const rewardDollars = '$'.repeat(roundReward);
+    const label = `Reward: ${rewardDollars}+`;
+    if (align === 'left') {
+      this.addLeftLabel(x, y, label, { ...style, color: TEXT_COLORS.MONEY });
+    } else {
+      this.addLabel(x, y, label, { ...style, color: TEXT_COLORS.MONEY });
     }
   }
 
@@ -422,6 +842,26 @@ export class RoundInfoPanel extends GameObjects.Container {
         ...style,
       })
       .setOrigin(0.5);
+    this.add(text);
+  }
+
+  private addLeftLabel(x: number, y: number, content: string, style: Phaser.Types.GameObjects.Text.TextStyle): void {
+    const text = this.scene.add
+      .text(x, y, content, {
+        fontFamily: FONTS.PRIMARY,
+        ...style,
+      })
+      .setOrigin(0, 0);
+    this.add(text);
+  }
+
+  private addRightLabel(x: number, y: number, content: string, style: Phaser.Types.GameObjects.Text.TextStyle): void {
+    const text = this.scene.add
+      .text(x, y, content, {
+        fontFamily: FONTS.PRIMARY,
+        ...style,
+      })
+      .setOrigin(1, 0);
     this.add(text);
   }
 
