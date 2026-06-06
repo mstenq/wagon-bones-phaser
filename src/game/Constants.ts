@@ -253,7 +253,7 @@ export type LayoutMode = 'sidebar' | 'topbar';
 export const UI = {
   // Sidebar (Balatro-style left panel) / portrait top bar
   SIDEBAR_WIDTH_RATIO: 0.24, // 24% of screen width
-  TOP_BAR_BASE_HEIGHT: 112,
+  TOP_BAR_BASE_HEIGHT: 172,
   /** Portrait reference width for UI scale (typical phone) */
   UI_SCALE_REF_WIDTH: 420,
   UI_SCALE_MIN: 0.72,

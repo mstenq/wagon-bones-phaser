@@ -240,7 +240,7 @@ export function computeLayoutMetrics(width: number, height: number): LayoutMetri
     };
   }
 
-  const topBarH = Math.floor(UI.TOP_BAR_BASE_HEIGHT * uiScale);
+  const topBarH = UI.TOP_BAR_BASE_HEIGHT;
   const sidebarW = 0;
   const contentX = feltPadding;
   const contentW = width - feltPadding * 2;

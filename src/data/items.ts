@@ -2975,7 +2975,7 @@ const items: ItemDef[] = [
       return {
         hint: [[miles(`+${total}`)], [condition('trail guide levels', 'sm')]],
         tooltip: [
-          [miles('+12'), text(' miles for each trail guide level above 1 on every hand type')],
+          [miles('+12'), text('miles for each trail guide level above 1 on every hand type')],
           [text('Currently: '), miles(`+${total}`), text(' miles')],
         ],
       };
