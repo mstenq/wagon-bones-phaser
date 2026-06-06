@@ -213,6 +213,8 @@ export class BoosterPackCard extends GameObjects.Container {
   }
 
   destroy(fromScene?: boolean): void {
+    this.disableInteractive();
+    this.removeAllListeners();
     this.hideTooltip();
     super.destroy(fromScene);
   }

@@ -32,6 +32,7 @@ import { createHorizontalDragReorder, type HorizontalDragReorder } from '../ui/h
 import { hitIncludesObjectOrChild, installClickAwayDismiss } from '../ui/clickAwayDismiss';
 import { createActionTabs, type ActionTabsHandle } from '../ui/actionTabs';
 import { ItemCard, CardActionTabConfig } from '../ui/ItemCard';
+import { clearSceneCardTooltips } from '../ui/itemCard/cardTooltipRegistry';
 import { addDiceCardVisual } from '../ui/DiceCardVisual';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
@@ -1188,6 +1189,28 @@ export class BoosterPackScene extends Scene {
     this.scene.start(returnScene, {});
   }
 
+  private tearDownPackLayout(): void {
+    clearSceneCardTooltips(this);
+    this.dismissActiveTab();
+    this.lineupDragReorder.stop();
+    this.clearDiceLineup();
+
+    for (const sprite of this.cardSprites) {
+      sprite.itemCard?.hideTooltip();
+      if (sprite.container.scene) {
+        sprite.container.disableInteractive();
+        sprite.container.removeAllListeners();
+        sprite.container.destroy();
+      }
+    }
+    this.cardSprites = [];
+    this.activeTabCard = null;
+
+    this.runShell?.destroy();
+    this.runShell = null;
+    this.children.removeAll(true);
+  }
+
   private onResize(): void {
     const stored = getSceneState().boosterPack;
     if (stored) {
@@ -1201,12 +1224,7 @@ export class BoosterPackScene extends Scene {
       this.queuedPackDefIds = [...stored.queuedPackDefIds];
       this.returnScene = stored.returnScene;
     }
-    this.cardSprites = [];
-    this.activeTabCard = null;
-    this.clearDismissClickAway();
-    this.runShell?.destroy();
-    this.runShell = null;
-    this.children.removeAll(true);
+    this.tearDownPackLayout();
     this.buildLayout();
   }
 

@@ -48,6 +48,7 @@ import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../ga
 import { bindStore } from '../store/subscribe';
 import type { ShopSceneState } from '../../game/store/types';
 import { appendShopStockForSlots, buildShopDieDisplayDef, buildShopPermitDisplayDef } from '../../game/store/shopStock';
+import { clearSceneCardTooltips } from '../ui/itemCard/cardTooltipRegistry';
 
 /** A shop stock item — equipment, consumable, or dice */
 type ShopItem =
@@ -631,6 +632,9 @@ export class ShopScene extends Scene {
 
   private clearShopStock(): void {
     this.activeTab.dismiss();
+    for (const card of this.cards) {
+      card.hideTooltip();
+    }
     for (const obj of this.shopStockObjects) {
       if (obj.scene) obj.destroy();
     }
@@ -640,6 +644,27 @@ export class ShopScene extends Scene {
     }
     this.cards = [];
     this.rerollBtn = null!;
+  }
+
+  /** Tear down shop UI before resize or full layout rebuild (mirrors CardBar card cleanup). */
+  private tearDownShopLayout(): void {
+    clearSceneCardTooltips(this);
+    this.clearShopStock();
+
+    for (const packCard of this.packCards) {
+      if (packCard.scene) packCard.destroy();
+    }
+    this.packCards = [];
+
+    if (this.permitCard?.scene) {
+      this.permitCard.hideTooltip();
+      this.permitCard.destroy();
+    }
+    this.permitCard = null;
+
+    this.runShell?.destroy();
+    this.runShell = null;
+    this.children.removeAll(true);
   }
 
   private buildShopStock(
@@ -918,13 +943,7 @@ export class ShopScene extends Scene {
         runActions.patch({ shopRerollCount: shop.shopRerollCount });
       }
     }
-    this.shopStockObjects = [];
-    this.runShell?.destroy();
-    this.runShell = null;
-    this.children.removeAll(true);
-    this.cards = [];
-    this.packCards = [];
-    this.rerollBtn = null!;
+    this.tearDownShopLayout();
     this.buildLayout();
   }
 
@@ -1088,10 +1107,7 @@ export class ShopScene extends Scene {
         this.stockItems = appendedStored.map((s) => this.deserializeShopItem(s));
         this.syncShopToStore();
         // Rebuild layout to reflect all permit changes (prices, sidebar, slots)
-        this.children.removeAll(true);
-        this.cards = [];
-        this.packCards = [];
-        this.permitCard = null;
+        this.tearDownShopLayout();
         this.buildLayout();
       },
     });
@@ -1135,11 +1151,7 @@ export class ShopScene extends Scene {
       this.stockItems[index] = { type: 'consumable', def: result.def };
     }
     this.syncShopToStore();
-    // Rebuild
-    this.children.removeAll(true);
-    this.cards = [];
-    this.packCards = [];
-    this.permitCard = null;
+    this.tearDownShopLayout();
     this.buildLayout();
   }
 
@@ -1154,11 +1166,7 @@ export class ShopScene extends Scene {
     }
     this.packs[index] = { def: packDef, id: `pack_dev_${Date.now()}` };
     this.syncShopToStore();
-    // Rebuild
-    this.children.removeAll(true);
-    this.cards = [];
-    this.packCards = [];
-    this.permitCard = null;
+    this.tearDownShopLayout();
     this.buildLayout();
   }
 
@@ -1172,11 +1180,7 @@ export class ShopScene extends Scene {
       return;
     }
     runActions.patch({ currentLegPermitId: permit.id, permitPurchasedThisLeg: false });
-    // Rebuild
-    this.children.removeAll(true);
-    this.cards = [];
-    this.packCards = [];
-    this.permitCard = null;
+    this.tearDownShopLayout();
     this.buildLayout();
   }
 
