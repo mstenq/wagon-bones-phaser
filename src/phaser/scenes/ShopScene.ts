@@ -35,6 +35,7 @@ import {
   createShopActiveTabHandle,
   openShopCardTabs,
   wireShopCardHover,
+  wireShopCardPointerUp,
   type ShopActiveTabHandle,
 } from './shop/shopCardInteractions';
 import { PermitDef, generateShopPermit, getPermitShopDiscount, getDiscountedShopPrice } from '../../game/PermitsSystem';
@@ -458,7 +459,7 @@ export class ShopScene extends Scene {
   private setupShopCardClick(card: ItemCard, stockIndex: number): void {
     wireShopCardHover(this, card, this.activeTab);
 
-    card.on('pointerup', () => {
+    wireShopCardPointerUp(card, () => {
       if (card.sold) return;
       card.setTooltipContext(null, getItemDisplayContext());
 
@@ -1065,7 +1066,7 @@ export class ShopScene extends Scene {
   private setupPackCardClick(card: ItemCard, packIndex: number): void {
     wireShopCardHover(this, card, this.activeTab);
 
-    card.on('pointerup', () => {
+    wireShopCardPointerUp(card, () => {
       if (card.sold) return;
 
       const tabs: CardActionTabConfig[] = [
@@ -1088,7 +1089,7 @@ export class ShopScene extends Scene {
   private setupPermitCardClick(card: ItemCard, permit: PermitDef, isPrimary: boolean): void {
     wireShopCardHover(this, card, this.activeTab);
 
-    card.on('pointerup', () => {
+    wireShopCardPointerUp(card, () => {
       if (card.sold) return;
 
       const tabs: CardActionTabConfig[] = [

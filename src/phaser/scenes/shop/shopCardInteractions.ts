@@ -11,6 +11,23 @@ export type ShopActiveTabHandle = {
   destroy: () => void;
 };
 
+/** Ignore pointerup unless pointerdown started on this card (avoids ghost clicks after scene transitions). */
+export function wireShopCardPointerUp(card: ItemCard, onPointerUp: () => void): void {
+  let pointerDownOnCard = false;
+
+  card.on('pointerdown', () => {
+    pointerDownOnCard = true;
+  });
+  card.on('pointerout', () => {
+    pointerDownOnCard = false;
+  });
+  card.on('pointerup', () => {
+    if (!pointerDownOnCard) return;
+    pointerDownOnCard = false;
+    onPointerUp();
+  });
+}
+
 export function wireShopCardHover(scene: Scene, card: ItemCard, activeTab: ShopActiveTabHandle): void {
   card.on('pointerover', () => {
     if (!card.sold && activeTab.getActiveCard() !== card) {

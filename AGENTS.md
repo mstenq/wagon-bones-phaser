@@ -4,9 +4,9 @@ use composer-2.5 for subagents, never use composer-2.5-fast for subagents
 
 ## Project Overview
 
-Balatro-inspired dice roguelike set on the Oregon Trail. Roll **d12** dice (values 1–12), build hands, collect equipment, and travel **8 legs** with **3 rounds per leg** (mile marker → river ford → boss showdown). Built with **Phaser 4 + SolidJS + Vite + TypeScript** using **bun** as the package manager.
+Balatro-inspired dice roguelike on the Oregon Trail. Roll **d12** dice (values 1–12), build hands, collect equipment, travel **8 legs** with **3 rounds per leg**. **Phaser 4 + SolidJS + Vite + TypeScript**, package manager **bun**.
 
-SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; almost all gameplay lives in Phaser scenes and `src/game/`.
+SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; gameplay lives in Phaser scenes (`src/phaser/`) and pure logic (`src/game/`).
 
 ## Quick Commands
 
@@ -18,7 +18,6 @@ SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; almost all gameplay liv
 | Tests | `bun test` |
 | Single test | `bun test src/game/__tests__/items/myTest.test.ts` |
 | Format | `bun run format` |
-| Format check | `bun run format:check` |
 | Tests + format | `bun run check` |
 | CI locally | `bun run ci` |
 
@@ -26,353 +25,135 @@ SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; almost all gameplay liv
 
 ### Before finishing work
 
-Run these before marking a task done (in order):
+1. **`bun run typecheck`**
+2. **`bun run check`**
+3. **`bun run build`** — when you changed Phaser scenes, Vite config, or the production bundle
 
-1. **`bun run typecheck`** — `tsc --noEmit` on `src/` (strict; catches issues tests may miss)
-2. **`bun run check`** — tests + format
-3. **`bun run build`** — when you changed Phaser scenes, Vite config, or anything that affects the production bundle
+Fix failures in code you touched. Pre-existing `tsc` errors elsewhere: clear only when you edit those files.
 
-Fix failures in code you touched. Do not introduce new TypeScript errors, test failures, or format violations. The repo may still have pre-existing `tsc` errors elsewhere; clear those when you edit the affected files.
+## Codebase navigation (graphify)
 
-## Architecture
+`graphify-out/` holds a living knowledge graph. **Use it for architecture and “where does X live?”** — not for input bugs or line-level debugging.
+
+| Need | Command |
+|------|---------|
+| Broad context | `graphify query "<question>"` |
+| Trace a path | `graphify path "<A>" "<B>"` |
+| Explain a symbol | `graphify explain "<concept>"` |
+| Community overview | `graphify-out/GRAPH_REPORT.md` or `graphify-out/wiki/index.md` if present |
+
+After modifying code in a session: **`graphify update .`** (AST-only, no API cost). See `.cursor/rules/graphify.mdc`.
+
+## Architecture (constitution only)
 
 ```
-src/game/          # Pure game logic — no Phaser game objects (see exceptions below)
-src/phaser/        # Rendering layer (scenes, UI, animations, asset preload)
-src/data/          # Typed data modules + some JSON (items, events, bosses, etc.)
-public/assets/     # PNG art (items, trail events, bosses, backgrounds, …)
+src/game/       # Pure game logic — no Phaser game objects (see exceptions)
+src/phaser/     # Scenes, UI, animations, asset preload
+src/data/       # Typed defs (items, events, bosses, …)
+public/assets/  # Art
 ```
 
-### Key Separation Rule
+**Logic/render split:** `src/game/` must not import Phaser scenes or sprites. Allowed Phaser imports in `src/game/`: `main.ts`, `config.ts`, `EventBus.ts` only.
 
-**Game logic in `src/game/` must not depend on Phaser scenes, sprites, or rendering.** Handlers and systems stay testable in isolation.
+**Orchestration:** Phaser scenes call **`gameFacade`**, not `*System.ts` directly. Gameplay animations go through **`enqueuePlayback`** / `PlaybackRunner` — scenes must not drive outcome animations themselves. State: `getRunState()` / `getRoundState()` / `getSceneState()` and matching `*Actions`.
 
-**Allowed Phaser imports (bootstrap / bridge only):**
+**Equipment:** defs in `src/data/items.ts` (`effectType`, `effectParams`, `display`); handlers in `src/game/effects/` via `effectRegistry`. Scoring pipeline, store layout, scene flow, data modules — **`graphify query`** or **`graphify explain`** on the relevant symbol.
 
-| File | Why |
-|------|-----|
-| `src/game/main.ts` | Creates the Phaser `Game` instance |
-| `src/game/config.ts` | Phaser game config (`Scale`, etc.) |
-| `src/game/EventBus.ts` | Uses `Phaser.Events.EventEmitter` for scene ↔ logic events |
+**Constants:** colors, fonts, sizing, gameplay defaults — **`Constants.ts` only** (`GAMEPLAY`: 8 rolled, 5 scored, 4 days, 4 rerolls by default).
 
-Everything else under `src/game/` should remain Phaser-free.
-
-### Core Systems (`src/game/`)
-
-| File / area | Purpose |
-|-------------|---------|
-| `store/runStore.ts` + `store/actions/*` | Run state (money, dice, equipment, consumables, trail modifiers, …) |
-| `store/roundStore.ts` + `roundActions` | Round FSM: **SELECT → ROLL → SCORE → DAY_END** → **ROUND_END** |
-| `facade/` | Blessed UI orchestration (`gameFacade.*`); Phaser scenes call facade instead of `*System.ts` |
-| `playback/` | `PlaybackCommand` queue (`enqueuePlayback`, `takePlayback`) — logic → animation channel |
-| `store/sceneStore.ts` | Shop, booster pack, trail event, payout, round-select slices |
-| `DiceSystem.ts` | Dice creation, rolling, pouch/spent cycling, hand detection |
-| `scoring/scoreHand.ts` | Per-hand score orchestration (`scoreHand` → held → additive/xMult in `roundActions`) |
-| `EquipmentEffects.ts` | Scoring pipeline + round/day lifecycle orchestration (some hooks still live here) |
-| `effects/` | Effect registry — additive, xMult, perDie, heldDie, lifecycle handlers |
-| `ItemsSystem.ts` | Equipment **instances**, shop stock, unlock checks, aura types (defs in `data/items.ts`) |
-| `EquipmentModifiers.ts` | Cursed / perishable / leased / negative modifiers on equipment instances |
-| `ConsumablesSystem.ts` | Supply cards, trail guides, frontier encounters |
-| `BoosterPackSystem.ts` | Pack opening logic |
-| `BossEffectsSystem.ts` | Boss round restrictions and modifiers |
-| `TrailEventsSystem.ts` | Between-round narrative events, choices, modifier accumulation |
-| `trailEventAssets.ts` | Asset key helpers for trail event / spyglass images (logic-side) |
-| `TagSystem.ts` | Skip-round tag rewards |
-| `PermitsSystem.ts` | Frontier permits (voucher-like shop upgrades) |
-| `DiceSelectionSystem.ts` | Dice selection flows (enhancements, destruction, etc.) |
-| `store/economy.ts` + `economyActions` | Money tracking |
-| `SaveLoad.ts` | Serializable run snapshot types + apply/serialize |
-| `AutoSave.ts` | Auto-save scheduling (interval from `Constants`) |
-| `scoreMath.ts` / `formatScore.ts` | Scoring math and display formatting |
-| `Constants.ts` | Magic numbers, colors, fonts, layout, gameplay defaults |
-| `EventBus.ts` | Global `EventEmitter` + `Events` constants (`domain:action` naming) |
-| `types.ts` | Core types (`Die`, `HandType`, `ScoreAnimEvent`, `PhaseState`, …) |
-| `DevMode.ts` | Debug/cheat helpers for development |
-| `config.ts` | Phaser game configuration |
-
-Default gameplay sizing (see `GAMEPLAY` in `Constants.ts`): **8 dice rolled**, **5 scored**, **4 days**, **4 rerolls** per day (profession/permits/trail events modify these).
-
-### Phaser Layer (`src/phaser/`)
-
-| Directory | Purpose |
-|-----------|---------|
-| `scenes/` | `Boot` → `Preloader` → menu flow → run scenes (see below) |
-| `ui/` | Reusable components (`DiceSprite`, `ItemCard`, `EquipmentBar`, `SpyglassTrailPreview`, …) |
-| `animations/` | `ScoreAnimation`, `RollAnimation`, `HandUpgradeAnimation` |
-| `AutoSaveManager.ts` | Boot-time restore + periodic save |
-| `SaveLoadIO.ts` | `localStorage` persistence + scene routing on load |
-| `GameAudio.ts` / `BackgroundMusic.ts` | SFX and music |
-
-**Scene flow (typical run):** `MainMenu` → `ProfessionSelect` → `DifficultySelect` → `RoundSelect` → `Game` → `Payout` → (`TrailEvent` | `Shop` | `BoosterPack` | `DiceSelection`) → … → `GameOver`.
-
-#### Container input and hit areas (common pitfall)
-
-`GameObjects.Container` always uses a **center transform** (`originX/Y` are fixed at `0.5`). Local `(0, 0)` is the container center, not the top-left corner. Input hit tests add `displayOriginX/Y` (`width * 0.5`, `height * 0.5`) before checking the hit shape.
-
-**Symptom:** clickable/hover area is shifted **up and left** of the visible UI when graphics are drawn from local `(0, 0)` but the hit rect is `new Phaser.Geom.Rectangle(0, 0, w, h)`.
-
-**Fix — pick one pattern and use it consistently:**
-
-| Pattern | Draw children | Hit area | Examples |
-|---------|---------------|----------|----------|
-| **Center-anchored** (preferred for new UI) | `fillRoundedRect(-w / 2, -h / 2, w, h)`; center text at `(0, 0)` | `Rectangle(0, 0, w, h)` | `Button.ts` |
-| **Top-left children** | `fillRoundedRect(0, 0, w, h)`; place content from `(0, 0)` | `Rectangle(w / 2, h / 2, w, h)` | `DicePouch.ts`, `actionTabs.ts` |
-
-Always call `setSize(w, h)` before `setInteractive(...)`. When adding nested interactive containers, apply the same offset rule to the child’s hit rect relative to **its** drawn bounds.
-
-**Scene placement:** if children are top-left drawn, the container’s `(x, y)` is still its transform center in Phaser — the project often places that at the visual top-left and accepts the offset. If you center-draw instead, position the container at the visual center (`topLeft + w/2`, `topLeft + h/2`).
-
-#### Responsive run scenes
-
-Canvas is `Scale.RESIZE` — use **`SceneLayout.ts`**, not `scene.scale.width` alone, for run-scene UI bounds.
-
-- **Shell:** `createRunSceneShell(scene, opts)` → `layout` with sidebar/top bar, equip/consumable bars, pouch, and `modalRegion`.
-- **Metrics only** (partial relayout): `computeLayoutMetrics(width, height)`.
-- **Portrait** (`height > width`): `layoutMode === 'topbar'`; chrome uses `uiScale` (`width / UI_SCALE_REF_WIDTH`, min `UI_SCALE_MIN`). **Narrow content** (`contentW < 650`): card bars auto-shrink via `layout.cardBar` — reuse `cardBar.cardScale` for shop/pack cards, not deprecated `EQUIP_CARD_SCALE` constants.
-
-**Lay out scene content inside the content box:**
-
-- Horizontal: `layout.contentX`, `layout.contentW`, `layout.contentCX`
-- Vertical: `layout.contentTop` … `layout.contentBottom` (between card bars and dice pouch)
-- Modals: `layout.modalRegion` (`y` is below top bar in portrait); `modalShell` `contentY` = `modalRegion.y`
-
-**Resize:** persist state to store if needed → `children.removeAll(true)` or `scene.restart({})` → rebuild through the same `createRunSceneShell` / `createLayout` path. See `ShopScene`, `BoosterPackScene`, `TrailEventScene` for patterns.
-
-**New layout numbers → `Constants.ts` `UI` block only.** Game-scene dice/HUD helpers (`computeGameHudLayout`, `diceRowGeometry`) live in the same file but are not needed for shop/pack/trail work.
-
-### Data Layer (`src/data/`)
-
-| Module | Contents |
-|--------|----------|
-| `items.ts` | **Sole source** for equipment definitions (`effectType`, `effectParams`, `display`, optional `unlockCondition`) |
-| `hands.ts` | Hand type definitions and detection order |
-| `trail_events.ts` | Trail event definitions and effect types |
-| `trail_guides.ts` / `.json` | Trail guide (planet) cards |
-| `supply_cards.ts` / `.json` | Supply (tarot) cards |
-| `frontier_encounters.ts` | Frontier (spectral) cards |
-| `bosses.ts` | Boss definitions |
-| `professions.ts` / `.json` | Professions + starting enhanced dice |
-| `permits.ts` / `.json` | Permits |
-| `packs.ts` / `.json` | Booster packs |
-| `trail_tags.ts` | Tag definitions |
-| `dice_enhancements.ts`, `pip_enhancements.ts`, `dice_auras.ts`, `item_auras.ts` | Enhancement/aura metadata |
-
-Prefer typed `.ts` modules over raw JSON where the codebase has already migrated (`BUGS.md` tracks remaining JSON → TS work).
-
-Equipment UI hints: items use `display(game, player)` on each def (returns `ItemDisplayResult` / hint segments). Only a couple of items still use a separate `hintDisplay` name — treat **`display` as the canonical hook** for dynamic tooltips.
-
-## Key Patterns
+## Key patterns
 
 ### TypeScript
 
-- **No inline type imports.** Never use `import('./module').Type` or `import('../foo').Bar` in type positions — not on fields (`surveyorHand?: import('../types').HandType`), parameters, or return types. Add a top-level `import type { Foo } from './module'` (or a value import when the symbol is an enum) and reference `Foo` directly.
+- **No inline type imports** (`import('./x').Foo`). Use top-level `import type { Foo } from '...'`.
 
-### Score Animation (Event-Driven)
+### Score animation
 
-Game logic emits `ScoreAnimEvent[]` during scoring. The Phaser layer plays them back — **no logic duplication**.
+Logic pushes `ScoreAnimEvent[]` during scoring; `ScoreAnimation.ts` plays them back. No duplicated scoring in Phaser.
 
-To add animation for a new effect:
+### New equipment effect
 
-1. In game logic (`DiceSystem.ts`, effect handlers, or `EquipmentEffects.ts`), push to `animEvents[]` next to the scoring code
-2. `ScoreAnimation.ts` plays back whatever events exist in the array
+1. Def in `src/data/items.ts`
+2. Handler in `src/game/effects/<category>/`, register with `effectRegistry`
+3. Push `ctx.animEvents` for visuals
+4. Tests in the correct existing file (see Testing)
 
-### Equipment Effects (Registry-Based)
+### Save / auto-save
 
-Equipment is defined in `src/data/items.ts` with `effectType` + `effectParams`. Handlers register in `src/game/effects/` and dispatch through `effectRegistry`.
+Logic: `SaveLoad.ts`, `AutoSave.ts`. IO: `phaser/AutoSaveManager.ts`, `phaser/SaveLoadIO.ts`.
 
-#### Effect Registry Architecture (`src/game/effects/`)
+**No legacy save support.** Default missing fields with `??` in deserialize paths. Do not bump `SAVE_VERSION` for field additions alone. Remove dead legacy code when you touch it.
 
-| File / Directory | Purpose |
-|------------------|---------|
-| `registry.ts` | `EffectRegistry` — register and dispatch by `effectType` / lifecycle phase |
-| `types.ts` | `ScoringPipelineContext`, `ScoringMutations`, `LifecyclePhase`, handler interfaces |
-| `helpers.ts` | Shared utilities (`forEachEquipmentResolved`, auras, copy targets, …) |
-| `applyMutations.ts` | `createEmptyScoringMutations()`, `mergeMutations()`, post-score application |
-| `index.ts` | Barrel export; imports handler modules to trigger registration |
-| `additive/` | Additive mult/miles/money (independent equipment pass) |
-| `xmult/` | xMult pass (`risky.ts`, `conditional.ts`, `stateful.ts`, …) |
-| `perDie/` | Per scoring die (pips, parity, enhancements) |
-| `heldDie/` | Held-in-hand die triggers |
-| `lifecycle/` | `on-hand-played`, `on-pre-scoring`, `after-hand-scored`, shop/reroll/sell, … |
+## Phaser gotchas
 
-#### Handler Categories
+### Container hit areas
 
-- **Additive** — `effectRegistry.registerAdditive(effectType, handler)` — `ctx.bonusMult` / `ctx.bonusMiles`
-- **XMult** — `effectRegistry.registerXMult(effectType, handler)` — multiplies `ctx.xMult`
-- **PerDie** — `effectRegistry.registerPerDie(effectType, handler)` — once per scoring die per trigger
-- **HeldDie** — `effectRegistry.registerHeldDie(effectType, handler)` — held dice
-- **Lifecycle** — `effectRegistry.registerLifecycle(phase, handler)` — see `LifecyclePhase` in `effects/types.ts`
+Containers use a **center transform**. Hit rects must match how children are drawn:
 
-**Note:** Round/day lifecycle hooks live in `effects/lifecycle/onRoundStart.ts`, `onDayEnd.ts`, and `onRoundEnd.ts` (orchestrator + `registerLifecycle`). Add new round-start/day-end/end-round effect types there.
+| Pattern | Draw | Hit area |
+|---------|------|----------|
+| **Center-anchored** (preferred) | from `(-w/2, -h/2)` | `Rectangle(0, 0, w, h)` |
+| **Top-left children** | from `(0, 0)` | `Rectangle(w/2, h/2, w, h)` |
 
-#### Scoring Pipeline (`EquipmentEffects.ts`)
+Call `setSize(w, h)` before `setInteractive(...)`.
 
-`applyEquipmentEffects()` builds a `ScoringPipelineContext` and runs roughly:
+### Responsive run scenes
 
-1. **Additive pass** — `dispatchAdditive()` per equipment (left to right)
-2. **Auras** — fire/icy from equipment slots
-3. **XMult pass** — `dispatchXMult()`
-4. **Final calculation** — `(baseMiles + totalValue + bonusMiles) * finalMult` (see `scoreMath.ts` for precision)
+Canvas is `Scale.RESIZE` — use **`SceneLayout.ts`** / `createRunSceneShell()`, not raw `scene.scale.width`. Lay out inside `layout.contentX` … `contentBottom`. New layout numbers → `Constants.ts` `UI` block only.
 
-Per-die scoring and retriggers live in `DiceSystem.ts`. `processHeldInHand()` uses held-die handlers.
+### Scene lifecycle
 
-#### Adding a New Equipment Effect
+- Clean up resize listeners in `shutdown`
+- `EventBus.emit(Events.SCENE_READY, this)` at end of `create()`
+- **Pass explicit data to `scene.start(key, data)`** — omitting the second arg reuses stale `init` data; use `{}` when empty
 
-1. Add definition to `src/data/items.ts`
-2. Create or append to the appropriate handler file in `src/game/effects/<category>/`
-3. `effectRegistry.register<Category>(effectType, handler)` — mutates `ctx` in place
-4. Push to `ctx.animEvents` for visual feedback
-5. Add test to the **correct existing test file** in `src/game/__tests__/items/` (see Testing — never create per-phase test files)
+### Shop card clicks
 
-### Hint / Display System
-
-Equipment cards show dynamic colored hints via `display(game, player)`. Segment styles include: `miles`, `mult`, `odds`, `inactive`, `condition`, `active`, `money`, `text`.
-
-**Gap:** Static tooltips cannot see live run state. `BUGS.md` tracks making consumable/equipment tooltips state-aware (like `display`) for cards such as Second Helpings and Trade.
-
-### State access
-
-- **Run / round / scene** — `getRunState()`, `getRoundState()`, `getSceneState()` and `*Actions` in `src/game/store/`
-- **Tests** — `resetTestRun()` / `resetAllGameStores()`; optional `testRunPlayer.ts` / `testGameState.ts` shims
-- `EventBus` — host-only (`Events.SCENE_READY`); gameplay uses stores, facade, and `playbackQueue`
-
-### UI integration (post-refactor)
-
-- Phaser scenes call **`gameFacade`** for orchestration (`import { gameFacade } from '../game/facade'`).
-- **Animations:** logic enqueues `PlaybackCommand` via `enqueuePlayback` / helpers in `src/game/store/playbackEnqueue.ts` (`enqueueHandUpgrades`, `enqueueConsumablePlayback`, …). `PlaybackRunner` in `src/phaser/playback/` drains the FIFO queue in order — **scenes must not call animation primitives directly for gameplay outcomes**.
-- **Scene binding:** any scene that can enqueue playback (Game, Shop, BoosterPack, Payout, TrailEvent, RoundSelect) binds `bindScenePlaybackRunner()` (or `bindScenePlaybackRunner` helper) in `create()`.
-- **Manual drains:** `day-end-destructions`, `score-events` (`round-end-held`), and scene-specific continuations use `playbackRunner.drainMatching(...)` after enqueueing — all drains serialize through one chain.
-- **Consumables:** scenes using `ConsumableBar` route `UseConsumableResult` through `handleStandardConsumableResult` for dice-selection redirects only; hand upgrades and consumable bar animations enqueue via `enqueueConsumablePlayback`.
-- **Round state:** reads via `selectHandDice`, `selectRolledDice`, etc.; writes via `roundActions`, `roundWrites`, or `gameFacade.round`.
-
-### Scene Lifecycle
-
-- Scenes clean up resize listeners in `shutdown`
-- Emit `EventBus.emit(Events.SCENE_READY, this)` at end of `create()`
-- Shared layout via `createLayout()` in `SceneLayout.ts`
-- **CRITICAL:** Pass explicit data to `this.scene.start(key, data)` when re-entering a scene — Phaser reuses previous `init` data if the second argument is omitted. Prefer `{}` when no data is needed. Audit call sites when debugging stale scene state.
-
-### Constants
-
-Colors, fonts, sizing, gameplay values — **`Constants.ts` only**. Import from there; do not hardcode in logic or UI.
-
-### Save / Auto-save
-
-- Logic: `SaveLoad.ts`, `AutoSave.ts`
-- IO + boot restore: `phaser/AutoSaveManager.ts`, `phaser/SaveLoadIO.ts`
-- Key: `GAMEPLAY.AUTOSAVE_STORAGE_KEY` in `localStorage`
-
-**Active development — no legacy save support.** The game is not launched; do not add migration helpers, equipment-state inference, or other backward-compatibility shims when renaming or adding run fields. On load, default missing fields with `?? 0`, `?? []`, `?? null`, etc. in `deserializeRunState` (or the v3 `playerSaveToRunState` path only when that path still exists). Do not bump `SAVE_VERSION` for field additions alone. Remove dead legacy code when you touch it rather than extending it.
+Use `wireShopCardPointerUp` (requires pointerdown on the card) so scene transitions from `Button` (`pointerdown`) do not ghost-open cards on `pointerup`.
 
 ## Testing
 
-- Framework: **bun:test** (Jest-compatible API)
-- Helpers: `src/game/__tests__/testHelpers.ts` — `setupGame()`, `calculateTestScore()`, `playScoredDayAndEnd()`, `item()`, `die()`, …
-- Setup: `src/game/__tests__/setup.ts` (suppresses `console.log`)
+- **bun:test**; helpers in `src/game/__tests__/testHelpers.ts`
 - **Test game logic only** — not Phaser rendering
+- Real modules, no mock scoring stack; failures = wrong handler or store not persisted
 
-Tests run against **real** game modules (`roundActions`, effect registry, stores). There is no parallel mock scoring stack. Failures usually mean either the handler is wrong or **store wiring** did not persist mutations.
+**Handler vs integration:** stateful equipment needs both — direct handler test + integration via `calculateTestScore`, `playScoredDayAndEnd`, or `game.startRound()` as appropriate.
 
-### Two layers: handler vs integration
+**Helpers:** `calculateTestScore`, `playScoredDayAndEnd` (use `avoidWin: true`, `endDay: { deferEquipmentDestructionAnimation: true }` when needed), `seedTestRoll`, `syncEquipmentInstances` / `pushEquipmentState`.
 
-| Layer | When to use | Example | Catches |
-|-------|-------------|---------|---------|
-| **Handler (unit)** | Rule logic on an in-memory `EquipmentInstance[]` | `processEndOfRound([inst])`, `processEquipmentOnHandPlayed([inst], hand)` | Effect math, branches |
-| **Store (integration)** | Anything that must survive an action boundary | `playScoredDayAndEnd(game)` then read `player.equipment` / `getRunState()` | Missing `replaceEquipmentList`, wrong resolve path |
+**Payout money:** use `computePayoutBreakdown` for `END_ROUND_MONEY` — not `processEndOfRound().moneyEarned` alone.
 
-Use **both** for stateful equipment (`equip.state`, `sellValue`, `perishableRoundsLeft`):
+**Timed “rounds”** on items = **leg rounds** (mile → ford → boss), not travel days.
 
-1. One fast handler test for the rule.
-2. One integration test through the real action that runs in gameplay.
+### Test file organization (CRITICAL)
 
-### Integration helpers (`testHelpers.ts`)
+By **effect category**, never `phaseN.test.ts`. Append to the matching file:
 
-| Helper | Flow | Use when |
-|--------|------|----------|
-| `calculateTestScore({ scoredDice, equipment })` | `startRound` → patch ROLL → `selectForScore` → `calculateScore` | Scoring pipeline; persists via `calculateScore` |
-| `playScoredDayAndEnd(game, options?)` | roll → score → `endDay`; syncs `player` from store | Day/round-end lifecycle (`processEndOfRound`, `processEquipmentOnDayEnd`) |
-| `seedTestRoll(dice)` | Patch round store to ROLL with fixed dice | Deterministic hands inside a started round |
-| `syncEquipmentInstances(...inst)` | Copy store → instances tests still hold | After store actions when keeping local `item()` refs |
-| `pushEquipmentState(...inst)` | Copy instances → store | Before store-driven actions when seeding custom `state` |
-
-`playScoredDayAndEnd` options:
-
-- `avoidWin: true` — high `targetMiles` so one hand does not end the leg.
-- `endDay: { deferEquipmentDestructionAnimation: true }` — matches `GameScene` (`roundActions.endDay` production path).
-
-### Lifecycle → action map (what to integration-test)
-
-| Mutation timing | Production entry | Prefer integration test via |
-|-----------------|------------------|-----------------------------|
-| On score | `roundActions.calculateScore` | `calculateTestScore` or `game.calculateScore` + `player.syncFromStore()` |
-| End of scored day | `roundActions.endDay` → `processEndOfRound` + `processEquipmentOnDayEnd` | `playScoredDayAndEnd` |
-| Start of leg round | `roundActions.startRound` → `processEquipmentOnRoundStart` | `game.startRound()` (+ `roundActions.clearRound()` for a second round in tests) |
-| Leg payout money | `computePayoutBreakdown` in `runProgression.ts` | `computePayoutBreakdown(getRunState(), …)` — **not** `processEndOfRound().moneyEarned` alone for `END_ROUND_MONEY` |
-
-**Do not assume** `processEndOfRound().moneyEarned` is applied during `endDay`; payday-style money is summed again at payout. Handler tests on `moneyEarned` are still useful but must be paired with `computePayoutBreakdown` for payout items.
-
-**Destruction-only** checks (e.g. Dynamite `destroyedIndices`) can stay on `processEndOfRound` direct calls; removal often persisted even when `state` did not (historical Fading Memory bug).
-
-### Test File Organization (CRITICAL)
-
-**Tests are organized by EFFECT CATEGORY, NOT by phase/release.** Never create `phase9.test.ts`-style files. Append to the matching file below.
-
-| File | Effect categories / topic |
-|------|---------------------------|
-| `items/xMult.test.ts` | xMult effects |
-| `items/nonScoring.test.ts` | Config modifiers, round/day end, reroll, shop, misc lifecycle |
-| `items/pipEffects.test.ts` | Per-pip scoring |
+| File | Topic |
+|------|-------|
+| `items/xMult.test.ts` | xMult |
+| `items/nonScoring.test.ts` | Lifecycle, shop, reroll, misc |
+| `items/pipEffects.test.ts` | Per-pip |
 | `items/statefulMult.test.ts` | Stateful additive mult |
-| `items/handEffects.test.ts` | `HAND_MULT` and hand-type additive bonuses |
-| `items/conditionalEffects.test.ts` | Conditional additive mult |
-| `items/parityEffects.test.ts` | Even/odd parity |
+| `items/handEffects.test.ts` | Hand-type mult |
+| `items/conditionalEffects.test.ts` | Conditional mult |
+| `items/parityEffects.test.ts` | Even/odd |
 | `items/heldInHand.test.ts` | Held-in-hand |
-| `items/copyEquipment.test.ts` | Copy equipment (Mirror Lake, Echo Chamber, …) |
+| `items/copyEquipment.test.ts` | Copy equipment |
 | `items/loadedDice.test.ts` | Loaded dice |
 | `items/addMult.test.ts` | `ADD_MULT` |
 | `items/legStart.test.ts` | Leg / round start |
-| `items/stickerEffects.test.ts` | Dice stickers |
-| `scoring.test.ts`, `bosses.test.ts`, `trailEvents.test.ts`, `trailEventAssets.test.ts` | Core scoring, bosses, trail events |
-| `saveLoad.test.ts`, `autoSave.test.ts`, `permits.test.ts`, `tags.test.ts`, … | Meta-systems |
+| `items/stickerEffects.test.ts` | Stickers |
+| `scoring.test.ts`, `bosses.test.ts`, `trailEvents.test.ts`, … | Core / meta |
 
-**When adding tests for a new item:** read `effectType` in `items.ts` → pick file from table → append `describe()` at **end** of file.
+**Every new item in `items.ts` needs tests** before the task is done (real effect path, not metadata-only).
 
-### New equipment (required)
+## Design docs
 
-**Every new equipment definition in `src/data/items.ts` must ship with tests** before the task is done. Do not merge item-only data without coverage.
+[GAME_OVERVIEW.md](GAME_OVERVIEW.md) · [GAME_EQUIPMENT_OVERVIEW.md](GAME_EQUIPMENT_OVERVIEW.md) · [GAME_DICE_OVERVIEW.md](GAME_DICE_OVERVIEW.md) · [GAME_BOSS_OVERVIEW.md](GAME_BOSS_OVERVIEW.md) · [GAME_SUPPLY_CARD_OVERVIEW.md](GAME_SUPPLY_CARD_OVERVIEW.md) · [GAME_TRAIL_GUIDE_OVERVIEW.md](GAME_TRAIL_GUIDE_OVERVIEW.md) · [GAME_PERMITS_OVERVIEW.md](GAME_PERMITS_OVERVIEW.md) · [GAME_FRONTIER_ENCOUNTER_OVERVIEW.md](GAME_FRONTIER_ENCOUNTER_OVERVIEW.md) · [GAME_TAGS_OVERVIEW.md](GAME_TAGS_OVERVIEW.md) · [BUGS.md](BUGS.md)
 
-| Requirement | Details |
-|-------------|---------|
-| **Minimum** | At least one test that exercises the item’s real effect path (not only `effectType` / `effectParams` metadata). |
-| **Stateful items** | Handler test **and** integration through the production action (`calculateTestScore`, `playScoredDayAndEnd`, `processEquipmentOnRoundStart`, etc.) when state must persist in the run store. |
-| **Timed “rounds”** | Items with `roundsRemaining` or “after each round” copy mean **leg rounds** (mile → ford → boss), not travel days. Use `processEndOfRound(..., { isLegRoundEnd: true })` in handler tests and `playScoredDayAndEnd` across multiple days for integration. `endDay` calls `processEndOfRound` every day but passes `isLegRoundEnd` only when the leg round actually ends. |
-| **File choice** | Same category table as above — never a `phaseN.test.ts` or `newEquipment.test.ts` catch-all. |
-
-
-## Game Design Documentation
-
-| Doc | Topic |
-|-----|--------|
-| [README.md](README.md) | Overview (note: still says “six-sided” in places — dice are **d12** in code) |
-| [GAME_OVERVIEW.md](GAME_OVERVIEW.md) | Core loop, scoring order, professions |
-| [GAME_EQUIPMENT_OVERVIEW.md](GAME_EQUIPMENT_OVERVIEW.md) | Equipment by phase |
-| [GAME_DICE_OVERVIEW.md](GAME_DICE_OVERVIEW.md) | Enhancements, stickers, auras |
-| [GAME_BOSS_OVERVIEW.md](GAME_BOSS_OVERVIEW.md) | Bosses |
-| [GAME_SUPPLY_CARD_OVERVIEW.md](GAME_SUPPLY_CARD_OVERVIEW.md) | Supply cards |
-| [GAME_TRAIL_GUIDE_OVERVIEW.md](GAME_TRAIL_GUIDE_OVERVIEW.md) | Trail guides |
-| [GAME_PERMITS_OVERVIEW.md](GAME_PERMITS_OVERVIEW.md) | Permits |
-| [GAME_FRONTIER_ENCOUNTER_OVERVIEW.md](GAME_FRONTIER_ENCOUNTER_OVERVIEW.md) | Frontier encounters |
-| [GAME_TAGS_OVERVIEW.md](GAME_TAGS_OVERVIEW.md) | Skip-round tags |
-| [BUGS.md](BUGS.md) | Known bugs, balance notes, tech debt |
-| [SCOUTS_SPYGLASS_UPDATE.md](SCOUTS_SPYGLASS_UPDATE.md) | Spyglass trail preview design |
+Dice are **d12** in code (README may still say six-sided).
 
 ## Skills
 
-Custom skills in `.agents/skills/`:
-
-- `phaser` — Phaser patterns (project uses **v4**)
-- `particles` — Particle effects
-- `sprites-and-images` — Sprites and images
-- `v4-new-features` — Phaser 4 filters, render nodes, etc.
-- `game-designer` — Visual polish and game feel
-- `game-ui-design` — HUD and UX
+`.agents/skills/`: `phaser`, `particles`, `sprites-and-images`, `v4-new-features`, `game-designer`, `game-ui-design`
