@@ -1,9 +1,10 @@
 import { arcaneEffect } from './definitions/arcane';
 import { fireEffect } from './definitions/fire';
 import { ghostEffect } from './definitions/ghost';
+import { holyEffect } from './definitions/holy';
 import type { EffectDefinition, EffectId } from './types';
 
-export const EFFECT_DEFINITIONS: EffectDefinition[] = [fireEffect, arcaneEffect, ghostEffect];
+export const EFFECT_DEFINITIONS: EffectDefinition[] = [fireEffect, arcaneEffect, ghostEffect, holyEffect];
 
 const byId = new Map(EFFECT_DEFINITIONS.map((d) => [d.id, d]));
 

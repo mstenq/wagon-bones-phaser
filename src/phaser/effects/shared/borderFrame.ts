@@ -21,3 +21,11 @@ export function effectVisualBounds(mount: EffectMountContext): BorderBounds {
 export function hostIsDie(hostKind: EffectHostKind): boolean {
   return hostKind === 'die';
 }
+
+/** Point on ellipse perimeter (t in 0..1). Works well for dice hosts. */
+export function perimeterPointEllipse(bounds: BorderBounds, t: number): { x: number; y: number } {
+  const a = bounds.halfW * 0.92;
+  const b = bounds.halfH * 0.92;
+  const angle = (((t % 1) + 1) % 1) * Math.PI * 2;
+  return { x: Math.cos(angle) * a, y: Math.sin(angle) * b };
+}

@@ -10,7 +10,7 @@ import { getGameplayPreferences } from '../../game/GameplayPreferences';
 import { AuraEffectHost } from '../effects/AuraEffectHost';
 import { effectPhaseFromSeed } from '../effects/context';
 import { isRegistryAura } from '../effects/registry';
-import { getAuraPrimary, setupLegacyDieAura, type LegacyAuraHandle } from './AuraFX';
+import { getAuraPrimary } from './AuraFX';
 import { DICE_ATLAS_KEY, resolveDiceAtlasFrame } from './diceAssets';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
@@ -65,7 +65,6 @@ export class DiceSprite extends GameObjects.Container {
   private auraLabel: GameObjects.Text | null = null;
   private tooltip: GameObjects.Container | null = null;
   private effectHost: AuraEffectHost | null = null;
-  private legacyAura: LegacyAuraHandle | null = null;
   private _dieData: Die;
   private _selected: boolean = false;
   private _rerollLocked: boolean = false;
@@ -278,10 +277,6 @@ export class DiceSprite extends GameObjects.Container {
       this.effectHost.destroy();
       this.effectHost = null;
     }
-    if (this.legacyAura) {
-      this.legacyAura.destroy();
-      this.legacyAura = null;
-    }
   }
 
   private drawAuraFX(): void {
@@ -310,8 +305,6 @@ export class DiceSprite extends GameObjects.Container {
         getArtImage: () => this.dieImage,
       });
       this.effectHost.bindPointer(this);
-    } else {
-      this.legacyAura = setupLegacyDieAura(this.scene, this, aura, half, this.dieImage);
     }
 
     if (info && this._showAuraLabel) {

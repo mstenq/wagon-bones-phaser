@@ -26,6 +26,16 @@ export function backdropBounds(mount: EffectMountContext): BorderBounds {
   return isDieMount(mount) ? effectVisualBounds(mount) : artBoundsFromMount(mount);
 }
 
+/** Random point over the card face (not on the perimeter). */
+export function randomInteriorPoint(bounds: BorderBounds, margin = 0.12): { x: number; y: number } {
+  const mx = bounds.halfW * (1 - margin);
+  const my = bounds.halfH * (1 - margin);
+  return {
+    x: (Math.random() - 0.5) * mx * 2,
+    y: (Math.random() - 0.5) * my * 2,
+  };
+}
+
 export function makeRuntime(
   id: EffectDefinition['id'],
   step: (frame: EffectFrameContext) => void,

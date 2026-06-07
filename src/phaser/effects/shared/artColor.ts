@@ -40,3 +40,25 @@ export function stepFireDisplacement(
   displacement.x = scale;
   displacement.y = scale;
 }
+
+export type HolyArtFilterState = {
+  colorMatrix: Display.ColorMatrix;
+  cmController: { colorMatrix: Display.ColorMatrix };
+};
+
+/** Warm divine tint on artwork — approximates Pixi colorTone via sepia + hue. */
+export function createHolyArtFilters(img: FilterableImage): HolyArtFilterState {
+  img.enableFilters?.();
+  const cmController = img.filters!.internal.addColorMatrix();
+  const colorMatrix = cmController.colorMatrix;
+  colorMatrix.brightness(1.06);
+  colorMatrix.saturate(0.12, true);
+  colorMatrix.sepia(true);
+  colorMatrix.hue(-8);
+
+  return { colorMatrix, cmController };
+}
+
+export function stepHolyArtMatrix(state: HolyArtFilterState, pulse: number): void {
+  state.colorMatrix.brightness(1.04 + pulse * 0.1);
+}

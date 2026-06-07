@@ -1,5 +1,6 @@
 export const EFFECT_TEXTURE_KEYS = {
   ember: 'effect_ember',
+  sparkle: 'effect_sparkle',
   displacementHeat: 'effect_displacement_heat',
 } as const;
 

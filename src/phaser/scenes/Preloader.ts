@@ -100,6 +100,7 @@ export class Preloader extends Scene {
 
     // Aura effect textures (registry definitions)
     this.load.image('effect_ember', 'assets/effects/ember.png');
+    this.load.image('effect_sparkle', 'assets/effects/sparkle.png');
     this.load.image('effect_displacement_heat', 'assets/effects/displacement-heat.png');
 
     // Load sound effects
