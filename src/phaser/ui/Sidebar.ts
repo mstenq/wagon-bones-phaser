@@ -90,6 +90,7 @@ export class Sidebar extends GameObjects.Container {
   private profTooltip: GameObjects.Container | null = null;
   private difficultyTooltip = new DifficultyTooltip();
   private difficultyIcon: GameObjects.Image | null = null;
+  private titleIconHit: GameObjects.Zone | null = null;
   private titleSectionY = 0;
   private titleSectionH = 44;
 
@@ -161,6 +162,23 @@ export class Sidebar extends GameObjects.Container {
     return tile;
   }
 
+  /** Pins difficulty icon left; centers title text in the sidebar title panel. */
+  private layoutSidebarTitleHeader(): void {
+    if (this.layoutMode === 'topbar') return;
+
+    const pad = UI.SIDEBAR_PADDING;
+    const innerW = this.sidebarWidth - pad * 2;
+    const titleIconY = this.titleSectionY + this.titleSectionH / 2;
+    const titleIconX = pad + 18;
+
+    if (this.difficultyIcon) {
+      this.difficultyIcon.setPosition(titleIconX, titleIconY);
+      this.titleIconHit?.setPosition(titleIconX, titleIconY);
+    }
+
+    this.titleText.setOrigin(0.5, 0.5).setPosition(pad + innerW / 2, titleIconY);
+  }
+
   private drawBackground(w: number, h: number): void {
     this.bg.clear();
     if (this.scene.textures.exists(TEXTURES.PANEL_DARK)) {
@@ -188,59 +206,59 @@ export class Sidebar extends GameObjects.Container {
     // ─── Title / header (scene name + difficulty stake) ───
     const titleH = this.titleSectionH;
     this.titleSectionY = y;
-    const titleIconSize = 42;
-    const titleIconX = pad + 18;
-    const titleIconY = y + titleH / 2;
     const titleBarBottom = y + titleH;
-    const tooltipAnchorY = titleIconY + titleIconSize / 2 + 4;
+
+    this.texturePanel(this, pad, y, innerW, titleH, TEXTURES.PANEL_DARK, {
+      border: COLORS.SIDEBAR_SECTION_BORDER,
+      borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+      radius: 0,
+    });
+
     this.difficultyIcon = addDifficultyImage(
       scene,
       this,
       selectRunSidebarModel().difficulty,
-      titleIconX,
-      titleIconY,
-      titleIconSize,
+      0,
+      y + titleH / 2,
+      32,
     );
 
-    this.titleText = scene.add
-      .text(titleIconX + titleIconSize / 2 + 12, titleIconY, 'SHOP', {
-        fontFamily: FONTS.TITLE,
-        fontSize: '24px',
-        color: TEXT_COLORS.PRIMARY,
-      })
-      .setOrigin(0, 0.5);
+    this.titleText = scene.add.text(0, y + titleH / 2, 'SHOP', {
+      fontFamily: FONTS.TITLE,
+      fontSize: '24px',
+      color: TEXT_COLORS.PRIMARY,
+    });
     this.add(this.titleText);
-
-    const headerDivider = scene.add.graphics();
-    headerDivider.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, COLORS.SIDEBAR_SECTION_BORDER_ALPHA);
-    headerDivider.lineBetween(pad, titleBarBottom + 4, w - pad, titleBarBottom + 4);
-    this.add(headerDivider);
+    this.layoutSidebarTitleHeader();
 
     if (this.difficultyIcon) {
-      const iconHit = scene.add
-        .zone(titleIconX, titleIconY, titleIconSize + 8, titleIconSize + 8)
+      const titleIconSize = 32;
+      this.titleIconHit = scene.add
+        .zone(0, y + titleH / 2, titleIconSize + 8, titleIconSize + 8)
         .setInteractive({ useHandCursor: true });
-      this.add(iconHit);
-      iconHit.on('pointerover', () => {
+      this.add(this.titleIconHit);
+      this.titleIconHit.on('pointerover', () => {
         const def = getDifficultyDef(selectRunSidebarModel().difficulty);
+        const iconX = this.difficultyIcon?.x ?? pad;
+        const iconY = this.difficultyIcon?.y ?? y + titleH / 2;
         this.difficultyTooltip.show(
           this.scene,
           def,
-          titleIconX,
-          tooltipAnchorY,
+          iconX,
+          iconY + titleIconSize / 2 + 4,
           {
             minX: pad,
             maxX: w - pad,
-            minY: titleBarBottom + 4,
+            minY: titleBarBottom + UI.SIDEBAR_SECTION_GAP,
           },
           400,
           this,
         );
       });
-      iconHit.on('pointerout', () => this.difficultyTooltip.hide());
+      this.titleIconHit.on('pointerout', () => this.difficultyTooltip.hide());
     }
 
-    y += titleH + 8;
+    y += titleH;
 
     this.contentStartY = y;
 
@@ -296,25 +314,25 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer.add(this.professionContainer);
 
     if (prof) {
-      this.texturePanel(this.professionContainer, pad, y, innerW, profH, TEXTURES.PANEL_DARK, {
-        border: COLORS.SIDEBAR_SECTION_BORDER,
-        borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
-        radius: 0,
-      });
+      // this.texturePanel(this.professionContainer, pad, y, innerW, profH, TEXTURES.PANEL_DARK, {
+      //   border: COLORS.SIDEBAR_SECTION_BORDER,
+      //   borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+      //   radius: 0,
+      // });
 
       const atlasFrame = `${prof.id}.png`;
       const profTexture = scene.textures.get('professions');
       const canUseAtlas = scene.textures.exists('professions') && profTexture.has(atlasFrame);
       if (canUseAtlas) {
-        const profImg = scene.add.image(pad + 6 + profImgSize / 2, y + profH / 2, 'professions', atlasFrame);
+        const profImg = scene.add.image(profImgSize / 2, y + profH / 2, 'professions', atlasFrame);
         const imgScale = profImgSize / Math.max(profImg.width, profImg.height);
         profImg.setScale(imgScale);
         this.professionContainer.add(profImg);
       }
 
       // Right side content area
-      const rightX = pad + 12 + profImgSize;
-      const rightW = w - pad * 2 - (rightX - pad);
+      const rightX = profImgSize;
+      const rightW = w - (rightX);
       const rightEdge = rightX + rightW - pad;
 
       // Title
@@ -337,9 +355,7 @@ export class Sidebar extends GameObjects.Container {
       // Money (green textured box, left-aligned)
       const moneyBoxH = 30;
       const moneyBoxY = y + 52;
-      this.texturePanel(this.professionContainer, rightX, moneyBoxY, rightW - pad, moneyBoxH, TEXTURES.PANEL_GREEN, {
-
-      });
+      this.texturePanel(this.professionContainer, rightX, moneyBoxY, rightW - pad, moneyBoxH, TEXTURES.PANEL_GREEN, {});
 
       this.moneyText = scene.add
         .text(rightX + 8, moneyBoxY + moneyBoxH / 2, '$10', {
@@ -401,7 +417,7 @@ export class Sidebar extends GameObjects.Container {
         this.hideProfTooltip();
       });
 
-      y += profH + UI.SIDEBAR_SECTION_GAP;
+      y += profH;
     } else {
       // No profession — show money and leg as standalone sections (fallback)
       const moneyH = 40;
@@ -904,7 +920,10 @@ export class Sidebar extends GameObjects.Container {
     const round = roundStore.getState();
     const overlay = round?.sidebarOverlay;
     if (!overlay) return;
-    if (overlay.title !== undefined) this.titleText.setText(overlay.title);
+    if (overlay.title !== undefined) {
+      this.titleText.setText(overlay.title);
+      this.layoutSidebarTitleHeader();
+    }
     if (overlay.handName !== undefined) {
       if (overlay.handName) {
         this.handNameText.setText(`${overlay.handName}  lvl.${overlay.handLevel}`);
@@ -938,19 +957,11 @@ export class Sidebar extends GameObjects.Container {
 
     if (this.subscribedDifficulty !== model.difficulty && this.difficultyIcon) {
       this.subscribedDifficulty = model.difficulty;
-      const pad = UI.SIDEBAR_PADDING;
-      const titleIconX = pad + 18;
       const titleIconY = this.titleSectionY + this.titleSectionH / 2;
-      const titleIconSize = 42;
       this.difficultyIcon.destroy();
-      this.difficultyIcon = addDifficultyImage(
-        this.scene,
-        this,
-        model.difficulty,
-        titleIconX,
-        titleIconY,
-        titleIconSize,
-      );
+      const titleIconX = UI.SIDEBAR_PADDING + 18;
+      this.difficultyIcon = addDifficultyImage(this.scene, this, model.difficulty, titleIconX, titleIconY, 32);
+      this.layoutSidebarTitleHeader();
     }
   }
 
@@ -977,7 +988,10 @@ export class Sidebar extends GameObjects.Container {
   // ─── Public API ───
 
   updateData(data: Partial<SidebarData>): void {
-    if (data.title !== undefined) this.titleText.setText(data.title);
+    if (data.title !== undefined) {
+      this.titleText.setText(data.title);
+      this.layoutSidebarTitleHeader();
+    }
     if (data.roundScore !== undefined) {
       this.roundScoreText.setText(formatScore(data.roundScore));
       this.fitTopBarRoundScore();

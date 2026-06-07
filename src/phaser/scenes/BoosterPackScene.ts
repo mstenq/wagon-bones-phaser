@@ -1044,26 +1044,12 @@ export class BoosterPackScene extends Scene {
     if (useResult.status === 'blocked') return;
     if (!this.beginPackCardUse(sprite)) return;
 
-    const { queuedPlayback, equipmentPopInCount, feedbackText } = useResult.outcome;
+    const { equipmentPopInCount, feedbackText } = useResult.outcome;
     if (feedbackText) {
       this.showFloatingText(feedbackText);
     }
 
-    const finishUse = () => this.finishUseCard(sprite, equipmentPopInCount);
-
-    if (queuedPlayback) {
-      void this.runShell?.playbackRunner
-        ?.drainMatching(
-          (cmd) =>
-            cmd.kind === 'consumable-playback' ||
-            cmd.kind === 'hand-upgrades' ||
-            cmd.kind === 'equipment-created-count',
-        )
-        .then(finishUse);
-      return;
-    }
-
-    finishUse();
+    this.finishUseCard(sprite, equipmentPopInCount);
   }
 
   private finishUseCard(sprite: CardSprite, equipmentPopInCount = 0): void {

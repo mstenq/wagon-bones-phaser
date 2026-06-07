@@ -28,6 +28,7 @@ import { getItemDisplayContext } from '../../game/displayContext';
 import { Button } from '../ui/Button';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
+import { isAutoDrainCommand } from '../playback/handlers';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import { computeFittedRowSpacing, computeLayoutMetrics, type CardBarMetrics } from '../ui/SceneLayout';
 import {
@@ -198,6 +199,7 @@ export class ShopScene extends Scene {
       consumableReturnScene: 'Shop',
       autoDestroyOnShutdown: false,
     });
+    void this.runShell.playbackRunner.drainMatching(isAutoDrainCommand);
 
     const layout = this.runShell.layout;
     this.equipBar = layout.equipBar;

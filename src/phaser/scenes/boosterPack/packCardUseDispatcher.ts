@@ -25,7 +25,6 @@ export type PackCardUseContext = {
 };
 
 export type PackCardUseOutcome = {
-  queuedPlayback: boolean;
   equipmentPopInCount: number;
   consumableResult?: UseConsumableResult;
   feedbackText?: string;
@@ -35,7 +34,6 @@ export type PackCardUseResult = { status: 'blocked' } | { status: 'ready'; outco
 
 export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): PackCardUseResult {
   const run = getRunState();
-  let queuedPlayback = false;
   let equipmentPopInCount = 0;
   let consumableResult: UseConsumableResult | undefined;
   let feedbackText: string | undefined;
@@ -50,7 +48,7 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
     feedbackText = gameFacade.pack.applyDiceSelection(config, selectedDice);
     return {
       status: 'ready',
-      outcome: { queuedPlayback, equipmentPopInCount, feedbackText },
+      outcome: { equipmentPopInCount, feedbackText },
     };
   }
 
@@ -60,12 +58,12 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
       gameFacade.pack.addEquipmentInstance(instance);
       equipmentPopInCount = 1;
     }
-    return { status: 'ready', outcome: { queuedPlayback, equipmentPopInCount } };
+    return { status: 'ready', outcome: { equipmentPopInCount } };
   }
 
   if (item.category === 'dice' && item.die) {
     gameFacade.pack.addDie(item.die);
-    return { status: 'ready', outcome: { queuedPlayback, equipmentPopInCount } };
+    return { status: 'ready', outcome: { equipmentPopInCount } };
   }
 
   if (item.category === 'trail_guide' && item.trailGuideId) {
@@ -74,11 +72,10 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
 
     const def = createTrailGuideConsumableDef(tg);
     const result = gameFacade.pack.useConsumableDirectly(def);
-    queuedPlayback = true;
     if (!result.success && result.failReason) {
       feedbackText = result.failReason;
     }
-    return { status: 'ready', outcome: { queuedPlayback, equipmentPopInCount, feedbackText } };
+    return { status: 'ready', outcome: { equipmentPopInCount, feedbackText } };
   }
 
   if (item.category === 'supply' && item.supplyCardId) {
@@ -87,11 +84,10 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
 
     const def = createSupplyConsumableDef(cardData);
     const result = gameFacade.pack.useConsumableDirectly(def);
-    queuedPlayback = true;
     if (!result.success && result.failReason) {
       feedbackText = result.failReason;
     }
-    return { status: 'ready', outcome: { queuedPlayback, equipmentPopInCount, feedbackText } };
+    return { status: 'ready', outcome: { equipmentPopInCount, feedbackText } };
   }
 
   if (item.category === 'frontier' && item.frontierEncounterId) {
@@ -102,29 +98,22 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
     consumableResult = gameFacade.pack.useConsumableDirectly(def, {
       visibleDiceIds: ctx.lineupDice.map((d) => d.id),
     });
-    queuedPlayback = true;
     if (!consumableResult.success && consumableResult.failReason) {
       feedbackText = consumableResult.failReason;
     }
     return {
       status: 'ready',
-      outcome: { queuedPlayback, equipmentPopInCount, consumableResult, feedbackText },
+      outcome: { equipmentPopInCount, consumableResult, feedbackText },
     };
   }
 
   if (item.instantEffect) {
     const instantResult = gameFacade.pack.applyInstantEffect(item.instantEffect);
-    queuedPlayback = Boolean(
-      instantResult.handUpgrades?.length ||
-      instantResult.handUpgrade ||
-      (instantResult.consumableAnimEvents?.length ?? 0) > 0 ||
-      (instantResult.equipmentCreatedCount ?? 0) > 0,
-    );
     equipmentPopInCount = Math.max(
       equipmentPopInCount,
       instantResult.equipmentCreatedCount ?? resolveEquipmentList().length - ctx.equipmentCountBefore,
     );
-    return { status: 'ready', outcome: { queuedPlayback, equipmentPopInCount } };
+    return { status: 'ready', outcome: { equipmentPopInCount } };
   }
 
   return { status: 'blocked' };
