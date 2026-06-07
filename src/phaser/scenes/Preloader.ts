@@ -98,6 +98,10 @@ export class Preloader extends Scene {
     }
     this.load.image('modifier_special', 'assets/equipment-modifiers/special.png');
 
+    // Aura effect textures (registry definitions)
+    this.load.image('effect_ember', 'assets/effects/ember.png');
+    this.load.image('effect_displacement_heat', 'assets/effects/displacement-heat.png');
+
     // Load sound effects
     this.load.audio('sfx_button', 'assets/sounds/button.ogg');
     this.load.audio('sfx_dice_roll', 'assets/sounds/diceRattleAndRoll.wav');

@@ -7,7 +7,10 @@ import { GameObjects, Scene } from 'phaser';
 import { Die } from '../../game/types';
 import { DICE, COLORS, UI } from '../../game/Constants';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
-import { applyAuraGlow, createAuraParticles, getAuraPrimary } from './AuraFX';
+import { AuraEffectHost } from '../effects/AuraEffectHost';
+import { effectPhaseFromSeed } from '../effects/context';
+import { isRegistryAura } from '../effects/registry';
+import { getAuraPrimary, setupLegacyDieAura, type LegacyAuraHandle } from './AuraFX';
 import { DICE_ATLAS_KEY, resolveDiceAtlasFrame } from './diceAssets';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
@@ -61,9 +64,8 @@ export class DiceSprite extends GameObjects.Container {
   private stickerOrbitDurationMs: number | null = null;
   private auraLabel: GameObjects.Text | null = null;
   private tooltip: GameObjects.Container | null = null;
-  private auraTweens: Phaser.Tweens.Tween[] = [];
-  private auraEmitters: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
-  private auraGlowCleanup: (() => void) | null = null;
+  private effectHost: AuraEffectHost | null = null;
+  private legacyAura: LegacyAuraHandle | null = null;
   private _dieData: Die;
   private _selected: boolean = false;
   private _rerollLocked: boolean = false;
@@ -271,20 +273,23 @@ export class DiceSprite extends GameObjects.Container {
     this.add(this.rerollLockLabel);
   }
 
+  private clearAuraFX(): void {
+    if (this.effectHost) {
+      this.effectHost.destroy();
+      this.effectHost = null;
+    }
+    if (this.legacyAura) {
+      this.legacyAura.destroy();
+      this.legacyAura = null;
+    }
+  }
+
   private drawAuraFX(): void {
-    // Clean up previous
     if (this.auraLabel) {
       this.auraLabel.destroy();
       this.auraLabel = null;
     }
-    for (const tw of this.auraTweens) tw.destroy();
-    this.auraTweens = [];
-    for (const em of this.auraEmitters) em.destroy();
-    this.auraEmitters = [];
-    if (this.auraGlowCleanup) {
-      this.auraGlowCleanup();
-      this.auraGlowCleanup = null;
-    }
+    this.clearAuraFX();
 
     const aura = this._dieData.aura;
     if (!aura) return;
@@ -293,26 +298,22 @@ export class DiceSprite extends GameObjects.Container {
     const color = getAuraPrimary(aura);
     const info = AURA_INFO.get(aura);
 
-    // Phaser 4 glow filter on the die image
-    const glowResult = applyAuraGlow(this.scene, this.dieImage as any, aura, {
-      strength: 6,
-      pulseMin: 0.65,
-      pulseMax: 1.1,
-      quality: 5,
-      distance: 80,
-    });
-    this.auraTweens.push(...glowResult.tweens);
-    this.auraGlowCleanup = glowResult.destroy;
-
-    // Particle effects
-    const particleResult = createAuraParticles(this.scene, aura, half, half);
-    for (const em of particleResult.emitters) {
-      this.add(em);
+    if (isRegistryAura(aura)) {
+      this.effectHost = new AuraEffectHost({
+        scene: this.scene,
+        parent: this,
+        effectId: aura,
+        hostKind: 'die',
+        width: DICE_SIZE,
+        height: DICE_SIZE,
+        phase: effectPhaseFromSeed(this._dieData.id),
+        getArtImage: () => this.dieImage,
+      });
+      this.effectHost.bindPointer(this);
+    } else {
+      this.legacyAura = setupLegacyDieAura(this.scene, this, aura, half, this.dieImage);
     }
-    this.auraEmitters.push(...particleResult.emitters);
-    this.auraTweens.push(...particleResult.tweens);
 
-    // Aura label below indicators (only in grab bag / booster pack)
     if (info && this._showAuraLabel) {
       this.auraLabel = this.scene.add
         .text(0, half + 16, info.name, {
@@ -420,14 +421,7 @@ export class DiceSprite extends GameObjects.Container {
       this.rerollLockLabel = null;
     }
     this.clearStickerOrbit();
-    for (const tw of this.auraTweens) tw.destroy();
-    this.auraTweens = [];
-    for (const em of this.auraEmitters) em.destroy();
-    this.auraEmitters = [];
-    if (this.auraGlowCleanup) {
-      this.auraGlowCleanup();
-      this.auraGlowCleanup = null;
-    }
+    this.clearAuraFX();
     super.destroy(fromScene);
   }
 }

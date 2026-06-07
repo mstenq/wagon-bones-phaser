@@ -147,8 +147,6 @@ export function createAuraParticles(scene: Scene, auraId: string, halfW: number,
   if (!colors) return { emitters: [], tweens: [] };
 
   switch (auraId) {
-    case 'fire':
-      return createFireParticles(scene, halfW, halfH, colors);
     case 'icy':
       return createIcyParticles(scene, halfW, halfH, colors);
     case 'holy':
@@ -158,102 +156,6 @@ export function createAuraParticles(scene: Scene, auraId: string, halfW: number,
     default:
       return { emitters: [], tweens: [] };
   }
-}
-
-function createFireParticles(
-  scene: Scene,
-  hw: number,
-  hh: number,
-  colors: (typeof AURA_COLORS)['fire'],
-): AuraParticleResult {
-  const emitters: GameObjects.Particles.ParticleEmitter[] = [];
-  const tweens: Phaser.Tweens.Tween[] = [];
-  const w = hw * 2;
-  const h = hh * 2;
-
-  // Intense rising flames from bottom
-  emitters.push(
-    scene.add.particles(0, 0, 'aura_soft', {
-      speed: { min: 20, max: 60 },
-      angle: { min: -110, max: -70 },
-      scale: { start: 0.62, end: 0 },
-      alpha: { start: 0.78, end: 0 },
-      lifespan: { min: 500, max: 900 },
-      frequency: 32,
-      quantity: 1,
-      tint: colors.tints,
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-hw + 4, hh - 6, w - 8, 6),
-      } as any,
-      maxAliveParticles: 20,
-    }),
-  );
-
-  // Hot ember sparks shooting upward from edges
-  emitters.push(
-    scene.add.particles(0, 0, 'aura_spark', {
-      speed: { min: 40, max: 100 },
-      angle: { min: -130, max: -50 },
-      scale: { start: 0.4, end: 0 },
-      alpha: { start: 0.85, end: 0 },
-      lifespan: { min: 400, max: 700 },
-      frequency: 65,
-      quantity: 1,
-      tint: [0xffdd00, 0xff8800, 0xff4400],
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-hw - 2, hh - 12, w + 4, 12),
-      } as any,
-      maxAliveParticles: 8,
-    }),
-  );
-
-  // Heat distortion wisps along sides
-  emitters.push(
-    scene.add.particles(0, 0, 'aura_streak', {
-      speed: { min: 10, max: 30 },
-      angle: { min: -100, max: -80 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.4, end: 0 },
-      lifespan: { min: 600, max: 1000 },
-      frequency: 95,
-      quantity: 1,
-      tint: [0xff6600, 0xff4400],
-      blendMode: 'ADD',
-      rotate: { min: -30, max: 30 },
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-hw - 6, -hh, 6, h),
-      } as any,
-      maxAliveParticles: 4,
-    }),
-  );
-
-  // Same on right side
-  emitters.push(
-    scene.add.particles(0, 0, 'aura_streak', {
-      speed: { min: 10, max: 30 },
-      angle: { min: -100, max: -80 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.4, end: 0 },
-      lifespan: { min: 600, max: 1000 },
-      frequency: 95,
-      quantity: 1,
-      tint: [0xff6600, 0xff4400],
-      blendMode: 'ADD',
-      rotate: { min: -30, max: 30 },
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(hw, -hh, 6, h),
-      } as any,
-      maxAliveParticles: 4,
-    }),
-  );
-
-  return { emitters, tweens };
 }
 
 function createIcyParticles(
@@ -443,4 +345,110 @@ function createGhostParticles(
 ): AuraParticleResult {
   // Ghost aura uses tint + transparency on the card itself, no particles needed
   return { emitters: [], tweens: [] };
+}
+
+// ─── Legacy aura setup (holy / icy / ghost until registry definitions ship) ───
+
+export interface LegacyAuraHandle {
+  emitters: GameObjects.Particles.ParticleEmitter[];
+  tweens: Phaser.Tweens.Tween[];
+  destroy: () => void;
+}
+
+type FilterableImage = GameObjects.Image & {
+  enableFilters?: () => void;
+  filters?: {
+    internal: { addColorMatrix: () => { colorMatrix: { negative: () => void } }; remove: (f: unknown) => void };
+  };
+};
+
+export function setupLegacyCardAura(
+  scene: Scene,
+  card: GameObjects.Container,
+  auraId: string,
+  halfW: number,
+  halfH: number,
+  glowTarget: GameObjects.GameObject & { enableFilters?: () => void; filters?: unknown },
+  cardImage: GameObjects.Image | null,
+): LegacyAuraHandle {
+  const glowResult = applyAuraGlow(scene, glowTarget, auraId, {
+    strength: 8,
+    pulseMin: 0.3,
+    pulseMax: 1,
+  });
+
+  let ghostTintOverlay: GameObjects.Graphics | null = null;
+  let ghostImageFilterCleanup: (() => void) | null = null;
+
+  if (auraId === 'ghost') {
+    card.setAlpha(0.8);
+    if (cardImage) {
+      const img = cardImage as FilterableImage;
+      if (img.enableFilters) {
+        img.enableFilters();
+        const cm = img.filters!.internal.addColorMatrix();
+        cm.colorMatrix.negative();
+        ghostImageFilterCleanup = () => {
+          if (img.filters) img.filters.internal.remove(cm);
+        };
+      }
+    }
+    const tintOverlay = scene.add.graphics();
+    tintOverlay.fillStyle(0x44dd88, 0.3);
+    tintOverlay.fillRoundedRect(-halfW, -halfH, halfW * 2, halfH * 2, 8);
+    ghostTintOverlay = tintOverlay;
+    card.add(tintOverlay);
+  }
+
+  const particleResult = createAuraParticles(scene, auraId, halfW, halfH);
+  for (const em of particleResult.emitters) {
+    card.add(em);
+  }
+
+  return {
+    emitters: particleResult.emitters,
+    tweens: [...glowResult.tweens, ...particleResult.tweens],
+    destroy: () => {
+      for (const tw of glowResult.tweens) tw.destroy();
+      for (const tw of particleResult.tweens) tw.destroy();
+      for (const em of particleResult.emitters) em.destroy();
+      glowResult.destroy();
+      if (ghostTintOverlay) ghostTintOverlay.destroy();
+      if (ghostImageFilterCleanup) ghostImageFilterCleanup();
+      if (cardImage) cardImage.setAlpha(1);
+      card.setAlpha(1);
+    },
+  };
+}
+
+export function setupLegacyDieAura(
+  scene: Scene,
+  die: GameObjects.Container,
+  auraId: string,
+  half: number,
+  dieImage: GameObjects.Image,
+): LegacyAuraHandle {
+  const glowResult = applyAuraGlow(scene, dieImage as GameObjects.GameObject & { enableFilters?: () => void }, auraId, {
+    strength: 6,
+    pulseMin: 0.65,
+    pulseMax: 1.1,
+    quality: 5,
+    distance: 80,
+  });
+
+  const particleResult = createAuraParticles(scene, auraId, half, half);
+  for (const em of particleResult.emitters) {
+    die.add(em);
+  }
+
+  return {
+    emitters: particleResult.emitters,
+    tweens: [...glowResult.tweens, ...particleResult.tweens],
+    destroy: () => {
+      for (const tw of glowResult.tweens) tw.destroy();
+      for (const tw of particleResult.tweens) tw.destroy();
+      for (const em of particleResult.emitters) em.destroy();
+      glowResult.destroy();
+    },
+  };
 }

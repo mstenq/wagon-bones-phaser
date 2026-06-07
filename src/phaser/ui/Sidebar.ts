@@ -214,14 +214,7 @@ export class Sidebar extends GameObjects.Container {
       radius: 0,
     });
 
-    this.difficultyIcon = addDifficultyImage(
-      scene,
-      this,
-      selectRunSidebarModel().difficulty,
-      0,
-      y + titleH / 2,
-      32,
-    );
+    this.difficultyIcon = addDifficultyImage(scene, this, selectRunSidebarModel().difficulty, 0, y + titleH / 2, 32);
 
     this.titleText = scene.add.text(0, y + titleH / 2, 'SHOP', {
       fontFamily: FONTS.TITLE,
@@ -332,7 +325,7 @@ export class Sidebar extends GameObjects.Container {
 
       // Right side content area
       const rightX = profImgSize;
-      const rightW = w - (rightX);
+      const rightW = w - rightX;
       const rightEdge = rightX + rightW - pad;
 
       // Title
@@ -510,9 +503,7 @@ export class Sidebar extends GameObjects.Container {
     const milesX = pad;
     const multX = w - pad - boxW;
 
-    this.texturePanel(this.mainContentContainer, milesX, y, boxW, boxH, TEXTURES.PANEL_BLUE, {
-
-    });
+    this.texturePanel(this.mainContentContainer, milesX, y, boxW, boxH, TEXTURES.PANEL_BLUE, {});
     this.milesBaseText = scene.add
       .text(milesX + boxW / 2, y + boxH / 2, '0', {
         fontFamily: FONTS.NUMBER,
@@ -531,9 +522,7 @@ export class Sidebar extends GameObjects.Container {
       .setOrigin(0.5);
     this.mainContentContainer.add(xText);
 
-    this.texturePanel(this.mainContentContainer, multX, y, boxW, boxH, TEXTURES.PANEL_RED, {
-
-    });
+    this.texturePanel(this.mainContentContainer, multX, y, boxW, boxH, TEXTURES.PANEL_RED, {});
     this.multText = scene.add
       .text(multX + boxW / 2, y + boxH / 2, '0', {
         fontFamily: FONTS.NUMBER,
@@ -878,7 +867,11 @@ export class Sidebar extends GameObjects.Container {
     const infoCX = optsCX - ctrlBtnW - ctrlGap;
 
     this.journeyInfoBtn = new Button(scene, infoCX, scoreRowCY, 'Info', ctrlBtnW, ctrlBtnH);
-    this.journeyInfoBtn.setTextureBackground(TEXTURES.PANEL_GRAY, COLORS.SIDEBAR_SECTION_BORDER, COLORS.SIDEBAR_SECTION_BORDER_ALPHA);
+    this.journeyInfoBtn.setTextureBackground(
+      TEXTURES.PANEL_GRAY,
+      COLORS.SIDEBAR_SECTION_BORDER,
+      COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+    );
     applyIcon(this.journeyInfoBtn, 'icon_book');
     this.journeyInfoBtn.onClick(() => {
       if (this.onJourneyInfo) this.onJourneyInfo();
@@ -886,7 +879,11 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer.add(this.journeyInfoBtn);
 
     this.optionsBtn = new Button(scene, optsCX, scoreRowCY, 'Opts', ctrlBtnW, ctrlBtnH);
-    this.optionsBtn.setTextureBackground(TEXTURES.PANEL_GRAY, COLORS.SIDEBAR_SECTION_BORDER, COLORS.SIDEBAR_SECTION_BORDER_ALPHA);
+    this.optionsBtn.setTextureBackground(
+      TEXTURES.PANEL_GRAY,
+      COLORS.SIDEBAR_SECTION_BORDER,
+      COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+    );
     applyIcon(this.optionsBtn, 'icon_menu');
     this.optionsBtn.onClick(() => {
       if (this.onOptions) this.onOptions();
