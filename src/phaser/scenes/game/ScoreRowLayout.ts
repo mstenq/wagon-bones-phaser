@@ -13,6 +13,8 @@ export type ScoreRowLayoutDeps = {
   getScoreRowY: () => number;
   getDiceSpacing: (count: number) => number;
   getDiceScale: () => number;
+  onLayoutTransitionStart?: () => void;
+  onLayoutTransitionEnd?: () => void;
 };
 
 export type ScoreLayoutGate = { promise: Promise<void>; release: () => void };
@@ -45,6 +47,8 @@ export class ScoreRowLayout {
       return;
     }
 
+    this.deps.onLayoutTransitionStart?.();
+
     const contentCX = this.deps.contentCenterX();
     const scale = this.deps.getDiceScale();
     const scoreSpacing = this.deps.getDiceSpacing(selectedSprites.length);
@@ -55,7 +59,10 @@ export class ScoreRowLayout {
 
     const onSpriteDone = () => {
       finished++;
-      if (finished >= tweenCount) onComplete();
+      if (finished >= tweenCount) {
+        this.deps.onLayoutTransitionEnd?.();
+        onComplete();
+      }
     };
 
     for (let i = 0; i < selectedSprites.length; i++) {

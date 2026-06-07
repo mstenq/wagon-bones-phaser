@@ -5,6 +5,7 @@ import { UI } from '../../../game/Constants';
 import type { Die } from '../../../game/types';
 import { DiceSprite } from '../../ui/DiceSprite';
 import { getArcOffset, getRowXPositions } from './diceRowGeometry';
+import { tweenDieRowSpriteLayout } from './diceRowElasticTween';
 
 export type PlayAreaDiceControllerDeps = {
   scene: Scene;
@@ -14,6 +15,7 @@ export type PlayAreaDiceControllerDeps = {
   isConsumableTargeting: () => boolean;
   isConsumableTargetDie: (sprite: DiceSprite) => boolean;
   onConsumableTargetClick: (sprite: DiceSprite) => void;
+  onLayoutChange?: () => void;
 };
 
 export class PlayAreaDiceController {
@@ -51,6 +53,7 @@ export class PlayAreaDiceController {
       sprite.disableInteractive();
       this.sprites.push(sprite);
     }
+    this.deps.onLayoutChange?.();
   }
 
   getXPositions(count: number): number[] {
@@ -58,9 +61,10 @@ export class PlayAreaDiceController {
     return getRowXPositions(count, this.deps.getContentCenterX(), spacing);
   }
 
-  reposition(animated: boolean, duration = 200): void {
+  reposition(animated: boolean, duration = 200, elasticLift?: boolean): void {
     if (this.sprites.length === 0) return;
 
+    const useElasticY = elasticLift ?? this.deps.isConsumableTargeting();
     const positions = this.getXPositions(this.sprites.length);
     const scale = this.deps.getDiceScale();
     for (let i = 0; i < this.sprites.length; i++) {
@@ -70,20 +74,17 @@ export class PlayAreaDiceController {
       sprite.setScale(scale);
       this.applyDieDepth(sprite);
 
-      if (animated) {
-        this.deps.scene.tweens.add({
-          targets: sprite,
-          x: positions[i],
-          y: targetY,
-          rotation: arc.rotation,
-          duration,
-          ease: 'Power2',
-        });
-      } else {
-        sprite.setPosition(positions[i], targetY);
-        sprite.rotation = arc.rotation;
-      }
+      tweenDieRowSpriteLayout(
+        this.deps.scene,
+        sprite,
+        { x: positions[i], y: targetY, rotation: arc.rotation },
+        animated,
+        duration,
+        useElasticY,
+        { onYUpdate: () => sprite.syncTooltipPosition() },
+      );
     }
+    this.deps.onLayoutChange?.();
   }
 
   setTargetingInteractive(enabled: boolean): void {

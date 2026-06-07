@@ -7,6 +7,7 @@ import type { Die } from '../../../game/types';
 import { DiceSprite } from '../../ui/DiceSprite';
 import { RollDiceDragReorder } from '../../ui/rollDiceDragReorder';
 import { getArcOffset } from './diceRowGeometry';
+import { tweenDieRowSpriteLayout, tweenDiceSelectLiftY } from './diceRowElasticTween';
 
 export type RollRowControllerDeps = {
   scene: Scene;
@@ -25,6 +26,7 @@ export type RollRowControllerDeps = {
   onDragBegin: () => void;
   getWasDragging: () => boolean;
   setWasDragging: (value: boolean) => void;
+  onLayoutChange?: () => void;
 };
 
 export class RollRowController {
@@ -81,6 +83,8 @@ export class RollRowController {
       sprite.setDepth(10);
       sprites.push(sprite);
     }
+    this.rollSprites = sprites;
+    this.deps.onLayoutChange?.();
     return sprites;
   }
 
@@ -122,9 +126,10 @@ export class RollRowController {
   }
 
   /** Reposition all roll sprites (row layout + selected lift + depth). */
-  reposition(animated: boolean, duration = 250): void {
+  reposition(animated: boolean, duration = 250, elasticLift?: boolean): void {
     if (this.rollSprites.length === 0) return;
 
+    const useElasticY = elasticLift ?? this.deps.isConsumableTargeting();
     const spacing = this.deps.getDiceSpacing(this.rollSprites.length);
     const scale = this.deps.getDiceScale();
     const totalWidth = (this.rollSprites.length - 1) * spacing;
@@ -137,31 +142,29 @@ export class RollRowController {
       sprite.setScale(scale);
       this.applyRollDieDepth(sprite);
 
-      if (animated) {
-        this.deps.scene.tweens.add({
-          targets: sprite,
-          x: targetX,
-          y: targetY,
-          rotation: arc.rotation,
-          duration,
-          ease: 'Power2',
-        });
-      } else {
-        sprite.setPosition(targetX, targetY);
-        sprite.rotation = arc.rotation;
-      }
+      tweenDieRowSpriteLayout(
+        this.deps.scene,
+        sprite,
+        { x: targetX, y: targetY, rotation: arc.rotation },
+        animated,
+        duration,
+        useElasticY,
+        { onYUpdate: () => sprite.syncTooltipPosition() },
+      );
     }
     this.deps.syncRolledDiceFromSprites();
+    this.deps.onLayoutChange?.();
   }
 
   animateSelectLift(sprite: DiceSprite, index: number): void {
     this.applyRollDieDepth(sprite);
-    this.deps.scene.tweens.add({
-      targets: sprite,
-      y: this.getRollDieY(index, sprite),
-      duration: 200,
-      ease: 'Power2',
+    const targetY = this.getRollDieY(index, sprite);
+    const syncTooltip = () => sprite.syncTooltipPosition();
+    tweenDiceSelectLiftY(this.deps.scene, sprite, targetY, {
+      onYUpdate: syncTooltip,
+      onYComplete: syncTooltip,
     });
+    this.deps.onLayoutChange?.();
   }
 
   getRollDieY(index: number, sprite: DiceSprite): number {

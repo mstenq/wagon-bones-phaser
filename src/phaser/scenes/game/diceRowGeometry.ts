@@ -54,6 +54,58 @@ export function getRowXPositions(count: number, contentCenterX: number, diceSpac
   return Array.from({ length: count }, (_, i) => startX + i * diceSpacing);
 }
 
+export interface DiceRowBackdropLayout {
+  rowY: number;
+  diceCount: number;
+  diceSpacing: number;
+  diceScale: number;
+  contentCenterX: number;
+  /** When true, reserve top inset for lifted/selected dice */
+  hasLiftedDice: boolean;
+  scoreRowY?: number;
+}
+
+export interface DiceRowBackdropBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Dice-driven backdrop box: width follows row span; height fits lift without overlapping score row. */
+export function computeDiceRowBackdropBounds(config: DiceRowBackdropLayout): DiceRowBackdropBounds {
+  const { rowY, diceCount, diceSpacing, diceScale, contentCenterX, hasLiftedDice, scoreRowY } = config;
+  const dieSize = DICE.SIZE * diceScale;
+  const dieHalf = dieSize / 2;
+  const padX = UI.DICE_ROW_BACKDROP_PAD_X;
+  const padY = UI.DICE_ROW_BACKDROP_PAD_Y;
+  const arcLift = UI.DICE_ARC_HEIGHT * diceScale;
+
+  let upExtent = dieHalf + arcLift + padY;
+  if (hasLiftedDice) {
+    upExtent += UI.DICE_LOCKED_LIFT_Y;
+  }
+  let downExtent = dieHalf + padY;
+
+  if (scoreRowY !== undefined) {
+    const scoreDiceBottom = scoreRowY + UI.DICE_SCORE_FILLER_DROP_Y + dieHalf + UI.DICE_ROW_BACKDROP_SCORE_CLEARANCE;
+    const maxUp = rowY - scoreDiceBottom;
+    upExtent = Math.min(upExtent, Math.max(dieHalf + padY, maxUp));
+  }
+
+  const rowWidth = diceCount <= 1 ? dieSize : (diceCount - 1) * diceSpacing + dieSize;
+  const width = rowWidth + padX * 2;
+  const height = upExtent + downExtent;
+  const centerY = rowY + (downExtent - upExtent) / 2;
+
+  return {
+    x: contentCenterX - width / 2,
+    y: centerY - height / 2,
+    width,
+    height,
+  };
+}
+
 /** Balatro-style arc Y offset and rotation for die at index i in a row of count. */
 export function getArcOffset(i: number, count: number, scale = 1): { y: number; rotation: number } {
   if (count <= 1) return { y: 0, rotation: 0 };

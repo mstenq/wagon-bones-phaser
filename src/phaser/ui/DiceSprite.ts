@@ -64,6 +64,7 @@ export class DiceSprite extends GameObjects.Container {
   private stickerOrbitDurationMs: number | null = null;
   private auraLabel: GameObjects.Text | null = null;
   private tooltip: GameObjects.Container | null = null;
+  private tooltipLayout: { width: number; height: number } | null = null;
   private effectHost: AuraEffectHost | null = null;
   private _dieData: Die;
   private _selected: boolean = false;
@@ -320,14 +321,18 @@ export class DiceSprite extends GameObjects.Container {
     }
   }
 
+  /** Keep scene-root tooltip aligned when the die moves (e.g. select lift tween). */
+  syncTooltipPosition(): void {
+    if (!this.tooltip) return;
+    const matrix = this.getWorldTransformMatrix();
+    this.positionTooltipAtWorld(matrix.tx, matrix.ty);
+  }
+
   private showTooltip(): void {
     if (this.tooltip || DiceSprite.suppressTooltips) return;
 
     // Get world position (handles nested containers)
     const matrix = this.getWorldTransformMatrix();
-    const worldX = matrix.tx;
-    const worldY = matrix.ty;
-    const half = DICE_SIZE / 2;
 
     this.tooltip = this.scene.add.container(0, 0).setDepth(1000);
 
@@ -371,6 +376,7 @@ export class DiceSprite extends GameObjects.Container {
 
     const tooltipWidth = infoText.width + TOOLTIP_PAD * 2;
     const tooltipHeight = infoText.height + TOOLTIP_PAD * 2;
+    this.tooltipLayout = { width: tooltipWidth, height: tooltipHeight };
 
     // Background
     const bg = this.scene.add.graphics();
@@ -384,11 +390,18 @@ export class DiceSprite extends GameObjects.Container {
     infoText.setPosition(TOOLTIP_PAD, TOOLTIP_PAD);
     this.tooltip.add(infoText);
 
-    // Position tooltip above the die
+    this.positionTooltipAtWorld(matrix.tx, matrix.ty);
+  }
+
+  private positionTooltipAtWorld(worldX: number, worldY: number): void {
+    if (!this.tooltip || !this.tooltipLayout) return;
+
+    const half = DICE_SIZE / 2;
+    const { width: tooltipWidth, height: tooltipHeight } = this.tooltipLayout;
+
     let tx = worldX - tooltipWidth / 2;
     let ty = worldY - half - tooltipHeight - 12;
 
-    // Clamp to screen bounds
     const { width: sw } = this.scene.scale;
     if (tx < 8) tx = 8;
     if (tx + tooltipWidth > sw - 8) tx = sw - 8 - tooltipWidth;
@@ -403,6 +416,7 @@ export class DiceSprite extends GameObjects.Container {
     if (this.tooltip) {
       this.tooltip.destroy();
       this.tooltip = null;
+      this.tooltipLayout = null;
     }
   }
 

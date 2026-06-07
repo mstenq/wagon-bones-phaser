@@ -22,8 +22,8 @@ export type GameConsumableTargetingDeps = {
   hideAllButtons: () => void;
   restorePhaseUi: () => void;
   syncRollDieVisuals: () => void;
-  repositionRollRow: (animated: boolean, duration?: number) => void;
-  repositionPlayArea: (animated: boolean, duration?: number) => void;
+  repositionRollRow: (animated: boolean, duration?: number, elasticLift?: boolean) => void;
+  repositionPlayArea: (animated: boolean, duration?: number, elasticLift?: boolean) => void;
   setPlayAreaTargetingInteractive: (enabled: boolean) => void;
   getSelectedDiceIds: () => Set<string>;
   setSelectedDiceIds: (ids: Set<string>) => void;
@@ -174,9 +174,9 @@ export class GameConsumableTargetingController {
     this.deps.getInstructionText().setText(this.savedInstructionText);
 
     if (this.deps.getRollSprites().length > 0) {
-      this.deps.repositionRollRow(true, 150);
+      this.deps.repositionRollRow(true, 150, true);
     } else if (this.deps.getPlayAreaSprites().length > 0) {
-      this.deps.repositionPlayArea(true, 150);
+      this.deps.repositionPlayArea(true, 150, true);
     }
 
     this.deps.restorePhaseUi();
