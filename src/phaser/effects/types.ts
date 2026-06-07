@@ -1,3 +1,4 @@
+import type * as Phaser from 'phaser';
 import type { GameObjects } from 'phaser';
 
 export const EFFECT_IDS = ['none', 'holy', 'fire', 'icy', 'ghost'] as const;
@@ -31,9 +32,11 @@ export type EffectLayers = {
 };
 
 export type FilterableImage = GameObjects.Image & {
+  filterCamera?: Phaser.Cameras.Scene2D.Camera;
   enableFilters?: () => void;
   filters?: {
     internal: {
+      add: (filter: Phaser.Filters.Controller) => Phaser.Filters.Controller;
       addColorMatrix: () => { colorMatrix: Phaser.Display.ColorMatrix };
       addDisplacement: (texture: string, x?: number, y?: number) => { x: number; y: number };
       remove: (f: unknown) => void;

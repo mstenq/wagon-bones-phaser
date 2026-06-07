@@ -1350,8 +1350,8 @@
     "semantic_hash": "548ec6d04f1c0985b2c36616d802708b"
   },
   "src/phaser/ui/DiceSprite.ts": {
-    "mtime": 1780842056.904714,
-    "ast_hash": "4a9244a434d86b0fc2f52fe0a528866a",
+    "mtime": 1780843248.5669332,
+    "ast_hash": "c99b8c8233e995ba5f271a038fc2cf19",
     "semantic_hash": ""
   },
   "src/phaser/ui/DifficultyAssets.ts": {
@@ -1510,8 +1510,8 @@
     "semantic_hash": "006a3d4b6cc83e0139c0daf81a9bd5f1"
   },
   "src/phaser/ui/itemCard/ItemCardAuras.ts": {
-    "mtime": 1780842093.4429913,
-    "ast_hash": "4743b6c6ad4ef946f5fdb4276a479e73",
+    "mtime": 1780843251.6758409,
+    "ast_hash": "b71f27e6f7f6750bcdff7e97ad597b2b",
     "semantic_hash": ""
   },
   "src/phaser/ui/itemCard/ItemCardBadges.ts": {
@@ -5740,8 +5740,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/AuraEffectHost.ts": {
-    "mtime": 1780842115.849178,
-    "ast_hash": "6c2b5d1489ef933e47b38f28902750a9",
+    "mtime": 1780843218.2395787,
+    "ast_hash": "5e138ed65e959a3d3a73eced1ac517ac",
     "semantic_hash": ""
   },
   "src/phaser/effects/AuraEffectUpdateBus.ts": {
@@ -5750,18 +5750,18 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/assets.ts": {
-    "mtime": 1780842115.844497,
-    "ast_hash": "0b398f4cf2c6c9e7e9963fd67e4295b0",
+    "mtime": 1780843205.5939004,
+    "ast_hash": "92d835784fec758dcac30fe9cc3cfc29",
     "semantic_hash": ""
   },
   "src/phaser/effects/context.ts": {
-    "mtime": 1780842115.854637,
-    "ast_hash": "e23647a8a01900195d8abae43d29cc7a",
+    "mtime": 1780843203.9331086,
+    "ast_hash": "3f2f26277fc00aa8587403d3c55d6d6d",
     "semantic_hash": ""
   },
   "src/phaser/effects/definitions/fire.ts": {
-    "mtime": 1780842115.877755,
-    "ast_hash": "745b4db335fcc0910be4a55f08643f5d",
+    "mtime": 1780843235.9370792,
+    "ast_hash": "947a5a8cbf30ce88d18c95c0f77f9135",
     "semantic_hash": ""
   },
   "src/phaser/effects/dieTuning.ts": {
@@ -5780,8 +5780,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/runtime.ts": {
-    "mtime": 1780842115.8900948,
-    "ast_hash": "e3aa2b75ca2df51b50a4adcda3325563",
+    "mtime": 1780843205.5939004,
+    "ast_hash": "86205af8c52f94e287b0bd2312a3c9fe",
     "semantic_hash": ""
   },
   "src/phaser/effects/shared/artColor.ts": {
@@ -5820,18 +5820,13 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/shared/pseudoRandom.ts": {
-    "mtime": 1780842115.9107268,
-    "ast_hash": "2946da0bb958790426fd19b2cc0a9578",
-    "semantic_hash": ""
-  },
-  "src/phaser/effects/shared/surfaceProjection.ts": {
-    "mtime": 1780842115.9125297,
-    "ast_hash": "b309d25b44ecfb0d429c2ff15679baf9",
+    "mtime": 1780843201.4058146,
+    "ast_hash": "581355e3cb288ca97e85b4092d5b2b78",
     "semantic_hash": ""
   },
   "src/phaser/effects/types.ts": {
-    "mtime": 1780842115.9163868,
-    "ast_hash": "0ff1c8b1cf7a8a1c7eb613fe03d8b66e",
+    "mtime": 1780843266.6857378,
+    "ast_hash": "edf2936c542ce3e820f7bcaa28f44717",
     "semantic_hash": ""
   },
   "FIRE.md": {
@@ -5847,6 +5842,11 @@
   "public/assets/effects/ember.png": {
     "mtime": 1780841932.6500213,
     "ast_hash": "388ee31a304ee214525f98150cb14eba",
+    "semantic_hash": ""
+  },
+  "src/phaser/effects/shared/imageEdgeLoop.ts": {
+    "mtime": 1780843300.9264297,
+    "ast_hash": "0b9aab13dc19ee9bbc4a8c8ea955c128",
     "semantic_hash": ""
   }
 }

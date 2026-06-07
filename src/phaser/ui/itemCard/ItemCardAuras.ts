@@ -59,7 +59,6 @@ export class ItemCardAuras {
       hw,
       hh,
       this.getCardBg() as GameObjects.GameObject & { enableFilters?: () => void; filters?: unknown },
-      this.getCardImage(),
     );
   }
 

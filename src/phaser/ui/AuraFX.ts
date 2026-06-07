@@ -151,8 +151,6 @@ export function createAuraParticles(scene: Scene, auraId: string, halfW: number,
       return createIcyParticles(scene, halfW, halfH, colors);
     case 'holy':
       return createHolyParticles(scene, halfW, halfH, colors);
-    case 'ghost':
-      return createGhostParticles(scene, halfW, halfH, colors);
     default:
       return { emitters: [], tweens: [] };
   }
@@ -337,30 +335,13 @@ function createHolyParticles(
   return { emitters, tweens };
 }
 
-function createGhostParticles(
-  _scene: Scene,
-  _hw: number,
-  _hh: number,
-  _colors: (typeof AURA_COLORS)['ghost'],
-): AuraParticleResult {
-  // Ghost aura uses tint + transparency on the card itself, no particles needed
-  return { emitters: [], tweens: [] };
-}
-
-// ─── Legacy aura setup (holy / icy / ghost until registry definitions ship) ───
+// ─── Legacy aura setup (holy / icy until registry definitions ship) ───
 
 export interface LegacyAuraHandle {
   emitters: GameObjects.Particles.ParticleEmitter[];
   tweens: Phaser.Tweens.Tween[];
   destroy: () => void;
 }
-
-type FilterableImage = GameObjects.Image & {
-  enableFilters?: () => void;
-  filters?: {
-    internal: { addColorMatrix: () => { colorMatrix: { negative: () => void } }; remove: (f: unknown) => void };
-  };
-};
 
 export function setupLegacyCardAura(
   scene: Scene,
@@ -369,36 +350,12 @@ export function setupLegacyCardAura(
   halfW: number,
   halfH: number,
   glowTarget: GameObjects.GameObject & { enableFilters?: () => void; filters?: unknown },
-  cardImage: GameObjects.Image | null,
 ): LegacyAuraHandle {
   const glowResult = applyAuraGlow(scene, glowTarget, auraId, {
     strength: 8,
     pulseMin: 0.3,
     pulseMax: 1,
   });
-
-  let ghostTintOverlay: GameObjects.Graphics | null = null;
-  let ghostImageFilterCleanup: (() => void) | null = null;
-
-  if (auraId === 'ghost') {
-    card.setAlpha(0.8);
-    if (cardImage) {
-      const img = cardImage as FilterableImage;
-      if (img.enableFilters) {
-        img.enableFilters();
-        const cm = img.filters!.internal.addColorMatrix();
-        cm.colorMatrix.negative();
-        ghostImageFilterCleanup = () => {
-          if (img.filters) img.filters.internal.remove(cm);
-        };
-      }
-    }
-    const tintOverlay = scene.add.graphics();
-    tintOverlay.fillStyle(0x44dd88, 0.3);
-    tintOverlay.fillRoundedRect(-halfW, -halfH, halfW * 2, halfH * 2, 8);
-    ghostTintOverlay = tintOverlay;
-    card.add(tintOverlay);
-  }
 
   const particleResult = createAuraParticles(scene, auraId, halfW, halfH);
   for (const em of particleResult.emitters) {
@@ -413,10 +370,6 @@ export function setupLegacyCardAura(
       for (const tw of particleResult.tweens) tw.destroy();
       for (const em of particleResult.emitters) em.destroy();
       glowResult.destroy();
-      if (ghostTintOverlay) ghostTintOverlay.destroy();
-      if (ghostImageFilterCleanup) ghostImageFilterCleanup();
-      if (cardImage) cardImage.setAlpha(1);
-      card.setAlpha(1);
     },
   };
 }

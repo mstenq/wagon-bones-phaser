@@ -1,7 +1,8 @@
 import { fireEffect } from './definitions/fire';
+import { ghostEffect } from './definitions/ghost';
 import type { EffectDefinition, EffectId } from './types';
 
-export const EFFECT_DEFINITIONS: EffectDefinition[] = [fireEffect];
+export const EFFECT_DEFINITIONS: EffectDefinition[] = [fireEffect, ghostEffect];
 
 const byId = new Map(EFFECT_DEFINITIONS.map((d) => [d.id, d]));
 
