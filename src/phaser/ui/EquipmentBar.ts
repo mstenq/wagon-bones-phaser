@@ -66,15 +66,22 @@ export class EquipmentBar extends CardBar {
     this.syncCardsFromStore();
   }
 
+  protected rebuildCardsNow(): void {
+    super.rebuildCardsNow();
+    this.syncHintsFromStore();
+    this.addDevIconsIfNeeded();
+  }
+
   protected syncCardsFromStore(): void {
     syncEquipmentDisplayOrder();
     for (const icon of this.devIcons) icon.destroy();
     this.devIcons = [];
     if (!this.tryRefreshCardsInPlace()) {
       this.rebuildCardsNow();
+    } else {
+      this.syncHintsFromStore();
+      this.addDevIconsIfNeeded();
     }
-    this.addDevIconsIfNeeded();
-    this.syncHintsFromStore();
   }
 
   /** Update hints/badges without destroying cards (preserves idle wobble tweens). */

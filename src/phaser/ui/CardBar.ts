@@ -497,8 +497,10 @@ export abstract class CardBar extends GameObjects.Container {
       duration: 400,
       ease: 'Power3',
       onComplete: () => {
+        const cardCountBefore = this.cards.length;
         this.onSellComplete(index);
-        this.rebuildCards();
+        // Successful sell rebuilds via store subscription; only rebuild if sell failed.
+        if (this.cards.length === cardCountBefore) this.rebuildCards();
       },
     });
   }

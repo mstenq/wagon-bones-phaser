@@ -336,6 +336,20 @@ export const UI = {
   /** Active/pinned tooltip depth — must render above sidebar/topbar (depth 200). */
   CARD_TOOLTIP_ACTIVE_DEPTH: 2500,
 
+  /** On-card hint panel (equipment / shop preview rows) */
+  CARD_HINT_BG_COLOR: 0x000000,
+  CARD_HINT_BG_ALPHA: 0.6,
+  CARD_HINT_BG_RADIUS: 6,
+  CARD_HINT_BG_PAD: 6,
+  CARD_HINT_SINGLE_LINE_GAP: 12,
+  CARD_HINT_ROW_GAP: 8,
+  /**
+   * Multi-line vertical anchor: fraction of hint block height that sits above the card
+   * bottom edge (remainder extends below). Lower = shift block down / less card overlap.
+   */
+  CARD_HINT_TWO_ROW_ABOVE_RATIO: 0.1,
+  CARD_HINT_THREE_ROW_ABOVE_RATIO: 0.35,
+
   // Game scene (main content area — right of sidebar)
   /** Bottom HUD: action buttons inset from screen bottom (landscape) */
   GAME_BOTTOM_BTN_MARGIN: 36,

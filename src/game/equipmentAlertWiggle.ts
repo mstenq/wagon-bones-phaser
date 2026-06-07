@@ -19,6 +19,11 @@ function isAlertTypeActive(
       const roundsNeeded = (equip.def.effectParams.roundsNeeded as number | undefined) ?? 2;
       return (equip.state.roundsHeld ?? 0) >= roundsNeeded;
     }
+    case 'everyNthHand': {
+      const n = (equip.def.effectParams.n as number | undefined) ?? 6;
+      const hands = equip.state.handsPlayed ?? 0;
+      return hands > 0 && hands % n === 0;
+    }
   }
 }
 

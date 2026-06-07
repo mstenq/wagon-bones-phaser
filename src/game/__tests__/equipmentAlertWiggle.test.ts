@@ -69,6 +69,27 @@ describe('isEquipmentTimingAlertActive', () => {
     });
   });
 
+  describe('everyNthHand alertType', () => {
+    test('six_shooter active on every nth hand played', () => {
+      const sixShooter = item('six_shooter');
+      sixShooter.state.handsPlayed = 6;
+      expect(isEquipmentTimingAlertActive(sixShooter, null)).toBe(true);
+      expect(isEquipmentTimingAlertActive(sixShooter, roundContext(3))).toBe(true);
+    });
+
+    test('six_shooter inactive before first trigger and between cycles', () => {
+      const sixShooter = item('six_shooter');
+      sixShooter.state.handsPlayed = 0;
+      expect(isEquipmentTimingAlertActive(sixShooter, null)).toBe(false);
+
+      sixShooter.state.handsPlayed = 5;
+      expect(isEquipmentTimingAlertActive(sixShooter, null)).toBe(false);
+
+      sixShooter.state.handsPlayed = 7;
+      expect(isEquipmentTimingAlertActive(sixShooter, null)).toBe(false);
+    });
+  });
+
   test('items without alertType never activate', () => {
     expect(isEquipmentTimingAlertActive(item('horseshoe'), roundContext(1))).toBe(false);
     expect(isEquipmentTimingAlertActive(item('horseshoe'), roundContext(5, 5))).toBe(false);

@@ -62,8 +62,8 @@ import {
 } from '../game/equipmentUnlock';
 import { enhancementMatchesTarget, hasAlchemyKit } from '../game/alchemyKit';
 
-/** Card-bar alert wiggle when a time-based effect is currently relevant */
-export type EquipmentAlertType = 'firstDay' | 'lastDay' | 'readyToSell';
+/** Card-bar alert wiggle when an effect's ready-to-use condition is met */
+export type EquipmentAlertType = 'firstDay' | 'lastDay' | 'readyToSell' | 'everyNthHand';
 
 /** Equipment definition shape (static data + optional `display` for live hints) */
 export interface ItemDef {
@@ -238,8 +238,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.THREE_OF_A_KIND)
-          ? [[miles('+100'), condition(HAND_NAMES.THREE_OF_A_KIND)], [active('Active!')]]
-          : [[miles('+100'), condition(HAND_NAMES.THREE_OF_A_KIND)], [inactive('Inactive')]],
+          ? [[miles('+100'), condition(HAND_NAMES.THREE_OF_A_KIND, 'xs')], [active('Active!')]]
+          : [[miles('+100'), condition(HAND_NAMES.THREE_OF_A_KIND, 'xs')], [inactive('Inactive')]],
       tooltip: [[text('If played hand contains'), condition(HAND_NAMES.THREE_OF_A_KIND), miles('+100'), text('miles')]],
     }),
   },
@@ -273,8 +273,8 @@ const items: ItemDef[] = [
       const isActive = diceCount > 0 && diceCount <= 3;
       return {
         hint: isActive
-          ? [[mult('+20'), condition('≤ 3 dice')], [active('Active!')]]
-          : [[mult('+20'), condition('≤ 3 dice')], [inactive('Inactive')]],
+          ? [[mult('+20'), condition('≤ 3 dice', 'xs')], [active('Active!')]]
+          : [[mult('+20'), condition('≤ 3 dice', 'xs')], [inactive('Inactive')]],
         tooltip: [[mult('+20'), text('mult if'), condition('3 or fewer dice are scored')]],
       };
     },
@@ -487,7 +487,9 @@ const items: ItemDef[] = [
       const held = round?.rolledDice?.filter((d) => !round.selectedForScore.some((s) => s.id === d.id)) ?? [];
       const count = held.filter((d) => d.value === 11).length;
       const hint =
-        count > 0 ? [[mult(`+${count * 11}`)]] : [[mult('+11'), condition('per 11 held')], [inactive('Inactive')]];
+        count > 0
+          ? [[mult(`+${count * 11}`)]]
+          : [[mult('+11'), condition('per 11 held', 'xs')], [inactive('Inactive')]];
       return {
         hint,
         tooltip: [[text('Each '), mult('11'), text(' held in hand gives '), mult('+11 mult')]],
@@ -513,6 +515,7 @@ const items: ItemDef[] = [
         tooltip: [
           [text('Item gains'), mult('x0.25 mult'), text('for every lucky dice trigger')],
           [text("Also makes Rabbit's Foot supply cards 2 times more likely")],
+          [text('Currently: '), mult(`x${xm.toFixed(2)}`)],
         ],
       };
     },
@@ -533,7 +536,10 @@ const items: ItemDef[] = [
           : [[mult('x1.5'), condition('per uncommon')], [inactive('None')]];
       return {
         hint,
-        tooltip: [[condition('Uncommon equipment'), text('each give'), mult('x1.5 mult')]],
+        tooltip: [
+          [condition('Uncommon equipment'), text('each give'), mult('x1.5 mult')],
+          [text('Currently: '), mult(`x${(1.5 ** count).toFixed(2)}`)],
+        ],
       };
     },
   },
@@ -550,7 +556,10 @@ const items: ItemDef[] = [
       const hint = [[miles(`+${total}`), text('mi')]];
       return {
         hint,
-        tooltip: [[miles('+2 miles'), text('for every'), money('$1'), text('you have')]],
+        tooltip: [
+          [miles('+2 miles'), text('for every'), money('$1'), text('you have')],
+          [text('Currently: '), miles(`+${total}`)],
+        ],
       };
     },
   },
@@ -570,7 +579,10 @@ const items: ItemDef[] = [
       const hint = [[mult(`+${m}`)]];
       return {
         hint,
-        tooltip: [[text('Item gains '), mult('+2'), text(' mult per reroll in the shop')]],
+        tooltip: [
+          [text('Item gains '), mult('+2'), text(' mult per reroll in the shop')],
+          [text('Currently: '), mult(`+${m}`)],
+        ],
       };
     },
   },
@@ -599,6 +611,7 @@ const items: ItemDef[] = [
             text(' mult per round played, removed after '),
             condition('5 rounds'),
           ],
+          [text('Currently: '), mult(`+${m}`), text(', '), condition(`${5 - rounds} rounds left`)],
         ],
       };
     },
@@ -635,6 +648,7 @@ const items: ItemDef[] = [
             condition(HAND_NAMES.TWO_PAIR),
             text('.'),
           ],
+          [text('Currently: '), mult(`+${m}`)],
         ],
       };
     },
@@ -683,7 +697,10 @@ const items: ItemDef[] = [
       const hint = [[mult(`x${xm.toFixed(2)}`)]];
       return {
         hint,
-        tooltip: [[mult('x2'), text(' Mult. Loses '), mult('x0.01'), text(' mult per dice rerolled')]],
+        tooltip: [
+          [mult('x2'), text(' Mult. Loses '), mult('x0.01'), text(' mult per dice rerolled')],
+          [text('Currently: '), mult(`x${xm.toFixed(2)}`)],
+        ],
       };
     },
   },
@@ -744,6 +761,7 @@ const items: ItemDef[] = [
         hint,
         tooltip: [
           [text('Item gains '), mult('x0.25'), text(' mult for each card sold. Resets when boss is defeated.')],
+          [text('Currently: '), mult(`x${xm.toFixed(2)}`)],
         ],
       };
     },
@@ -822,7 +840,10 @@ const items: ItemDef[] = [
       const hint = [[mult(`+${total}`)]];
       return {
         hint,
-        tooltip: [[text('Add the sell value of all other owned equipment as '), mult('mult')]],
+        tooltip: [
+          [text('Add the sell value of all other owned equipment as '), mult('mult')],
+          [text('Currently: '), mult(`+${total}`)],
+        ],
       };
     },
   },
@@ -866,6 +887,7 @@ const items: ItemDef[] = [
             mult(`x${gain}`),
             text(' mult each time it prevents a penalty.'),
           ],
+          [text('Currently: '), mult(`x${xm.toFixed(2)}`)],
         ],
       };
     },
@@ -900,6 +922,7 @@ const items: ItemDef[] = [
             miles(`+${investigateMiles}`),
             text(' stored miles and face the full event.'),
           ],
+          [text('Currently: '), miles(`+${stored}`)],
         ],
       };
     },
@@ -938,7 +961,10 @@ const items: ItemDef[] = [
       const xm = equip?.state.xMult ?? 1;
       return {
         hint: [[mult(`x${xm}`)], [condition('per enhanced destroyed', 'xs')]],
-        tooltip: [[text('Gains '), mult('x1'), text(' mult for each destroyed enhanced dice')]],
+        tooltip: [
+          [text('Gains '), mult('x1'), text(' mult for each destroyed enhanced dice')],
+          [text('Currently: '), mult(`x${xm}`)],
+        ],
       };
     },
   },
@@ -970,7 +996,10 @@ const items: ItemDef[] = [
       const total = equip?.state.rerollsTotal ?? 0;
       return {
         hint: [[mult(`x${xm}`)], [text(`${total % 23}/23`)]],
-        tooltip: [[text('Item gains '), mult('x1'), text(' mult for every '), condition('23'), text(' dice rerolled')]],
+        tooltip: [
+          [text('Item gains '), mult('x1'), text(' mult for every '), condition('23'), text(' dice rerolled')],
+          [text('Currently: '), mult(`x${xm}`), text(` (${total % 23}/23 rerolls)`)],
+        ],
       };
     },
   },
@@ -998,6 +1027,7 @@ const items: ItemDef[] = [
             condition('10'),
             text(' dice scored'),
           ],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`), text(` (${total % 10}/10 dice)`)],
         ],
       };
     },
@@ -1041,8 +1071,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.TWO_PAIR)
-          ? [[miles('+80'), condition(HAND_NAMES.TWO_PAIR)], [active('Active!')]]
-          : [[miles('+80'), condition(HAND_NAMES.TWO_PAIR)], [inactive('Inactive')]],
+          ? [[miles('+80'), condition(HAND_NAMES.TWO_PAIR, 'xs')], [active('Active!')]]
+          : [[miles('+80'), condition(HAND_NAMES.TWO_PAIR, 'xs')], [inactive('Inactive')]],
       tooltip: [
         [text('If played hand contains '), condition(HAND_NAMES.TWO_PAIR), text(' '), miles('+80'), text(' miles')],
       ],
@@ -1127,6 +1157,7 @@ const items: ItemDef[] = [
         hint,
         tooltip: [
           [text('When starting round, destroy equipment to right and add double its sell value as '), mult('mult')],
+          [text('Currently: '), mult(`+${m}`)],
         ],
       };
     },
@@ -1153,6 +1184,7 @@ const items: ItemDef[] = [
     effectType: 'EVERY_NTH_HAND_XMULT',
     effectParams: { n: 6, value: 4 },
     initialState: { handsPlayed: 0 },
+    alertType: 'everyNthHand',
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'six_shooter');
       const hands = equip?.state.handsPlayed ?? 0;
@@ -1163,7 +1195,10 @@ const items: ItemDef[] = [
           : [[mult('x4'), condition(`in ${remaining}`)]];
       return {
         hint,
-        tooltip: [[mult('x4'), text(' mult every '), condition('6th'), text(' hand played')]],
+        tooltip: [
+          [mult('x4'), text(' mult every '), condition('6th'), text(' hand played')],
+          [text('Currently: '), remaining === 6 && hands > 0 ? active('Active!') : condition(`${remaining} hands until x4`),],
+        ],
       };
     },
   },
@@ -1382,12 +1417,19 @@ const items: ItemDef[] = [
     effectParams: {},
     display: (round, player) => {
       const handType = round?.currentHandType;
+      const timesPlayed = handType ? player.getHandStats(handType).timesPlayed : null;
       const hint = handType
-        ? [[mult(`+${player.getHandStats(handType).timesPlayed}`)], [condition(HAND_NAMES[handType], 'sm')]]
+        ? [[mult(`+${timesPlayed}`)], [condition(HAND_NAMES[handType], 'sm')]]
         : [[mult('+?')], [condition('times hand played', 'xs')]];
+      const tooltip: HintSegment[][] = [
+        [text('Adds the number of times the hand has been played this trip as '), mult('mult')],
+      ];
+      if (handType !== undefined && handType !== null && timesPlayed !== null) {
+        tooltip.push([text('Currently: '), mult(`+${timesPlayed}`), text(' for '), condition(HAND_NAMES[handType])]);
+      }
       return {
         hint,
-        tooltip: [[text('Adds the number of times the hand has been played this trip as '), mult('mult')]],
+        tooltip,
       };
     },
   },
@@ -1415,6 +1457,7 @@ const items: ItemDef[] = [
             mult('+2'),
             text(' per hand.'),
           ],
+          [text('Currently: '), mult(`+${m}`)],
         ],
       };
     },
@@ -1456,14 +1499,12 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'guide_lantern');
       const xm = equip?.state.xMult ?? 1;
-      const gain = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 0.1 }, 'value', player.professionId);
-      const hint =
-        xm > 1 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult(`x${gain}`), condition('per guide used')], [inactive('None')]];
       return {
-        hint,
+        hint: [[mult(`x${xm.toFixed(1)}`)], [condition('per guide used', 'xs')]],
         tooltip: [
           [text('Gain '), mult('x0.1'), text('mult for every trail guide used.')],
           [text('Caleb Winters (Scout) gains '), mult('x0.2'), text('mult for every trail guide used.')],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`)],
         ],
       };
     },
@@ -1484,7 +1525,10 @@ const items: ItemDef[] = [
       const hint = m > 0 ? [[miles(`+${m}`)]] : [[inactive('+0 miles')]];
       return {
         hint,
-        tooltip: [[text('Gains '), miles('+100'), text(' miles. '), miles('-5'), text(' miles per hand played.')]],
+        tooltip: [
+          [text('Gains '), miles('+100'), text(' miles. '), miles('-5'), text(' miles per hand played.')],
+          [text('Currently: '), miles(`+${m}`)],
+        ],
       };
     },
   },
@@ -1564,7 +1608,10 @@ const items: ItemDef[] = [
       const hint = [[mult(`+${m}`)]];
       return {
         hint,
-        tooltip: [[mult('+2'), text(' mult per day travelled, '), mult('-1'), text(' mult per reroll used')]],
+        tooltip: [
+          [mult('+2'), text(' mult per day travelled, '), mult('-1'), text(' mult per reroll used')],
+          [text('Currently: '), mult(`+${m}`)],
+        ],
       };
     },
   },
@@ -1646,7 +1693,10 @@ const items: ItemDef[] = [
       const hint = m > 0 ? [[mult(`+${m}`)]] : [[mult('+3')], [condition('per pack skipped', 'xs')]];
       return {
         hint,
-        tooltip: [[text('Gains '), mult('+3'), text(' mult when any booster pack is skipped')]],
+        tooltip: [
+          [text('Gains '), mult('+3'), text(' mult when any booster pack is skipped')],
+          [text('Currently: '), mult(`+${m}`)],
+        ],
       };
     },
   },
@@ -1672,6 +1722,7 @@ const items: ItemDef[] = [
             mult('x0.5'),
             text(' mult when round starts (not boss rounds). Destroys one random equipment.'),
           ],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`)],
         ],
       };
     },
@@ -1692,7 +1743,10 @@ const items: ItemDef[] = [
       const hint = [[miles(`+${m}`)], [condition('4 dice played', 'xs')]];
       return {
         hint,
-        tooltip: [[text('Gains '), miles('+4'), text(' miles if played hand has exactly '), condition('4 dice')]],
+        tooltip: [
+          [text('Gains '), miles('+4'), text(' miles if played hand has exactly '), condition('4 dice')],
+          [text('Currently: '), miles(`+${m}`)],
+        ],
       };
     },
   },
@@ -1732,7 +1786,10 @@ const items: ItemDef[] = [
       const hint = xm > 1 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult('x0.25'), condition('per new dice')]];
       return {
         hint,
-        tooltip: [[text('Gains '), mult('x0.25'), text(' mult for every new dice added to collection')]],
+        tooltip: [
+          [text('Gains '), mult('x0.25'), text(' mult for every new dice added to collection')],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`)],
+        ],
       };
     },
   },
@@ -1869,6 +1926,7 @@ const items: ItemDef[] = [
         tooltip: [
           [miles('+25'), text('miles for each stone die in collection')],
           [text('Also makes Chisel supply cards 2 times more likely')],
+          [text('Currently in collection:'), condition(`${count} ${stoneLabel}`, 'sm'), miles(`+${total}`)],
         ],
       };
     },
@@ -1923,6 +1981,7 @@ const items: ItemDef[] = [
         hint,
         tooltip: [
           [text('Gains '), miles('+15'), text(' miles if hand contains a '), condition(HAND_NAMES.FIVE_STRAIGHT)],
+          [text('Currently: '), miles(`+${m}`)],
         ],
       };
     },
@@ -1938,8 +1997,8 @@ const items: ItemDef[] = [
     display: (round, _player) => ({
       hint:
         round && handContains(round.currentHandType, HandType.FOUR_STRAIGHT)
-          ? [[mult('+8'), condition(HAND_NAMES.FOUR_STRAIGHT)], [active('Active!')]]
-          : [[mult('+8'), condition(HAND_NAMES.FOUR_STRAIGHT)], [inactive('Inactive')]],
+          ? [[mult('+8'), condition(HAND_NAMES.FOUR_STRAIGHT, 'xs')], [active('Active!')]]
+          : [[mult('+8'), condition(HAND_NAMES.FOUR_STRAIGHT, 'xs')], [inactive('Inactive')]],
       tooltip: [
         [text('If played hand contains a '), condition(HAND_NAMES.FOUR_STRAIGHT), text(' '), mult('+8'), text(' mult')],
       ],
@@ -1971,13 +2030,14 @@ const items: ItemDef[] = [
     effectParams: { value: 1 },
     display: (_round, player) => {
       const emptySlots = player.maxEquipmentSlots - player.usedEquipmentSlots;
+      const xm = 1 + emptySlots;
       const hint =
         emptySlots > 0
-          ? [[mult(`x${1 + emptySlots}`), condition(`${emptySlots} empty`)]]
+          ? [[mult(`x${xm}`), condition(`${emptySlots} empty`)]]
           : [[mult('x1'), condition('no empty slots')], [inactive('Inactive')]];
       return {
         hint,
-        tooltip: [[mult('x1'), text(' mult for each empty equipment slot')]],
+        tooltip: [[mult('x1'), text(' mult for each empty equipment slot')], [text('Currently: '), mult(`x${xm}`)]],
       };
     },
   },
@@ -2007,6 +2067,7 @@ const items: ItemDef[] = [
         tooltip: [
           [text('Gains '), miles('+12'), text('miles for every Wood die scored')],
           [text('Also makes Firewood supply cards 2 times more likely')],
+          [text('Currently: '), miles(`+${m}`)],
         ],
       };
     },
@@ -2072,7 +2133,10 @@ const items: ItemDef[] = [
       const hint = [[mult(`x${xm.toFixed(2)}`)], [condition(`${skipped} skipped`, 'sm')]];
       return {
         hint,
-        tooltip: [[mult('x0.25'), text(' mult for each round of journey skipped')]],
+        tooltip: [
+          [mult('x0.25'), text(' mult for each round of journey skipped')],
+          [text('Currently: '), mult(`x${xm.toFixed(2)}`)],
+        ],
       };
     },
   },
@@ -2111,7 +2175,7 @@ const items: ItemDef[] = [
     effectType: 'LUCKY_DICE_MONEY',
     effectParams: { value: 1 },
     display: (_round, _player) => ({
-      hint: [[money('+$1'), condition('per lucky scored')]],
+      hint: [[money('+$1')], [condition('per lucky scored', 'xs')]],
       tooltip: [[text('Played lucky dice earn '), money('$1'), text(' when scored')]],
     }),
   },
@@ -2192,6 +2256,7 @@ const items: ItemDef[] = [
         tooltip: [
           [text('Item gains '), mult('x0.75'), text(' mult for every diamond die that is destroyed')],
           [text('Also makes Pick Axe supply cards 2 times more likely')],
+          [text('Currently: '), mult(`x${xm.toFixed(2)}`)],
         ],
       };
     },
@@ -2245,6 +2310,9 @@ const items: ItemDef[] = [
             mult('x5'),
             text(' if 5 different'),
           ],
+          ...(types && types.size >= 2
+            ? [[text('Currently: '), mult(`x${types.size}`)]]
+            : [[text('Currently: '), inactive('Inactive')]]),
         ],
       };
     },
@@ -2374,7 +2442,10 @@ const items: ItemDef[] = [
       const hint = [[miles(`+${m}`)], [condition('5s scored', 'sm')]];
       return {
         hint,
-        tooltip: [[text('Gains '), miles('+5'), text(' miles each time a '), condition('5'), text(' pip is scored')]],
+        tooltip: [
+          [text('Gains '), miles('+5'), text(' miles each time a '), condition('5'), text(' pip is scored')],
+          [text('Currently: '), miles(`+${m}`)],
+        ],
       };
     },
   },
@@ -2546,6 +2617,8 @@ const items: ItemDef[] = [
         hint,
         tooltip: [
           [mult('x3'), text(' mult if you have at least '), condition('16'), text(' enhanced dice in collection')],
+          [text('Currently: '), condition(`${enhCount} enhanced`),
+          enhCount >= 16 ? active('Active!') : inactive('Inactive'),],
         ],
       };
     },
@@ -2592,7 +2665,10 @@ const items: ItemDef[] = [
       const hint = xm > 1 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult('x0.1'), condition('per enhanced scored')]];
       return {
         hint,
-        tooltip: [[text('Gains '), mult('x0.1'), text(' mult per scored enhanced dice, removes dice enhancement')]],
+        tooltip: [
+          [text('Gains '), mult('x0.1'), text(' mult per scored enhanced dice, removes dice enhancement')],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`)],
+        ],
       };
     },
     unlockCondition: unlockAnyEnhanced,
@@ -2678,7 +2754,10 @@ const items: ItemDef[] = [
       const hint = [[mult(`+${multGain}`)], [condition('per $5 held', 'sm')]];
       return {
         hint,
-        tooltip: [[mult('+2'), text(' mult for every '), money('$5'), text(' you have')]],
+        tooltip: [
+          [mult('+2'), text(' mult for every '), money('$5'), text(' you have')],
+          [text('Currently: '), mult(`+${multGain}`)],
+        ],
       };
     },
   },
@@ -2695,10 +2774,9 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'trailblazer');
       const streak = equip?.state.streak ?? 0;
+      const xm = 1 + streak * 0.2;
       const hint =
-        streak > 0
-          ? [[mult(`x${(1 + streak * 0.2).toFixed(1)}`)]]
-          : [[mult('+ x0.2')], [condition('if not most-played hand', 'xs')]];
+        streak > 0 ? [[mult(`x${xm.toFixed(1)}`)]] : [[mult('+ x0.2')], [condition('if not most-played hand', 'xs')]];
       return {
         hint,
         tooltip: [
@@ -2707,6 +2785,7 @@ const items: ItemDef[] = [
             mult('x0.2'),
             text(' mult per consecutive hand played without playing your most played hand'),
           ],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`)],
         ],
       };
     },
@@ -2857,7 +2936,10 @@ const items: ItemDef[] = [
       const m = equip?.state.miles ?? 0;
       return {
         hint: [[miles(`+${m}`)]],
-        tooltip: [[text('Item gains '), miles('+66'), text(' miles for every dice that is destroyed')]],
+        tooltip: [
+          [text('Item gains '), miles('+66'), text(' miles for every dice that is destroyed')],
+          [text('Currently: '), miles(`+${m}`)],
+        ],
       };
     },
   },
@@ -3022,9 +3104,14 @@ const items: ItemDef[] = [
     modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'old_calendar');
+      const milesVal = equip?.state.miles ?? 0;
+      const multVal = equip?.state.mult ?? 0;
       return {
-        hint: [[miles(`+${equip?.state.miles ?? 0}`)], [mult(`+${equip?.state.mult ?? 0}`)]],
-        tooltip: [[text('Gains miles equal to travel days left and mult equal to rerolls left after each round')]],
+        hint: [[miles(`+${milesVal}`)], [mult(`+${multVal}`)]],
+        tooltip: [
+          [text('Gains miles equal to travel days left and mult equal to rerolls left after each round')],
+          [text('Currently: '), miles(`+${milesVal}`), text(', '), mult(`+${multVal}`)],
+        ],
       };
     },
   },
@@ -3072,9 +3159,13 @@ const items: ItemDef[] = [
     modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'campfire_embers');
+      const xm = equip?.state.xMult ?? 1;
       return {
-        hint: [[mult(`x${(equip?.state.xMult ?? 1).toFixed(1)}`)]],
-        tooltip: [[text('Gains '), mult('x0.2'), text(' at end of each non-boss round')]],
+        hint: [[mult(`x${xm.toFixed(1)}`)]],
+        tooltip: [
+          [text('Gains '), mult('x0.2'), text(' at end of each non-boss round')],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`)],
+        ],
       };
     },
   },
@@ -3109,6 +3200,7 @@ const items: ItemDef[] = [
         hint: [[miles(`+${total}`)], [condition('unique hand type', 'sm')]],
         tooltip: [
           [miles(`+${gain}`), text(' miles per new hand type each round; bonus miles carry over between rounds')],
+          [text('Currently: '), miles(`+${total}`)],
         ],
       };
     },
@@ -3123,9 +3215,13 @@ const items: ItemDef[] = [
     effectParams: { chunk: 25, value: 0.4 },
     display: (_round, player) => {
       const chunks = Math.floor(player.balance / 25);
+      const xm = 1 + chunks * 0.4;
       return {
-        hint: [[mult(`x${(1 + chunks * 0.4).toFixed(1)}`)], [condition('per $25 held', 'sm')]],
-        tooltip: [[text('Gain '), mult('x0.4'), text(' mult for every '), money('$25'), text(' you have')]],
+        hint: [[mult(`x${xm.toFixed(1)}`)], [condition('per $25 held', 'sm')]],
+        tooltip: [
+          [text('Gain '), mult('x0.4'), text(' mult for every '), money('$25'), text(' you have')],
+          [text('Currently: '), mult(`x${xm.toFixed(1)}`)],
+        ],
       };
     },
   },
@@ -3145,7 +3241,10 @@ const items: ItemDef[] = [
           : [[mult('x1'), condition('per day travelled', 'xs')], [inactive('Inactive', 'sm')]];
       return {
         hint,
-        tooltip: [[mult('x1'), text(' mult per day travelled. Resets every round')]],
+        tooltip: [
+          [mult('x1'), text(' mult per day travelled. Resets every round')],
+          [text('Currently: '), mult(`x${day}`)],
+        ],
       };
     },
   },
@@ -3207,9 +3306,13 @@ const items: ItemDef[] = [
     modifierImmunity: ['perishable'],
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'offering_bowl');
+      const m = equip?.state.mult ?? 0;
       return {
-        hint: [[mult(`+${equip?.state.mult ?? 0}`)], [condition('destroys random consumable', 'xs')]],
-        tooltip: [[text('Round start: destroy a random consumable. If destroyed, gain '), mult('+4'), text(' mult')]],
+        hint: [[mult(`+${m}`)], [condition('destroys random consumable', 'xs')]],
+        tooltip: [
+          [text('Round start: destroy a random consumable. If destroyed, gain '), mult('+4'), text(' mult')],
+          [text('Currently: '), mult(`+${m}`)],
+        ],
       };
     },
   },
