@@ -12,6 +12,9 @@ export type GameSceneDevPanelDeps = {
   scene: Scene;
   getSidebarW: () => number;
   onDevWin: () => void;
+  onDevBgCycle: (delta: number) => void;
+  getDevBgIndex: () => number;
+  getDevBgCount: () => number;
 };
 
 export class GameSceneDevPanel {
@@ -22,6 +25,9 @@ export class GameSceneDevPanel {
   private loadedDiceIncBtn!: Button;
   private loadedDicePicker: Phaser.GameObjects.Container | null = null;
   private devWinBtn: Button | null = null;
+  private devBgPrevBtn: Button | null = null;
+  private devBgNextBtn: Button | null = null;
+  private devBgLabel: Phaser.GameObjects.Text | null = null;
 
   constructor(private readonly deps: GameSceneDevPanelDeps) {}
 
@@ -33,8 +39,33 @@ export class GameSceneDevPanel {
         .setColor(0x553388, 0x7744aa)
         .onClick(() => this.deps.onDevWin());
       this.devWinBtn.setDepth(100);
+
+      this.devBgLabel = this.deps.scene.add
+        .text(devBtnX, 316, this.formatBgLabel(), {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '11px',
+          color: TEXT_COLORS.SECONDARY,
+          align: 'center',
+        })
+        .setOrigin(0.5)
+        .setDepth(100);
+
+      this.devBgPrevBtn = new Button(this.deps.scene, devBtnX - 40, 342, '◀', 48, 28)
+        .setColor(0x334455, 0x446677)
+        .onClick(() => this.deps.onDevBgCycle(-1));
+      this.devBgPrevBtn.setDepth(100);
+      this.devBgPrevBtn.setLabelFontSize(14);
+
+      this.devBgNextBtn = new Button(this.deps.scene, devBtnX + 40, 342, '▶', 48, 28)
+        .setColor(0x334455, 0x446677)
+        .onClick(() => this.deps.onDevBgCycle(1));
+      this.devBgNextBtn.setDepth(100);
+      this.devBgNextBtn.setLabelFontSize(14);
     } else {
       this.devWinBtn = null;
+      this.devBgPrevBtn = null;
+      this.devBgNextBtn = null;
+      this.devBgLabel = null;
     }
   }
 
@@ -44,6 +75,15 @@ export class GameSceneDevPanel {
 
   update(): void {
     this.updateLoadedDiceControl();
+    this.updateBgPreviewLabel();
+  }
+
+  private formatBgLabel(): string {
+    return `BG ${this.deps.getDevBgIndex()}/${this.deps.getDevBgCount()}`;
+  }
+
+  private updateBgPreviewLabel(): void {
+    this.devBgLabel?.setText(this.formatBgLabel());
   }
 
   destroyPicker(): void {

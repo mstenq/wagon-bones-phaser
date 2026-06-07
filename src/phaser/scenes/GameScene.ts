@@ -30,14 +30,20 @@ import {
 } from '../../game/store/selectors/roundSelectors';
 import { selectAvailableDice, selectCurrentBoss, selectSpentDice } from '../../game/store/selectors/runSelectors';
 import { D } from '../../game/scoreMath';
-import { COLORS, TEXT_COLORS, FONTS, UI, ANIM, MARQUEE } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, ANIM, MARQUEE, GAMEPLAY } from '../../game/Constants';
 import { DiceSprite } from '../ui/DiceSprite';
 import { Button } from '../ui/Button';
 import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
-import { computeGameHudLayout, createLayout } from '../ui/SceneLayout';
+import {
+  applyCoverBackgroundImage,
+  computeGameHudLayout,
+  computeLayoutMetricsFromScene,
+  createLayout,
+  getContentBackgroundRegion,
+} from '../ui/SceneLayout';
 import { RoundModificationsModal } from '../ui/RoundModificationsModal';
 import { shouldPromptRoundModifications } from '../../game/store/selectors/uiSelectors';
 import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
@@ -108,6 +114,9 @@ export class GameScene extends Scene {
 
   /** Lazy-loaded round background texture key; cleared in init for each scene visit */
   private roundBackgroundKey: string | null = null;
+  /** Dev-only background preview index (1..ROUND_BACKGROUND_COUNT) */
+  private devBgPreviewIndex: number | null = null;
+  private bgImage: Phaser.GameObjects.Image | null = null;
 
   /** Ambient fire sounds from equipment destruction — stopped on scene shutdown */
   private activeEquipDestroySounds: Phaser.Sound.BaseSound[] = [];
@@ -127,6 +136,8 @@ export class GameScene extends Scene {
     // Round state lives in roundStore (hydrated by applySaveSnapshot or cleared between rounds).
     this.roundSessionActive = false;
     this.roundBackgroundKey = null;
+    this.devBgPreviewIndex = null;
+    this.bgImage = null;
   }
 
   private get rollSprites(): DiceSprite[] {
@@ -249,6 +260,9 @@ export class GameScene extends Scene {
       scene: this,
       getSidebarW: () => this.sidebarW,
       onDevWin: () => this.onDevWinRound(),
+      onDevBgCycle: (delta) => this.cycleDevBackground(delta),
+      getDevBgIndex: () => this.getDevBgPreviewIndex(),
+      getDevBgCount: () => GAMEPLAY.ROUND_BACKGROUND_COUNT,
     });
 
     this.buildLayout(false);
@@ -272,7 +286,7 @@ export class GameScene extends Scene {
       return;
     }
 
-    const index = getRunRoundBackgroundIndex(getRunState());
+    const index = this.getDevBgPreviewIndex();
 
     ensureGameRoundBackgroundLoaded(this, index, (textureKey) => {
       const bgKey = this.textures.exists(textureKey) ? textureKey : null;
@@ -281,10 +295,51 @@ export class GameScene extends Scene {
     });
   }
 
+  private getDevBgPreviewIndex(): number {
+    if (this.devBgPreviewIndex === null) {
+      this.devBgPreviewIndex = getRunRoundBackgroundIndex(getRunState());
+    }
+    return this.devBgPreviewIndex;
+  }
+
+  private cycleDevBackground(delta: number): void {
+    if (!isDevMode()) return;
+
+    const count = GAMEPLAY.ROUND_BACKGROUND_COUNT;
+    const current = this.getDevBgPreviewIndex();
+    this.devBgPreviewIndex = ((current - 1 + delta + count) % count) + 1;
+
+    ensureGameRoundBackgroundLoaded(this, this.devBgPreviewIndex, (textureKey) => {
+      if (!this.textures.exists(textureKey)) return;
+      this.roundBackgroundKey = textureKey;
+      this.applyRoundBackground(textureKey);
+      this.devPanel.update();
+    });
+  }
+
+  private applyRoundBackground(textureKey: string): void {
+    if (!this.bgImage) return;
+    this.bgImage.setTexture(textureKey);
+    const metrics = computeLayoutMetricsFromScene(this);
+    applyCoverBackgroundImage(this.bgImage, getContentBackgroundRegion(metrics));
+  }
+
+  private captureBackgroundImage(bgKey: string | null): void {
+    this.bgImage = null;
+    if (!bgKey) return;
+    for (const child of this.children.list) {
+      if (child instanceof Phaser.GameObjects.Image && child.texture.key === bgKey) {
+        this.bgImage = child;
+        return;
+      }
+    }
+  }
+
   private finishBuildLayout(isRelayout: boolean, bgKey: string | null): void {
     const { height } = this.scale;
 
-    const layout = createLayout(this, { bgKey });
+    const layout = createLayout(this, { bgKey, felt: false, bgRegion: 'content' });
+    this.captureBackgroundImage(bgKey);
     this.sidebar = layout.sidebar;
     this.equipBar = layout.equipBar;
     this.consumableBar = layout.consumableBar;

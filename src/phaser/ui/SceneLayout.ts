@@ -4,7 +4,7 @@
 // content area metrics. Scenes call `createLayout()` and get back references
 // to the shared UI elements plus layout dimensions.
 
-import { Scene } from 'phaser';
+import { Scene, type GameObjects } from 'phaser';
 import { COLORS, DICE, UI, GAMEPLAY, type LayoutMode } from '../../game/Constants';
 import { computeDiceDisplayScale } from '../scenes/game/diceRowGeometry';
 import { getRunState } from '../../game/store/runStore';
@@ -412,9 +412,40 @@ export function getContentLayoutCenter(scene: Scene): { cx: number; cy: number }
   return { cx: metrics.contentCX, cy };
 }
 
+export interface BackgroundCoverRegion {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Play area to the right of the sidebar or below the top bar — not covered by chrome. */
+export function getContentBackgroundRegion(metrics: LayoutMetrics): BackgroundCoverRegion {
+  return {
+    x: metrics.feltX,
+    y: metrics.feltY,
+    w: metrics.feltW,
+    h: metrics.feltH,
+  };
+}
+
+/** Cover-scale an image into a region (centered, no letterboxing). */
+export function applyCoverBackgroundImage(image: GameObjects.Image, region: BackgroundCoverRegion): void {
+  const cx = region.x + region.w / 2;
+  const cy = region.y + region.h / 2;
+  image.setPosition(cx, cy);
+  const scale = Math.max(region.w / image.width, region.h / image.height);
+  image.setScale(scale);
+}
+
 export interface LayoutOptions {
   /** Background texture key (e.g. 'bg_1', 'bg_shop'). If null, draws a solid color fill. */
   bgKey?: string | null;
+  /**
+   * 'screen' — full canvas (shop, etc.).
+   * 'content' — cover the play area beside/below sidebar chrome so less art sits behind HUD.
+   */
+  bgRegion?: 'screen' | 'content';
   /** Whether to draw the felt overlay behind the content area (default true) */
   felt?: boolean;
   /** Sidebar title override */
@@ -438,9 +469,14 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
 
   // ─── Background ───
   if (opts.bgKey) {
-    const bg = scene.add.image(width / 2, height / 2, opts.bgKey);
-    const scale = Math.max(width / bg.width, height / bg.height);
-    bg.setScale(scale);
+    const bg = scene.add.image(0, 0, opts.bgKey);
+    if (opts.bgRegion === 'content') {
+      applyCoverBackgroundImage(bg, getContentBackgroundRegion(metrics));
+    } else {
+      bg.setPosition(width / 2, height / 2);
+      const scale = Math.max(width / bg.width, height / bg.height);
+      bg.setScale(scale);
+    }
   } else if (opts.bgKey === null) {
     const bg = scene.add.graphics();
     bg.fillStyle(COLORS.BG_PRIMARY, 1);
