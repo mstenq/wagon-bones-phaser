@@ -2,6 +2,7 @@ import { onCleanup, onMount } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import StartGame from './game/main';
 import { EventBus, Events } from './game/EventBus';
+import { shutdownAutoSave } from './phaser/AutoSaveManager';
 
 export interface IRefPhaserGame {
   game: Phaser.Game | null;
@@ -37,6 +38,8 @@ export const PhaserGame = (props: IProps) => {
     });
 
     onCleanup(() => {
+      shutdownAutoSave();
+
       if (instance.game) {
         instance.game.destroy(true);
         setInstance({ game: null, scene: null });

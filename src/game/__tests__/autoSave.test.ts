@@ -4,6 +4,7 @@ import {
   writeAutoSaveToStorage,
   readAutoSaveFromStorage,
   readPreviousAutoSaveFromStorage,
+  readAutoSaveCandidates,
   clearAutoSaveStorage,
   clearPreviousAutoSaveStorage,
   snapshotContentKey,
@@ -132,5 +133,53 @@ describe('AutoSave', () => {
 
     expect(readAutoSaveFromStorage()).toBeNull();
     expect(readPreviousAutoSaveFromStorage()?.run.leg).toBe(1);
+  });
+
+  test('readAutoSaveCandidates returns current then previous when both differ', () => {
+    const player = resetPlayerState();
+    player.applyProfession('farmer');
+    player.leg = 1;
+
+    writeAutoSaveToStorage(buildSaveSnapshot({ activeScene: 'RoundSelect' }));
+    player.leg = 2;
+    writeAutoSaveToStorage(buildSaveSnapshot({ activeScene: 'RoundSelect' }));
+
+    const candidates = readAutoSaveCandidates();
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0]?.run.leg).toBe(2);
+    expect(candidates[1]?.run.leg).toBe(1);
+  });
+
+  test('readAutoSaveCandidates dedupes identical current and previous', () => {
+    resetPlayerState().applyProfession('farmer');
+    writeAutoSaveToStorage(buildSaveSnapshot({ activeScene: 'RoundSelect' }));
+
+    expect(readAutoSaveCandidates()).toHaveLength(1);
+  });
+
+  test('hasRunnableAutoSave is true when only previous slot is runnable', () => {
+    const player = resetPlayerState();
+    player.applyProfession('farmer');
+    player.leg = 1;
+    writeAutoSaveToStorage(buildSaveSnapshot({ activeScene: 'RoundSelect' }));
+
+    player.leg = 2;
+    writeAutoSaveToStorage(buildSaveSnapshot({ activeScene: 'RoundSelect' }));
+
+    clearAutoSaveStorage();
+
+    expect(readAutoSaveFromStorage()).toBeNull();
+    expect(readPreviousAutoSaveFromStorage()?.run.professionId).toBe('farmer');
+    expect(hasRunnableAutoSave()).toBe(true);
+  });
+
+  test('writeAutoSaveToStorage skips snapshots that fail validation', () => {
+    resetPlayerState().applyProfession('farmer');
+    writeAutoSaveToStorage(buildSaveSnapshot({ activeScene: 'RoundSelect' }));
+    const before = localStorage.getItem(GAMEPLAY.AUTOSAVE_STORAGE_KEY);
+
+    writeAutoSaveToStorage({ version: 0 } as ReturnType<typeof buildSaveSnapshot>);
+
+    expect(localStorage.getItem(GAMEPLAY.AUTOSAVE_STORAGE_KEY)).toBe(before);
   });
 });

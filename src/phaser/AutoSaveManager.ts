@@ -4,7 +4,8 @@
 import type { Game, Scene } from 'phaser';
 import { GAMEPLAY } from '../game/Constants';
 import { getRunState } from '../game/store/runStore';
-import { clearAutoSaveStorage, readAutoSaveFromStorage, writeAutoSaveToStorage } from '../game/AutoSave';
+import { clearAutoSaveStorage, readAutoSaveCandidates, writeAutoSaveToStorage } from '../game/AutoSave';
+import type { GameSaveSnapshot } from '../game/SaveLoad';
 import { buildSnapshotFromScene, restoreSnapshotToScene } from './SaveLoadIO';
 import { ensureBackgroundMusic } from './BackgroundMusic';
 import type { ActiveScene } from '../game/SaveLoad';
@@ -19,9 +20,33 @@ const AUTOSAVE_SCENE_KEYS: ReadonlySet<ActiveScene> = new Set([
 
 let gameRef: Game | null = null;
 let intervalId: ReturnType<typeof setInterval> | null = null;
+let pagehideRegistered = false;
+
+function devAutoSaveWarn(message: string, err?: unknown): void {
+  if (import.meta.env.DEV) {
+    console.warn(`[AutoSave] ${message}`, err ?? '');
+  }
+}
+
+function registerPagehideFlushOnce(): void {
+  if (pagehideRegistered || typeof window === 'undefined') return;
+  pagehideRegistered = true;
+  window.addEventListener('pagehide', () => {
+    flushAutoSave();
+  });
+}
 
 export function initAutoSave(game: Game): void {
+  stopAutoSaveLoop();
   gameRef = game;
+  registerPagehideFlushOnce();
+}
+
+/** Flush pending state and stop the timer — call before destroying the Phaser game (e.g. HMR). */
+export function shutdownAutoSave(): void {
+  flushAutoSave();
+  stopAutoSaveLoop();
+  gameRef = null;
 }
 
 export function startAutoSaveLoop(): void {
@@ -75,21 +100,37 @@ export function flushAutoSave(): void {
   autoSaveTick();
 }
 
-/** Restore from localStorage on boot. Returns true if a scene was started. */
-export function tryRestoreAutoSaveOnBoot(hostScene: Scene): boolean {
-  const snapshot = readAutoSaveFromStorage();
-  if (!snapshot || !snapshot.run.professionId) {
-    if (snapshot) clearAutoSaveStorage();
-    return false;
-  }
-
+function tryRestoreSnapshot(hostScene: Scene, snapshot: GameSaveSnapshot): boolean {
   try {
     restoreSnapshotToScene(hostScene, snapshot);
     ensureBackgroundMusic(hostScene);
     startAutoSaveLoop();
     return true;
-  } catch {
-    clearAutoSaveStorage();
+  } catch (err) {
+    devAutoSaveWarn('Restore failed for snapshot', err);
     return false;
   }
+}
+
+/** Restore from localStorage on boot. Returns true if a scene was started. */
+export function tryRestoreAutoSaveOnBoot(hostScene: Scene): boolean {
+  const candidates = readAutoSaveCandidates();
+  if (candidates.length === 0) {
+    return false;
+  }
+
+  for (const snapshot of candidates) {
+    if (tryRestoreSnapshot(hostScene, snapshot)) {
+      writeAutoSaveToStorage(snapshot);
+      return true;
+    }
+  }
+
+  if (!import.meta.env.DEV) {
+    clearAutoSaveStorage();
+  } else {
+    devAutoSaveWarn('All auto-save candidates failed restore; keeping localStorage for inspection');
+  }
+
+  return false;
 }

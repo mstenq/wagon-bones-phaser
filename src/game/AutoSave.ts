@@ -12,8 +12,12 @@ export function snapshotContentKey(snapshot: GameSaveSnapshot): string {
 
 export function writeAutoSaveToStorage(snapshot: GameSaveSnapshot): void {
   try {
+    const validated = validateSaveSnapshot(snapshot);
+    if (!validated) return;
+    assertSaveIntegrity(validated);
+
     const rawCurrent = localStorage.getItem(GAMEPLAY.AUTOSAVE_STORAGE_KEY);
-    const newKey = snapshotContentKey(snapshot);
+    const newKey = snapshotContentKey(validated);
 
     if (rawCurrent) {
       const parsed = JSON.parse(rawCurrent) as unknown;
@@ -24,9 +28,9 @@ export function writeAutoSaveToStorage(snapshot: GameSaveSnapshot): void {
       localStorage.setItem(GAMEPLAY.AUTOSAVE_PREV_STORAGE_KEY, rawCurrent);
     }
 
-    localStorage.setItem(GAMEPLAY.AUTOSAVE_STORAGE_KEY, JSON.stringify(snapshot));
+    localStorage.setItem(GAMEPLAY.AUTOSAVE_STORAGE_KEY, JSON.stringify(validated));
   } catch {
-    // Quota exceeded or private browsing — ignore
+    // Quota exceeded, private browsing, or integrity failure — skip write
   }
 }
 
@@ -68,7 +72,30 @@ export function clearPreviousAutoSaveStorage(): void {
   }
 }
 
-export function hasRunnableAutoSave(): boolean {
-  const snapshot = readAutoSaveFromStorage();
+function isRunnableSnapshot(snapshot: GameSaveSnapshot | null): snapshot is GameSaveSnapshot {
   return snapshot !== null && snapshot.run.professionId !== null;
+}
+
+/** Current slot first, then previous — deduped by content. */
+export function readAutoSaveCandidates(): GameSaveSnapshot[] {
+  const current = readAutoSaveFromStorage();
+  const previous = readPreviousAutoSaveFromStorage();
+  const candidates: GameSaveSnapshot[] = [];
+
+  if (isRunnableSnapshot(current)) {
+    candidates.push(current);
+  }
+
+  if (isRunnableSnapshot(previous)) {
+    const currentKey = current ? snapshotContentKey(current) : null;
+    if (currentKey !== snapshotContentKey(previous)) {
+      candidates.push(previous);
+    }
+  }
+
+  return candidates;
+}
+
+export function hasRunnableAutoSave(): boolean {
+  return readAutoSaveCandidates().length > 0;
 }

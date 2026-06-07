@@ -5,9 +5,9 @@
     "semantic_hash": "00ea9c0ff16514f113cc59cb3826954d"
   },
   "src/PhaserGame.tsx": {
-    "mtime": 1779613583.6763682,
-    "ast_hash": "ada8a81746a96215325dea7be10582ac",
-    "semantic_hash": "ada8a81746a96215325dea7be10582ac"
+    "mtime": 1780853995.50089,
+    "ast_hash": "cef5fc8905ac9409c433d706142513ac",
+    "semantic_hash": ""
   },
   "src/data/bosses.ts": {
     "mtime": 1779978643.4671476,
@@ -95,9 +95,9 @@
     "semantic_hash": "533a8e8840e13cdadb31d58a6dac6aa9"
   },
   "src/game/AutoSave.ts": {
-    "mtime": 1779759334.622,
-    "ast_hash": "2df7adbc2c6d52494d060ec47180e67d",
-    "semantic_hash": "2df7adbc2c6d52494d060ec47180e67d"
+    "mtime": 1780853993.3118525,
+    "ast_hash": "6bf0ab8cfad7e1f5111e92f91f5f0899",
+    "semantic_hash": ""
   },
   "src/game/BoosterPackSystem.ts": {
     "mtime": 1780116554.007845,
@@ -220,9 +220,9 @@
     "semantic_hash": ""
   },
   "src/game/__tests__/autoSave.test.ts": {
-    "mtime": 1779759334.622,
-    "ast_hash": "0c494dacdcab0e39371b966732d77123",
-    "semantic_hash": "0c494dacdcab0e39371b966732d77123"
+    "mtime": 1780854002.3310068,
+    "ast_hash": "2f1b29363a4da01178651701eade9c3d",
+    "semantic_hash": ""
   },
   "src/game/__tests__/boosterPack.test.ts": {
     "mtime": 1780116554.0291622,
@@ -1095,9 +1095,9 @@
     "semantic_hash": "8396effcf7b53bb6008d229f425a1dbb"
   },
   "src/phaser/AutoSaveManager.ts": {
-    "mtime": 1779759334.6221461,
-    "ast_hash": "eac0f7179b56801dd7ad5eb9cb303ced",
-    "semantic_hash": "eac0f7179b56801dd7ad5eb9cb303ced"
+    "mtime": 1780854036.3109255,
+    "ast_hash": "b913dd06fefce40579068308a9f1d40e",
+    "semantic_hash": ""
   },
   "src/phaser/BackgroundMusic.ts": {
     "mtime": 1780839266.1809487,
@@ -5875,8 +5875,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/definitions/holy.ts": {
-    "mtime": 1780853164.9835448,
-    "ast_hash": "5d1f834b3789e3437301a10ddf472289",
+    "mtime": 1780853728.259317,
+    "ast_hash": "2ed9f6204bae7b2fa5fd9e724d228fb2",
     "semantic_hash": ""
   },
   "HOLY.md": {
