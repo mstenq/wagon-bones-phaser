@@ -5,7 +5,7 @@ tag_permit,Permit Stamp,Adds a Frontier Permit to the next shop.
 tag_company_store,On the House,"Next shop: initial equipment, consumables, and booster packs cost $0."
 tag_free_reroll,Coupon Book,Next shop: first camp reroll costs $0.
 tag_ghost,Haunted Relic,Next base equipment in shop becomes Ghost aura and is free.
-tag_icy,Frosted Tin,Next base equipment in shop becomes Icy aura (+50 miles) and is free.
+tag_arcane,Arcane Tin,Next base equipment in shop becomes Arcane aura (+50 miles) and is free.
 tag_fire,Branded Iron,Next base equipment in shop becomes Fire aura (+10 mult) and is free.
 tag_holy,Gilded Cross,Next base equipment in shop becomes Holy aura (×1.5 mult) and is free.
 tag_investment,Bounty Payout,Gain $25 after defeating the next boss.

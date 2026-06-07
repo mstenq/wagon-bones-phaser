@@ -123,6 +123,11 @@ export class ItemCard extends GameObjects.Container {
     this.applyFaceDownSuppression();
   }
 
+  /** Suppress arcane hover strikes while the card is being dragged. */
+  setAuraDragging(dragging: boolean): void {
+    this.auras.setFrame({ dragging });
+  }
+
   /** Re-apply aura VFX when equipment.def is replaced in-place (Bless, Blood Moon, dev tools). */
   syncAuraFromEquipment(equipment: EquipmentInstance): void {
     this._equipment = equipment;

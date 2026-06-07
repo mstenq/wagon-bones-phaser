@@ -82,7 +82,15 @@ Logic pushes `ScoreAnimEvent[]` during scoring; `ScoreAnimation.ts` plays them b
 
 Logic: `SaveLoad.ts`, `AutoSave.ts`. IO: `phaser/AutoSaveManager.ts`, `phaser/SaveLoadIO.ts`.
 
-**No legacy save support.** Default missing fields with `??` in deserialize paths. Do not bump `SAVE_VERSION` for field additions alone. Remove dead legacy code when you touch it.
+**Pre-ship: no backwards compatibility.** The game has not shipped; old local saves are disposable. Do not preserve compatibility with renamed or removed ids.
+
+**Renames are direct.** When an id changes (aura, tag, equipment, effect, etc.), update definitions and all references. Do **not** add `normalize*` / `migrate*` / alias-map helpers in save/load or resolve paths.
+
+**`??` defaults are for new optional fields only** — not for translating old stored values to new names.
+
+**One canonical id everywhere.** Do not keep a separate visual id (e.g. `arcane`) and game-data id (e.g. `icy`) unless the user explicitly asks for that split.
+
+Default missing fields with `??` in deserialize paths. Do not bump `SAVE_VERSION` for field additions alone. Remove dead legacy code when you touch it.
 
 ## Phaser gotchas
 

@@ -28,7 +28,7 @@ export type DiceEnhancement = 'bone' | 'lucky' | 'wooden' | 'steel' | 'gold' | '
 
 export type DiceSticker = 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_moon' | null;
 
-export type DiceAura = 'holy' | 'fire' | 'icy' | null;
+export type DiceAura = 'holy' | 'fire' | 'arcane' | null;
 
 export interface Die {
   id: string;

@@ -43,3 +43,26 @@ export function applyLayerBlur(g: GameObjects.Graphics, strength: number, qualit
   const blur = gfx.filters!.internal.addBlur(blurQuality, strength * 0.4, strength * 0.4, 1, 0xffffff, 4);
   blur.setPaddingOverride?.(null);
 }
+
+/** Stronger blur + blue tint for arcane aura layers (closer to Pixi BlurFilter response). */
+export function applyArcaneLayerBlur(
+  g: GameObjects.Graphics,
+  strength: number,
+  quality: number,
+  tint = 0x66ccff,
+): void {
+  const gfx = asFilterableGraphics(g);
+  if (!gfx.enableFilters) {
+    return;
+  }
+  gfx.enableFilters();
+  let blurQuality = 0;
+  if (quality >= 3) {
+    blurQuality = 2;
+  } else if (quality >= 2) {
+    blurQuality = 1;
+  }
+  const scale = quality >= 3 ? 0.85 : quality >= 2 ? 0.65 : 0.5;
+  const blur = gfx.filters!.internal.addBlur(blurQuality, strength * scale, strength * scale, 1, tint, 6);
+  blur.setPaddingOverride?.(null);
+}

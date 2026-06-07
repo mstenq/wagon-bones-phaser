@@ -290,8 +290,8 @@ describe('TagSystem', () => {
       expect(getEquipmentPurchasePrice(def, ['leased'], listPrice, [])).not.toBe(EQUIPMENT_MODIFIER.LEASED_BUY_PRICE);
     });
 
-    it('free icy aura equipment stays $0 at purchase', () => {
-      const icy = getItemAuraById('icy')!;
+    it('free arcane aura equipment stays $0 at purchase', () => {
+      const arcane = getItemAuraById('arcane')!;
       const def = {
         id: 'bargain_bin',
         name: 'Bargain Bin',
@@ -300,7 +300,7 @@ describe('TagSystem', () => {
         description: '',
         effectType: 'SHOP_REROLL_MULT_GAIN',
         effectParams: {},
-        aura: icy,
+        aura: arcane,
         display: stubEquipmentDisplay,
       };
       const listPrice = getEquipmentListPrice(def);

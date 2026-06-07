@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { GameObjects } from 'phaser';
 
-export const EFFECT_IDS = ['none', 'holy', 'fire', 'icy', 'ghost'] as const;
+export const EFFECT_IDS = ['none', 'holy', 'fire', 'arcane', 'ghost'] as const;
 
 export type EffectId = (typeof EFFECT_IDS)[number];
 
@@ -14,6 +14,8 @@ export type EffectFrameContext = {
   height: number;
   hostKind: EffectHostKind;
   hovered: boolean;
+  dragging: boolean;
+  activated: boolean;
   pointerNormX: number;
   pointerNormY: number;
   phase: number;

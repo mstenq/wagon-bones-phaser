@@ -15,7 +15,7 @@ export interface ItemAura {
 
 // ─── Roll order (first match wins, independent rolls per type) ───
 
-export const EQUIPMENT_AURA_ORDER = ['holy', 'fire', 'icy', 'ghost'] as const;
+export const EQUIPMENT_AURA_ORDER = ['holy', 'fire', 'arcane', 'ghost'] as const;
 
 /** Pip sticker spawn on dice from shop/packs — AURA_PERCENTAGES.md */
 export const DICE_STICKER_CHANCE = 0.2;
@@ -38,8 +38,8 @@ const itemAuras: ItemAura[] = [
     equipmentChance: 0.014,
   },
   {
-    id: 'icy',
-    name: 'Icy',
+    id: 'arcane',
+    name: 'Arcane',
     description: '+50 miles',
     costIncrease: 3,
     equipmentChance: 0.02,

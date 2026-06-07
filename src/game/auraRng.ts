@@ -1,5 +1,5 @@
 // ─── Aura spawn RNG (No Phaser imports) ───
-// Sequential independent rolls per aura type; permit multiplier scales holy/fire/icy only.
+// Sequential independent rolls per aura type; permit multiplier scales holy/fire/arcane only.
 
 import { DICE_AURA_ORDER, getDiceAuraById } from '../data/dice_auras';
 import itemAuras, { EQUIPMENT_AURA_ORDER, getItemAuraDefById, type ItemAura } from '../data/item_auras';
@@ -30,12 +30,12 @@ function rollSequentialAuras(
   return null;
 }
 
-/** Roll equipment shop aura (holy → fire → icy → ghost). Ghost ignores permit multiplier. */
+/** Roll equipment shop aura (holy → fire → arcane → ghost). Ghost ignores permit multiplier. */
 export function rollEquipmentAura(auraMultiplier: number = 1, stream: RngStream = 'shop'): ItemAura | null {
   return rollSequentialAuras(EQUIPMENT_AURA_ORDER, (a) => a.equipmentChance, auraMultiplier, stream);
 }
 
-/** Roll dice aura (holy → fire → icy). Returns null when no type succeeds. */
+/** Roll dice aura (holy → fire → arcane). Returns null when no type succeeds. */
 export function rollDiceAura(auraMultiplier: number = 1, stream: RngStream = 'shop'): DiceAura | null {
   for (const id of DICE_AURA_ORDER) {
     const aura = getDiceAuraById(id);
@@ -51,7 +51,7 @@ export function pickDiceAuraWeighted(auraMultiplier: number = 1, stream: RngStre
   const candidates = DICE_AURA_ORDER.map((id) => getDiceAuraById(id)!);
   const weights = candidates.map((a) => scaleAuraChance(a.diceChance, auraMultiplier));
   const total = weights.reduce((sum, w) => sum + w, 0);
-  if (total <= 0) return 'icy';
+  if (total <= 0) return 'arcane';
 
   const roll = rngFloat(stream) * total;
   let cumulative = 0;

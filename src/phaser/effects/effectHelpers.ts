@@ -64,6 +64,10 @@ export function applyArtFilters(
   art.applyArtFilters(setup);
 }
 
+export function pulse01(time: number, period: number, phase = 0): number {
+  return (Math.sin((time / period) * Math.PI * 2 + phase) + 1) * 0.5;
+}
+
 export function noopDestroy(...disposers: (() => void)[]): () => void {
   return () => {
     for (const d of disposers) {

@@ -96,7 +96,6 @@ export class AuraEffectHost {
   bindPointer(target: GameObjects.Container): void {
     this.unbindPointer?.();
 
-    const centerAnchored = this.mount.hostKind === 'die';
     const onOver = () => {
       this.setFrame({ hovered: true });
     };
@@ -104,11 +103,10 @@ export class AuraEffectHost {
       this.setFrame({ hovered: false, pointerNormX: 0.5, pointerNormY: 0.5 });
     };
     const onMove = (pointer: Phaser.Input.Pointer) => {
-      const matrix = target.getWorldTransformMatrix();
-      const localX = pointer.worldX - matrix.tx;
-      const localY = pointer.worldY - matrix.ty;
-      const normX = centerAnchored ? localX / this.mount.width + 0.5 : localX / this.mount.width;
-      const normY = centerAnchored ? localY / this.mount.height + 0.5 : localY / this.mount.height;
+      // Cards and dice draw center-anchored at (0,0); norm 0.5 = center (matches Pixi ARCANE/FIRE hosts).
+      const local = target.getLocalPoint(pointer.worldX, pointer.worldY);
+      const normX = local.x / this.mount.width + 0.5;
+      const normY = local.y / this.mount.height + 0.5;
       this.setFrame({
         pointerNormX: Phaser.Math.Clamp(normX, 0, 1),
         pointerNormY: Phaser.Math.Clamp(normY, 0, 1),

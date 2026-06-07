@@ -87,7 +87,7 @@ export function applyEquipmentEffects(
   console.log('[SCORE] Step 5 — Equipment pass (additive → auras → xMult → final miles)');
   const ctx = createEquipmentScoringContext(baseResult, equipment, context, animEvents);
 
-  console.log('  [equip] Additive pass (bar order, fire/icy per slot)');
+  console.log('  [equip] Additive pass (bar order, fire/arcane per slot)');
   forEachEquipmentScoring(equipment, (equip, _original, i) => {
     effectRegistry.dispatchAdditive(equip.def.effectType, ctx, equip, i);
     applyEquipmentAuraForSlot(equipment, i, ctx);

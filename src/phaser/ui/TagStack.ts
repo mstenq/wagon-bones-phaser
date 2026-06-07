@@ -273,7 +273,7 @@ export class TagStack extends GameObjects.Container {
       tag_uncommon: '🏷️',
       tag_rare: '🍺',
       tag_ghost: '👻',
-      tag_icy: '❄️',
+      tag_arcane: '⚡',
       tag_fire: '🔥',
       tag_holy: '✝️',
       tag_investment: '💰',

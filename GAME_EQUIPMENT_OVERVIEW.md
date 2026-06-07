@@ -6,7 +6,7 @@ Equipment can also have Aura with the same affects as the dice aura, except for 
 
 - holy aura - x1.5 mult
 - fire -  +10 mult
-- icy - + 50 miles
+- arcane - + 50 miles
 - ghost - doesn't take up equipment slot
 
 

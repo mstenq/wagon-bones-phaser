@@ -27,4 +27,4 @@ Instead of card editions like Balatro, we have dice Aura, which behaves mostly t
 
 - holy aura - x1.5 mult
 - fire -  +10 mult
-- icy - + 50 pips
+- arcane - + 50 pips

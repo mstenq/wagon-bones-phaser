@@ -30,7 +30,7 @@ export type HintStyle =
   | 'money' // gold text — dollar amounts
   | 'text' // default light text — plain labels
   | 'aura_fire' // fire aura label (orange-red)
-  | 'aura_icy' // icy aura label (cyan)
+  | 'aura_arcane' // arcane aura label (cyan)
   | 'aura_holy'; // holy aura label (golden-white)
 
 export type HintSize = 'xs' | 'sm' | 'md';

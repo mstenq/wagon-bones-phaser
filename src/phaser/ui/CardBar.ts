@@ -109,6 +109,7 @@ export abstract class CardBar extends GameObjects.Container {
         this.onReorder(fromIndex, toIndex);
       },
       onSettleStart: (card) => {
+        card.setAuraDragging(false);
         card.setDepth(0);
         this.applyCardDepths();
         this.draggingCard = null;
@@ -610,6 +611,7 @@ export abstract class CardBar extends GameObjects.Container {
     }
 
     this.draggingCard = card;
+    card.setAuraDragging(true);
 
     this.dismissActiveTab();
     this.setAllCardTooltipsSuppressed(true);
@@ -626,6 +628,7 @@ export abstract class CardBar extends GameObjects.Container {
     const positions = this.getCardXPositions(this.cards.length);
     for (let i = 0; i < this.cards.length; i++) {
       const card = this.cards[i]!;
+      card.setAuraDragging(false);
       this.scene.tweens.killTweensOf(card);
       card.x = positions[i] ?? card.x;
       card.y = this.cardCenterY;

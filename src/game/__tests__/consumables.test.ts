@@ -649,12 +649,12 @@ import { GAMEPLAY } from '../Constants';
 
 describe('Bless supply card aura weighting', () => {
   test('bless applies weighted aura distribution matching item_auras data', () => {
-    const blessableIds = ['fire', 'icy', 'holy'] as const;
+    const blessableIds = ['fire', 'arcane', 'holy'] as const;
     const blessableAuras = blessableIds.map((id) => itemAuras.find((a) => a.id === id)!);
     const totalWeight = blessableAuras.reduce((sum, a) => sum + a.equipmentChance, 0);
     const expectedRates = Object.fromEntries(blessableAuras.map((a) => [a.id, a.equipmentChance / totalWeight]));
 
-    const counts: Record<string, number> = { fire: 0, icy: 0, holy: 0 };
+    const counts: Record<string, number> = { fire: 0, arcane: 0, holy: 0 };
     const runs = 10000;
 
     for (let i = 0; i < runs; i++) {
@@ -674,7 +674,7 @@ describe('Bless supply card aura weighting', () => {
       }
     }
 
-    const total = counts.fire + counts.icy + counts.holy;
+    const total = counts.fire + counts.arcane + counts.holy;
     const tolerance = 0.07; // ±7% tolerance for RNG
 
     for (const id of blessableIds) {

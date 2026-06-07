@@ -269,10 +269,10 @@ export function scoreHand(
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'mult', value: 10, dieId: die.id });
           console.log(`  [perDie] ${die.id}${triggerLabel}: fire aura +10 mult (bonusMult ${bonusMult})`);
           break;
-        case 'icy':
+        case 'arcane':
           totalValue += 50;
           animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'miles', value: 50, dieId: die.id });
-          console.log(`  [perDie] ${die.id}${triggerLabel}: icy aura +50 miles (totalValue ${totalValue})`);
+          console.log(`  [perDie] ${die.id}${triggerLabel}: arcane aura +50 miles (totalValue ${totalValue})`);
           break;
         case 'holy':
           xMult = multiplyScore(xMult, 1.5);

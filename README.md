@@ -38,7 +38,7 @@ Each leg has a boss encounter and increasing mile targets.
 
 ## Card Types
 
-- **Equipment** — persistent items that modify scoring (add mult, bonus miles, conditional triggers). Can have auras (Fire, Icy, Holy, Ghost)
+- **Equipment** — persistent items that modify scoring (add mult, bonus miles, conditional triggers). Can have auras (Fire, Arcane, Holy, Ghost)
 - **Trail Guides** — level up specific hand types, increasing their base miles and mult (Balatro's planet cards)
 - **Supply Cards** — one-use cards that enhance dice, manipulate your collection, or earn money (Balatro's tarot cards)
 - **Frontier Encounters** — rare, powerful cards that add auras, duplicate equipment, or reshape your dice (Balatro's spectral cards)

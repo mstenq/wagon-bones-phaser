@@ -75,7 +75,7 @@ Defined in `src/game/playback/types.ts`. Enqueued from `roundActions`, `playback
 
 | `popupType` | Logic examples | Visual / audio |
 |-------------|----------------|----------------|
-| `miles` | Per-die pips, equipment additive miles, icy aura | Blue `+N mi` above die or below card; sidebar miles pill scales + shakes; `sfx_chips2` |
+| `miles` | Per-die pips, equipment additive miles, arcane aura | Blue `+N mi` above die or below card; sidebar miles pill scales + shakes; `sfx_chips2` |
 | `mult` | Additive mult, fire aura (+10) | Red `+N mult`; mult pill shake; `sfx_multhit1` |
 | `xmult` | Equipment xMult, holy aura (1.5), Graverobber after strip | `xN mult`; mult pill shake (xMult style); `sfx_multhit2` |
 | `money` | Gold die, held money effects | Gold `+$N`; `sfx_coin` |
@@ -104,7 +104,7 @@ Defined in `src/game/playback/types.ts`. Enqueued from `roundActions`, `playback
 Not separate VFX types — they append normal popups in `applyEquipmentAuraForSlot` (`helpers.ts`):
 
 - **Fire:** `+10 mult` on that card
-- **Icy:** `+50 mi` on that card  
+- **Arcane:** `+50 mi` on that card  
 - **Holy:** `x1.5 mult` in holy pass (`applyHolyAuraXMult`)
 
 Persistent **glow + particles** on cards/dice come from `AuraFX.ts` (`ItemCard`, `DiceSprite`), not from the score step loop.
@@ -219,7 +219,7 @@ No playback queue for narrative resolution — **scene-local tweens** after `res
 |---------|----------|
 | Faces | Texture per `dice_{enhancement}` or `dice_standard` |
 | Stone | Shows 0 during roll tumble |
-| Aura | Glow filter + particles (holy/fire/icy/ghost palettes) |
+| Aura | Glow filter + particles (holy/fire/arcane/ghost palettes) |
 | Sticker | Orbits die (`STICKER_ORBIT_*`) unless preference disables |
 | Selected / score presentation | Stroke, filler row, depth |
 | Reroll lock | 🔒 label below die |

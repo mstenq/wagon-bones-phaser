@@ -110,9 +110,9 @@ const trailTags: TrailTagDef[] = [
     weight: 1.5,
   },
   {
-    id: 'tag_icy',
-    name: 'Frosted Tin',
-    description: 'Next base equipment in shop becomes Icy aura (+50 miles) and is free.',
+    id: 'tag_arcane',
+    name: 'Arcane Tin',
+    description: 'Next base equipment in shop becomes Arcane aura (+50 miles) and is free.',
     category: 'shop_aura',
     minLeg: 1,
     weight: 3,

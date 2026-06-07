@@ -32,7 +32,7 @@ This document maps every Balatro tag to an Oregon Trail equivalent and records d
 | Tarot card | **Supply card** | One-use consumable |
 | Spectral card | **Frontier Encounter** | Rare, high-impact consumable |
 | Playing card pack | **Dice Grab Bag** | Adds/enhances dice in your pouch |
-| Edition (Foil / Holo / Poly / Negative) | **Equipment aura** (Icy / Fire / Holy / Ghost) | Ghost = “negative” (no slot) |
+| Edition (Foil / Holo / Poly / Negative) | **Equipment aura** (Arcane / Fire / Holy / Ghost) | Ghost = “negative” (no slot) |
 | Hand size | **Dice hand size** | How many dice you can hold in the pick phase |
 | Hand played | **Day scored** | One scoring play per day |
 | Discard | **Unused reroll** | Rerolls left at end of day/round |
@@ -67,7 +67,7 @@ Skipped rounds still advance `leg` / `round` counters and pay no round reward. T
 | `tag_uncommon` | **Outfitter's Pick** | Next camp shop includes one free **Uncommon** equipment (extra shop slot roll, guaranteed uncommon). | Uncommon | 1 | Stacks with aura tags on the same item. Not reduced by permits that skew shop weights. |
 | `tag_rare` | **Saloon Find** | Next camp shop includes one free **Rare** equipment. | Rare | 1 | Same generation rules as Outfitter's Pick. |
 | `tag_ghost` | **Haunted Relic** | Next **base** (no aura) equipment in shop becomes **Ghost** aura and is free. | Negative | 2+ | If no base equipment in next shop, tag is **stored**. Stacks until consumed. Works with Pick/Saloon if the rolled item has no aura. |
-| `tag_icy` | **Frosted Tin** | Next base equipment in shop becomes **Icy** aura (+50 miles when scored) and is free. | Foil | 1 | Stored if no base equipment. |
+| `tag_arcane` | **Arcane Tin** | Next base equipment in shop becomes **Arcane** aura (+50 miles when scored) and is free. | Foil | 1 | Stored if no base equipment. |
 | `tag_fire` | **Branded Iron** | Next base equipment in shop becomes **Fire** aura (+10 mult) and is free. | Holographic | 1 | Stored if no base equipment. |
 | `tag_holy` | **Gilded Cross** | Next base equipment in shop becomes **Holy** aura (×1.5 mult) and is free. | Polychrome | 1 | Stored if no base equipment. |
 | `tag_investment` | **Bounty Payout** | Gain **$25** after defeating the next boss (Showdown). | Investment | 1 | Stacks on one boss; each tag +$25. |
@@ -134,7 +134,7 @@ Balatro **edition tags** modify joker editions. Wagon Bones currently implements
 | Balatro Edition | Wagon Bones Aura Tag | Scoring effect |
 |---------------|----------------------|----------------|
 | Negative (+1 slot) | **Haunted Relic** → Ghost | Occupies no equipment slot |
-| Foil (+50 chips) | **Frosted Tin** → Icy | +50 miles |
+| Foil (+50 chips) | **Arcane Tin** → Arcane | +50 miles |
 | Holographic (+10 mult) | **Branded Iron** → Fire | +10 mult |
 | Polychrome (×1.5 mult) | **Gilded Cross** → Holy | ×1.5 mult |
 

@@ -79,6 +79,10 @@ export class ItemCardAuras {
     if (aura) this.setup(aura);
   }
 
+  setFrame(partial: Parameters<AuraEffectHost['setFrame']>[0]): void {
+    this.effectHost?.setFrame(partial);
+  }
+
   clear(): void {
     if (this.effectHost) {
       this.effectHost.destroy();

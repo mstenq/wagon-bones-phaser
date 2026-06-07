@@ -85,7 +85,7 @@ describe('equipment aura marginals (Monte Carlo)', () => {
 
   test('1x rates match AURA_PERCENTAGES.md', () => {
     resetRunRng();
-    const rates: Record<string, number> = { holy: 0, fire: 0, icy: 0, ghost: 0 };
+    const rates: Record<string, number> = { holy: 0, fire: 0, arcane: 0, ghost: 0 };
     for (let i = 0; i < TRIALS; i++) {
       const aura = rollEquipmentAura(1, 'shop');
       if (aura) rates[aura.id]!++;
@@ -95,7 +95,7 @@ describe('equipment aura marginals (Monte Carlo)', () => {
     }
   });
 
-  test('2x scales holy/fire/icy; ghost stays 0.3%', () => {
+  test('2x scales holy/fire/arcane; ghost stays 0.3%', () => {
     resetRunRng();
     const ghostRate = monteCarloRate(TRIALS, () => rollEquipmentAura(2, 'shop')?.id === 'ghost');
     expectRate(ghostRate, 0.003, 'ghost');
@@ -103,14 +103,14 @@ describe('equipment aura marginals (Monte Carlo)', () => {
     expectRate(holyRate, 0.01, 'holy');
   });
 
-  test('4x sacred ceremony rates for holy/fire/icy', () => {
+  test('4x sacred ceremony rates for holy/fire/arcane', () => {
     resetRunRng();
     const holyRate = monteCarloRate(TRIALS, () => rollEquipmentAura(4, 'shop')?.id === 'holy');
     expectRate(holyRate, 0.02, 'holy');
     const fireRate = monteCarloRate(TRIALS, () => rollEquipmentAura(4, 'shop')?.id === 'fire');
     expectRate(fireRate, 0.056, 'fire');
-    const icyRate = monteCarloRate(TRIALS, () => rollEquipmentAura(4, 'shop')?.id === 'icy');
-    expectRate(icyRate, 0.08, 'icy');
+    const arcaneRate = monteCarloRate(TRIALS, () => rollEquipmentAura(4, 'shop')?.id === 'arcane');
+    expectRate(arcaneRate, 0.08, 'arcane');
   });
 });
 
@@ -121,7 +121,7 @@ describe('dice aura marginals (Monte Carlo)', () => {
 
   test('1x rates match AURA_PERCENTAGES.md', () => {
     resetRunRng();
-    const rates: Record<string, number> = { holy: 0, fire: 0, icy: 0 };
+    const rates: Record<string, number> = { holy: 0, fire: 0, arcane: 0 };
     for (let i = 0; i < TRIALS; i++) {
       const aura = rollDiceAura(1, 'pack');
       if (aura) rates[aura]!++;
@@ -142,12 +142,12 @@ describe('dice aura marginals (Monte Carlo)', () => {
 describe('pickEquipmentAuraWeighted', () => {
   test('respects equipmentChance ratios', () => {
     resetRunRng();
-    const counts = { fire: 0, icy: 0, holy: 0 };
+    const counts = { fire: 0, arcane: 0, holy: 0 };
     for (let i = 0; i < TRIALS; i++) {
-      const aura = pickEquipmentAuraWeighted(['fire', 'icy', 'holy'], 'consumables');
+      const aura = pickEquipmentAuraWeighted(['fire', 'arcane', 'holy'], 'consumables');
       counts[aura.id as keyof typeof counts]++;
     }
-    const blessable = itemAuras.filter((a) => ['fire', 'icy', 'holy'].includes(a.id));
+    const blessable = itemAuras.filter((a) => ['fire', 'arcane', 'holy'].includes(a.id));
     const total = blessable.reduce((s, a) => s + a.equipmentChance, 0);
     for (const a of blessable) {
       expectRate(counts[a.id as keyof typeof counts] / TRIALS, a.equipmentChance / total, a.id);

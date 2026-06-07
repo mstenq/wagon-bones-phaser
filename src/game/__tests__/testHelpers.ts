@@ -51,11 +51,11 @@ export function item(id: string, purchasedPermitIds: string[] = []): EquipmentIn
 }
 
 /** Create an equipment instance with an aura applied */
-export function itemWithAura(id: string, auraId: 'fire' | 'icy' | 'holy' | 'ghost'): EquipmentInstance {
+export function itemWithAura(id: string, auraId: 'fire' | 'arcane' | 'holy' | 'ghost'): EquipmentInstance {
   const inst = item(id);
   const auraMap = {
     fire: { id: 'fire', name: 'Blazing', description: '+10 mult', costIncrease: 3, equipmentChance: 0 },
-    icy: { id: 'icy', name: 'Frozen', description: '+50 miles', costIncrease: 3, equipmentChance: 0 },
+    arcane: { id: 'arcane', name: 'Arcane', description: '+50 miles', costIncrease: 3, equipmentChance: 0 },
     holy: { id: 'holy', name: 'Holy', description: 'x1.5 mult', costIncrease: 5, equipmentChance: 0 },
     ghost: {
       id: 'ghost',

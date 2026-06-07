@@ -213,9 +213,9 @@ describe('dice auras', () => {
     expect(result.mult).toBeMult(11);
   });
 
-  test('icy aura adds +50 to totalValue', () => {
+  test('arcane aura adds +50 to totalValue', () => {
     const { result } = calculateTestScore({
-      scoredDice: [die({ value: 5, aura: 'icy' }), die({ value: 5 })],
+      scoredDice: [die({ value: 5, aura: 'arcane' }), die({ value: 5 })],
     });
     // PAIR: baseMiles=10, baseMult=1
     // totalValue = 5 + 5 + 50 = 60
@@ -272,15 +272,15 @@ describe('item auras', () => {
     expect(result.mult).toBeMult(7.5);
   });
 
-  test('icy aura on equipment adds +50 miles', () => {
+  test('arcane aura on equipment adds +50 miles', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(4, 2),
-      equipment: [itemWithAura('horseshoe', 'icy')],
+      equipment: [itemWithAura('horseshoe', 'arcane')],
     });
     // PAIR: baseMiles=10, baseMult=1
     // horseshoe: +4 mult → mult=5
-    // icy aura: +50 miles → totalValue = 4+4+50 = 58 ... wait
-    // icy aura on ITEMS adds +50 to bonusMiles in applyEquipmentEffects
+    // arcane aura: +50 miles → totalValue = 4+4+50 = 58 ... wait
+    // arcane aura on ITEMS adds +50 to bonusMiles in applyEquipmentEffects
     // miles = (baseMiles + totalValue + bonusMiles) * mult
     // = (10 + 8 + 50) * 5 = 340
     expect(result.miles).toBeMiles(340);

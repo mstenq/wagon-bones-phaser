@@ -16,7 +16,7 @@ export const HINT_COLORS: Record<string, { text: string; bg?: number }> = {
   money: { text: '#ffd700' },
   text: { text: '#7b7b7b' },
   aura_fire: { text: '#ff4500' },
-  aura_icy: { text: '#00bfff' },
+  aura_arcane: { text: '#00bfff' },
   aura_holy: { text: '#fffacd' },
 };
 
@@ -63,10 +63,10 @@ export function getAuraHintRow(auraId: string | undefined): HintSegment[] | null
         { text: '+10', style: 'mult', size: 'xs' },
         { text: 'Fire', style: 'aura_fire', size: 'xs' },
       ];
-    case 'icy':
+    case 'arcane':
       return [
         { text: '+50', style: 'miles', size: 'xs' },
-        { text: 'Icy', style: 'aura_icy', size: 'xs' },
+        { text: 'Arcane', style: 'aura_arcane', size: 'xs' },
       ];
     case 'holy':
       return [

@@ -1,8 +1,9 @@
+import { arcaneEffect } from './definitions/arcane';
 import { fireEffect } from './definitions/fire';
 import { ghostEffect } from './definitions/ghost';
 import type { EffectDefinition, EffectId } from './types';
 
-export const EFFECT_DEFINITIONS: EffectDefinition[] = [fireEffect, ghostEffect];
+export const EFFECT_DEFINITIONS: EffectDefinition[] = [fireEffect, arcaneEffect, ghostEffect];
 
 const byId = new Map(EFFECT_DEFINITIONS.map((d) => [d.id, d]));
 

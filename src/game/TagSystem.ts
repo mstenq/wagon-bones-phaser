@@ -345,7 +345,7 @@ export function applyInjectTagsToShopStock(stockItems: ShopStockRow[], _legacy?:
 
 const AURA_TAG_IDS: Record<string, string> = {
   tag_ghost: 'ghost',
-  tag_icy: 'icy',
+  tag_arcane: 'arcane',
   tag_fire: 'fire',
   tag_holy: 'holy',
 };

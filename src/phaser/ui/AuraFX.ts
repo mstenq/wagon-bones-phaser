@@ -19,7 +19,7 @@ export const AURA_COLORS: Record<string, { primary: number; secondary: number; g
     glow: 0xff4500,
     tints: [0xff2200, 0xff4500, 0xff6600, 0xffaa00, 0xffdd00],
   },
-  icy: {
+  arcane: {
     primary: 0x00bfff,
     secondary: 0x88ddff,
     glow: 0x00aaff,
@@ -101,7 +101,7 @@ export function applyAuraGlow(
   if (!colors || !target.enableFilters) return { tweens: [], destroy: () => {} };
 
   const strength = options?.strength ?? 4;
-  const pulseDuration = options?.pulseDuration ?? (auraId === 'fire' ? 400 : auraId === 'icy' ? 2500 : 1500);
+  const pulseDuration = options?.pulseDuration ?? (auraId === 'fire' ? 400 : 1500);
   const pulseMin = options?.pulseMin ?? 0.5;
   const pulseMax = options?.pulseMax ?? 1;
   const quality = options?.quality ?? 4;
@@ -147,87 +147,11 @@ export function createAuraParticles(scene: Scene, auraId: string, halfW: number,
   if (!colors) return { emitters: [], tweens: [] };
 
   switch (auraId) {
-    case 'icy':
-      return createIcyParticles(scene, halfW, halfH, colors);
     case 'holy':
       return createHolyParticles(scene, halfW, halfH, colors);
     default:
       return { emitters: [], tweens: [] };
   }
-}
-
-function createIcyParticles(
-  scene: Scene,
-  hw: number,
-  hh: number,
-  colors: (typeof AURA_COLORS)['icy'],
-): AuraParticleResult {
-  const emitters: GameObjects.Particles.ParticleEmitter[] = [];
-  const tweens: Phaser.Tweens.Tween[] = [];
-  const w = hw * 2;
-  const h = hh * 2;
-
-  // Drifting ice crystals all around — slower, more serene
-  emitters.push(
-    scene.add.particles(0, 0, 'aura_spark', {
-      speed: { min: 3, max: 12 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.9, end: 0 },
-      lifespan: { min: 2000, max: 3500 },
-      frequency: 60,
-      quantity: 1,
-      tint: colors.tints,
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-hw - 8, -hh - 8, w + 16, h + 16),
-      } as any,
-      maxAliveParticles: 20,
-    }),
-  );
-
-  // Frost mist falling gently downward
-  emitters.push(
-    scene.add.particles(0, 0, 'aura_soft', {
-      speedX: { min: -8, max: 8 },
-      speedY: { min: 8, max: 20 },
-      scale: { start: 0.5, end: 0 },
-      alpha: { start: 0.35, end: 0 },
-      lifespan: { min: 2500, max: 4000 },
-      frequency: 120,
-      quantity: 1,
-      tint: [0xcceeff, 0xaaddff, 0x88ccff],
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-hw - 6, -hh - 10, w + 12, 10),
-      } as any,
-      maxAliveParticles: 10,
-    }),
-  );
-
-  // Occasional bright ice flash
-  emitters.push(
-    scene.add.particles(0, 0, 'aura_soft', {
-      speed: { min: 1, max: 5 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.8, end: 0 },
-      alpha: { start: 0.7, end: 0 },
-      lifespan: { min: 300, max: 600 },
-      frequency: 500,
-      quantity: 1,
-      tint: 0xffffff,
-      blendMode: 'ADD',
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(-hw, -hh, w, h),
-      } as any,
-      maxAliveParticles: 3,
-    }),
-  );
-
-  return { emitters, tweens };
 }
 
 function createHolyParticles(
@@ -335,7 +259,7 @@ function createHolyParticles(
   return { emitters, tweens };
 }
 
-// ─── Legacy aura setup (holy / icy until registry definitions ship) ───
+// ─── Legacy aura setup (holy until registry definition ships) ───
 
 export interface LegacyAuraHandle {
   emitters: GameObjects.Particles.ParticleEmitter[];

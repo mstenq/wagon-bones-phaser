@@ -1,5 +1,5 @@
 // ─── Dice Aura Definitions ───
-// Display metadata for dice auras (holy, fire, icy).
+// Display metadata for dice auras (holy, fire, arcane).
 
 // ─── Types ───
 
@@ -13,7 +13,7 @@ export interface DiceAuraDef {
 }
 
 /** Roll order for dice auras (first match wins, independent rolls per type). */
-export const DICE_AURA_ORDER = ['holy', 'fire', 'icy'] as const;
+export const DICE_AURA_ORDER = ['holy', 'fire', 'arcane'] as const;
 
 // ─── Aura Definitions ───
 
@@ -33,8 +33,8 @@ const diceAuras: DiceAuraDef[] = [
     diceChance: 0.028,
   },
   {
-    id: 'icy',
-    name: 'Icy',
+    id: 'arcane',
+    name: 'Arcane',
     description: '+50 pips',
     color: '0x00bfff',
     diceChance: 0.04,

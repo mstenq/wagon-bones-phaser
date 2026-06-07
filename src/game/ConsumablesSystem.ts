@@ -537,7 +537,7 @@ export function executeConsumableEffect(
         enqueueToastFeedback('Unlucky! No blessing', 'failure');
         return { success: true };
       }
-      const blessableIds = ['fire', 'icy', 'holy'] as const;
+      const blessableIds = ['fire', 'arcane', 'holy'] as const;
       const target = rngPick('consumables', unblessed);
       const appliedAura = pickEquipmentAuraWeighted(blessableIds, 'consumables');
       target.def = { ...target.def, aura: appliedAura };

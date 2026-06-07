@@ -24,6 +24,8 @@ export function createDefaultEffectFrame(
     height,
     hostKind,
     hovered: false,
+    dragging: false,
+    activated: false,
     pointerNormX: 0.5,
     pointerNormY: 0.5,
     phase,

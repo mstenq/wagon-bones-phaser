@@ -15,9 +15,9 @@
     "semantic_hash": "4b5922f4bd253b1e75992a3d318ef24b"
   },
   "src/data/dice_auras.ts": {
-    "mtime": 1780006250.4665225,
-    "ast_hash": "05a83ebccae6e27748d1f1753d32fa7a",
-    "semantic_hash": "05a83ebccae6e27748d1f1753d32fa7a"
+    "mtime": 1780845690.2197433,
+    "ast_hash": "2358612e582734b2ec69f2be30baece7",
+    "semantic_hash": ""
   },
   "src/data/dice_enhancements.ts": {
     "mtime": 1779841666.8032908,
@@ -35,14 +35,14 @@
     "semantic_hash": "0c39ab83d1a600909f8f7bb2bf00f7bc"
   },
   "src/data/item_auras.ts": {
-    "mtime": 1780006321.3034234,
-    "ast_hash": "f6653a9522ff644068418d20df4c1708",
-    "semantic_hash": "f6653a9522ff644068418d20df4c1708"
+    "mtime": 1780845689.159314,
+    "ast_hash": "0f2625312169d701a85405bd7d1229dc",
+    "semantic_hash": ""
   },
   "src/data/items.ts": {
-    "mtime": 1780795835.0954566,
-    "ast_hash": "be53071c4eb09f6ab26ca64d85436382",
-    "semantic_hash": "be53071c4eb09f6ab26ca64d85436382"
+    "mtime": 1780845698.3774848,
+    "ast_hash": "e68a6ae34fd0afe66fa06f412ae38816",
+    "semantic_hash": ""
   },
   "src/data/packs.ts": {
     "mtime": 1779525013.7153141,
@@ -75,9 +75,9 @@
     "semantic_hash": "06627848564ee51f171318626d297817"
   },
   "src/data/trail_events.ts": {
-    "mtime": 1779919147.6646488,
-    "ast_hash": "0a03e831e3d955a3e19cd22ff2763999",
-    "semantic_hash": "0a03e831e3d955a3e19cd22ff2763999"
+    "mtime": 1780845698.66949,
+    "ast_hash": "5dd989bd09bd701056bb8336ac8fdd22",
+    "semantic_hash": ""
   },
   "src/data/trail_guides.ts": {
     "mtime": 1779893404.3456876,
@@ -85,9 +85,9 @@
     "semantic_hash": "caa4aecc6b4cfd7328c8bca3f80b0a5d"
   },
   "src/data/trail_tags.ts": {
-    "mtime": 1780760798.3642914,
-    "ast_hash": "5a05a551d4406ce1a6cd99efdd417c1b",
-    "semantic_hash": "5a05a551d4406ce1a6cd99efdd417c1b"
+    "mtime": 1780845690.8321505,
+    "ast_hash": "e4cec2994c4ef39ed985714c34f9690f",
+    "semantic_hash": ""
   },
   "src/game/AudioPreferences.ts": {
     "mtime": 1779557367.5704973,
@@ -115,9 +115,9 @@
     "semantic_hash": "c9b1b402238a170411fae7da00e9b166"
   },
   "src/game/ConsumablesSystem.ts": {
-    "mtime": 1780089092.656607,
-    "ast_hash": "2df6d9982ce5e53d6442052529eed95f",
-    "semantic_hash": "2df6d9982ce5e53d6442052529eed95f"
+    "mtime": 1780845698.011472,
+    "ast_hash": "a3be8c2ab143fe67bf14f38331a33123",
+    "semantic_hash": ""
   },
   "src/game/DevMode.ts": {
     "mtime": 1779974883.5282667,
@@ -135,9 +135,9 @@
     "semantic_hash": "b1fec084eaeb92be4d3df95cb2ab732b"
   },
   "src/game/EquipmentEffects.ts": {
-    "mtime": 1780770467.5934167,
-    "ast_hash": "96d7dc47bb18728a7e387edc0b2a2d4f",
-    "semantic_hash": "96d7dc47bb18728a7e387edc0b2a2d4f"
+    "mtime": 1780845699.1364987,
+    "ast_hash": "fd3f2bf47dfc1992ec6a3891593265d6",
+    "semantic_hash": ""
   },
   "src/game/EquipmentModifierDisplay.ts": {
     "mtime": 1779525014.5921838,
@@ -185,9 +185,9 @@
     "semantic_hash": "0d5f80d0daecbc463a003637e23978a4"
   },
   "src/game/TagSystem.ts": {
-    "mtime": 1780005251.302264,
-    "ast_hash": "57e5327a489d59e33153c88a5ac8391c",
-    "semantic_hash": "57e5327a489d59e33153c88a5ac8391c"
+    "mtime": 1780845691.5363579,
+    "ast_hash": "b9f1bb8fd03bb6fe2ae838dadcd99041",
+    "semantic_hash": ""
   },
   "src/game/TrailEventsSystem.ts": {
     "mtime": 1780116554.0291622,
@@ -215,9 +215,9 @@
     "semantic_hash": "30078c474e1fb624f0563cb3ee73bfd5"
   },
   "src/game/__tests__/auraRates.test.ts": {
-    "mtime": 1780006307.99176,
-    "ast_hash": "78bb290ec384f776ba61c8c3852d5b6f",
-    "semantic_hash": "78bb290ec384f776ba61c8c3852d5b6f"
+    "mtime": 1780845721.9309213,
+    "ast_hash": "ae50d28e60128bc0d4950dc5a1f5e392",
+    "semantic_hash": ""
   },
   "src/game/__tests__/autoSave.test.ts": {
     "mtime": 1779759334.622,
@@ -235,9 +235,9 @@
     "semantic_hash": "2bc6a2f152fbde813631d50f9578874d"
   },
   "src/game/__tests__/consumables.test.ts": {
-    "mtime": 1780775964.6312485,
-    "ast_hash": "74161fa77421922e6d5ba7c1c91095e3",
-    "semantic_hash": "74161fa77421922e6d5ba7c1c91095e3"
+    "mtime": 1780845713.1607587,
+    "ast_hash": "c063fae66b974bc315ff6e422d7b3f2b",
+    "semantic_hash": ""
   },
   "src/game/__tests__/decimal.test.ts": {
     "mtime": 1779650534.5157359,
@@ -375,9 +375,9 @@
     "semantic_hash": "d56d1203193ca0dfde9dad302d5a1343"
   },
   "src/game/__tests__/scoring.test.ts": {
-    "mtime": 1780007830.2142322,
-    "ast_hash": "b60ebe08271df5f7e07120dc0986497f",
-    "semantic_hash": "b60ebe08271df5f7e07120dc0986497f"
+    "mtime": 1780845716.458418,
+    "ast_hash": "3d7c83e382ad04a438add353f5da60f2",
+    "semantic_hash": ""
   },
   "src/game/__tests__/setup.ts": {
     "mtime": 1779650534.8464804,
@@ -435,9 +435,9 @@
     "semantic_hash": "a6c7596fe51adb0359e0b9a72a0621aa"
   },
   "src/game/__tests__/tags.test.ts": {
-    "mtime": 1780005304.1160054,
-    "ast_hash": "5e97b7c01714665842421d8e06bba473",
-    "semantic_hash": "5e97b7c01714665842421d8e06bba473"
+    "mtime": 1780845724.4163501,
+    "ast_hash": "2a0370eb3212397219e130bc6952f7e3",
+    "semantic_hash": ""
   },
   "src/game/__tests__/target_miles.test.ts": {
     "mtime": 1779926380.7075956,
@@ -450,9 +450,9 @@
     "semantic_hash": "0c9c12fe9e8d243938d5fca0a2536b70"
   },
   "src/game/__tests__/testHelpers.ts": {
-    "mtime": 1780116554.007845,
-    "ast_hash": "3bdd2a13115231824c1bd35f61c7b598",
-    "semantic_hash": "3bdd2a13115231824c1bd35f61c7b598"
+    "mtime": 1780845714.2377787,
+    "ast_hash": "4e266d78b8754f35427d47eb1a023c08",
+    "semantic_hash": ""
   },
   "src/game/__tests__/testRunPlayer.ts": {
     "mtime": 1780007380.707948,
@@ -480,9 +480,9 @@
     "semantic_hash": "647efc8bbbf27821ede63936ecab5446"
   },
   "src/game/auraRng.ts": {
-    "mtime": 1780006269.3427608,
-    "ast_hash": "fdf427facd71d9b456371ec5d61de9d1",
-    "semantic_hash": "fdf427facd71d9b456371ec5d61de9d1"
+    "mtime": 1780845693.0943868,
+    "ast_hash": "aee8369f486ab4aecaaf32d18b3f34ab",
+    "semantic_hash": ""
   },
   "src/game/config.ts": {
     "mtime": 1780684785.2838497,
@@ -560,9 +560,9 @@
     "semantic_hash": "293ea914bad7e0ef4564b8e260e84291"
   },
   "src/game/effects/helpers.ts": {
-    "mtime": 1780770467.452741,
-    "ast_hash": "7aa6b0f445a6b5f5d259222dc9f8203f",
-    "semantic_hash": "7aa6b0f445a6b5f5d259222dc9f8203f"
+    "mtime": 1780845696.8064556,
+    "ast_hash": "0a4bbefb109728d87e077cd7abec8cb8",
+    "semantic_hash": ""
   },
   "src/game/effects/index.ts": {
     "mtime": 1780770316.3460603,
@@ -885,9 +885,9 @@
     "semantic_hash": "67ed00ad34b3717563d10b4bff4a9429"
   },
   "src/game/scoring/scoreHand.ts": {
-    "mtime": 1780770955.6108487,
-    "ast_hash": "a507a6f0160c15acd6f0142cddbcbc3e",
-    "semantic_hash": "a507a6f0160c15acd6f0142cddbcbc3e"
+    "mtime": 1780845697.58347,
+    "ast_hash": "354f8eb523d47cc84817e0321cd4501c",
+    "semantic_hash": ""
   },
   "src/game/store/actions/bossActions.ts": {
     "mtime": 1779650535.9254155,
@@ -1085,9 +1085,9 @@
     "semantic_hash": "2db0571a06f1f632569190b84f8cd2c5"
   },
   "src/game/types.ts": {
-    "mtime": 1780760798.3522913,
-    "ast_hash": "3f8fbb86e24947cdde3c04f814a80b7c",
-    "semantic_hash": "3f8fbb86e24947cdde3c04f814a80b7c"
+    "mtime": 1780845691.2503526,
+    "ast_hash": "5c4ce1c88a276e285c1967872ecd9fa4",
+    "semantic_hash": ""
   },
   "src/index.tsx": {
     "mtime": 1779556130.7604623,
@@ -1310,8 +1310,8 @@
     "semantic_hash": "2bfa4a1f6b8a0bcd3a220206c912da9d"
   },
   "src/phaser/ui/AuraFX.ts": {
-    "mtime": 1780844284.58389,
-    "ast_hash": "12e49f1d009235fbae3c42a17800e16d",
+    "mtime": 1780845707.1686478,
+    "ast_hash": "95660a76fec9b3b4afeb2110a2ef9b46",
     "semantic_hash": ""
   },
   "src/phaser/ui/BossTestModal.ts": {
@@ -1325,9 +1325,9 @@
     "semantic_hash": "040944fa051fd66e84807d8727600418"
   },
   "src/phaser/ui/CardBar.ts": {
-    "mtime": 1780785535.1446512,
-    "ast_hash": "74150fecc5078b91560d416c7224458d",
-    "semantic_hash": "74150fecc5078b91560d416c7224458d"
+    "mtime": 1780845685.9464035,
+    "ast_hash": "b0c51af0cba28c544d479b2cc1334e04",
+    "semantic_hash": ""
   },
   "src/phaser/ui/ConsumableBar.ts": {
     "mtime": 1780726824.8514705,
@@ -1390,9 +1390,9 @@
     "semantic_hash": "194022f92706ec12f63a03730291a58d"
   },
   "src/phaser/ui/ItemCard.ts": {
-    "mtime": 1780726528.8527465,
-    "ast_hash": "e5e2bc082b07c891cbc9cd02124d9baa",
-    "semantic_hash": "e5e2bc082b07c891cbc9cd02124d9baa"
+    "mtime": 1780845684.3565223,
+    "ast_hash": "3490290ae47c0f43b271af5c9933dc7f",
+    "semantic_hash": ""
   },
   "src/phaser/ui/JourneyInfoModal.ts": {
     "mtime": 1780695018.274865,
@@ -1460,9 +1460,9 @@
     "semantic_hash": "0cbd4ca5ffc5a0fddca601946cdbc3ef"
   },
   "src/phaser/ui/TagStack.ts": {
-    "mtime": 1779665766.1424408,
-    "ast_hash": "bbb0da37ff68bd6c6eb8c6e319d465f5",
-    "semantic_hash": "bbb0da37ff68bd6c6eb8c6e319d465f5"
+    "mtime": 1780845708.5392919,
+    "ast_hash": "551dbecc4b95a4d6fcd00f74422908a0",
+    "semantic_hash": ""
   },
   "src/phaser/ui/TagTooltip.ts": {
     "mtime": 1779665750.527309,
@@ -1510,8 +1510,8 @@
     "semantic_hash": "006a3d4b6cc83e0139c0daf81a9bd5f1"
   },
   "src/phaser/ui/itemCard/ItemCardAuras.ts": {
-    "mtime": 1780844285.072507,
-    "ast_hash": "acb1f79c7e75f8c3a6f05e11cf280d96",
+    "mtime": 1780845680.3451505,
+    "ast_hash": "f54e7ce8445b7256bcb087fe331ea01b",
     "semantic_hash": ""
   },
   "src/phaser/ui/itemCard/ItemCardBadges.ts": {
@@ -1545,9 +1545,9 @@
     "semantic_hash": "0c2655bf36649a1dc31ac387c740890e"
   },
   "src/phaser/ui/itemCard/itemCardHintStyles.ts": {
-    "mtime": 1780688907.723514,
-    "ast_hash": "6321d83445394137b34a6322f05efb12",
-    "semantic_hash": "6321d83445394137b34a6322f05efb12"
+    "mtime": 1780845708.314743,
+    "ast_hash": "a95bb1b5a6755ff8283887c274334bc0",
+    "semantic_hash": ""
   },
   "src/phaser/ui/itemCard/itemCardTooltipFlow.ts": {
     "mtime": 1780754961.8588157,
@@ -1815,18 +1815,18 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1780840642.2129955,
-    "ast_hash": "61956ebbf3a394f6cb7e25f636ab59ea",
+    "mtime": 1780845734.153148,
+    "ast_hash": "21127ea6ac6adcfd50f67a1cc42c5bb3",
     "semantic_hash": ""
   },
   "ANIMATIONS.md": {
-    "mtime": 1780760798.352769,
-    "ast_hash": "44fe3cdb4320becd15ad86a0add983c9",
+    "mtime": 1780845727.2730203,
+    "ast_hash": "cb2878ecd17ad0d646103828fef16e73",
     "semantic_hash": ""
   },
   "AURA_PERCENTAGES.md": {
-    "mtime": 1779923929.2989898,
-    "ast_hash": "96f35e8288e922fc178076a8a33a8494",
+    "mtime": 1780845728.2450385,
+    "ast_hash": "1f5d85cc30debb887add6b16e1b6d7d5",
     "semantic_hash": ""
   },
   "BUGS.md": {
@@ -1840,13 +1840,13 @@
     "semantic_hash": ""
   },
   "GAME_DICE_OVERVIEW.md": {
-    "mtime": 1778306900.206337,
-    "ast_hash": "6e089233ba9b976f37746f3d35ca8f17",
+    "mtime": 1780845728.759048,
+    "ast_hash": "6ad299ec52976728309f837b9ff0f400",
     "semantic_hash": ""
   },
   "GAME_EQUIPMENT_OVERVIEW.md": {
-    "mtime": 1780760804.1597176,
-    "ast_hash": "eebd3204cc269ab0742e6ea0445efde9",
+    "mtime": 1780845728.541808,
+    "ast_hash": "39d09f4897dace27882344edadaf33d8",
     "semantic_hash": ""
   },
   "GAME_FRONTIER_ENCOUNTER_OVERVIEW.md": {
@@ -1880,8 +1880,8 @@
     "semantic_hash": ""
   },
   "GAME_TAGS_OVERVIEW.md": {
-    "mtime": 1780760804.38344,
-    "ast_hash": "b14a44fdf1a9ac67b12e4355db2fc153",
+    "mtime": 1780845730.1950746,
+    "ast_hash": "978a9faded0f900b9de56537b62668c1",
     "semantic_hash": ""
   },
   "GAME_TRAIL_GUIDE_OVERVIEW.md": {
@@ -1895,8 +1895,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1780760802.164076,
-    "ast_hash": "674b99435858d1a1d36781cca6678443",
+    "mtime": 1780845726.0889983,
+    "ast_hash": "3a5132e9bf8a82408a4d7bdf7bcfa9ca",
     "semantic_hash": ""
   },
   "TRAIL_EVENT_IMAGE_DESCRIPTIONS.md": {
@@ -5740,8 +5740,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/AuraEffectHost.ts": {
-    "mtime": 1780843218.2395787,
-    "ast_hash": "5e138ed65e959a3d3a73eced1ac517ac",
+    "mtime": 1780851147.7248154,
+    "ast_hash": "a18278530009b57b79c1aeb83333376e",
     "semantic_hash": ""
   },
   "src/phaser/effects/AuraEffectUpdateBus.ts": {
@@ -5755,8 +5755,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/context.ts": {
-    "mtime": 1780843203.9331086,
-    "ast_hash": "3f2f26277fc00aa8587403d3c55d6d6d",
+    "mtime": 1780845676.2410743,
+    "ast_hash": "94187aad67779d817e605e0812ab06d2",
     "semantic_hash": ""
   },
   "src/phaser/effects/definitions/fire.ts": {
@@ -5770,13 +5770,13 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/effectHelpers.ts": {
-    "mtime": 1780842115.885974,
-    "ast_hash": "01662d96228a9dacc6281d303917bac7",
+    "mtime": 1780845674.92005,
+    "ast_hash": "ff0c98b67084e7ca07e448f0a3ad8d25",
     "semantic_hash": ""
   },
   "src/phaser/effects/registry.ts": {
-    "mtime": 1780844273.8153043,
-    "ast_hash": "c52794d4a5f33dd069bbc82c50718a55",
+    "mtime": 1780845677.013128,
+    "ast_hash": "3497f414459ea5a69ec84c3f4f2e42a0",
     "semantic_hash": ""
   },
   "src/phaser/effects/runtime.ts": {
@@ -5805,8 +5805,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/shared/glow.ts": {
-    "mtime": 1780842115.902756,
-    "ast_hash": "9a395c1da4be8643a064add8e1ac5ff2",
+    "mtime": 1780846635.3300374,
+    "ast_hash": "d1f5a485ee639570932bbd5bde8970de",
     "semantic_hash": ""
   },
   "src/phaser/effects/shared/graphicsPath.ts": {
@@ -5825,8 +5825,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/types.ts": {
-    "mtime": 1780844276.8883595,
-    "ast_hash": "389c23f302fad5992f4276dd5c46d892",
+    "mtime": 1780845675.7206082,
+    "ast_hash": "e022698fd7aa4837942100e37fa84af8",
     "semantic_hash": ""
   },
   "FIRE.md": {
@@ -5862,6 +5862,16 @@
   "GHOST.md": {
     "mtime": 1780844059.3988488,
     "ast_hash": "972c293e090fa9f3266658082e7439c7",
+    "semantic_hash": ""
+  },
+  "src/phaser/effects/definitions/arcane.ts": {
+    "mtime": 1780850936.1755528,
+    "ast_hash": "f0ce6e7d16e2aba747d5d57320e8cd8f",
+    "semantic_hash": ""
+  },
+  "ARCANE.md": {
+    "mtime": 1780845042.2346103,
+    "ast_hash": "018f5a044fd7dc5df82d5b17d26058bb",
     "semantic_hash": ""
   }
 }
