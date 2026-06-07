@@ -3,7 +3,7 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { COLORS, TEXT_COLORS } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 
 const DEFAULT_BG = COLORS.BTN_DEFAULT;
 const HOVER_BG = COLORS.BTN_HOVER;
@@ -18,6 +18,10 @@ const CORNER_BADGE_MIN = 16;
 
 export class Button extends GameObjects.Container {
   private bg: GameObjects.Graphics;
+  private bgTile: GameObjects.TileSprite | null = null;
+  private textured = false;
+  private _borderColor = 0x000000;
+  private _borderAlpha = 0.5;
   private label: GameObjects.Text;
   private icon: GameObjects.Image | null = null;
   private cornerBadge: GameObjects.Container | null = null;
@@ -38,7 +42,7 @@ export class Button extends GameObjects.Container {
     this.bg = scene.add.graphics();
     this.label = scene.add
       .text(0, 0, text, {
-        fontFamily: 'Arial',
+        fontFamily: FONTS.TITLE,
         fontSize: '18px',
         color: TEXT_COLOR,
         align: 'center',
@@ -88,6 +92,26 @@ export class Button extends GameObjects.Container {
     return this;
   }
 
+  /**
+   * Render a tileable texture as the button background (e.g. TEXTURES.PANEL_GRAY).
+   * The texture sits below a thin border; hover/disabled states overlay a tint.
+   */
+  setTextureBackground(textureKey: string, borderColor = 0x000000, borderAlpha = 0.5): this {
+    if (!this.scene.textures.exists(textureKey)) return this;
+    this.textured = true;
+    this._borderColor = borderColor;
+    this._borderAlpha = borderAlpha;
+
+    if (this.bgTile) this.bgTile.destroy();
+    this.bgTile = this.scene.add.tileSprite(0, 0, this._width, this._height, textureKey).setOrigin(0.5);
+
+    // Texture below the border/overlay graphics so the border renders on top.
+    // (Phaser 4 geometry masks are Canvas-only; the rounded border hides corners.)
+    this.addAt(this.bgTile, 0);
+    this.drawBg(this._enabled ? this._bgColor : DISABLED_BG);
+    return this;
+  }
+
   setText(text: string): this {
     this.label.setText(text);
     return this;
@@ -120,7 +144,7 @@ export class Button extends GameObjects.Container {
       this.cornerBadgeBg = this.scene.add.graphics();
       this.cornerBadgeLabel = this.scene.add
         .text(0, 0, '', {
-          fontFamily: 'Arial',
+          fontFamily: FONTS.TITLE,
           fontSize: `${CORNER_BADGE_FONT_SIZE}px`,
           color: TEXT_COLORS.PRIMARY,
           fontStyle: 'bold',
@@ -147,9 +171,26 @@ export class Button extends GameObjects.Container {
 
   private drawBg(color: number): void {
     this.bg.clear();
+    const x = -this._width / 2;
+    const y = -this._height / 2;
+
+    if (this.textured) {
+      // Texture supplies the fill; overlay a tint for hover (lighten) / disabled (darken).
+      if (color === this._hoverColor) {
+        this.bg.fillStyle(0xffffff, 0.12);
+        this.bg.fillRoundedRect(x, y, this._width, this._height, UI.BTN_RADIUS);
+      } else if (color === DISABLED_BG) {
+        this.bg.fillStyle(0x000000, 0.45);
+        this.bg.fillRoundedRect(x, y, this._width, this._height, UI.BTN_RADIUS);
+      }
+      this.bg.lineStyle(1, this._borderColor, this._borderAlpha);
+      this.bg.strokeRoundedRect(x, y, this._width, this._height, UI.BTN_RADIUS);
+      return;
+    }
+
     this.bg.fillStyle(color, 1);
-    this.bg.fillRoundedRect(-this._width / 2, -this._height / 2, this._width, this._height, 8);
+    this.bg.fillRoundedRect(x, y, this._width, this._height, 8);
     this.bg.lineStyle(1, 0x888888, 0.5);
-    this.bg.strokeRoundedRect(-this._width / 2, -this._height / 2, this._width, this._height, 8);
+    this.bg.strokeRoundedRect(x, y, this._width, this._height, 8);
   }
 }

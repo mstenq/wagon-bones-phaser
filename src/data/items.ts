@@ -454,15 +454,9 @@ const items: ItemDef[] = [
     rarity: 'common',
     effectType: 'HELD_ENHANCED_MONEY',
     effectParams: { chance: [1, 2], value: 1 },
-    display: (round, player) => {
-      const held = round?.rolledDice?.filter((d) => !round.selectedForScore.some((s) => s.id === d.id)) ?? [];
-      const enhanced = held.filter((d) => d.enhancement !== null).length;
-      const hint =
-        enhanced > 0
-          ? [[money('$1'), oddsDisplay([1, 2], player), condition(`${enhanced} enhanced`)]]
-          : [[money('$1'), oddsDisplay([1, 2], player), condition('enhanced held')]];
+    display: (_round, player) => {
       return {
-        hint,
+        hint: [[money('$1'), oddsDisplay([1, 2], player, 'xs')], [condition('enhanced held', 'xs')]],
         tooltip: [
           [
             text('Each enhanced die held in hand has a '),
@@ -1197,7 +1191,10 @@ const items: ItemDef[] = [
         hint,
         tooltip: [
           [mult('x4'), text(' mult every '), condition('6th'), text(' hand played')],
-          [text('Currently: '), remaining === 6 && hands > 0 ? active('Active!') : condition(`${remaining} hands until x4`),],
+          [
+            text('Currently: '),
+            remaining === 6 && hands > 0 ? active('Active!') : condition(`${remaining} hands until x4`),
+          ],
         ],
       };
     },
@@ -2037,7 +2034,10 @@ const items: ItemDef[] = [
           : [[mult('x1'), condition('no empty slots')], [inactive('Inactive')]];
       return {
         hint,
-        tooltip: [[mult('x1'), text(' mult for each empty equipment slot')], [text('Currently: '), mult(`x${xm}`)]],
+        tooltip: [
+          [mult('x1'), text(' mult for each empty equipment slot')],
+          [text('Currently: '), mult(`x${xm}`)],
+        ],
       };
     },
   },
@@ -2617,8 +2617,11 @@ const items: ItemDef[] = [
         hint,
         tooltip: [
           [mult('x3'), text(' mult if you have at least '), condition('16'), text(' enhanced dice in collection')],
-          [text('Currently: '), condition(`${enhCount} enhanced`),
-          enhCount >= 16 ? active('Active!') : inactive('Inactive'),],
+          [
+            text('Currently: '),
+            condition(`${enhCount} enhanced`),
+            enhCount >= 16 ? active('Active!') : inactive('Inactive'),
+          ],
         ],
       };
     },

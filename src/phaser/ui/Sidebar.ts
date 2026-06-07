@@ -4,7 +4,7 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, TEXTURES } from '../../game/Constants';
 import { formatScore, formatScoreComponent, formatMult } from '../../game/formatScore';
 import { milesFromSave } from '../../game/scoreMath';
 import type { DecimalSource } from '../../game/decimal';
@@ -67,8 +67,6 @@ export class Sidebar extends GameObjects.Container {
   private handNameText: GameObjects.Text;
   private milesBaseText: GameObjects.Text;
   private multText: GameObjects.Text;
-  private milesBaseBg: GameObjects.Graphics;
-  private multBg: GameObjects.Graphics;
   private daysText: GameObjects.Text;
   private rerollsText: GameObjects.Text;
   private moneyText: GameObjects.Text;
@@ -133,34 +131,63 @@ export class Sidebar extends GameObjects.Container {
     return this.layoutMode === 'topbar' ? this.barHeight : 0;
   }
 
+  /**
+   * Adds a tileable textured panel plus an optional rounded border to `parent`.
+   * Phaser 4 geometry masks are Canvas-only, so the tile keeps square corners;
+   * the rounded border stroke (drawn in the panel's own color family) hides the
+   * tiny corner overshoot.
+   */
+  private texturePanel(
+    parent: GameObjects.Container,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    textureKey: string,
+    opts: { radius?: number; border?: number; borderAlpha?: number; alpha?: number } = {},
+  ): GameObjects.TileSprite {
+    const radius = opts.radius ?? UI.SIDEBAR_PANEL_RADIUS;
+    const tile = this.scene.add.tileSprite(x, y, w, h, textureKey).setOrigin(0, 0);
+    tile.setAlpha(opts.alpha ?? 1);
+    parent.add(tile);
+
+    if (opts.border !== undefined) {
+      const border = this.scene.add.graphics();
+      border.lineStyle(1, opts.border, opts.borderAlpha ?? 0.8);
+      border.strokeRoundedRect(x, y, w, h, radius);
+      parent.add(border);
+    }
+
+    return tile;
+  }
+
   private drawBackground(w: number, h: number): void {
     this.bg.clear();
-    // Main background
-    this.bg.fillStyle(UI.SIDEBAR_BG, 0.95);
-    this.bg.fillRect(0, 0, w, h);
-    this.bg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, 1);
+    if (this.scene.textures.exists(TEXTURES.PANEL_DARK)) {
+      const tile = this.scene.add.tileSprite(0, 0, w, h, TEXTURES.PANEL_DARK).setOrigin(0, 0);
+      this.add(tile);
+    } else {
+      this.bg.fillStyle(UI.SIDEBAR_BG, 0.95);
+      this.bg.fillRect(0, 0, w, h);
+    }
+    this.bg.lineStyle(2, COLORS.SIDEBAR_SECTION_BORDER, COLORS.SIDEBAR_SECTION_BORDER_ALPHA);
     if (this.layoutMode === 'topbar') {
       this.bg.lineBetween(0, h, w, h);
     } else {
       this.bg.lineBetween(w, 0, w, h);
     }
+    this.add(this.bg);
   }
 
   private buildSidebarContent(scene: Scene, w: number, _h: number): void {
     const pad = UI.SIDEBAR_PADDING;
     const cx = w / 2;
+    const innerW = w - pad * 2;
     let y: number = pad;
 
-    // ─── Title Section (scene name + difficulty stake) ───
+    // ─── Title / header (scene name + difficulty stake) ───
     const titleH = this.titleSectionH;
     this.titleSectionY = y;
-    const titleBg = scene.add.graphics();
-    titleBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    titleBg.fillRoundedRect(pad, y, w - pad * 2, titleH, 6);
-    titleBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    titleBg.strokeRoundedRect(pad, y, w - pad * 2, titleH, 6);
-    this.add(titleBg);
-
     const titleIconSize = 42;
     const titleIconX = pad + 18;
     const titleIconY = y + titleH / 2;
@@ -176,14 +203,18 @@ export class Sidebar extends GameObjects.Container {
     );
 
     this.titleText = scene.add
-      .text(cx, titleIconY, 'SHOP', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '22px',
-        color: TEXT_COLORS.GOLD,
-        align: 'center',
+      .text(titleIconX + titleIconSize / 2 + 12, titleIconY, 'SHOP', {
+        fontFamily: FONTS.TITLE,
+        fontSize: '24px',
+        color: TEXT_COLORS.PRIMARY,
       })
-      .setOrigin(0.5);
+      .setOrigin(0, 0.5);
     this.add(this.titleText);
+
+    const headerDivider = scene.add.graphics();
+    headerDivider.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, COLORS.SIDEBAR_SECTION_BORDER_ALPHA);
+    headerDivider.lineBetween(pad, titleBarBottom + 4, w - pad, titleBarBottom + 4);
+    this.add(headerDivider);
 
     if (this.difficultyIcon) {
       const iconHit = scene.add
@@ -227,12 +258,10 @@ export class Sidebar extends GameObjects.Container {
     this.bossContainer.setVisible(false);
     this.add(this.bossContainer);
 
-    const bossBg = scene.add.graphics();
-    bossBg.fillStyle(0x3a1a1a, 1);
-    bossBg.fillRoundedRect(pad, 0, w - pad * 2, bossH, 6);
-    bossBg.lineStyle(1, 0x8a3333, 0.9);
-    bossBg.strokeRoundedRect(pad, 0, w - pad * 2, bossH, 6);
-    this.bossContainer.add(bossBg);
+    this.texturePanel(this.bossContainer, pad, 0, innerW, bossH, TEXTURES.PANEL_RED, {
+      border: 0x8a3333,
+      borderAlpha: 0.9,
+    });
 
     const bossImgPlaceholder = scene.add.rectangle(
       pad + 8 + bossImgSize / 2,
@@ -245,8 +274,8 @@ export class Sidebar extends GameObjects.Container {
     this.bossContainer.setData('bossImgPlaceholder', bossImgPlaceholder);
 
     this.bossDescText = scene.add.text(pad + 16 + bossImgSize, 10, '', {
-      fontFamily: FONTS.PRIMARY,
-      fontSize: '11px',
+      fontFamily: FONTS.TITLE,
+      fontSize: '14px',
       color: TEXT_COLORS.SECONDARY,
       wordWrap: { width: w - pad * 2 - bossImgSize - 24 },
       lineSpacing: 2,
@@ -267,12 +296,11 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer.add(this.professionContainer);
 
     if (prof) {
-      const profBg = scene.add.graphics();
-      profBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-      profBg.fillRoundedRect(pad, y, w - pad * 2, profH, 6);
-      profBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-      profBg.strokeRoundedRect(pad, y, w - pad * 2, profH, 6);
-      this.professionContainer.add(profBg);
+      this.texturePanel(this.professionContainer, pad, y, innerW, profH, TEXTURES.PANEL_DARK, {
+        border: COLORS.SIDEBAR_SECTION_BORDER,
+        borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+        radius: 0,
+      });
 
       const atlasFrame = `${prof.id}.png`;
       const profTexture = scene.textures.get('professions');
@@ -291,53 +319,50 @@ export class Sidebar extends GameObjects.Container {
 
       // Title
       const profNameText = scene.add.text(rightX, y + 8, prof.title, {
-        fontFamily: FONTS.HEADING,
-        fontSize: '16px',
-        color: TEXT_COLORS.GOLD,
+        fontFamily: FONTS.TITLE,
+        fontSize: '17px',
+        color: TEXT_COLORS.PRIMARY,
       });
       this.professionContainer.add(profNameText);
 
       // Full name
-      const profCharName = scene.add.text(rightX, y + 28, prof.name, {
-        fontFamily: FONTS.PRIMARY,
+      const profCharName = scene.add.text(rightX, y + 30, prof.name, {
+        fontFamily: FONTS.TITLE,
         fontSize: '11px',
-        color: TEXT_COLORS.SECONDARY,
+        color: TEXT_COLORS.MUTED,
         wordWrap: { width: rightW },
       });
       this.professionContainer.add(profCharName);
 
-      // Money (green box, left-aligned)
-      const moneyBoxH = 28;
-      const moneyBoxY = y + 54;
-      const moneyBoxBg = scene.add.graphics();
-      moneyBoxBg.fillStyle(0x1a4a1a, 1);
-      moneyBoxBg.fillRoundedRect(rightX, moneyBoxY, rightW - pad, moneyBoxH, 4);
-      moneyBoxBg.lineStyle(1, 0x2a6a2a, 0.8);
-      moneyBoxBg.strokeRoundedRect(rightX, moneyBoxY, rightW - pad, moneyBoxH, 4);
-      this.professionContainer.add(moneyBoxBg);
+      // Money (green textured box, left-aligned)
+      const moneyBoxH = 30;
+      const moneyBoxY = y + 52;
+      this.texturePanel(this.professionContainer, rightX, moneyBoxY, rightW - pad, moneyBoxH, TEXTURES.PANEL_GREEN, {
+
+      });
 
       this.moneyText = scene.add
         .text(rightX + 8, moneyBoxY + moneyBoxH / 2, '$10', {
           fontFamily: FONTS.HEADING,
-          fontSize: '18px',
-          color: TEXT_COLORS.MONEY,
+          fontSize: '17px',
+          color: TEXT_COLORS.PRIMARY,
         })
         .setOrigin(0, 0.5);
       this.professionContainer.add(this.moneyText);
 
       // Leg info (hugging bottom with inner padding)
-      const bottomLabelY = y + profH - 40;
-      const bottomValueY = y + profH - 24;
+      const bottomLabelY = y + profH - 42;
+      const bottomValueY = y + profH - 26;
 
-      const legLabel = scene.add.text(rightX, bottomLabelY, 'Leg / Round', {
-        fontFamily: FONTS.PRIMARY,
+      const legLabel = scene.add.text(rightX, bottomLabelY, 'LEG / ROUND', {
+        fontFamily: FONTS.TITLE,
         fontSize: '10px',
         color: TEXT_COLORS.MUTED,
       });
       this.professionContainer.add(legLabel);
 
       this.legText = scene.add.text(rightX, bottomValueY, '1 / 8', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.TITLE,
         fontSize: '14px',
         color: TEXT_COLORS.PRIMARY,
       });
@@ -345,8 +370,8 @@ export class Sidebar extends GameObjects.Container {
 
       // Target info (hugging bottom-right)
       const targetLabel = scene.add
-        .text(rightEdge, bottomLabelY, 'Target', {
-          fontFamily: FONTS.PRIMARY,
+        .text(rightEdge, bottomLabelY, 'TARGET', {
+          fontFamily: FONTS.TITLE,
           fontSize: '10px',
           color: TEXT_COLORS.MUTED,
         })
@@ -355,7 +380,7 @@ export class Sidebar extends GameObjects.Container {
 
       this.targetText = scene.add
         .text(rightEdge, bottomValueY, '300 mi', {
-          fontFamily: FONTS.HEADING,
+          fontFamily: FONTS.TITLE,
           fontSize: '14px',
           color: TEXT_COLORS.SCORE_GREEN,
         })
@@ -380,33 +405,29 @@ export class Sidebar extends GameObjects.Container {
     } else {
       // No profession — show money and leg as standalone sections (fallback)
       const moneyH = 40;
-      const moneyBg = scene.add.graphics();
-      moneyBg.fillStyle(0x1a4a1a, 1);
-      moneyBg.fillRoundedRect(pad, y, w - pad * 2, moneyH, 6);
-      moneyBg.lineStyle(1, 0x2a6a2a, 0.8);
-      moneyBg.strokeRoundedRect(pad, y, w - pad * 2, moneyH, 6);
-      this.mainContentContainer.add(moneyBg);
+      this.texturePanel(this.mainContentContainer, pad, y, innerW, moneyH, TEXTURES.PANEL_GREEN, {
+        border: 0x4a8a4a,
+        borderAlpha: 0.8,
+      });
 
       this.moneyText = scene.add
         .text(cx, y + moneyH / 2, '$10', {
-          fontFamily: FONTS.HEADING,
+          fontFamily: FONTS.NUMBER,
           fontSize: '24px',
-          color: TEXT_COLORS.MONEY,
+          color: TEXT_COLORS.PRIMARY,
         })
         .setOrigin(0.5);
       this.mainContentContainer.add(this.moneyText);
       y += moneyH + UI.SIDEBAR_SECTION_GAP;
 
       const legH = 52;
-      const legBg = scene.add.graphics();
-      legBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-      legBg.fillRoundedRect(pad, y, w - pad * 2, legH, 6);
-      legBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-      legBg.strokeRoundedRect(pad, y, w - pad * 2, legH, 6);
-      this.mainContentContainer.add(legBg);
+      this.texturePanel(this.mainContentContainer, pad, y, innerW, legH, TEXTURES.PANEL_GRAY, {
+        border: COLORS.SIDEBAR_SECTION_BORDER,
+        borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+      });
 
       this.legText = scene.add.text(pad + 8, y + 26, '1 / 8', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.TITLE,
         fontSize: '16px',
         color: TEXT_COLORS.PRIMARY,
       });
@@ -414,7 +435,7 @@ export class Sidebar extends GameObjects.Container {
 
       this.targetText = scene.add
         .text(w - pad - 8, y + 26, '300 mi', {
-          fontFamily: FONTS.HEADING,
+          fontFamily: FONTS.TITLE,
           fontSize: '16px',
           color: TEXT_COLORS.SCORE_GREEN,
         })
@@ -424,28 +445,27 @@ export class Sidebar extends GameObjects.Container {
     }
 
     // ─── Round Score Section ───
-    const scoreSectionH = 36;
-    const scoreBg = scene.add.graphics();
-    scoreBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    scoreBg.fillRoundedRect(pad, y, w - pad * 2, scoreSectionH, 6);
-    scoreBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    scoreBg.strokeRoundedRect(pad, y, w - pad * 2, scoreSectionH, 6);
-    this.mainContentContainer.add(scoreBg);
+    const scoreSectionH = 38;
+    this.texturePanel(this.mainContentContainer, pad, y, innerW, scoreSectionH, TEXTURES.PANEL_GRAY, {
+      border: COLORS.SIDEBAR_SECTION_BORDER,
+      borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+      alpha: 0.25,
+      radius: 0,
+    });
 
     const scoreLabel = scene.add
-      .text(pad + 8, y + scoreSectionH / 2, 'Round\nscore', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '10px',
+      .text(pad + 10, y + scoreSectionH / 2, 'ROUND SCORE', {
+        fontFamily: FONTS.TITLE,
+        fontSize: '11px',
         color: TEXT_COLORS.MUTED,
-        lineSpacing: -2,
       })
       .setOrigin(0, 0.5);
     this.mainContentContainer.add(scoreLabel);
 
     this.roundScoreText = scene.add
-      .text(w - pad - 8, y + scoreSectionH / 2, '0', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '20px',
+      .text(w - pad - 10, y + scoreSectionH / 2, '0', {
+        fontFamily: FONTS.NUMBER,
+        fontSize: '22px',
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(1, 0.5);
@@ -453,11 +473,11 @@ export class Sidebar extends GameObjects.Container {
     y += scoreSectionH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Hand Name / Level Display (above miles/mult) ───
-    const handDisplayH = 32;
+    const handDisplayH = 30;
     this.handDisplayLocalY = y;
     this.handNameText = scene.add
       .text(cx, y + handDisplayH / 2, '', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.TITLE,
         fontSize: '16px',
         color: TEXT_COLORS.GOLD,
         align: 'center',
@@ -468,133 +488,121 @@ export class Sidebar extends GameObjects.Container {
 
     y += handDisplayH;
 
-    // ─── Miles/Mult Display (Balatro chips×mult style) ───
-    const scoreDisplayH = 48;
-    const scoreDisplayBg = scene.add.graphics();
-    scoreDisplayBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    scoreDisplayBg.fillRoundedRect(pad, y, w - pad * 2, scoreDisplayH, 6);
-    scoreDisplayBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    scoreDisplayBg.strokeRoundedRect(pad, y, w - pad * 2, scoreDisplayH, 6);
-    this.mainContentContainer.add(scoreDisplayBg);
+    // ─── Miles × Mult Display (Balatro chips×mult style — floating boxes) ───
+    const boxH = 52;
+    const boxW = (innerW - 30) / 2;
+    const milesX = pad;
+    const multX = w - pad - boxW;
 
-    // Miles base (blue pill)
-    const pillW = (w - pad * 2 - 36) / 2;
-    const pillH = 30;
-    const pillY = y + (scoreDisplayH - pillH) / 2;
+    this.texturePanel(this.mainContentContainer, milesX, y, boxW, boxH, TEXTURES.PANEL_BLUE, {
 
-    this.milesBaseBg = scene.add.graphics();
-    this.milesBaseBg.fillStyle(COLORS.MILES_BG, 1);
-    this.milesBaseBg.fillRoundedRect(pad + 6, pillY, pillW, pillH, 4);
-    this.mainContentContainer.add(this.milesBaseBg);
-
+    });
     this.milesBaseText = scene.add
-      .text(pad + 6 + pillW / 2, pillY + pillH / 2, '0', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '18px',
+      .text(milesX + boxW / 2, y + boxH / 2, '0', {
+        fontFamily: FONTS.NUMBER,
+        fontSize: '26px',
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(this.milesBaseText);
 
-    // "×" separator
     const xText = scene.add
-      .text(cx, pillY + pillH / 2, '×', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '16px',
-        color: TEXT_COLORS.SECONDARY,
+      .text(cx, y + boxH / 2, '×', {
+        fontFamily: FONTS.TITLE,
+        fontSize: '18px',
+        color: TEXT_COLORS.MUTED,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(xText);
 
-    // Mult (red pill)
-    this.multBg = scene.add.graphics();
-    this.multBg.fillStyle(COLORS.MULT_BG, 1);
-    this.multBg.fillRoundedRect(w - pad - 6 - pillW, pillY, pillW, pillH, 4);
-    this.mainContentContainer.add(this.multBg);
+    this.texturePanel(this.mainContentContainer, multX, y, boxW, boxH, TEXTURES.PANEL_RED, {
 
+    });
     this.multText = scene.add
-      .text(w - pad - 6 - pillW / 2, pillY + pillH / 2, '0', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '18px',
+      .text(multX + boxW / 2, y + boxH / 2, '0', {
+        fontFamily: FONTS.NUMBER,
+        fontSize: '26px',
         color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(this.multText);
-    y += scoreDisplayH + UI.SIDEBAR_SECTION_GAP;
+    y += boxH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Days / Rerolls Row ───
-    const rowH = 52;
-    const halfW = (w - pad * 2 - UI.SIDEBAR_SECTION_GAP) / 2;
+    const rowH = 72;
+    const halfW = (innerW - UI.SIDEBAR_SECTION_GAP) / 2;
 
     // Travel Days
-    const daysBg = scene.add.graphics();
-    daysBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    daysBg.fillRoundedRect(pad, y, halfW, rowH, 6);
-    daysBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    daysBg.strokeRoundedRect(pad, y, halfW, rowH, 6);
-    this.mainContentContainer.add(daysBg);
+    this.texturePanel(this.mainContentContainer, pad, y, halfW, rowH, TEXTURES.PANEL_GRAY, {
+      border: COLORS.SIDEBAR_SECTION_BORDER,
+      borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+      alpha: 0.25,
+      radius: 0,
+    });
 
     const daysLabel = scene.add
-      .text(pad + halfW / 2, y + 12, 'Travel Days', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '10px',
+      .text(pad + halfW / 2, y + 14, 'TRAVEL DAYS', {
+        fontFamily: FONTS.TITLE,
+        fontSize: '12px',
         color: TEXT_COLORS.MUTED,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(daysLabel);
 
     this.daysText = scene.add
-      .text(pad + halfW / 2, y + 34, '4', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '22px',
-        color: '#66aaff',
+      .text(pad + halfW / 2, y + 42, '?', {
+        fontFamily: FONTS.NUMBER,
+        fontSize: '28px',
+        color: '#2c5a89',
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(this.daysText);
 
     // Rerolls
     const rerollX = pad + halfW + UI.SIDEBAR_SECTION_GAP;
-    const rerollBg = scene.add.graphics();
-    rerollBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    rerollBg.fillRoundedRect(rerollX, y, halfW, rowH, 6);
-    rerollBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    rerollBg.strokeRoundedRect(rerollX, y, halfW, rowH, 6);
-    this.mainContentContainer.add(rerollBg);
+    this.texturePanel(this.mainContentContainer, rerollX, y, halfW, rowH, TEXTURES.PANEL_GRAY, {
+      border: COLORS.SIDEBAR_SECTION_BORDER,
+      radius: 0,
+      alpha: 0.25,
+      borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+    });
 
     const rerollLabel = scene.add
-      .text(rerollX + halfW / 2, y + 12, 'Rerolls', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '10px',
+      .text(rerollX + halfW / 2, y + 14, 'REROLLS', {
+        fontFamily: FONTS.TITLE,
+        fontSize: '12px',
         color: TEXT_COLORS.MUTED,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(rerollLabel);
 
     this.rerollsText = scene.add
-      .text(rerollX + halfW / 2, y + 34, '3', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '22px',
-        color: '#ff6666',
+      .text(rerollX + halfW / 2, y + 42, '?', {
+        fontFamily: FONTS.NUMBER,
+        fontSize: '28px',
+        color: '#b02f27',
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(this.rerollsText);
     y += rowH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Journey Info Button ───
-    this.journeyInfoBtn = new Button(scene, cx, y + 20, 'Journey Info', w - pad * 2 - 8, 34);
+    this.journeyInfoBtn = new Button(scene, cx, y + 22, 'JOURNEY INFO', innerW - 8, 38);
+    this.journeyInfoBtn.setTextureBackground(TEXTURES.PANEL_GRAY);
     this.journeyInfoBtn.onClick(() => {
       if (this.onJourneyInfo) this.onJourneyInfo();
     });
     this.mainContentContainer.add(this.journeyInfoBtn);
-    y += 46;
+    y += 50;
 
     // ─── Options Button ───
-    this.optionsBtn = new Button(scene, cx, y + 20, 'Options', w - pad * 2 - 8, 34);
+    this.optionsBtn = new Button(scene, cx, y + 22, 'OPTIONS', innerW - 8, 38);
+    this.optionsBtn.setTextureBackground(TEXTURES.PANEL_GRAY);
     this.optionsBtn.onClick(() => {
       if (this.onOptions) this.onOptions();
     });
     this.mainContentContainer.add(this.optionsBtn);
-    y += 46;
+    y += 50;
 
     this.syncMainContentOffset(false);
 
@@ -639,7 +647,7 @@ export class Sidebar extends GameObjects.Container {
       .text(titleX, headerCY, 'SHOP', {
         fontFamily: FONTS.HEADING,
         fontSize: '20px',
-        color: TEXT_COLORS.GOLD,
+        color: TEXT_COLORS.PRIMARY,
       })
       .setOrigin(0, 0.5);
     this.add(this.titleText);
@@ -703,7 +711,7 @@ export class Sidebar extends GameObjects.Container {
 
     this.moneyText = scene.add
       .text(metaRight, headerCY - 8, '$10', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.NUMBER,
         fontSize: '15px',
         color: TEXT_COLORS.MONEY,
         align: 'right',
@@ -713,7 +721,7 @@ export class Sidebar extends GameObjects.Container {
 
     this.legText = scene.add
       .text(metaRight, headerCY + 10, '1·1/3', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.TITLE,
         fontSize: '12px',
         color: TEXT_COLORS.PRIMARY,
         align: 'right',
@@ -738,7 +746,7 @@ export class Sidebar extends GameObjects.Container {
 
     this.roundScoreText = scene.add
       .text(scoreBlockRight, headerCY + 9, '0', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.NUMBER,
         fontSize: '20px',
         color: TEXT_COLORS.PRIMARY,
         align: 'right',
@@ -770,22 +778,20 @@ export class Sidebar extends GameObjects.Container {
 
     // ─── Score band: target | hand | miles × mult ───
     const scoreRowH = 56;
-    const scoreRowBg = scene.add.graphics();
-    scoreRowBg.fillStyle(COLORS.SIDEBAR_SECTION, 1);
-    scoreRowBg.fillRoundedRect(pad, localY, innerW, scoreRowH, 6);
-    scoreRowBg.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.8);
-    scoreRowBg.strokeRoundedRect(pad, localY, innerW, scoreRowH, 6);
-    this.mainContentContainer.add(scoreRowBg);
+    this.texturePanel(this.mainContentContainer, pad, localY, innerW, scoreRowH, TEXTURES.PANEL_DARK, {
+      border: COLORS.SIDEBAR_SECTION_BORDER,
+      borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+    });
 
     const targetLabel = scene.add.text(pad + 12, localY + 11, 'TARGET', {
-      fontFamily: FONTS.PRIMARY,
+      fontFamily: FONTS.TITLE,
       fontSize: '10px',
       color: TEXT_COLORS.MUTED,
     });
     this.mainContentContainer.add(targetLabel);
 
     this.targetText = scene.add.text(pad + 12, localY + 26, '300 mi', {
-      fontFamily: FONTS.HEADING,
+      fontFamily: FONTS.TITLE,
       fontSize: '18px',
       color: TEXT_COLORS.SCORE_GREEN,
     });
@@ -808,7 +814,7 @@ export class Sidebar extends GameObjects.Container {
     this.handDisplayLocalY = handY;
     this.handNameText = scene.add
       .text(scoreClusterCX, handY, '', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.TITLE,
         fontSize: '12px',
         color: TEXT_COLORS.GOLD,
         align: 'center',
@@ -817,14 +823,13 @@ export class Sidebar extends GameObjects.Container {
       .setVisible(false);
     this.mainContentContainer.add(this.handNameText);
 
-    this.milesBaseBg = scene.add.graphics();
-    this.milesBaseBg.fillStyle(COLORS.MILES_BG, 1);
-    this.milesBaseBg.fillRoundedRect(milesX, pillY, pillW, pillH, 4);
-    this.mainContentContainer.add(this.milesBaseBg);
+    this.texturePanel(this.mainContentContainer, milesX, pillY, pillW, pillH, TEXTURES.PANEL_BLUE, {
+      radius: 0,
+    });
 
     this.milesBaseText = scene.add
       .text(milesX + pillW / 2, pillY + pillH / 2, '0', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.NUMBER,
         fontSize: '15px',
         color: TEXT_COLORS.PRIMARY,
       })
@@ -833,21 +838,20 @@ export class Sidebar extends GameObjects.Container {
 
     const xText = scene.add
       .text(multX - 10, pillY + pillH / 2, '×', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.TITLE,
         fontSize: '14px',
-        color: TEXT_COLORS.SECONDARY,
+        color: TEXT_COLORS.MUTED,
       })
       .setOrigin(0.5);
     this.mainContentContainer.add(xText);
 
-    this.multBg = scene.add.graphics();
-    this.multBg.fillStyle(COLORS.MULT_BG, 1);
-    this.multBg.fillRoundedRect(multX, pillY, pillW, pillH, 4);
-    this.mainContentContainer.add(this.multBg);
+    this.texturePanel(this.mainContentContainer, multX, pillY, pillW, pillH, TEXTURES.PANEL_RED, {
+      radius: 0,
+    });
 
     this.multText = scene.add
       .text(multX + pillW / 2, pillY + pillH / 2, '0', {
-        fontFamily: FONTS.HEADING,
+        fontFamily: FONTS.NUMBER,
         fontSize: '15px',
         color: TEXT_COLORS.PRIMARY,
       })
@@ -858,6 +862,7 @@ export class Sidebar extends GameObjects.Container {
     const infoCX = optsCX - ctrlBtnW - ctrlGap;
 
     this.journeyInfoBtn = new Button(scene, infoCX, scoreRowCY, 'Info', ctrlBtnW, ctrlBtnH);
+    this.journeyInfoBtn.setTextureBackground(TEXTURES.PANEL_GRAY, COLORS.SIDEBAR_SECTION_BORDER, COLORS.SIDEBAR_SECTION_BORDER_ALPHA);
     applyIcon(this.journeyInfoBtn, 'icon_book');
     this.journeyInfoBtn.onClick(() => {
       if (this.onJourneyInfo) this.onJourneyInfo();
@@ -865,6 +870,7 @@ export class Sidebar extends GameObjects.Container {
     this.mainContentContainer.add(this.journeyInfoBtn);
 
     this.optionsBtn = new Button(scene, optsCX, scoreRowCY, 'Opts', ctrlBtnW, ctrlBtnH);
+    this.optionsBtn.setTextureBackground(TEXTURES.PANEL_GRAY, COLORS.SIDEBAR_SECTION_BORDER, COLORS.SIDEBAR_SECTION_BORDER_ALPHA);
     applyIcon(this.optionsBtn, 'icon_menu');
     this.optionsBtn.onClick(() => {
       if (this.onOptions) this.onOptions();

@@ -114,8 +114,7 @@ export class ItemCardHints {
     if (rowCount === 1) {
       blockTopY = cardBottom + Math.round(UI.CARD_HINT_SINGLE_LINE_GAP * scale);
     } else {
-      const aboveRatio =
-        rowCount === 2 ? UI.CARD_HINT_TWO_ROW_ABOVE_RATIO : UI.CARD_HINT_THREE_ROW_ABOVE_RATIO;
+      const aboveRatio = rowCount === 2 ? UI.CARD_HINT_TWO_ROW_ABOVE_RATIO : UI.CARD_HINT_THREE_ROW_ABOVE_RATIO;
       blockTopY = cardBottom - blockH * aboveRatio;
     }
 

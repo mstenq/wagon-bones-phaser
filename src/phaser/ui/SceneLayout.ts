@@ -205,7 +205,7 @@ export function computeLayoutMetrics(width: number, height: number): LayoutMetri
   const pouchMargin = Math.floor(UI.POUCH_MARGIN * uiScale);
 
   if (layoutMode === 'sidebar') {
-    const sidebarW = Math.floor(width * UI.SIDEBAR_WIDTH_RATIO);
+    const sidebarW = UI.SIDEBAR_WIDTH;
     const contentX = sidebarW + feltPadding;
     const contentW = width - sidebarW - feltPadding * 2;
     const contentCX = sidebarW + (width - sidebarW) / 2;

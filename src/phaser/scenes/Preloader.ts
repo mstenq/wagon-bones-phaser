@@ -33,6 +33,11 @@ export class Preloader extends Scene {
     // Shop background only; game rounds lazy-load numbered backgrounds in GameScene
     this.load.image('bg_shop', 'assets/backgrounds/shop.png');
 
+    // Tileable panel textures for sidebar / top bar UI
+    for (const tex of ['black', 'blue', 'gray', 'green', 'red'] as const) {
+      this.load.image(`tex_${tex}`, `assets/textures/${tex}.png`);
+    }
+
     // Load sticker images
     for (const sticker of pipEnhancements) {
       const filename = STICKER_FILE_MAP[sticker.id] ?? sticker.id;

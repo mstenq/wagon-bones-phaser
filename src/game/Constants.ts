@@ -219,7 +219,8 @@ export const COLORS = {
   // Sidebar sections
   SIDEBAR_BG: 0x111122,
   SIDEBAR_SECTION: 0x1a1a30,
-  SIDEBAR_SECTION_BORDER: 0x2a2a4a,
+  SIDEBAR_SECTION_BORDER: 0xffffff,
+  SIDEBAR_SECTION_BORDER_ALPHA: 0.15,
 
   // Score display (Balatro-style chips/mult)
   MILES_BG: 0x2266cc,
@@ -234,7 +235,7 @@ export const TEXT_COLORS = {
   DISABLED: '#b0b0b0',
   GOLD: '#ffcc00',
   MONEY: '#ffd700',
-  SCORE_GREEN: '#44ff44',
+  SCORE_GREEN: '#a2d752',
   ERROR_RED: '#ff4444',
   WIN: '#44ff44',
   LOSE: '#ff4444',
@@ -242,17 +243,40 @@ export const TEXT_COLORS = {
 };
 
 // ─── Fonts ───
+// Two-font system (still converging during active dev): a stylized display face
+// for numeric stat values, and a serif for titles, labels, and body copy.
+// Change these two consts to retheme typography across the UI.
+/** Stylized display font used for numeric stat values (money, score, miles, mult…). */
+export const FONT_NUMBER = 'Angkor';
+/** Serif font used for titles, labels, and body copy. */
+export const FONT_TITLE = 'Bree Serif';
+
 export const FONTS = {
-  PRIMARY: 'sans-serif',
-  HEADING: 'Arial Black',
+  PRIMARY: FONT_TITLE,
+  HEADING: FONT_TITLE,
+  /** Titles, labels, and body copy. */
+  TITLE: FONT_TITLE,
+  /** Big numeric stat values. */
+  NUMBER: FONT_NUMBER,
 };
+
+// ─── UI Textures (tileable panel backgrounds) ───
+// 295×295 seamless tiles in public/assets/textures/, loaded in Preloader.
+export const TEXTURES = {
+  PANEL_DARK: 'tex_black',
+  PANEL_GRAY: 'tex_gray',
+  PANEL_BLUE: 'tex_blue',
+  PANEL_GREEN: 'tex_green',
+  PANEL_RED: 'tex_red',
+} as const;
 
 // ─── UI Layout ───
 export type LayoutMode = 'sidebar' | 'topbar';
 
 export const UI = {
   // Sidebar (Balatro-style left panel) / portrait top bar
-  SIDEBAR_WIDTH_RATIO: 0.24, // 24% of screen width
+  /** Fixed sidebar width in landscape (portrait uses top bar instead). */
+  SIDEBAR_WIDTH: 330,
   TOP_BAR_BASE_HEIGHT: 120,
   /** Portrait reference width for UI scale (typical phone) */
   UI_SCALE_REF_WIDTH: 420,
@@ -261,6 +285,8 @@ export const UI = {
   SIDEBAR_BG: 0x111122,
   SIDEBAR_BORDER: 0x333355,
   SIDEBAR_SECTION_GAP: 8,
+  /** Corner radius for textured sidebar/topbar panels */
+  SIDEBAR_PANEL_RADIUS: 6,
 
   // Equipment + consumable card bars (shared sizing — see computeCardBarMetrics in SceneLayout)
   EQUIP_BAR_RATIO: 0.8,
@@ -304,7 +330,7 @@ export const UI = {
   HUD_ALPHA: 0.85,
 
   // Buttons
-  BTN_RADIUS: 8,
+  BTN_RADIUS: 0,
   BTN_FONT_SIZE: '18px',
 
   // Cards
