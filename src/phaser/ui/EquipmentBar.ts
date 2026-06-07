@@ -21,7 +21,15 @@ import { CardBar } from './CardBar';
 import type { CardBarMetrics } from './SceneLayout';
 import type { RoundHintContext } from '../../game/displayContext';
 import { isDevMode, devGetAllAuras } from '../../game/DevMode';
-import { getItemAuraById, isEquipmentCursed, isEquipmentPerishable } from '../../game/ItemsSystem';
+import {
+  getEquipmentDefById,
+  getItemAuraById,
+  isEquipmentCursed,
+  isEquipmentPerishable,
+  type EquipmentDef,
+  type EquipmentInstance,
+  type ItemAura,
+} from '../../game/ItemsSystem';
 import {
   getBossEquipmentDisplayOrder,
   isBossEquipmentHidden,
@@ -199,7 +207,7 @@ export class EquipmentBar extends CardBar {
         .setOrigin(0.5)
         .setDepth(300)
         .setInteractive({ useHandCursor: true });
-      const equipIndex = i;
+      const equipIndex = this.getEquipmentIndexForSlot(i);
       icon.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         pointer.event.stopPropagation();
         this.devChangeAura(equipIndex);
@@ -226,17 +234,32 @@ export class EquipmentBar extends CardBar {
     if (choice === null) return;
 
     const trimmed = choice.trim().split(' ')[0];
-    if (trimmed === 'none') {
-      equip.def = { ...equip.def, aura: null };
-    } else {
-      const aura = getItemAuraById(trimmed);
-      if (!aura) {
+    let nextAura: ItemAura | null = null;
+    if (trimmed !== 'none') {
+      nextAura = getItemAuraById(trimmed);
+      if (!nextAura) {
         window.alert('Aura not found');
         return;
       }
-      equip.def = { ...equip.def, aura };
     }
+
+    const next = [...equipment];
+    next[equipIndex] = this.withDevAura(equip, nextAura);
+    equipmentActions.setEquipment(next);
     this.emit('equipment-changed');
+  }
+
+  private withDevAura(equip: EquipmentInstance, aura: ItemAura | null): EquipmentInstance {
+    const base = getEquipmentDefById(equip.def.id);
+    if (!base) return equip;
+
+    let def: EquipmentDef;
+    if (aura) {
+      def = { ...base, aura, cost: base.cost + aura.costIncrease };
+    } else {
+      def = { ...base, aura: undefined };
+    }
+    return { ...equip, def };
   }
 
   protected getSlotLabel(): string {
