@@ -167,6 +167,7 @@ export class ConsumableBar extends CardBar {
         if (card.scene) card.destroy();
         this.emit('consumable-used', consumed);
         this.rebuildCards();
+        this.tryRestoreBarDepth();
       },
     });
   }

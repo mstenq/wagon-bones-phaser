@@ -1,11 +1,11 @@
 # Graph Report - wagon-bones-phaser  (2026-06-07)
 
 ## Corpus Check
-- 414 files · ~35,043,441 words
+- 414 files · ~35,043,398 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4427 nodes · 12771 edges · 233 communities (204 shown, 29 thin omitted)
+- 4427 nodes · 12771 edges · 234 communities (205 shown, 29 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -147,6 +147,7 @@
 - [[_COMMUNITY_Community 132|Community 132]]
 - [[_COMMUNITY_Community 133|Community 133]]
 - [[_COMMUNITY_Community 134|Community 134]]
+- [[_COMMUNITY_Community 135|Community 135]]
 - [[_COMMUNITY_Community 137|Community 137]]
 - [[_COMMUNITY_Community 139|Community 139]]
 - [[_COMMUNITY_Community 140|Community 140]]
@@ -272,25 +273,25 @@
 - 3-file cycle: `src/game/facade/index.ts -> src/game/facade/meta.ts -> src/game/store/index.ts -> src/game/facade/index.ts`
 - 3-file cycle: `src/game/facade/index.ts -> src/game/facade/pack.ts -> src/game/store/index.ts -> src/game/facade/index.ts`
 - 3-file cycle: `src/game/facade/index.ts -> src/game/facade/trail.ts -> src/game/store/index.ts -> src/game/facade/index.ts`
-- 3-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/store/resolve.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
-- 3-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/store/runStore.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
+- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/DiceSystem.ts -> src/game/equipmentUtils.ts -> src/game/BossEffectsSystem.ts`
 - 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/economyActions.ts -> src/game/equipmentUtils.ts -> src/game/BossEffectsSystem.ts`
+- 3-file cycle: `src/data/items.ts -> src/game/equipmentUtils.ts -> src/game/ItemsSystem.ts -> src/data/items.ts`
 - 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/EquipmentEffects.ts -> src/game/BossEffectsSystem.ts`
 - 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/store/actions/equipmentActions.ts -> src/game/BossEffectsSystem.ts`
-- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/DiceSystem.ts -> src/game/equipmentUtils.ts -> src/game/BossEffectsSystem.ts`
+- 3-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/store/resolve.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
+- 3-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/store/runStore.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
 - 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/applyMutations.ts -> src/game/ConsumablesSystem.ts`
-- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/applyMutations.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
-- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onShopEnd.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
-- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onSell.ts -> src/game/ConsumablesSystem.ts`
-- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onSell.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
+- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/afterHandScored.ts -> src/game/ConsumablesSystem.ts`
 - 4-file cycle: `src/game/facade/gameFacade.ts -> src/game/facade/meta.ts -> src/game/store/index.ts -> src/game/facade/index.ts -> src/game/facade/gameFacade.ts`
 - 4-file cycle: `src/game/facade/gameFacade.ts -> src/game/facade/pack.ts -> src/game/store/index.ts -> src/game/facade/index.ts -> src/game/facade/gameFacade.ts`
 - 4-file cycle: `src/game/facade/gameFacade.ts -> src/game/facade/trail.ts -> src/game/store/index.ts -> src/game/facade/index.ts -> src/game/facade/gameFacade.ts`
-- 4-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/store/resolve.ts -> src/game/store/runStore.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
-- 4-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/store/actions/diceActions.ts -> src/game/store/resolve.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
+- 4-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/EquipmentEffects.ts -> src/game/effects/helpers.ts -> src/game/BossEffectsSystem.ts`
+- 4-file cycle: `src/game/BoosterPackSystem.ts -> src/game/DiceSelectionSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onPreScoring.ts -> src/game/BoosterPackSystem.ts`
+- 4-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onPreScoring.ts -> src/game/BossEffectsSystem.ts`
+- 4-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/DiceSystem.ts -> src/game/store/selectors/runSelectors.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
 - 4-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/DiceSystem.ts -> src/game/store/resolve.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
 
-## Communities (233 total, 29 thin omitted)
+## Communities (234 total, 29 thin omitted)
 
 ### Community 0 - "App Shell & Scenes"
 Cohesion: 0.22
@@ -317,8 +318,8 @@ Cohesion: 0.12
 Nodes (3): PackInstance, ShopScene, ShopSceneState
 
 ### Community 7 - "Item Card UI"
-Cohesion: 0.11
-Nodes (28): syncDieSpriteFromScore(), buildHandResult(), buildResult(), detectBestHand(), detectBestHandFromDice(), findLongestStraight(), getFrequencies(), getHandDef() (+20 more)
+Cohesion: 0.09
+Nodes (35): syncDieSpriteFromScore(), BeginRoundSessionOptions, EndDayOptions, EndDayResult, FacadeScoreResult, buildHandResult(), buildResult(), detectBestHand() (+27 more)
 
 ### Community 8 - "Shop Generation"
 Cohesion: 0.09
@@ -345,8 +346,8 @@ Cohesion: 0.08
 Nodes (43): InstantEffect, milesToSave(), RunRngState, ACTIVE_SCENES, applySaveSnapshot(), BoosterPackSaveData, buildSaveSnapshot(), BuildSaveSnapshotOptions (+35 more)
 
 ### Community 14 - "Dice Row Layout"
-Cohesion: 0.06
-Nodes (55): DICE_AURA_ORDER, diceAuras, getDiceAuraById(), HandDef, EQUIPMENT_AURA_ORDER, getItemAuraDefById(), itemAuras, getPackById() (+47 more)
+Cohesion: 0.08
+Nodes (40): HandDef, getPackById(), PackCategory, PackDef, packs, PackTier, generateShopPacks(), createDie() (+32 more)
 
 ### Community 15 - "Boss Effects"
 Cohesion: 0.06
@@ -357,8 +358,8 @@ Cohesion: 0.05
 Nodes (41): Algorithm notes, Arcane Aura Effect — Complete Rebuild Guide, Architecture, Card vs Die Differences, Colors, Dependencies, Die hover/strike gap (current repo), Effect picker (dev UI) (+33 more)
 
 ### Community 17 - "Booster Pack Data"
-Cohesion: 0.09
-Nodes (42): ALL_STICKERS, applyRandomSticker(), buildFrontierPackItem(), buildSupplyPackItem(), buildTrailGuidePackItem(), ENHANCEMENT_INFO, filterPoolByExcludeIds(), FrontierEntry (+34 more)
+Cohesion: 0.07
+Nodes (56): DICE_AURA_ORDER, diceAuras, getDiceAuraById(), EQUIPMENT_AURA_ORDER, getItemAuraDefById(), itemAuras, pickEquipmentAuraWeighted(), rollDiceAura() (+48 more)
 
 ### Community 18 - "Scoring Pipeline"
 Cohesion: 0.09
@@ -442,7 +443,7 @@ Nodes (4): buildStreamsFromSeed(), generateRunSeed(), getRunRngState(), restoreR
 
 ### Community 41 - "Bosses & Hands"
 Cohesion: 0.08
-Nodes (35): shopBuyActions, ShopBuyFailReason, ShopBuyResult, shopSceneActions, ItemAura, EquipmentAlertType, getPackDefById(), ConsumableDef (+27 more)
+Nodes (36): shopBuyActions, ShopBuyFailReason, ShopBuyResult, shopSceneActions, ItemAura, EquipmentAlertType, getPackDefById(), PackDefinition (+28 more)
 
 ### Community 42 - "Trail Event Logic"
 Cohesion: 0.27
@@ -517,8 +518,8 @@ Cohesion: 0.05
 Nodes (40): Ambient Particles, Animated Wing / Bobbing, Checklist, Clouds, Color Cycling Background, Color Palette, Combo Counter with Scaling Text, Drawing Game Entities with Graphics (+32 more)
 
 ### Community 64 - "Run State Reads"
-Cohesion: 0.12
-Nodes (25): gameBoss, gameConsumable, gameDice, gameDiceSelection, gameEquipment, gameMeta, gamePack, gameRound (+17 more)
+Cohesion: 0.29
+Nodes (11): gameBoss, gameConsumable, gameDice, gameDiceSelection, gameEquipment, gameMeta, gamePack, gameRound (+3 more)
 
 ### Community 65 - "Community 65"
 Cohesion: 0.07
@@ -743,6 +744,10 @@ Nodes (11): Basic Scene Template, Cross-Scene Communication, Direct scene access
 ### Community 134 - "Community 134"
 Cohesion: 0.17
 Nodes (11): frames, meta, app, format, image, scale, size, smartupdate (+3 more)
+
+### Community 135 - "Community 135"
+Cohesion: 0.46
+Nodes (7): syncTrailRoundEffectsOnRestore(), RunStatusTraitPolarity, selectRunStatusTraits(), getPlayerTrailDebuffLines(), getTrailDebuffLines(), hasActiveTrailRoundEffects(), trailRoundEffectsFromModifiers()
 
 ### Community 137 - "Community 137"
 Cohesion: 0.11
@@ -1096,11 +1101,11 @@ Nodes (3): Full audit (default), Production audit, Production vs Full Audit
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `getRunState()` connect `Scene Layout Metrics` to `Store Actions & Selectors`, `Types & Formatting`, `Misc Utilities`, `Equipment & Tags`, `Serialization & Tooltips`, `Item Card UI`, `Community 137`, `Audio Preferences`, `Community 139`, `Save/Load & RNG`, `Dice Row Layout`, `Boss Effects`, `Round FSM Actions`, `Booster Pack Data`, `Scoring Pipeline`, `Community 147`, `Cluster 22`, `Community 151`, `Permits & Shop`, `Consumables System`, `Dice Enhancements`, `Dice Sprite Visuals`, `Dice & Item Auras`, `Boss Equipment UI`, `Score Animations`, `Trail Events Data`, `Trail Event Scene`, `Bosses & Hands`, `Run RNG & Packs`, `Game Facade Modules`, `Cluster 47`, `Cluster 50`, `Game & Round State`, `Store Subscriptions`, `Tag Stack UI`, `Community 54`, `Loaded Dice Effects`, `Run State Reads`, `Community 65`, `Community 67`, `Cluster 71`, `Community 79`, `Cluster 82`, `Community 89`, `Community 90`, `Cluster 94`, `Community 102`, `Community 106`?**
+- **Why does `getRunState()` connect `Scene Layout Metrics` to `Store Actions & Selectors`, `Types & Formatting`, `Misc Utilities`, `Equipment & Tags`, `Serialization & Tooltips`, `Item Card UI`, `Community 135`, `Community 137`, `Audio Preferences`, `Community 139`, `Save/Load & RNG`, `Dice Row Layout`, `Boss Effects`, `Round FSM Actions`, `Booster Pack Data`, `Scoring Pipeline`, `Community 147`, `Cluster 22`, `Community 151`, `Permits & Shop`, `Consumables System`, `Dice Enhancements`, `Dice Sprite Visuals`, `Dice & Item Auras`, `Boss Equipment UI`, `Score Animations`, `Trail Events Data`, `Trail Event Scene`, `Bosses & Hands`, `Run RNG & Packs`, `Game Facade Modules`, `Cluster 47`, `Cluster 50`, `Game & Round State`, `Store Subscriptions`, `Tag Stack UI`, `Community 54`, `Loaded Dice Effects`, `Community 65`, `Community 67`, `Cluster 71`, `Community 79`, `Cluster 82`, `Community 89`, `Community 90`, `Cluster 94`, `Community 102`, `Community 106`?**
   _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Why does `DiceSprite` connect `Consumable Bar` to `App Shell & Scenes`, `Community 137`, `Community 139`, `Booster Pack Scene`, `Equipment Animations`, `Consumables System`, `Dice Sprite Visuals`, `Playback Queue`, `Boss Equipment UI`, `Effect Helpers`, `Run RNG & Packs`, `Game Facade Modules`, `Cluster 63`, `Community 65`, `Community 85`, `Community 89`, `Community 92`, `Community 114`, `Community 116`?**
   _High betweenness centrality (0.039) - this node is a cross-community bridge._
-- **Why does `Die` connect `Community 89` to `App Shell & Scenes`, `Misc Utilities`, `Equipment & Tags`, `Serialization & Tooltips`, `Item Card UI`, `Shop Generation`, `Community 137`, `Audio Preferences`, `Community 139`, `Save/Load & RNG`, `Dice Row Layout`, `Boss Effects`, `Round FSM Actions`, `Booster Pack Data`, `Scoring Pipeline`, `Booster Pack Scene`, `Equipment Animations`, `Frontier & Item Defs`, `Cluster 22`, `Permits & Shop`, `Consumables System`, `Dice Enhancements`, `Scene Layout Metrics`, `Trail Events Data`, `Bosses & Hands`, `Run RNG & Packs`, `Cluster 47`, `Game & Round State`, `Store Subscriptions`, `Tag Stack UI`, `Community 54`, `Consumable Bar`, `Run State Reads`, `Community 85`, `Community 114`?**
+- **Why does `Die` connect `Community 89` to `App Shell & Scenes`, `Misc Utilities`, `Equipment & Tags`, `Serialization & Tooltips`, `Item Card UI`, `Shop Generation`, `Community 137`, `Audio Preferences`, `Community 139`, `Save/Load & RNG`, `Dice Row Layout`, `Boss Effects`, `Round FSM Actions`, `Booster Pack Data`, `Scoring Pipeline`, `Booster Pack Scene`, `Equipment Animations`, `Frontier & Item Defs`, `Cluster 22`, `Permits & Shop`, `Consumables System`, `Dice Enhancements`, `Scene Layout Metrics`, `Trail Events Data`, `Bosses & Hands`, `Run RNG & Packs`, `Cluster 47`, `Game & Round State`, `Store Subscriptions`, `Tag Stack UI`, `Community 54`, `Consumable Bar`, `Community 85`, `Community 114`?**
   _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **What connects `$schema`, `lsp`, `npm` to the rest of the system?**
   _1485 weakly-connected nodes found - possible documentation gaps or missing edges._

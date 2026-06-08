@@ -294,6 +294,12 @@ export const UI = {
   CONSUMABLE_BAR_COMPACT_MAX_RATIO: 0.38,
   /** Gap between equipment and consumable bars */
   CARD_BAR_GAP: 8,
+  /** Scene depth for the consumable card bar (created after equipment bar). */
+  CONSUMABLE_BAR_DEPTH: 150,
+  /** Equipment bar sits above consumable bar so right-edge sell tabs are not covered. */
+  EQUIP_BAR_DEPTH: 160,
+  /** Raised while a card is dragged or action tabs are open. */
+  CARD_BAR_INTERACTION_DEPTH: 175,
   /** Top inset for cards inside the bar background */
   CARD_BAR_TOP_INSET: 8,
   /** Base card scale for both equipment and consumable bars at full content width */

@@ -2280,7 +2280,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "data_dice_auras",
-      "community": 14,
+      "community": 17,
       "norm_label": "dice_auras.ts"
     },
     {
@@ -2300,7 +2300,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "data_dice_auras_dice_aura_order",
-      "community": 14,
+      "community": 17,
       "norm_label": "dice_aura_order"
     },
     {
@@ -2310,7 +2310,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "data_dice_auras_diceauras",
-      "community": 14,
+      "community": 17,
       "norm_label": "diceauras"
     },
     {
@@ -2320,7 +2320,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "data_dice_auras_getdiceaurabyid",
-      "community": 14,
+      "community": 17,
       "norm_label": "getdiceaurabyid()"
     },
     {
@@ -2490,7 +2490,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "data_item_auras",
-      "community": 14,
+      "community": 17,
       "norm_label": "item_auras.ts"
     },
     {
@@ -2510,7 +2510,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "data_item_auras_equipment_aura_order",
-      "community": 14,
+      "community": 17,
       "norm_label": "equipment_aura_order"
     },
     {
@@ -2520,7 +2520,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "data_item_auras_itemauras",
-      "community": 14,
+      "community": 17,
       "norm_label": "itemauras"
     },
     {
@@ -2530,7 +2530,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "data_item_auras_getitemauradefbyid",
-      "community": 14,
+      "community": 17,
       "norm_label": "getitemauradefbyid()"
     },
     {
@@ -2540,7 +2540,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "data_item_auras_getequipmentrollableauras",
-      "community": 14,
+      "community": 17,
       "norm_label": "getequipmentrollableauras()"
     },
     {
@@ -3740,7 +3740,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "game_boosterpacksystem_packdefinition",
-      "community": 17,
+      "community": 41,
       "norm_label": "packdefinition"
     },
     {
@@ -6040,7 +6040,7 @@
       "source_location": "L116",
       "_origin": "ast",
       "id": "game_itemssystem_rollrandomitemaura",
-      "community": 14,
+      "community": 17,
       "norm_label": "rollrandomitemaura()"
     },
     {
@@ -6490,7 +6490,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "game_runrng_rngfloat",
-      "community": 14,
+      "community": 17,
       "norm_label": "rngfloat()"
     },
     {
@@ -6520,7 +6520,7 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "game_runrng_rngchance",
-      "community": 14,
+      "community": 17,
       "norm_label": "rngchance()"
     },
     {
@@ -7170,7 +7170,7 @@
       "source_location": "L460",
       "_origin": "ast",
       "id": "game_tagsystem_consumenextroundtags",
-      "community": 64,
+      "community": 7,
       "norm_label": "consumenextroundtags()"
     },
     {
@@ -7250,7 +7250,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "game_traileventssystem_trailroundeffectsfrommodifiers",
-      "community": 64,
+      "community": 135,
       "norm_label": "trailroundeffectsfrommodifiers()"
     },
     {
@@ -7260,7 +7260,7 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "game_traileventssystem_hasactivetrailroundeffects",
-      "community": 64,
+      "community": 135,
       "norm_label": "hasactivetrailroundeffects()"
     },
     {
@@ -7270,7 +7270,7 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "game_traileventssystem_getplayertraildebufflines",
-      "community": 64,
+      "community": 135,
       "norm_label": "getplayertraildebufflines()"
     },
     {
@@ -7280,7 +7280,7 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "game_traileventssystem_gettraildebufflines",
-      "community": 64,
+      "community": 135,
       "norm_label": "gettraildebufflines()"
     },
     {
@@ -7750,7 +7750,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_aurarates_test",
-      "community": 14,
+      "community": 17,
       "norm_label": "aurarates.test.ts"
     },
     {
@@ -7760,7 +7760,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "tests_aurarates_test_montecarlorate",
-      "community": 14,
+      "community": 17,
       "norm_label": "montecarlorate()"
     },
     {
@@ -7770,7 +7770,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_aurarates_test_expectrate",
-      "community": 14,
+      "community": 17,
       "norm_label": "expectrate()"
     },
     {
@@ -10750,7 +10750,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "game_aurarng",
-      "community": 14,
+      "community": 17,
       "norm_label": "aurarng.ts"
     },
     {
@@ -10760,7 +10760,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "game_aurarng_unscaled_aura_ids",
-      "community": 14,
+      "community": 17,
       "norm_label": "unscaled_aura_ids"
     },
     {
@@ -10770,7 +10770,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "game_aurarng_scaleaurachance",
-      "community": 14,
+      "community": 17,
       "norm_label": "scaleaurachance()"
     },
     {
@@ -10780,7 +10780,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "game_aurarng_rollsequentialauras",
-      "community": 14,
+      "community": 17,
       "norm_label": "rollsequentialauras()"
     },
     {
@@ -10790,7 +10790,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "game_aurarng_rollequipmentaura",
-      "community": 14,
+      "community": 17,
       "norm_label": "rollequipmentaura()"
     },
     {
@@ -10800,7 +10800,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "game_aurarng_rolldiceaura",
-      "community": 14,
+      "community": 17,
       "norm_label": "rolldiceaura()"
     },
     {
@@ -10820,7 +10820,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "game_aurarng_pickequipmentauraweighted",
-      "community": 14,
+      "community": 17,
       "norm_label": "pickequipmentauraweighted()"
     },
     {
@@ -10830,7 +10830,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "game_aurarng_getallitemauradefs",
-      "community": 14,
+      "community": 17,
       "norm_label": "getallitemauradefs()"
     },
     {
@@ -13100,7 +13100,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "facade_round",
-      "community": 64,
+      "community": 7,
       "norm_label": "round.ts"
     },
     {
@@ -13130,7 +13130,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "facade_round_synctrailroundeffectsonrestore",
-      "community": 64,
+      "community": 135,
       "norm_label": "synctrailroundeffectsonrestore()"
     },
     {
@@ -13210,7 +13210,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "facade_types",
-      "community": 64,
+      "community": 7,
       "norm_label": "types.ts"
     },
     {
@@ -13220,7 +13220,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "facade_types_enddayresult",
-      "community": 64,
+      "community": 7,
       "norm_label": "enddayresult"
     },
     {
@@ -13230,7 +13230,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "facade_types_beginroundsessionoptions",
-      "community": 64,
+      "community": 7,
       "norm_label": "beginroundsessionoptions"
     },
     {
@@ -13240,7 +13240,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "facade_types_enddayoptions",
-      "community": 64,
+      "community": 7,
       "norm_label": "enddayoptions"
     },
     {
@@ -13250,7 +13250,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "facade_types_facadescoreresult",
-      "community": 64,
+      "community": 7,
       "norm_label": "facadescoreresult"
     },
     {
@@ -13590,7 +13590,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "game_runstatustraits",
-      "community": 64,
+      "community": 135,
       "norm_label": "runstatustraits.ts"
     },
     {
@@ -13600,7 +13600,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "game_runstatustraits_runstatustraitpolarity",
-      "community": 64,
+      "community": 135,
       "norm_label": "runstatustraitpolarity"
     },
     {
@@ -13620,7 +13620,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "game_runstatustraits_selectrunstatustraits",
-      "community": 64,
+      "community": 135,
       "norm_label": "selectrunstatustraits()"
     },
     {
@@ -14927,7 +14927,7 @@
       "label": "getSceneState()",
       "file_type": "code",
       "source_file": "src/game/store/sceneStore.ts",
-      "source_location": "L191",
+      "source_location": "L180",
       "_origin": "ast",
       "id": "store_scenestore_getscenestate",
       "community": 9,
@@ -14937,7 +14937,7 @@
       "label": "subscribeSceneState()",
       "file_type": "code",
       "source_file": "src/game/store/sceneStore.ts",
-      "source_location": "L195",
+      "source_location": "L184",
       "_origin": "ast",
       "id": "store_scenestore_subscribescenestate",
       "community": 25,
@@ -15757,7 +15757,7 @@
       "label": "selectTrailEventState()",
       "file_type": "code",
       "source_file": "src/game/store/selectors/sceneSelectors.ts",
-      "source_location": "L65",
+      "source_location": "L63",
       "_origin": "ast",
       "id": "selectors_sceneselectors_selecttraileventstate",
       "community": 41,
@@ -16390,7 +16390,7 @@
       "source_location": "L183",
       "_origin": "ast",
       "id": "store_types_roundsidebaroverlay",
-      "community": 64,
+      "community": 7,
       "norm_label": "roundsidebaroverlay"
     },
     {
@@ -16470,7 +16470,7 @@
       "source_location": "L276",
       "_origin": "ast",
       "id": "store_types_payoutscenestate",
-      "community": 64,
+      "community": 7,
       "norm_label": "payoutscenestate"
     },
     {
@@ -16947,7 +16947,7 @@
       "label": "initPackLineup()",
       "file_type": "code",
       "source_file": "src/game/visibleDiceRow.ts",
-      "source_location": "L29",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "game_visibledicerow_initpacklineup",
       "community": 30,
@@ -16957,7 +16957,7 @@
       "label": "reorderPackLineup()",
       "file_type": "code",
       "source_file": "src/game/visibleDiceRow.ts",
-      "source_location": "L35",
+      "source_location": "L36",
       "_origin": "ast",
       "id": "game_visibledicerow_reorderpacklineup",
       "community": 30,
@@ -16967,7 +16967,7 @@
       "label": "commitPackLineup()",
       "file_type": "code",
       "source_file": "src/game/visibleDiceRow.ts",
-      "source_location": "L46",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "game_visibledicerow_commitpacklineup",
       "community": 30,
@@ -16977,7 +16977,7 @@
       "label": "syncPackLineupAfterSelection()",
       "file_type": "code",
       "source_file": "src/game/visibleDiceRow.ts",
-      "source_location": "L50",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "game_visibledicerow_syncpacklineupafterselection",
       "community": 30,
@@ -16987,7 +16987,7 @@
       "label": "applyCopyAfterSelection()",
       "file_type": "code",
       "source_file": "src/game/visibleDiceRow.ts",
-      "source_location": "L60",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "game_visibledicerow_applycopyafterselection",
       "community": 30,
@@ -16997,7 +16997,7 @@
       "label": "applyCopyToRoundRow()",
       "file_type": "code",
       "source_file": "src/game/visibleDiceRow.ts",
-      "source_location": "L66",
+      "source_location": "L68",
       "_origin": "ast",
       "id": "game_visibledicerow_applycopytoroundrow",
       "community": 7,
@@ -19977,7 +19977,7 @@
       "label": ".buildLayout()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L322",
+      "source_location": "L321",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_buildlayout",
       "community": 54,
@@ -19987,7 +19987,7 @@
       "label": ".getLineupLockIconOffsetY()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L479",
+      "source_location": "L478",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_getlineuplockiconoffsety",
       "community": 19,
@@ -19997,7 +19997,7 @@
       "label": ".renderLineupFromStore()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L487",
+      "source_location": "L486",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore",
       "community": 54,
@@ -20007,7 +20007,7 @@
       "label": ".layoutDiceLineup()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L495",
+      "source_location": "L494",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_layoutdicelineup",
       "community": 85,
@@ -20017,7 +20017,7 @@
       "label": ".clearDiceLineupSprites()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L537",
+      "source_location": "L536",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites",
       "community": 85,
@@ -20027,7 +20027,7 @@
       "label": ".clearDiceLineup()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L545",
+      "source_location": "L544",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_cleardicelineup",
       "community": 85,
@@ -20037,7 +20037,7 @@
       "label": ".setLineupInteractive()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L551",
+      "source_location": "L550",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_setlineupinteractive",
       "community": 85,
@@ -20047,7 +20047,7 @@
       "label": ".wireLineupSpriteInteraction()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L570",
+      "source_location": "L569",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_wirelineupspriteinteraction",
       "community": 85,
@@ -20057,7 +20057,7 @@
       "label": ".cancelLineupDrag()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L577",
+      "source_location": "L576",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_cancellineupdrag",
       "community": 85,
@@ -20067,7 +20067,7 @@
       "label": ".onLineupDieClick()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L582",
+      "source_location": "L581",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_onlineupdieclick",
       "community": 19,
@@ -20077,7 +20077,7 @@
       "label": ".createCardDisplay()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L614",
+      "source_location": "L613",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_createcarddisplay",
       "community": 28,
@@ -20087,7 +20087,7 @@
       "label": ".setupCardClick()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L748",
+      "source_location": "L747",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_setupcardclick",
       "community": 54,
@@ -20097,7 +20097,7 @@
       "label": ".buildActionTabs()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L838",
+      "source_location": "L837",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_buildactiontabs",
       "community": 28,
@@ -20107,7 +20107,7 @@
       "label": ".showCardActionTabs()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L879",
+      "source_location": "L878",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_showcardactiontabs",
       "community": 24,
@@ -20117,7 +20117,7 @@
       "label": ".hideCardActionTabs()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L887",
+      "source_location": "L886",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_hidecardactiontabs",
       "community": 19,
@@ -20127,7 +20127,7 @@
       "label": ".getCardActionTabContainers()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L895",
+      "source_location": "L894",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_getcardactiontabcontainers",
       "community": 19,
@@ -20137,7 +20137,7 @@
       "label": ".dismissActiveTab()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L902",
+      "source_location": "L901",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_dismissactivetab",
       "community": 19,
@@ -20147,7 +20147,7 @@
       "label": ".clearDismissClickAway()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L931",
+      "source_location": "L930",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_cleardismissclickaway",
       "community": 19,
@@ -20157,7 +20157,7 @@
       "label": ".installActionTabClickAway()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L938",
+      "source_location": "L937",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_installactiontabclickaway",
       "community": 19,
@@ -20167,7 +20167,7 @@
       "label": ".clearLineupSelections()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L958",
+      "source_location": "L957",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_clearlineupselections",
       "community": 19,
@@ -20177,7 +20177,7 @@
       "label": ".cardNeedsDiceSelection()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L969",
+      "source_location": "L968",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_cardneedsdiceselection",
       "community": 19,
@@ -20187,7 +20187,7 @@
       "label": ".getLineupDiceConfig()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L975",
+      "source_location": "L974",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_getlineupdiceconfig",
       "community": 19,
@@ -20197,7 +20197,7 @@
       "label": ".getMaxDicePicks()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L979",
+      "source_location": "L978",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_getmaxdicepicks",
       "community": 19,
@@ -20207,7 +20207,7 @@
       "label": ".updateActiveTabEnabled()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L985",
+      "source_location": "L984",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_updateactivetabenabled",
       "community": 19,
@@ -20217,7 +20217,7 @@
       "label": ".updateInstructionText()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1004",
+      "source_location": "L1003",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_updateinstructiontext",
       "community": 19,
@@ -20227,7 +20227,7 @@
       "label": ".shouldShowDiceLineup()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1036",
+      "source_location": "L1035",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_shouldshowdicelineup",
       "community": 54,
@@ -20237,7 +20237,7 @@
       "label": ".canUseConsumableFromBar()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1040",
+      "source_location": "L1039",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_canuseconsumablefrombar",
       "community": 19,
@@ -20247,7 +20247,7 @@
       "label": ".lockPackCard()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1046",
+      "source_location": "L1045",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_lockpackcard",
       "community": 19,
@@ -20257,7 +20257,7 @@
       "label": ".unlockPackCardAfterFailedUse()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1052",
+      "source_location": "L1051",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_unlockpackcardafterfaileduse",
       "community": 54,
@@ -20267,7 +20267,7 @@
       "label": ".beginPackCardUse()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1073",
+      "source_location": "L1072",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_beginpackcarduse",
       "community": 19,
@@ -20277,7 +20277,7 @@
       "label": ".onUseCard()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1080",
+      "source_location": "L1079",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_onusecard",
       "community": 54,
@@ -20287,7 +20287,7 @@
       "label": ".finishUseCard()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1112",
+      "source_location": "L1110",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_finishusecard",
       "community": 54,
@@ -20297,7 +20297,7 @@
       "label": ".markCardUsed()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1133",
+      "source_location": "L1131",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_markcardused",
       "community": 54,
@@ -20307,7 +20307,7 @@
       "label": ".showFloatingText()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1166",
+      "source_location": "L1164",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_showfloatingtext",
       "community": 54,
@@ -20317,7 +20317,7 @@
       "label": ".cardNeedsEquipSlot()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1190",
+      "source_location": "L1188",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_cardneedsequipslot",
       "community": 19,
@@ -20327,7 +20327,7 @@
       "label": ".updatePicksText()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1196",
+      "source_location": "L1194",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_updatepickstext",
       "community": 54,
@@ -20337,7 +20337,7 @@
       "label": ".onSkip()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1206",
+      "source_location": "L1204",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_onskip",
       "community": 19,
@@ -20347,7 +20347,7 @@
       "label": ".exitBoosterPackFlow()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1211",
+      "source_location": "L1209",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_exitboosterpackflow",
       "community": 19,
@@ -20357,7 +20357,7 @@
       "label": ".tearDownPackLayout()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1233",
+      "source_location": "L1231",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_teardownpacklayout",
       "community": 85,
@@ -20367,7 +20367,7 @@
       "label": ".onResize()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1256",
+      "source_location": "L1254",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_onresize",
       "community": 9,
@@ -20377,7 +20377,7 @@
       "label": ".updateEquipHints()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1275",
+      "source_location": "L1273",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_updateequiphints",
       "community": 54,
@@ -20387,7 +20387,7 @@
       "label": ".isPackDiceTargetingPending()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1279",
+      "source_location": "L1277",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_ispackdicetargetingpending",
       "community": 19,
@@ -20397,7 +20397,7 @@
       "label": ".handleConsumableUsed()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1288",
+      "source_location": "L1286",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_handleconsumableused",
       "community": 19,
@@ -20407,7 +20407,7 @@
       "label": ".handleConsumableUsedAsync()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
-      "source_location": "L1294",
+      "source_location": "L1292",
       "_origin": "ast",
       "id": "scenes_boosterpackscene_boosterpackscene_handleconsumableusedasync",
       "community": 54,
@@ -23037,7 +23037,7 @@
       "label": "PackCardUseContext",
       "file_type": "code",
       "source_file": "src/phaser/scenes/boosterPack/packCardUseDispatcher.ts",
-      "source_location": "L20",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "boosterpack_packcardusedispatcher_packcardusecontext",
       "community": 30,
@@ -23047,7 +23047,7 @@
       "label": "PackCardUseOutcome",
       "file_type": "code",
       "source_file": "src/phaser/scenes/boosterPack/packCardUseDispatcher.ts",
-      "source_location": "L27",
+      "source_location": "L25",
       "_origin": "ast",
       "id": "boosterpack_packcardusedispatcher_packcarduseoutcome",
       "community": 30,
@@ -23057,7 +23057,7 @@
       "label": "PackCardUseResult",
       "file_type": "code",
       "source_file": "src/phaser/scenes/boosterPack/packCardUseDispatcher.ts",
-      "source_location": "L33",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "boosterpack_packcardusedispatcher_packcarduseresult",
       "community": 30,
@@ -23067,7 +23067,7 @@
       "label": "resolvePackCardUse()",
       "file_type": "code",
       "source_file": "src/phaser/scenes/boosterPack/packCardUseDispatcher.ts",
-      "source_location": "L35",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "boosterpack_packcardusedispatcher_resolvepackcarduse",
       "community": 28,
@@ -44267,7 +44267,7 @@
       "label": "sceneLifecycleActions",
       "file_type": "code",
       "source_file": "src/game/store/sceneStore.ts",
-      "source_location": "L189",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "store_scenestore_scenelifecycleactions",
       "community": 98,
@@ -47753,9 +47753,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "data_frontier_encounters",
-      "confidence_score": 1.0
+      "target": "data_frontier_encounters"
     },
     {
       "relation": "references",
@@ -64180,9 +64180,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_consumablessystem",
-      "confidence_score": 1.0
+      "target": "game_consumablessystem"
     },
     {
       "relation": "imports_from",
@@ -65137,9 +65137,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_consumablessystem_createfrontierconsumabledef",
-      "confidence_score": 1.0
+      "target": "game_consumablessystem_createfrontierconsumabledef"
     },
     {
       "relation": "imports",
@@ -68151,9 +68151,9 @@
       "source_file": "src/game/facade/round.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_round",
-      "target": "game_diceselectionsystem",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem"
     },
     {
       "relation": "imports_from",
@@ -68718,9 +68718,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_diceselectionsystem",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem"
     },
     {
       "relation": "imports_from",
@@ -68773,9 +68773,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_diceselectionsystem",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem"
     },
     {
       "relation": "re_exports",
@@ -69070,9 +69070,9 @@
       "source_file": "src/game/store/types.ts",
       "source_location": "L254",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "store_types_boosterpackscenestate",
-      "target": "game_diceselectionsystem_diceselectionconfig",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_diceselectionconfig"
     },
     {
       "relation": "references",
@@ -69730,9 +69730,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_diceselectionsystem_drawdiceforselection",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_drawdiceforselection"
     },
     {
       "relation": "calls",
@@ -69807,9 +69807,9 @@
       "source_file": "src/game/facade/round.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_round",
-      "target": "game_diceselectionsystem_diceselectionresult",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_diceselectionresult"
     },
     {
       "relation": "references",
@@ -69829,9 +69829,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_diceselectionsystem_diceselectionresult",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_diceselectionresult"
     },
     {
       "relation": "imports",
@@ -69862,9 +69862,9 @@
       "source_file": "src/game/facade/round.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_round",
-      "target": "game_diceselectionsystem_dicelineupsyncoptions",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_dicelineupsyncoptions"
     },
     {
       "relation": "references",
@@ -69884,9 +69884,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_diceselectionsystem_dicelineupsyncoptions",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_dicelineupsyncoptions"
     },
     {
       "relation": "imports",
@@ -69961,9 +69961,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_diceselectionsystem_buildcopylineupsync",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_buildcopylineupsync"
     },
     {
       "relation": "calls",
@@ -70203,9 +70203,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_diceselectionsystem_applydiceselectioneffect",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_applydiceselectioneffect"
     },
     {
       "relation": "imports",
@@ -70302,9 +70302,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_diceselectionsystem_synclineupafterdiceeffect",
-      "confidence_score": 1.0
+      "target": "game_diceselectionsystem_synclineupafterdiceeffect"
     },
     {
       "relation": "calls",
@@ -82144,9 +82144,9 @@
       "source_file": "src/game/SaveLoad.ts",
       "source_location": "L185",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_saveload_boosterpacksavedata",
-      "target": "store_types_boosterpackscenestate",
-      "confidence_score": 1.0
+      "target": "store_types_boosterpackscenestate"
     },
     {
       "relation": "imports",
@@ -87732,9 +87732,9 @@
       "source_file": "src/game/__tests__/consumables.test.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_consumables_test",
-      "target": "game_visibledicerow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow"
     },
     {
       "relation": "imports",
@@ -87743,9 +87743,9 @@
       "source_file": "src/game/__tests__/consumables.test.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_consumables_test",
-      "target": "game_visibledicerow_applycopyafterselection",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_applycopyafterselection"
     },
     {
       "relation": "imports_from",
@@ -92793,9 +92793,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "tests_setup",
-      "confidence_score": 1.0
+      "target": "tests_setup"
     },
     {
       "relation": "calls",
@@ -95903,9 +95903,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "tests_testhelpers",
-      "confidence_score": 1.0
+      "target": "tests_testhelpers"
     },
     {
       "relation": "calls",
@@ -96013,9 +96013,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "tests_testhelpers_die",
-      "confidence_score": 1.0
+      "target": "tests_testhelpers_die"
     },
     {
       "relation": "calls",
@@ -97149,9 +97149,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "tests_testrunplayer",
-      "confidence_score": 1.0
+      "target": "tests_testrunplayer"
     },
     {
       "relation": "method",
@@ -101121,9 +101121,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "tests_testrunplayer_getplayerstate",
-      "confidence_score": 1.0
+      "target": "tests_testrunplayer_getplayerstate"
     },
     {
       "relation": "imports",
@@ -101143,9 +101143,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "tests_testrunplayer_resetplayerstate",
-      "confidence_score": 1.0
+      "target": "tests_testrunplayer_resetplayerstate"
     },
     {
       "relation": "imports_from",
@@ -101383,9 +101383,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_visibledicerow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow"
     },
     {
       "relation": "imports",
@@ -101394,9 +101394,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_visibledicerow_initpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_initpacklineup"
     },
     {
       "relation": "imports",
@@ -101405,9 +101405,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_visibledicerow_reorderpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_reorderpacklineup"
     },
     {
       "relation": "imports",
@@ -101416,9 +101416,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_visibledicerow_selectpacklineupdice",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_selectpacklineupdice"
     },
     {
       "relation": "imports",
@@ -101427,9 +101427,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "game_visibledicerow_syncpacklineupafterselection",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_syncpacklineupafterselection"
     },
     {
       "relation": "imports_from",
@@ -101438,9 +101438,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "store_scenestore",
-      "confidence_score": 1.0
+      "target": "store_scenestore"
     },
     {
       "relation": "imports",
@@ -101449,9 +101449,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "store_scenestore_getscenestate",
-      "confidence_score": 1.0
+      "target": "store_scenestore_getscenestate"
     },
     {
       "relation": "imports",
@@ -101460,9 +101460,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "store_scenestore_sceneactions",
-      "confidence_score": 1.0
+      "target": "store_scenestore_sceneactions"
     },
     {
       "relation": "contains",
@@ -101470,9 +101470,9 @@
       "source_file": "src/game/__tests__/visibleDiceRow.test.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_visibledicerow_test",
-      "target": "tests_visibledicerow_test_entertestpack",
-      "confidence_score": 1.0
+      "target": "tests_visibledicerow_test_entertestpack"
     },
     {
       "relation": "imports_from",
@@ -113543,9 +113543,9 @@
       "source_file": "src/phaser/scenes/boosterPack/packCardUseDispatcher.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "boosterpack_packcardusedispatcher",
-      "target": "facade_diceselection",
-      "confidence_score": 1.0
+      "target": "facade_diceselection"
     },
     {
       "relation": "contains",
@@ -114571,9 +114571,9 @@
       "source_file": "src/game/facade/pack.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_pack",
-      "target": "game_visibledicerow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow"
     },
     {
       "relation": "imports",
@@ -114582,9 +114582,9 @@
       "source_file": "src/game/facade/pack.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_pack",
-      "target": "game_visibledicerow_initpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_initpacklineup"
     },
     {
       "relation": "imports",
@@ -114593,9 +114593,9 @@
       "source_file": "src/game/facade/pack.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_pack",
-      "target": "game_visibledicerow_reorderpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_reorderpacklineup"
     },
     {
       "relation": "imports",
@@ -114604,9 +114604,9 @@
       "source_file": "src/game/facade/pack.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_pack",
-      "target": "game_visibledicerow_selectpacklineupdice",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_selectpacklineupdice"
     },
     {
       "relation": "imports",
@@ -114615,9 +114615,9 @@
       "source_file": "src/game/facade/pack.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_pack",
-      "target": "game_visibledicerow_syncpacklineupafterselection",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_syncpacklineupafterselection"
     },
     {
       "relation": "imports_from",
@@ -114919,9 +114919,9 @@
       "source_file": "src/game/facade/round.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_round",
-      "target": "game_visibledicerow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow"
     },
     {
       "relation": "imports",
@@ -114930,9 +114930,9 @@
       "source_file": "src/game/facade/round.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_round",
-      "target": "game_visibledicerow_applycopyafterselection",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_applycopyafterselection"
     },
     {
       "relation": "imports",
@@ -114941,9 +114941,9 @@
       "source_file": "src/game/facade/round.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "facade_round",
-      "target": "game_visibledicerow_applycopytoroundrow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_applycopytoroundrow"
     },
     {
       "relation": "imports_from",
@@ -123994,9 +123994,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_roundwrites",
-      "confidence_score": 1.0
+      "target": "store_roundwrites"
     },
     {
       "relation": "imports_from",
@@ -124220,9 +124220,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_roundwrites_syncrolleddicefromfaces",
-      "confidence_score": 1.0
+      "target": "store_roundwrites_syncrolleddicefromfaces"
     },
     {
       "relation": "calls",
@@ -124253,9 +124253,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_roundwrites_sethanddice",
-      "confidence_score": 1.0
+      "target": "store_roundwrites_sethanddice"
     },
     {
       "relation": "calls",
@@ -124609,9 +124609,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_runstore",
-      "confidence_score": 1.0
+      "target": "store_runstore"
     },
     {
       "relation": "imports_from",
@@ -125271,9 +125271,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_runstore_getrunstate",
-      "confidence_score": 1.0
+      "target": "store_runstore_getrunstate"
     },
     {
       "relation": "calls",
@@ -126173,9 +126173,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_scenestore",
-      "confidence_score": 1.0
+      "target": "store_scenestore"
     },
     {
       "relation": "imports_from",
@@ -126464,9 +126464,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_scenestore_sceneactions",
-      "confidence_score": 1.0
+      "target": "store_scenestore_sceneactions"
     },
     {
       "relation": "imports",
@@ -126563,9 +126563,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "store_scenestore_getscenestate",
-      "confidence_score": 1.0
+      "target": "store_scenestore_getscenestate"
     },
     {
       "relation": "calls",
@@ -127177,9 +127177,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "selectors_roundselectors",
-      "confidence_score": 1.0
+      "target": "selectors_roundselectors"
     },
     {
       "relation": "imports_from",
@@ -127560,9 +127560,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "selectors_roundselectors_selectroundphase",
-      "confidence_score": 1.0
+      "target": "selectors_roundselectors_selectroundphase"
     },
     {
       "relation": "calls",
@@ -127835,9 +127835,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "selectors_roundselectors_selecthanddice",
-      "confidence_score": 1.0
+      "target": "selectors_roundselectors_selecthanddice"
     },
     {
       "relation": "calls",
@@ -127956,9 +127956,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "selectors_roundselectors_selectrolleddice",
-      "confidence_score": 1.0
+      "target": "selectors_roundselectors_selectrolleddice"
     },
     {
       "relation": "calls",
@@ -130055,9 +130055,9 @@
       "source_file": "src/game/store/selectors/sceneSelectors.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "selectors_sceneselectors",
-      "target": "game_visibledicerow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow"
     },
     {
       "relation": "re_exports",
@@ -130066,9 +130066,9 @@
       "source_file": "src/game/store/selectors/sceneSelectors.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "selectors_sceneselectors",
-      "target": "game_visibledicerow_selectpacklineupdice",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_selectpacklineupdice"
     },
     {
       "relation": "contains",
@@ -132912,9 +132912,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_types",
-      "confidence_score": 1.0
+      "target": "game_types"
     },
     {
       "relation": "imports_from",
@@ -133319,9 +133319,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_types_die",
-      "confidence_score": 1.0
+      "target": "game_types_die"
     },
     {
       "relation": "imports",
@@ -133945,9 +133945,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_visibledicerow_applycopyafterselection",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_applycopyafterselection"
     },
     {
       "relation": "contains",
@@ -133955,9 +133955,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L66",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_visibledicerow_applycopytoroundrow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_applycopytoroundrow"
     },
     {
       "relation": "contains",
@@ -133965,9 +133965,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_visibledicerow_commitpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_commitpacklineup"
     },
     {
       "relation": "contains",
@@ -133975,9 +133975,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_visibledicerow_initpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_initpacklineup"
     },
     {
       "relation": "contains",
@@ -133985,9 +133985,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_visibledicerow_reorderpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_reorderpacklineup"
     },
     {
       "relation": "contains",
@@ -133995,9 +133995,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_visibledicerow_selectpacklineupdice",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_selectpacklineupdice"
     },
     {
       "relation": "contains",
@@ -134005,9 +134005,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow",
-      "target": "game_visibledicerow_syncpacklineupafterselection",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_syncpacklineupafterselection"
     },
     {
       "relation": "calls",
@@ -134016,9 +134016,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow_syncpacklineupafterselection",
-      "target": "game_visibledicerow_selectpacklineupdice",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_selectpacklineupdice"
     },
     {
       "relation": "calls",
@@ -134027,9 +134027,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow_initpacklineup",
-      "target": "game_visibledicerow_commitpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_commitpacklineup"
     },
     {
       "relation": "calls",
@@ -134038,9 +134038,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow_syncpacklineupafterselection",
-      "target": "game_visibledicerow_commitpacklineup",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_commitpacklineup"
     },
     {
       "relation": "calls",
@@ -134049,9 +134049,9 @@
       "source_file": "src/game/visibleDiceRow.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "game_visibledicerow_applycopyafterselection",
-      "target": "game_visibledicerow_applycopytoroundrow",
-      "confidence_score": 1.0
+      "target": "game_visibledicerow_applycopytoroundrow"
     },
     {
       "relation": "contains",
@@ -142800,9 +142800,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L537",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene",
-      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites"
     },
     {
       "relation": "method",
@@ -143080,9 +143080,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L487",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene",
-      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore"
     },
     {
       "relation": "method",
@@ -143320,9 +143320,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L1270",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_onresize",
-      "target": "scenes_boosterpackscene_boosterpackscene_syncpacktostore",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_syncpacktostore"
     },
     {
       "relation": "calls",
@@ -143397,9 +143397,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L396",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_buildlayout",
-      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore"
     },
     {
       "relation": "calls",
@@ -143507,9 +143507,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L1129",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_finishusecard",
-      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore"
     },
     {
       "relation": "calls",
@@ -143518,9 +143518,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L1312",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_handleconsumableusedasync",
-      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore"
     },
     {
       "relation": "calls",
@@ -143529,9 +143529,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L491",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_renderlineupfromstore",
-      "target": "scenes_boosterpackscene_boosterpackscene_layoutdicelineup",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_layoutdicelineup"
     },
     {
       "relation": "calls",
@@ -143573,9 +143573,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L497",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_layoutdicelineup",
-      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites"
     },
     {
       "relation": "calls",
@@ -143606,9 +143606,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L546",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_cleardicelineup",
-      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites"
     },
     {
       "relation": "calls",
@@ -143617,9 +143617,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L538",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites",
-      "target": "scenes_boosterpackscene_boosterpackscene_cancellineupdrag",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_cancellineupdrag"
     },
     {
       "relation": "calls",
@@ -143628,9 +143628,9 @@
       "source_file": "src/phaser/scenes/BoosterPackScene.ts",
       "source_location": "L1238",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_boosterpackscene_boosterpackscene_teardownpacklayout",
-      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites",
-      "confidence_score": 1.0
+      "target": "scenes_boosterpackscene_boosterpackscene_cleardicelineupsprites"
     },
     {
       "relation": "calls",
@@ -146129,9 +146129,9 @@
       "source_file": "src/phaser/scenes/GameScene.ts",
       "source_location": "L1476",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_gamescene_gamescene",
-      "target": "scenes_gamescene_gamescene_rebuildactivedicerowfromstore",
-      "confidence_score": 1.0
+      "target": "scenes_gamescene_gamescene_rebuildactivedicerowfromstore"
     },
     {
       "relation": "method",
@@ -146774,9 +146774,9 @@
       "source_file": "src/phaser/scenes/GameScene.ts",
       "source_location": "L1485",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_gamescene_gamescene_rebuildactivedicerowfromstore",
-      "target": "scenes_gamescene_gamescene_applybossrolldicestate",
-      "confidence_score": 1.0
+      "target": "scenes_gamescene_gamescene_applybossrolldicestate"
     },
     {
       "relation": "calls",
@@ -146851,9 +146851,9 @@
       "source_file": "src/phaser/scenes/GameScene.ts",
       "source_location": "L1482",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_gamescene_gamescene_rebuildactivedicerowfromstore",
-      "target": "scenes_gamescene_gamescene_syncrolldievisuals",
-      "confidence_score": 1.0
+      "target": "scenes_gamescene_gamescene_syncrolldievisuals"
     },
     {
       "relation": "calls",
@@ -147093,9 +147093,9 @@
       "source_file": "src/phaser/scenes/GameScene.ts",
       "source_location": "L1493",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_gamescene_gamescene_rebuildactivedicerowfromstore",
-      "target": "scenes_gamescene_gamescene_updatedrawbuttons",
-      "confidence_score": 1.0
+      "target": "scenes_gamescene_gamescene_updatedrawbuttons"
     },
     {
       "relation": "calls",
@@ -147236,9 +147236,9 @@
       "source_file": "src/phaser/scenes/GameScene.ts",
       "source_location": "L1469",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "scenes_gamescene_gamescene_handleconsumabletargetingapply",
-      "target": "scenes_gamescene_gamescene_rebuildactivedicerowfromstore",
-      "confidence_score": 1.0
+      "target": "scenes_gamescene_gamescene_rebuildactivedicerowfromstore"
     },
     {
       "relation": "calls",
