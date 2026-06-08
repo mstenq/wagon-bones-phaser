@@ -18,6 +18,7 @@ import { TagStack } from './TagStack';
 import { DicePouchModal } from './DicePouchModal';
 import { JourneyInfoModal } from './JourneyInfoModal';
 import { OptionsModal } from './OptionsModal';
+import { openRunModalSingleton } from './modalShell';
 import { RoundModificationsModal } from './RoundModificationsModal';
 import { startAutoSaveLoop } from '../AutoSaveManager';
 import { ensureBackgroundMusic } from '../BackgroundMusic';
@@ -505,10 +506,14 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   }
   const { modalRegion } = metrics;
   sidebar.setJourneyInfoCallback(() => {
-    new JourneyInfoModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y);
+    openRunModalSingleton(scene, 'journey-info', () =>
+      new JourneyInfoModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y),
+    );
   });
   sidebar.setOptionsCallback(() => {
-    new OptionsModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y);
+    openRunModalSingleton(scene, 'options', () =>
+      new OptionsModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y),
+    );
   });
   sidebar.setModifiersCallback(() => {
     new RoundModificationsModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y);

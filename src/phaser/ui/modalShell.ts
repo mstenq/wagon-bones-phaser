@@ -161,6 +161,62 @@ export function finalizeModal(container: GameObjects.Container, scene: Scene, de
   scene.add.existing(container);
 }
 
+const openRunModalsByScene = new WeakMap<Scene, Map<string, GameObjects.Container>>();
+
+export function isRunModalOpen(scene: Scene, modalKey: string): boolean {
+  const existing = openRunModalsByScene.get(scene)?.get(modalKey);
+  return !!existing?.active;
+}
+
+function registerRunModal(scene: Scene, modalKey: string, modal: GameObjects.Container): void {
+  let sceneModals = openRunModalsByScene.get(scene);
+  if (!sceneModals) {
+    sceneModals = new Map();
+    openRunModalsByScene.set(scene, sceneModals);
+  }
+  sceneModals.set(modalKey, modal);
+  modal.once('destroy', () => {
+    if (sceneModals!.get(modalKey) === modal) {
+      sceneModals!.delete(modalKey);
+    }
+  });
+}
+
+/** Open a run-scene modal only when that key is not already active. */
+export function openRunModalSingleton<T extends GameObjects.Container>(
+  scene: Scene,
+  modalKey: string,
+  create: () => T,
+): T | null {
+  if (isRunModalOpen(scene, modalKey)) return null;
+  const modal = create();
+  registerRunModal(scene, modalKey, modal);
+  return modal;
+}
+
+/** Transparent hit target so panel clicks do not fall through to the dim backdrop. */
+export function createModalPanelBlocker(
+  scene: Scene,
+  layout: Pick<ModalPanelLayout, 'panelX' | 'panelY' | 'panelW' | 'panelH'>,
+): GameObjects.Rectangle {
+  const { panelX, panelY, panelW, panelH } = layout;
+  const blocker = scene.add.rectangle(panelX + panelW / 2, panelY + panelH / 2, panelW, panelH, 0x000000, 0);
+  blocker.setInteractive();
+  return blocker;
+}
+
+/** Clicking the dim backdrop closes the modal; the panel blocker absorbs clicks on the panel. */
+export function wireModalBackdropDismiss(
+  dim: GameObjects.Graphics,
+  onClose: () => void,
+  layout: Pick<ModalPanelLayout, 'panelX' | 'panelY' | 'panelW' | 'panelH'>,
+  scene: Scene,
+): GameObjects.Rectangle {
+  const panelBlocker = createModalPanelBlocker(scene, layout);
+  dim.on('pointerdown', onClose);
+  return panelBlocker;
+}
+
 /** Bump interactive controls above labels drawn earlier in the same container. */
 export function bringModalInteractivesToTop(
   container: GameObjects.Container,

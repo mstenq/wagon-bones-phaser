@@ -11,7 +11,7 @@ import { SoundsSettingsModal } from './SoundsSettingsModal';
 import { PreferencesSettingsModal } from './PreferencesSettingsModal';
 import { clearAutoSave } from '../AutoSaveManager';
 import { exportGameFromScene, exportPreviousAutoSaveFromStorage, performLoadGame } from '../SaveLoadIO';
-import { createModalShell, finalizeModal } from './modalShell';
+import { createModalShell, finalizeModal, wireModalBackdropDismiss } from './modalShell';
 
 export class OptionsModal extends GameObjects.Container {
   constructor(scene: Scene, contentX: number, width: number, height: number, contentY = 0) {
@@ -27,7 +27,9 @@ export class OptionsModal extends GameObjects.Container {
     });
     const { panelX, panelY, panelW, panelH } = layout;
 
-    this.add([dim, panel, title]);
+    const close = () => this.destroy();
+    const panelBlocker = wireModalBackdropDismiss(dim, close, layout, scene);
+    this.add([dim, panelBlocker, panel, title]);
 
     const equipmentBtn = new Button(scene, panelX + panelW / 2, panelY + 78, 'Equipment', panelW - 60, 40);
     equipmentBtn.onClick(() => {
@@ -120,7 +122,7 @@ export class OptionsModal extends GameObjects.Container {
     }
 
     const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 30, 'Close', 120, 34);
-    closeBtn.onClick(() => this.destroy());
+    closeBtn.onClick(close);
     this.add(closeBtn);
 
     finalizeModal(this, scene);

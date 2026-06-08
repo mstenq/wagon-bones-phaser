@@ -15,6 +15,7 @@ import { devGrantPermit, isDevMode } from '../../game/DevMode';
 import { createLegRoundPanelsForPlayer } from './RoundInfo';
 import { ensureRoundSkipPreviewTags } from '../../game/TagSystem';
 import { TagTooltip } from './TagTooltip';
+import { wireModalBackdropDismiss } from './modalShell';
 import hands from '../../data/hands';
 
 export class JourneyInfoModal extends GameObjects.Container {
@@ -55,13 +56,24 @@ export class JourneyInfoModal extends GameObjects.Container {
       new Phaser.Geom.Rectangle(0, contentY, scene.scale.width, height),
       Phaser.Geom.Rectangle.Contains,
     );
-    this.add(dim);
 
     // Modal panel (wider to fit three round columns on the Rounds tab)
     this.panelW = Math.min(width - 40, 680);
     this.panelH = Math.min(height - 80, 560);
     this.panelX = contentX + (width - this.panelW) / 2;
     this.panelY = contentY + (height - this.panelH) / 2;
+
+    const close = () => {
+      this.tagTooltip.hide();
+      this.destroy();
+    };
+    const panelBlocker = wireModalBackdropDismiss(
+      dim,
+      close,
+      { panelX: this.panelX, panelY: this.panelY, panelW: this.panelW, panelH: this.panelH },
+      scene,
+    );
+    this.add([dim, panelBlocker]);
 
     const panel = scene.add.graphics();
     panel.fillStyle(UI.MODAL_BG, 1);
@@ -92,10 +104,7 @@ export class JourneyInfoModal extends GameObjects.Container {
 
     // Close button
     this.closeBtn = new Button(scene, this.panelX + this.panelW / 2, this.panelY + this.panelH - 38, 'Close', 120, 34);
-    this.closeBtn.onClick(() => {
-      this.tagTooltip.hide();
-      this.destroy();
-    });
+    this.closeBtn.onClick(close);
     this.add(this.closeBtn);
 
     this.bringTabsToFront();
