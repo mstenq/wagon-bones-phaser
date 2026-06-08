@@ -23,7 +23,6 @@ import { getRunState } from '../../game/store';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
 import { getBonusPackPicks } from '../../game/effects/helpers';
-import { selectEquipmentSlotsFree } from '../../game/store/selectors/runSelectors';
 import {
   getDiceSelectionMaxPicks,
   getDiceSelectionMinPicks,
@@ -46,7 +45,11 @@ import { computeFittedRowSpacing } from '../ui/SceneLayout';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import { computeDiceRowLayout, getArcOffset, getRowXPositions } from './game/diceRowGeometry';
 import { BoosterPackDiceTargetingController } from './boosterPack/BoosterPackDiceTargetingController';
-import { resolvePackCardUse } from './boosterPack/packCardUseDispatcher';
+import {
+  canAcquirePackCardItem,
+  packCardNeedsEquipSlot,
+  resolvePackCardUse,
+} from './boosterPack/packCardUseDispatcher';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import type { BoosterPackSceneState } from '../../game/store/types';
@@ -765,9 +768,8 @@ export class BoosterPackScene extends Scene {
       // Dismiss any other card's tabs first
       this.dismissActiveTab();
 
-      // Block equipment cards if no free slot
-      if (this.cardNeedsEquipSlot(sprite.item)) {
-        if (selectEquipmentSlotsFree(getRunState()) <= 0) return;
+      if (sprite.itemCard) {
+        sprite.itemCard.setTooltipContext(null, getItemDisplayContext());
       }
 
       // Lift card
@@ -834,6 +836,22 @@ export class BoosterPackScene extends Scene {
     });
   }
 
+  private buildPackUseTab(sprite: CardSprite, label: string, color: number, onUse: () => void): CardActionTabConfig {
+    const canAcquire = canAcquirePackCardItem(sprite.item);
+    return {
+      label,
+      color: canAcquire ? color : 0x555555,
+      textColor: canAcquire ? '#ffffff' : '#bbbbbb',
+      callback: () => {
+        if (!canAcquire) {
+          this.showPackCardPopup(sprite, 'No space!');
+          return;
+        }
+        onUse();
+      },
+    };
+  }
+
   private buildActionTabs(sprite: CardSprite): CardActionTabConfig[] {
     const item = sprite.item;
 
@@ -847,31 +865,21 @@ export class BoosterPackScene extends Scene {
     // BUMP_VALUE gets two tabs (+1 / -1)
     if (item.diceSelection && item.diceSelection.effectType === 'BUMP_VALUE') {
       return [
-        {
-          label: '+1\nUP',
-          color: 0x338833,
-          callback: () => {
-            item.diceSelection!.effectParams.bumpDirection = 'up';
-            this.onUseCard(sprite);
-          },
-        },
-        {
-          label: '-1\nDOWN',
-          color: 0x883333,
-          callback: () => {
-            item.diceSelection!.effectParams.bumpDirection = 'down';
-            this.onUseCard(sprite);
-          },
-        },
+        this.buildPackUseTab(sprite, '+1\nUP', 0x338833, () => {
+          item.diceSelection!.effectParams.bumpDirection = 'up';
+          this.onUseCard(sprite);
+        }),
+        this.buildPackUseTab(sprite, '-1\nDOWN', 0x883333, () => {
+          item.diceSelection!.effectParams.bumpDirection = 'down';
+          this.onUseCard(sprite);
+        }),
       ];
     }
 
     return [
-      {
-        label: 'USE',
-        color: 0x338833,
-        callback: () => this.onUseCard(sprite),
-      },
+      this.buildPackUseTab(sprite, 'USE', 0x338833, () => {
+        this.onUseCard(sprite);
+      }),
     ];
   }
 
@@ -1087,7 +1095,12 @@ export class BoosterPackScene extends Scene {
       cardNeedsDiceSelection: (packItem) => this.cardNeedsDiceSelection(packItem),
     });
 
-    if (useResult.status === 'blocked') return;
+    if (useResult.status === 'blocked') {
+      if (packCardNeedsEquipSlot(item) && !canAcquirePackCardItem(item)) {
+        this.showPackCardPopup(sprite, 'No space!');
+      }
+      return;
+    }
     if (!this.beginPackCardUse(sprite)) return;
 
     const { equipmentPopInCount, feedbackText, consumableResult } = useResult.outcome;
@@ -1161,6 +1174,35 @@ export class BoosterPackScene extends Scene {
     container.disableInteractive();
   }
 
+  private showPackCardPopup(sprite: CardSprite, message: string): void {
+    this.sound.play('sfx_cancel', { volume: 0.5 });
+
+    const matrix = sprite.container.getWorldTransformMatrix();
+    const worldX = matrix.tx;
+    const worldY = matrix.ty;
+
+    const text = this.add
+      .text(worldX, worldY - 40, message, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '24px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(1000);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 15,
+      fontSize: '32px',
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    });
+  }
+
   private showFloatingText(message: string): void {
     const text = this.add
       .text(this.contentCX, this.lineupY, message, {
@@ -1184,12 +1226,6 @@ export class BoosterPackScene extends Scene {
   }
 
   // ─── Helpers ───
-
-  private cardNeedsEquipSlot(item: PackItem): boolean {
-    if (item.category === 'equipment' && item.equipmentDef) return true;
-    if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
-    return false;
-  }
 
   private updatePicksText(): void {
     if (this.picksRemaining <= 0) {

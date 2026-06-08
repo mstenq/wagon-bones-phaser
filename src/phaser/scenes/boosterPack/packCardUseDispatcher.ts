@@ -30,6 +30,23 @@ export type PackCardUseOutcome = {
 
 export type PackCardUseResult = { status: 'blocked' } | { status: 'ready'; outcome: PackCardUseOutcome };
 
+export function packCardNeedsEquipSlot(item: PackItem): boolean {
+  if (item.category === 'equipment' && item.equipmentDef) return true;
+  if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
+  return false;
+}
+
+export function canAcquirePackCardItem(item: PackItem, run = getRunState()): boolean {
+  if (item.category === 'equipment' && item.equipmentDef) {
+    if (item.equipmentDef.aura?.id === 'ghost') return true;
+    return selectEquipmentSlotsFree(run) > 0;
+  }
+  if (item.instantEffect?.type === 'CREATE_EQUIPMENT') {
+    return selectEquipmentSlotsFree(run) > 0;
+  }
+  return true;
+}
+
 export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): PackCardUseResult {
   const run = getRunState();
   let equipmentPopInCount = 0;
@@ -53,11 +70,12 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
   }
 
   if (item.category === 'equipment' && item.equipmentDef) {
-    if (item.equipmentDef.aura?.id === 'ghost' || selectEquipmentSlotsFree(run) > 0) {
-      const instance = gameFacade.pack.acquireEquipment(item.equipmentDef, item.equipmentPreview?.modifiers);
-      gameFacade.pack.addEquipmentInstance(instance);
-      equipmentPopInCount = 1;
+    if (!canAcquirePackCardItem(item, run)) {
+      return { status: 'blocked' };
     }
+    const instance = gameFacade.pack.acquireEquipment(item.equipmentDef, item.equipmentPreview?.modifiers);
+    gameFacade.pack.addEquipmentInstance(instance);
+    equipmentPopInCount = 1;
     return { status: 'ready', outcome: { equipmentPopInCount } };
   }
 
@@ -108,6 +126,9 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
   }
 
   if (item.instantEffect) {
+    if (!canAcquirePackCardItem(item, run)) {
+      return { status: 'blocked' };
+    }
     const instantResult = gameFacade.pack.applyInstantEffect(item.instantEffect);
     equipmentPopInCount = Math.max(
       equipmentPopInCount,
