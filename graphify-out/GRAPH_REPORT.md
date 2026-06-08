@@ -1,16 +1,16 @@
 # Graph Report - wagon-bones-phaser  (2026-06-07)
 
 ## Corpus Check
-- 408 files · ~35,039,773 words
+- 415 files · ~35,043,592 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4354 nodes · 12467 edges · 242 communities (215 shown, 27 thin omitted)
+- 4432 nodes · 12789 edges · 254 communities (221 shown, 33 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `199a063e`
+- Built from commit: `fc549da5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -33,7 +33,6 @@
 - [[_COMMUNITY_Boss Effects|Boss Effects]]
 - [[_COMMUNITY_Auto-Save Storage|Auto-Save Storage]]
 - [[_COMMUNITY_Booster Pack Data|Booster Pack Data]]
-- [[_COMMUNITY_Scoring Pipeline|Scoring Pipeline]]
 - [[_COMMUNITY_Booster Pack Scene|Booster Pack Scene]]
 - [[_COMMUNITY_Equipment Animations|Equipment Animations]]
 - [[_COMMUNITY_Frontier & Item Defs|Frontier & Item Defs]]
@@ -54,6 +53,7 @@
 - [[_COMMUNITY_Score Animations|Score Animations]]
 - [[_COMMUNITY_Trail Events Data|Trail Events Data]]
 - [[_COMMUNITY_Effect Helpers|Effect Helpers]]
+- [[_COMMUNITY_Difficulty & Stats|Difficulty & Stats]]
 - [[_COMMUNITY_Trail Event Scene|Trail Event Scene]]
 - [[_COMMUNITY_Bosses & Hands|Bosses & Hands]]
 - [[_COMMUNITY_Trail Event Logic|Trail Event Logic]]
@@ -68,22 +68,22 @@
 - [[_COMMUNITY_Game & Round State|Game & Round State]]
 - [[_COMMUNITY_Store Subscriptions|Store Subscriptions]]
 - [[_COMMUNITY_Tag Stack UI|Tag Stack UI]]
-- [[_COMMUNITY_Shop Buy Actions|Shop Buy Actions]]
+- [[_COMMUNITY_Community 54|Community 54]]
 - [[_COMMUNITY_Item Card Hints|Item Card Hints]]
-- [[_COMMUNITY_Dice Selection UI|Dice Selection UI]]
+- [[_COMMUNITY_Community 56|Community 56]]
 - [[_COMMUNITY_Trail Event Assets|Trail Event Assets]]
 - [[_COMMUNITY_Card Tooltip Tracking|Card Tooltip Tracking]]
 - [[_COMMUNITY_Consumable Bar|Consumable Bar]]
 - [[_COMMUNITY_Loaded Dice Effects|Loaded Dice Effects]]
-- [[_COMMUNITY_Leg Round Panels|Leg Round Panels]]
+- [[_COMMUNITY_Community 61|Community 61]]
 - [[_COMMUNITY_Dice Selection Picks|Dice Selection Picks]]
 - [[_COMMUNITY_Cluster 63|Cluster 63]]
 - [[_COMMUNITY_Run State Reads|Run State Reads]]
-- [[_COMMUNITY_Dice Selection Effects|Dice Selection Effects]]
+- [[_COMMUNITY_Community 65|Community 65]]
 - [[_COMMUNITY_Cluster 66|Cluster 66]]
-- [[_COMMUNITY_Cluster 67|Cluster 67]]
+- [[_COMMUNITY_Community 67|Community 67]]
 - [[_COMMUNITY_Die Scoring Patches|Die Scoring Patches]]
-- [[_COMMUNITY_Cluster 69|Cluster 69]]
+- [[_COMMUNITY_Community 69|Community 69]]
 - [[_COMMUNITY_Action Tabs & HUD|Action Tabs & HUD]]
 - [[_COMMUNITY_Cluster 71|Cluster 71]]
 - [[_COMMUNITY_Cluster 72|Cluster 72]]
@@ -94,21 +94,22 @@
 - [[_COMMUNITY_Payout Scene|Payout Scene]]
 - [[_COMMUNITY_Cluster 78|Cluster 78]]
 - [[_COMMUNITY_Community 79|Community 79]]
-- [[_COMMUNITY_Trail Round Effects|Trail Round Effects]]
-- [[_COMMUNITY_Enhancement Payouts|Enhancement Payouts]]
-- [[_COMMUNITY_Action Tabs Layout|Action Tabs Layout]]
+- [[_COMMUNITY_Community 80|Community 80]]
+- [[_COMMUNITY_Community 81|Community 81]]
+- [[_COMMUNITY_Cluster 82|Cluster 82]]
+- [[_COMMUNITY_Community 83|Community 83]]
 - [[_COMMUNITY_Cluster 84|Cluster 84]]
 - [[_COMMUNITY_Community 85|Community 85]]
 - [[_COMMUNITY_Professions Data|Professions Data]]
 - [[_COMMUNITY_Lifecycle Orchestrators|Lifecycle Orchestrators]]
 - [[_COMMUNITY_Cluster 88|Cluster 88]]
-- [[_COMMUNITY_Cluster 89|Cluster 89]]
-- [[_COMMUNITY_Cluster 90|Cluster 90]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
 - [[_COMMUNITY_Cluster 91|Cluster 91]]
 - [[_COMMUNITY_Community 92|Community 92]]
-- [[_COMMUNITY_Cluster 93|Cluster 93]]
+- [[_COMMUNITY_Community 93|Community 93]]
 - [[_COMMUNITY_Cluster 94|Cluster 94]]
-- [[_COMMUNITY_Cluster 95|Cluster 95]]
+- [[_COMMUNITY_Community 95|Community 95]]
 - [[_COMMUNITY_Cluster 96|Cluster 96]]
 - [[_COMMUNITY_Cluster 98|Cluster 98]]
 - [[_COMMUNITY_Cluster 99|Cluster 99]]
@@ -160,15 +161,18 @@
 - [[_COMMUNITY_Community 145|Community 145]]
 - [[_COMMUNITY_Community 146|Community 146]]
 - [[_COMMUNITY_Community 147|Community 147]]
-- [[_COMMUNITY_Community 148|Community 148]]
 - [[_COMMUNITY_Community 149|Community 149]]
-- [[_COMMUNITY_Community 150|Community 150]]
+- [[_COMMUNITY_Community 151|Community 151]]
 - [[_COMMUNITY_Community 152|Community 152]]
 - [[_COMMUNITY_Community 153|Community 153]]
 - [[_COMMUNITY_Community 154|Community 154]]
+- [[_COMMUNITY_Community 155|Community 155]]
+- [[_COMMUNITY_Community 156|Community 156]]
 - [[_COMMUNITY_Community 157|Community 157]]
+- [[_COMMUNITY_Community 158|Community 158]]
 - [[_COMMUNITY_Community 159|Community 159]]
 - [[_COMMUNITY_Community 160|Community 160]]
+- [[_COMMUNITY_Community 161|Community 161]]
 - [[_COMMUNITY_Community 162|Community 162]]
 - [[_COMMUNITY_Community 163|Community 163]]
 - [[_COMMUNITY_Community 164|Community 164]]
@@ -196,6 +200,8 @@
 - [[_COMMUNITY_Community 186|Community 186]]
 - [[_COMMUNITY_Community 187|Community 187]]
 - [[_COMMUNITY_Community 188|Community 188]]
+- [[_COMMUNITY_Community 189|Community 189]]
+- [[_COMMUNITY_Community 190|Community 190]]
 - [[_COMMUNITY_Community 191|Community 191]]
 - [[_COMMUNITY_Community 192|Community 192]]
 - [[_COMMUNITY_Community 193|Community 193]]
@@ -224,7 +230,9 @@
 - [[_COMMUNITY_Community 216|Community 216]]
 - [[_COMMUNITY_Community 217|Community 217]]
 - [[_COMMUNITY_Community 218|Community 218]]
+- [[_COMMUNITY_Community 219|Community 219]]
 - [[_COMMUNITY_Community 220|Community 220]]
+- [[_COMMUNITY_Community 221|Community 221]]
 - [[_COMMUNITY_Community 222|Community 222]]
 - [[_COMMUNITY_Community 223|Community 223]]
 - [[_COMMUNITY_Community 224|Community 224]]
@@ -233,6 +241,8 @@
 - [[_COMMUNITY_Community 227|Community 227]]
 - [[_COMMUNITY_Community 228|Community 228]]
 - [[_COMMUNITY_Community 229|Community 229]]
+- [[_COMMUNITY_Community 230|Community 230]]
+- [[_COMMUNITY_Community 231|Community 231]]
 - [[_COMMUNITY_Community 232|Community 232]]
 - [[_COMMUNITY_Community 233|Community 233]]
 - [[_COMMUNITY_Community 234|Community 234]]
@@ -240,6 +250,7 @@
 - [[_COMMUNITY_Community 236|Community 236]]
 - [[_COMMUNITY_Community 237|Community 237]]
 - [[_COMMUNITY_Community 238|Community 238]]
+- [[_COMMUNITY_Community 239|Community 239]]
 - [[_COMMUNITY_Community 240|Community 240]]
 - [[_COMMUNITY_Community 241|Community 241]]
 - [[_COMMUNITY_Community 242|Community 242]]
@@ -254,64 +265,64 @@
 - [[_COMMUNITY_Community 252|Community 252]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `getRunState()` - 230 edges
+1. `getRunState()` - 232 edges
 2. `PlayerState` - 144 edges
 3. `resolveEquipmentList()` - 98 edges
-4. `ItemCard` - 93 edges
-5. `Die` - 91 edges
-6. `DiceSprite` - 85 edges
-7. `GameScene` - 77 edges
+4. `Die` - 96 edges
+5. `ItemCard` - 93 edges
+6. `DiceSprite` - 92 edges
+7. `GameScene` - 81 edges
 8. `EquipmentInstance` - 75 edges
 9. `HandType` - 74 edges
-10. `BoosterPackScene` - 57 edges
+10. `BoosterPackScene` - 64 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `RowMeasurement` --references--> `HintSegment`  [EXTRACTED]
-  src/phaser/ui/itemCard/ItemCardHints.ts → src/data/items.ts
+- `getAuraTagDefForAuraId()` --calls--> `getTrailTagById()`  [EXTRACTED]
+  src/game/TagSystem.ts → src/data/trail_tags.ts
 - `BossScorePreview` --references--> `HandType`  [EXTRACTED]
   src/game/BossEffectsSystem.ts → src/game/types.ts
 - `animateGrantToConsumableBar()` --calls--> `getConsumableAtlasKey()`  [EXTRACTED]
   src/phaser/animations/ScoreAnimation.ts → src/game/ConsumablesSystem.ts
+- `measurePickRate()` --calls--> `getRandomSupplyDef()`  [EXTRACTED]
+  src/game/__tests__/supplyCardWeights.test.ts → src/game/ConsumablesSystem.ts
 - `applyConsumableGrant()` --calls--> `getConsumableDefById()`  [EXTRACTED]
   src/phaser/animations/ScoreAnimation.ts → src/game/ConsumablesSystem.ts
-- `DiceSelectionState` --references--> `Die`  [EXTRACTED]
-  src/game/DiceSelectionSystem.ts → src/game/types.ts
 
 ## Import Cycles
 - 3-file cycle: `src/game/facade/index.ts -> src/game/facade/meta.ts -> src/game/store/index.ts -> src/game/facade/index.ts`
 - 3-file cycle: `src/game/facade/index.ts -> src/game/facade/pack.ts -> src/game/store/index.ts -> src/game/facade/index.ts`
 - 3-file cycle: `src/game/facade/index.ts -> src/game/facade/trail.ts -> src/game/store/index.ts -> src/game/facade/index.ts`
-- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/applyMutations.ts -> src/game/ConsumablesSystem.ts`
-- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/applyMutations.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
-- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/playback/feedback.ts -> src/game/playback/types.ts -> src/game/ConsumablesSystem.ts`
-- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onRoundStart.ts -> src/game/store/actions/diceActions.ts -> src/game/EquipmentEffects.ts`
-- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/economyActions.ts -> src/game/equipmentUtils.ts -> src/game/BossEffectsSystem.ts`
-- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/EquipmentEffects.ts -> src/game/BossEffectsSystem.ts`
-- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/store/actions/equipmentActions.ts -> src/game/BossEffectsSystem.ts`
+- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/afterHandScored.ts -> src/game/ConsumablesSystem.ts`
+- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/afterHandScored.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
 - 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/DiceSystem.ts -> src/game/equipmentUtils.ts -> src/game/BossEffectsSystem.ts`
 - 3-file cycle: `src/game/playback/index.ts -> src/game/playback/queue.ts -> src/game/store/runStore.ts -> src/game/playback/index.ts`
 - 3-file cycle: `src/game/playback/index.ts -> src/game/store/playbackEnqueue.ts -> src/game/store/runStore.ts -> src/game/playback/index.ts`
-- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onSell.ts -> src/game/ConsumablesSystem.ts`
-- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onSell.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
-- 3-file cycle: `src/data/items.ts -> src/game/equipmentUtils.ts -> src/game/ItemsSystem.ts -> src/data/items.ts`
-- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/afterHandScored.ts -> src/game/ConsumablesSystem.ts`
-- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/afterHandScored.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
+- 3-file cycle: `src/game/DiceSelectionSystem.ts -> src/game/store/runStore.ts -> src/game/store/types.ts -> src/game/DiceSelectionSystem.ts`
+- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onRoundStart.ts -> src/game/store/actions/diceActions.ts -> src/game/EquipmentEffects.ts`
+- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/lifecycle/onShopEnd.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
+- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/playback/feedback.ts -> src/game/playback/types.ts -> src/game/ConsumablesSystem.ts`
+- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/EquipmentEffects.ts -> src/game/BossEffectsSystem.ts`
+- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/progressionActions.ts -> src/game/store/actions/equipmentActions.ts -> src/game/BossEffectsSystem.ts`
+- 3-file cycle: `src/game/ConsumablesSystem.ts -> src/game/EquipmentEffects.ts -> src/game/effects/applyMutations.ts -> src/game/ConsumablesSystem.ts`
+- 3-file cycle: `src/game/EquipmentEffects.ts -> src/game/effects/applyMutations.ts -> src/game/store/actions/consumableActions.ts -> src/game/EquipmentEffects.ts`
+- 3-file cycle: `src/game/BossEffectsSystem.ts -> src/game/store/actions/economyActions.ts -> src/game/equipmentUtils.ts -> src/game/BossEffectsSystem.ts`
 - 4-file cycle: `src/game/facade/gameFacade.ts -> src/game/facade/meta.ts -> src/game/store/index.ts -> src/game/facade/index.ts -> src/game/facade/gameFacade.ts`
 - 4-file cycle: `src/game/facade/gameFacade.ts -> src/game/facade/pack.ts -> src/game/store/index.ts -> src/game/facade/index.ts -> src/game/facade/gameFacade.ts`
+- 4-file cycle: `src/game/facade/gameFacade.ts -> src/game/facade/trail.ts -> src/game/store/index.ts -> src/game/facade/index.ts -> src/game/facade/gameFacade.ts`
 
-## Communities (242 total, 27 thin omitted)
+## Communities (254 total, 33 thin omitted)
 
 ### Community 0 - "App Shell & Scenes"
-Cohesion: 0.05
-Nodes (42): DiceEnhancementDef, diceEnhancements, PipEnhancementDef, pipEnhancements, ANIM, DICE, clamp01(), computeDiceDisplayScale() (+34 more)
+Cohesion: 0.14
+Nodes (8): getBossEquipmentDisplayOrder(), isBossEquipmentHidden(), isBossEquipmentHintsHidden(), isEquipmentDisabledByBoss(), devGetAllAuras(), selectEquipmentBarSlotLabel(), selectEquipmentBarSnapshot(), EquipmentBar
 
 ### Community 1 - "Store Actions & Selectors"
-Cohesion: 0.21
-Nodes (15): registry, EquipmentInstance, RNG_STREAMS, rngInt(), rngOneDecimal(), RngStream, StreamPrng, dispatchLifecycle() (+7 more)
+Cohesion: 0.11
+Nodes (19): CardTemplate, PermitDef, devLookupPack(), devLookupPermit(), SerializedShopItem, serializeEquipmentInstance(), serializePackItem(), ShopItem (+11 more)
 
 ### Community 2 - "Types & Formatting"
-Cohesion: 0.06
-Nodes (20): HandUpgradeAnimConfig, LayoutMode, TEXTURES, DecimalSource, formatMult(), formatScientific(), formatScore(), formatScoreComponent() (+12 more)
+Cohesion: 0.10
+Nodes (5): HandUpgradeAnimConfig, LayoutMode, getRunProfession(), LayoutMetrics, Sidebar
 
 ### Community 3 - "Game Scene Core"
 Cohesion: 0.05
@@ -319,67 +330,67 @@ Nodes (39): Architecture, Art filter tuning, Asset description, Card loop shape,
 
 ### Community 5 - "Equipment & Tags"
 Cohesion: 0.12
-Nodes (41): getBossById(), COPY_INCOMPATIBLE_EFFECTS, GAMEPLAY, gt(), setUrlDevModeForTests(), createPouch(), playDayAndGetScore(), expectMirrorLakeDoesNotChangeScore() (+33 more)
+Nodes (43): getBossById(), TagDescriptionContext, gt(), createPouch(), initRunRng(), HandType, playDayAndGetScore(), expectMirrorLakeDoesNotChangeScore() (+35 more)
 
 ### Community 6 - "Serialization & Tooltips"
-Cohesion: 0.12
-Nodes (6): PackInstance, devLookupPermit(), ShopScene, selectTrailGuidesFree(), getSceneState(), ShopSceneState
+Cohesion: 0.10
+Nodes (7): PackInstance, isDevMode(), ShopScene, selectTrailGuidesFree(), selectShopAffordabilityInputs(), ShopSceneState, computeFittedRowSpacing()
 
 ### Community 7 - "Item Card UI"
-Cohesion: 0.19
-Nodes (18): dieBlurPadding(), dieHalfSize(), effectRadius(), hostParticleScale(), isDieMount(), tightDieBounds(), addGlowLayer(), addSpriteLayer() (+10 more)
+Cohesion: 0.06
+Nodes (52): syncPawnBrokerSellValueFromStore(), createInitialRound(), drawRandomHandIds(), patchRound(), requireRound(), syncDieSpriteFromScore(), initRoundSession(), startRoundSession() (+44 more)
 
 ### Community 8 - "Shop Generation"
-Cohesion: 0.09
-Nodes (25): FrontierDiceSelectionDef, FrontierEncounterDef, frontierEncounters, FrontierInstantEffect, FrontierInstantEffectType, HintSegment, ItemDef, oddsText() (+17 more)
-
-### Community 9 - "Dev Modals & Catalog"
-Cohesion: 0.06
-Nodes (45): getPackDefById(), devGetAllBosses(), devGrantPermit(), devLookupPack(), DevLookupResult, devStartBossRound(), initDevModeFromUrl(), isDevMode() (+37 more)
+Cohesion: 0.12
+Nodes (16): FrontierEncounterDef, ItemDef, SupplyCardDef, supplyCards, SupplyDiceSelectionDef, SupplyInstantEffect, SupplyInstantEffectType, getTrailGuideById() (+8 more)
 
 ### Community 10 - "Effect Registry"
 Cohesion: 0.05
 Nodes (38): Architecture, Card vs Die Differences, Color palette (hex), Dependencies, File Layout, Fire Aura Effect — Complete Rebuild Guide, Frame + art refs, Game Data Wiring (optional) (+30 more)
 
 ### Community 11 - "Audio Preferences"
-Cohesion: 0.16
-Nodes (20): AudioPreferences, clamp01(), DEFAULT_AUDIO_PREFERENCES, getAudioPreferences(), initAudioPreferences(), normalizeAudio(), readFromStorage(), setAudioPreferences() (+12 more)
+Cohesion: 0.12
+Nodes (30): ShopBuyFailReason, ShopBuyResult, EQUIPMENT_MODIFIER, getModifierHintRows(), getModifierTooltipLines(), ModifierTooltipLine, acquireEquipmentInstance(), applyEquipmentModifierDestructions() (+22 more)
 
 ### Community 12 - "Round FSM Actions"
 Cohesion: 0.07
-Nodes (44): requireRound(), ScoreAnimationConfig, syncDieSpriteFromScore(), initRoundSession(), startRoundSession(), BeginRoundSessionOptions, EndDayOptions, EndDayResult (+36 more)
+Nodes (57): progressionActions, getBossDistanceMultiplier(), getProfessionById(), ProfessionModifiers, professions, ProfessionSpecialEquipment, ProfessionStartingEnhancement, ProfessionStartingSupplyCard (+49 more)
 
 ### Community 13 - "Save/Load & RNG"
-Cohesion: 0.08
-Nodes (42): InstantEffect, buildStreamsFromSeed(), generateRunSeed(), getRunRngState(), getRunSeed(), initRunRng(), restoreRunRng(), RunRngState (+34 more)
+Cohesion: 0.11
+Nodes (30): RunRngState, ACTIVE_SCENES, applySaveSnapshot(), buildSaveSnapshot(), BuildSaveSnapshotOptions, deserializeEquipmentInstance(), deserializeGameRound(), deserializePackItem() (+22 more)
 
 ### Community 14 - "Dice Row Layout"
-Cohesion: 0.08
-Nodes (29): roundActions, setupActions, resetRunRng(), selectBalance(), SelectorSubscribeOptions, subscribeRoundSelector(), subscribeRunSelector(), subscribeSceneSelector() (+21 more)
+Cohesion: 0.23
+Nodes (11): HandDef, buildHandResult(), buildResult(), createRunStartingPouch(), createStartingDice(), detectBestHandFromDice(), drawFromPouch(), findLongestStraight() (+3 more)
 
 ### Community 15 - "Boss Effects"
-Cohesion: 0.05
-Nodes (66): createInitialRound(), drawRandomHandIds(), patchRound(), BossEffectType, bosses, getEligibleBossesForLeg(), isFinisherLeg(), getHandByType() (+58 more)
+Cohesion: 0.11
+Nodes (37): isBossEffectNegated(), applyBossAfterRoll(), applyBossAfterScore(), applyBossOnDayStart(), applyBossOnScore(), BossRoundConfigMods, BossScorePreview, canPlayHandType() (+29 more)
 
 ### Community 16 - "Auto-Save Storage"
 Cohesion: 0.05
 Nodes (41): Algorithm notes, Arcane Aura Effect — Complete Rebuild Guide, Architecture, Card vs Die Differences, Colors, Dependencies, Die hover/strike gap (current repo), Effect picker (dev UI) (+33 more)
 
 ### Community 17 - "Booster Pack Data"
-Cohesion: 0.09
-Nodes (41): equipment(), removeEquipmentAtIndices(), getPackById(), PackCategory, PackDef, packs, PackTier, ALL_STICKERS (+33 more)
+Cohesion: 0.10
+Nodes (37): getPackById(), PackCategory, PackDef, packs, PackTier, ALL_STICKERS, buildFrontierPackItem(), buildSupplyPackItem() (+29 more)
 
-### Community 18 - "Scoring Pipeline"
-Cohesion: 0.12
-Nodes (43): getEnhancementScoreDestroyChance(), createEmptyScoringMutations(), mergeMutations(), applyEquipmentAuraForSlot(), applyEquipmentAuras(), dieMatchesParity(), dieMatchesPip(), hasStackedDeck() (+35 more)
+### Community 19 - "Booster Pack Scene"
+Cohesion: 0.10
+Nodes (6): getBonusPackPicks(), getPackDefById(), PackDefinition, computeDiceRowLayout(), BoosterPackScene, getSceneState()
 
 ### Community 20 - "Equipment Animations"
-Cohesion: 0.27
-Nodes (11): enqueueToastFeedback(), clearPlayback(), enqueuePlayback(), takePlayback(), enqueueConsumablePlayback(), enqueueDayEndDestructions(), enqueueHandUpgrades(), enqueueModifierFeedback() (+3 more)
+Cohesion: 0.15
+Nodes (15): animateGrantToConsumableBar(), applyConsumableGrant(), ENHANCEMENT_NAMES, floatingText(), getSoundForType(), playAgainRetrigger(), popupForDie(), popupForEquip() (+7 more)
 
 ### Community 21 - "Frontier & Item Defs"
-Cohesion: 0.17
-Nodes (15): LIFECYCLE_MIRROR_DOUBLES, CheckLoadedChanceOptions, EQUIPMENT_WALK_PRESETS, EquipmentWalkPolicy, formatLoadedDieOddsNote(), formatLoadedFaceOdds(), getLoadedFaceRollChance(), hasGamblersDiceCup() (+7 more)
+Cohesion: 0.19
+Nodes (16): getPermitById(), PermitEffect, permits, PermitStage, generateShopPermit(), getAllPermits(), getAvailablePermits(), getPermitBossRerollLimit() (+8 more)
+
+### Community 22 - "Cluster 22"
+Cohesion: 0.13
+Nodes (39): createEmptyScoringMutations(), mergeMutations(), dieMatchesParity(), dieMatchesPip(), forEachEquipmentScoring(), getConfigModifiers(), hasStackedDeck(), buildHeldRetriggerSources() (+31 more)
 
 ### Community 23 - "Item Card Layout"
 Cohesion: 0.05
@@ -387,123 +398,135 @@ Nodes (37): Architecture, Aura ID Mapping (UI), Card props, Card vs Die Differen
 
 ### Community 24 - "Score Math & Targets"
 Cohesion: 0.13
-Nodes (32): getBossDistanceMultiplier(), getBaseTargetMilesForLeg(), SHARED_EARLY, tableForDifficulty(), TARGET_MILES_BY_LEG_DEADLY_STRING, TARGET_MILES_BY_LEG_ROUGH_STRING, TARGET_MILES_BY_LEG_STRING, applyHolyAuraXMult() (+24 more)
+Nodes (11): CardActionTabConfig, ActionTabInstance, ActionTabsLayout, ActionTabsOptions, SideTabCorners, SideTabDirection, CardWobbleMode, CardWobbleState (+3 more)
 
 ### Community 25 - "Permits & Shop"
-Cohesion: 0.18
-Nodes (17): getPermitById(), PermitEffect, permits, PermitStage, generateShopPermit(), getAllPermits(), getAvailablePermits(), getPermitBossRerollLimit() (+9 more)
+Cohesion: 0.07
+Nodes (36): roundActions, shopSceneActions, RoundSkipPreviewMeta, getRunRoundBackgroundIndex(), pickGameRoundBackgroundIndex(), resetRunRng(), TrailEventModifiers, TrailRoundEffects (+28 more)
 
 ### Community 26 - "Pack Card Use Flow"
-Cohesion: 0.18
-Nodes (14): createStrikePath(), drawEdgeBand(), drawFlameLane(), FIRE_TUNE, Point, ringDistance01(), createFireArtFilters(), FireArtFilterState (+6 more)
+Cohesion: 0.14
+Nodes (16): drawEdgeBand(), drawFlameLane(), FIRE_TUNE, Point, ringDistance01(), EFFECT_TEXTURE_KEYS, EffectTextureKey, createFireArtFilters() (+8 more)
 
 ### Community 27 - "Hint Display System"
-Cohesion: 0.26
-Nodes (15): clearAutoSaveStorage(), AUTOSAVE_SCENE_KEYS, autoSaveTick(), clearAutoSave(), devAutoSaveWarn(), findActiveAutoSaveScene(), flushAutoSave(), initAutoSave() (+7 more)
+Cohesion: 0.20
+Nodes (13): applyMusicPreferences(), getSoundDefaultVolume(), isSoundMarker(), MUSIC_KEYS, patchGameAudio(), scaleSfxPlayArgs(), scaleSoundConfig(), setSoundVolume() (+5 more)
 
 ### Community 28 - "Consumables System"
 Cohesion: 0.12
-Nodes (44): consumableActions, diceActions, shopBuyActions, PackCardUseContext, PackCardUseOutcome, PackCardUseResult, resolvePackCardUse(), PackOpenResult (+36 more)
+Nodes (37): pickEquipmentAuraWeighted(), applyRunInstantEffect(), bumpAllSellValues(), canBuyAndUseConsumableInShop(), canUseConsumableInShop(), ConsumableCategory, createAllHandUpgrades(), createConsumableInstance() (+29 more)
 
 ### Community 29 - "Dice Enhancements"
-Cohesion: 0.07
-Nodes (3): CardSprite, ActionTabsHandle, ItemCard
+Cohesion: 0.09
+Nodes (44): writeEquipment(), applyScoringMutations(), COPY_INCOMPATIBLE_EFFECTS, LIFECYCLE_MIRROR_DOUBLES, applyDestroy(), CheckLoadedChanceOptions, EQUIPMENT_WALK_PRESETS, EquipmentWalkPolicy (+36 more)
 
 ### Community 30 - "Scene Layout Metrics"
-Cohesion: 0.14
-Nodes (15): getSoundDefaultVolume(), isSoundMarker(), MUSIC_KEYS, patchGameAudio(), scaleSfxPlayArgs(), scaleSoundConfig(), setSoundVolume(), SoundConfig (+7 more)
+Cohesion: 0.10
+Nodes (31): DICE_AURA_ORDER, DiceAuraDef, diceAuras, getDiceAuraById(), EQUIPMENT_AURA_ORDER, getItemAuraDefById(), itemAuras, rollDiceAura() (+23 more)
 
 ### Community 31 - "Dice Sprite Visuals"
-Cohesion: 0.11
-Nodes (4): DiceCardVisualResult, DiceSprite, setStickerOrbitOrientation(), setStickerOrbitPosition()
+Cohesion: 0.15
+Nodes (26): applyConsumableAnimEvents(), playConsumableAnimEvent(), playEquipmentCreatedPopIn(), animateEquipmentFireDestruction(), animateEquipmentFireDestructionParallel(), animateEquipmentFireDestructionSequence(), EquipmentFireDestruction, EquipmentFireDestructionOptions (+18 more)
 
 ### Community 32 - "Dice & Item Auras"
 Cohesion: 0.11
-Nodes (27): DICE_AURA_ORDER, DiceAuraDef, diceAuras, getDiceAuraById(), EQUIPMENT_AURA_ORDER, getItemAuraDefById(), itemAuras, pickDiceAuraWeighted() (+19 more)
+Nodes (18): playCenterToast(), ConsumableAnimEvent, enqueueToastFeedback(), clearPlayback(), enqueuePlayback(), takePlayback(), ModifierFeedbackPayload, PLAYBACK_COMMAND_KINDS (+10 more)
+
+### Community 33 - "Playback Queue"
+Cohesion: 0.13
+Nodes (26): generateShopPacks(), SHOP_WEIGHTS, hasPermitDiceInShop(), applyInjectTagsToShopStock(), storedFromEquipmentInstance(), appendShopStockForSlots(), applyFreeShopCosts(), applyShopTagModsToRows() (+18 more)
 
 ### Community 34 - "Equipment Definitions"
 Cohesion: 0.04
 Nodes (47): Actions, Architecture, Auto-save — `src/game/AutoSave.ts`, Avoid, Barrel export index, Boss, trail, tags, packs, permits, Consumables, Core types (+39 more)
 
 ### Community 35 - "Boss Equipment UI"
-Cohesion: 0.08
-Nodes (6): playRollAnimation(), GameScene, selectHandDice(), selectRerollsRemaining(), selectRolledDice(), selectRoundConfig()
+Cohesion: 0.10
+Nodes (4): playRollAnimation(), GameScene, selectHandDice(), selectRolledDice()
 
 ### Community 36 - "Score Animations"
-Cohesion: 0.12
-Nodes (30): shopSceneActions, generateShopPacks(), SHOP_WEIGHTS, ShopTagModifications, selectIsFirstShopVisit(), storedFromEquipmentInstance(), appendShopStockForSlots(), applyFreeShopCosts() (+22 more)
+Cohesion: 0.11
+Nodes (14): ItemDisplayResult, ItemCardBadges, ItemCardChrome, ItemCardContentResult, CardData, CardTextureSource, ItemCardLayout, ItemCardOptions (+6 more)
 
 ### Community 37 - "Trail Events Data"
-Cohesion: 0.14
-Nodes (26): createEmptyModifiers(), TrailEventModifiers, TrailRoundEffects, applySpyglassAvoid(), applySpyglassInvestigate(), eventHasEffect(), filterEventsByLeg(), filterStandoffBlockedEvents() (+18 more)
+Cohesion: 0.13
+Nodes (32): getTrailEventById(), getTrailEventMinimumLeg(), TrailEventCategory, TrailEventChoice, TrailEventCondition, TrailEventConditionType, TrailEventEffectType, TrailEventOutcome (+24 more)
 
 ### Community 38 - "Effect Helpers"
-Cohesion: 0.11
-Nodes (23): AuraEffectHost, AuraEffectHostOptions, BusEntry, buses, getBus(), registerAuraEffectHost(), createDefaultEffectFrame(), createEffectArtTarget() (+15 more)
+Cohesion: 0.12
+Nodes (21): AuraEffectHost, AuraEffectHostOptions, BusEntry, buses, getBus(), registerAuraEffectHost(), createDefaultEffectFrame(), createEffectArtTarget() (+13 more)
+
+### Community 39 - "Difficulty & Stats"
+Cohesion: 0.13
+Nodes (9): diceRowElasticTweenProps(), DieRowSpriteLayout, DieRowSpriteTweenHooks, DieRowTweenSprite, tweenDiceSelectLiftY(), tweenDieRowSpriteLayout(), getRowXPositions(), PlayAreaDiceControllerDeps (+1 more)
 
 ### Community 40 - "Trail Event Scene"
 Cohesion: 0.12
-Nodes (6): TrailEventChoice, TrailEventDef, TrailEventSaveData, trailEventImageKey(), filterEquipmentEligibleForTrailSacrifice(), TrailEventScene
+Nodes (8): TrailEventDef, TrailEventSaveData, trailEventImageKey(), filterEquipmentEligibleForTrailSacrifice(), TrailEventResult, flushAutoSave(), TrailEventScene, LayoutResult
 
 ### Community 41 - "Bosses & Hands"
-Cohesion: 0.29
-Nodes (10): PACK_EXCLUDED_SUPPLY_IDS, getRandomSupplyDef(), parseWeightSupplyFromParams(), expectedRelativeRate(), getSupplyCardWeightForItem(), getSupplyCardWeightMultiplier(), pickWeightedSupplyCard(), pickWeightedSupplyCardsWithoutReplacement() (+2 more)
+Cohesion: 0.14
+Nodes (18): BossDef, BossEffectType, bosses, getEligibleBossesForLeg(), isFinisherLeg(), devGetAllBosses(), devGrantPermit(), DevLookupResult (+10 more)
 
 ### Community 42 - "Trail Event Logic"
-Cohesion: 0.17
-Nodes (24): EQUIPMENT_MODIFIER, getModifierHintRows(), getModifierTooltipLines(), ModifierTooltipLine, acquireEquipmentInstance(), acquireRewardEquipmentInstance(), applyModifiersToEquipment(), getEquipmentPurchasePrice() (+16 more)
+Cohesion: 0.26
+Nodes (12): dieBlurPadding(), dieBlurStrength(), dieHalfSize(), effectRadius(), hostParticleScale(), isDieMount(), tightDieBounds(), applyArcaneLayerBlur() (+4 more)
 
 ### Community 43 - "Run RNG & Packs"
-Cohesion: 0.16
-Nodes (20): selectRoundTotalMiles(), selectRunSidebarModel(), RoundModificationsModal, CardBarWidths, clamp01(), computeCardBarDisplayScale(), computeCardBarMetrics(), computeCardBarWidths() (+12 more)
+Cohesion: 0.19
+Nodes (10): DiceRowBackdrop, clamp01(), computeDiceDisplayScale(), computeDiceRowBackdropBounds(), computeDiceRowEdgePad(), computeDiceSpacing(), DiceRowBackdropBounds, DiceRowBackdropLayout (+2 more)
 
 ### Community 44 - "Equipment Pool Gen"
-Cohesion: 0.22
-Nodes (20): writeEquipment(), applyDiceEnhancementMutations(), applyScoringMutations(), applyAddSticker(), applyAura(), applyBumpValue(), applyClone(), applyCopy() (+12 more)
+Cohesion: 0.19
+Nodes (5): EquipmentAlertType, EquipmentDef, ShopStockRow, EquipmentCard, RARITY_COLORS
 
 ### Community 45 - "Difficulty Select UI"
-Cohesion: 0.10
-Nodes (27): active(), CardTemplate, condition(), HAND_NAMES, HandsWithContainment, HintSize, HintStyle, inactive() (+19 more)
+Cohesion: 0.11
+Nodes (26): active(), condition(), HAND_NAMES, HandsWithContainment, HintStyle, inactive(), items, miles() (+18 more)
 
 ### Community 46 - "Game Facade Modules"
-Cohesion: 0.13
-Nodes (8): ItemCardBadges, ItemCardChrome, ItemCardContentResult, CardData, CardTextureSource, ItemCardLayout, ItemCardOptions, createActionTabs()
+Cohesion: 0.07
+Nodes (18): clearUserStatsStorage(), emptyStats(), getDifficultyBeatColor(), getDifficultyBeatStrokeColor(), getHighestDifficultyBeaten(), getHighestUnlockedDifficulty(), isDifficultyUnlocked(), normalizeDifficulty() (+10 more)
 
 ### Community 47 - "Cluster 47"
-Cohesion: 0.14
-Nodes (14): findLowestHeldDieTarget(), handTypeMatches(), isLowestHeldDieTarget(), multiplyCtxXMult(), enhancementCountsAsGold(), enhancementCountsAsSteel(), enhancementHeldGoldPayout(), enhancementMatchesTarget() (+6 more)
+Cohesion: 0.20
+Nodes (10): clamp01(), DEFAULT_AUDIO_PREFERENCES, initAudioPreferences(), normalizeAudio(), readFromStorage(), setAudioPreferences(), writeToStorage(), hideLoadingOverlay() (+2 more)
 
 ### Community 48 - "Equipment Lifecycle"
-Cohesion: 0.11
-Nodes (21): buildCardRing(), CardRing, createCardLoopRaw(), createOutwardNormals(), drawEdgeLightLane(), fract01(), HOLY_TUNE, HostHolyTune (+13 more)
+Cohesion: 0.12
+Nodes (24): buildCardRing(), CardRing, createCardLoopRaw(), createOutwardNormals(), drawEdgeLightLane(), fract01(), HOLY_TUNE, HostHolyTune (+16 more)
+
+### Community 49 - "Aura Particles"
+Cohesion: 0.13
+Nodes (26): PackCardUseContext, PackCardUseOutcome, PackCardUseResult, resolvePackCardUse(), PackOpenResult, PackItem, ConsumableInstance, createFrontierConsumableDef() (+18 more)
 
 ### Community 50 - "Cluster 50"
-Cohesion: 0.15
-Nodes (13): EffectRegistry, AdditiveEffectHandler, HeldDieEffectHandler, LifecycleHandler, LifecyclePhase, PerDieEffectHandler, ScoringMutations, ScoringPipelineContext (+5 more)
+Cohesion: 0.19
+Nodes (19): clearAutoSaveStorage(), AUTOSAVE_SCENE_KEYS, autoSaveTick(), clearAutoSave(), devAutoSaveWarn(), findActiveAutoSaveScene(), initAutoSave(), registerPagehideFlushOnce() (+11 more)
 
 ### Community 51 - "Game & Round State"
-Cohesion: 0.29
-Nodes (8): applyBackgroundMusicPreferences(), ensureBackgroundMusic(), isBackgroundMusicPlaying(), setBackgroundMusicVolume(), soundManager(), stopBackgroundMusic(), applyMusicPreferences(), MainMenu
+Cohesion: 0.15
+Nodes (22): bossActions, consumableActions, writeConsumables(), diceActions, economyActions, equipmentActions, permitActions, setupActions (+14 more)
 
 ### Community 52 - "Store Subscriptions"
-Cohesion: 0.08
-Nodes (39): getProfessionById(), ProfessionModifiers, professions, ProfessionSpecialEquipment, ProfessionStartingEnhancement, ProfessionStartingSupplyCard, getTrailTagById(), getConfigModifiers() (+31 more)
+Cohesion: 0.13
+Nodes (29): applyAuraTagsToShopStock(), AURA_TAG_IDS, consumeNextRoundTags(), consumeShopAuraTagCopies(), consumeShopTagCopies(), currentRun(), ensureRoundSkipPreviewTags(), expandImmediatePackTagsToPackDefIds() (+21 more)
 
 ### Community 53 - "Tag Stack UI"
-Cohesion: 0.27
+Cohesion: 0.30
 Nodes (3): groupTagsById(), selectTagStackModel(), TagStack
 
-### Community 54 - "Shop Buy Actions"
-Cohesion: 0.26
-Nodes (13): bossActions, economyActions, equipmentActions, permitActions, progressionActions, shopActions, canAfford(), earnBalance() (+5 more)
+### Community 54 - "Community 54"
+Cohesion: 0.12
+Nodes (12): getItemDisplayContext(), selectUsedEquipmentSlots(), selectShopStockRevision(), shopStockRevisionKey(), selectConsumableBarSnapshot(), buildShopPackDisplayDef(), buildShopPermitDisplayDef(), bindGameObject() (+4 more)
 
 ### Community 55 - "Item Card Hints"
-Cohesion: 0.15
-Nodes (26): tooltipSegmentColors(), DisplayResolver, expandSegmentRowToTokens(), mergeAdjacentSegments(), segmentIsAtomic(), appendSegmentRow(), appendSpacer(), appendTextLine() (+18 more)
+Cohesion: 0.13
+Nodes (28): tooltipSegmentColors(), DisplayResolver, expandSegmentRowToTokens(), mergeAdjacentSegments(), segmentIsAtomic(), appendSegmentRow(), appendSpacer(), appendTextLine() (+20 more)
 
-### Community 56 - "Dice Selection UI"
-Cohesion: 0.18
-Nodes (12): ItemDisplayResult, ItemCardHints, RowMeasurement, getAuraHintRow(), getHintMetrics(), getSegmentSize(), getTooltipMetrics(), HINT_COLORS (+4 more)
+### Community 56 - "Community 56"
+Cohesion: 0.36
+Nodes (11): clearPreviousAutoSaveStorage(), hasRunnableAutoSave(), isRunnableSnapshot(), readAutoSaveCandidates(), readAutoSaveFromStorage(), readPreviousAutoSaveFromStorage(), readSnapshotFromKey(), snapshotContentKey() (+3 more)
 
 ### Community 57 - "Trail Event Assets"
 Cohesion: 0.19
@@ -513,49 +536,53 @@ Nodes (9): computeCoverCrop(), computeCoverScale(), CoverCropResult, trailEventI
 Cohesion: 0.05
 Nodes (42): computedHash, skillPath, source, sourceType, computedHash, skillPath, source, sourceType (+34 more)
 
-### Community 59 - "Consumable Bar"
-Cohesion: 0.23
-Nodes (16): applyConsumableAnimEvents(), playConsumableAnimEvent(), playEquipmentCreatedPopIn(), animateEquipmentPopIn(), playHandUpgradeAnimation(), playScoreAnimation(), getRoundHintContext(), applyEquipmentModifierDestructions() (+8 more)
-
 ### Community 60 - "Loaded Dice Effects"
-Cohesion: 0.36
-Nodes (11): clearPreviousAutoSaveStorage(), hasRunnableAutoSave(), isRunnableSnapshot(), readAutoSaveCandidates(), readAutoSaveFromStorage(), readPreviousAutoSaveFromStorage(), readSnapshotFromKey(), snapshotContentKey() (+3 more)
+Cohesion: 0.15
+Nodes (17): EquipmentCatalogDef, getEquipmentDefById(), getEquipmentPool(), getItemAuraById(), applyRandomAura(), generateRandomEquipment(), generateShopStock(), getShopEquipmentPool() (+9 more)
+
+### Community 61 - "Community 61"
+Cohesion: 0.32
+Nodes (8): getAudioPreferences(), applyBackgroundMusicPreferences(), isBackgroundMusicPlaying(), setBackgroundMusicVolume(), soundManager(), stopBackgroundMusic(), SoundsSettingsModal, SoundsSettingsModalOptions
 
 ### Community 62 - "Dice Selection Picks"
 Cohesion: 0.05
 Nodes (40): Ambient Particles, Animated Wing / Bobbing, Checklist, Clouds, Color Cycling Background, Color Palette, Combo Counter with Scaling Text, Drawing Game Entities with Graphics (+32 more)
 
 ### Community 63 - "Cluster 63"
-Cohesion: 0.13
-Nodes (18): COLORS, DIFFICULTIES, FONTS, TAG_STACK, TEXT_COLORS, UI, GameSceneDevPanelDeps, DifficultyDef (+10 more)
+Cohesion: 0.21
+Nodes (3): DiceRowBackdropController, DiceRowBackdropControllerDeps, selectRoundPhase()
 
 ### Community 64 - "Run State Reads"
-Cohesion: 0.18
-Nodes (15): ShopBuyFailReason, ShopBuyResult, BossRollUiState, gameBoss, gameConsumable, gameDice, gameDiceSelection, gameEquipment (+7 more)
+Cohesion: 0.26
+Nodes (12): BossRollUiState, gameBoss, gameConsumable, gameDice, gameDiceSelection, gameEquipment, gameMeta, gamePack (+4 more)
 
-### Community 65 - "Dice Selection Effects"
-Cohesion: 0.11
-Nodes (37): tagActions, resolveTagDescription(), RoundSkipPreviewMeta, TagCategory, TagDescription, TrailTagDef, TrailTagInstance, trailTags (+29 more)
+### Community 65 - "Community 65"
+Cohesion: 0.07
+Nodes (24): consumables(), DieAnimEventsConfig, ScoreAnimationConfig, ConsumableDef, getConsumableAtlasKey(), bindScenePlaybackRunner(), ScenePlaybackBindOptions, PlaybackHandlerContext (+16 more)
 
 ### Community 66 - "Cluster 66"
 Cohesion: 0.05
 Nodes (36): bugs, url, dependencies, break_eternity.js, phaser, seedrandom, solid-js, zustand (+28 more)
 
-### Community 67 - "Cluster 67"
-Cohesion: 0.12
-Nodes (17): devGetAllAuras(), selectAvailableDice(), selectCanUseSecondHelpings(), selectConsumableBarSlotLabel(), selectConsumableBarSnapshot(), selectDicePouchCounts(), selectEquipmentBarSlotLabel(), selectEquipmentBarSnapshot() (+9 more)
+### Community 67 - "Community 67"
+Cohesion: 0.24
+Nodes (10): getHandByType(), hands, applyBossTricksterDowngrade(), previewBossScoreSelection(), detectBestHand(), applyHandLevelUpgrade(), buildHandUpgradeInfo(), prepareScoreSidebar() (+2 more)
 
 ### Community 68 - "Die Scoring Patches"
 Cohesion: 0.10
 Nodes (20): Architecture (constitution only), Before finishing work, Codebase navigation (graphify), Container hit areas, Design docs, Key patterns, New equipment effect, Phaser gotchas (+12 more)
 
+### Community 69 - "Community 69"
+Cohesion: 0.21
+Nodes (11): HintSegment, HintSize, ItemCardHints, RowMeasurement, getAuraHintRow(), getHintMetrics(), getSegmentSize(), getTooltipMetrics() (+3 more)
+
 ### Community 70 - "Action Tabs & HUD"
-Cohesion: 0.19
-Nodes (10): TrailEventCondition, CsvRow, formatTrailEventChoice(), formatTrailEventCondition(), formatTrailEventOutcomes(), itemDisplayContext, OUTPUT_DIR, rowsToCsv() (+2 more)
+Cohesion: 0.15
+Nodes (19): CatalogModalShellOptions, CatalogPanelBounds, CatalogScrollBindings, CatalogScrollHandlers, createCatalogModalShell(), computeModalPanelLayout(), createModalActionButton(), createModalBackButton() (+11 more)
 
 ### Community 72 - "Cluster 72"
-Cohesion: 0.17
-Nodes (13): ARCANE_TUNE, drawStrikeBolt(), Point, setStrokeStyle(), Strike, dieBlurStrength(), makeRuntime(), pulse01() (+5 more)
+Cohesion: 0.11
+Nodes (23): ARCANE_TUNE, arcaneEffect, createStrikePath(), drawStrikeBolt(), Point, setStrokeStyle(), Strike, fireEffect (+15 more)
 
 ### Community 73 - "Equipment Modifiers"
 Cohesion: 0.06
@@ -566,32 +593,36 @@ Cohesion: 0.06
 Nodes (33): Baseline Comparison Tracks Issue Identity, `--changed-since` Shows Only New Issues, Class Instance Members Are Tracked, Decorated Members Are Skipped By Default, Don't Create Config Unless Needed, Duplication Modes Affect What's Detected, Dynamically Loaded Files: Use `dynamicallyLoaded`, Exit Code 1 vs 2 (+25 more)
 
 ### Community 76 - "Core Die Types"
-Cohesion: 0.11
-Nodes (16): syncPawnBrokerSellValueFromStore(), applyHandLevelUpgrade(), buildHandUpgradeInfo(), consumeNextRoundTags(), processImmediateUpgradeTag(), prepareScoreSidebar(), selectHandStats(), getResolvedLoadedDieTarget() (+8 more)
+Cohesion: 0.39
+Nodes (8): ActiveScene, getSaveFilename(), buildSnapshotFromScene(), downloadSave(), exportGameFromScene(), exportPreviousAutoSaveFromStorage(), sanitizeDebugSaveFilename(), syncSceneStoreFromScene()
 
 ### Community 78 - "Cluster 78"
-Cohesion: 0.10
-Nodes (16): arcaneEffect, fireEffect, ghostEffect, holyEffect, applyArtFilters(), noopDestroy(), byId, EFFECT_DEFINITIONS (+8 more)
+Cohesion: 0.15
+Nodes (9): FilterableImage, createGhostArtFilter(), ensureGhostAuraFilterRegistered(), FilterGhostAura, GHOST_AURA_FRAGMENT, GHOST_TINT_COLOR, GhostArtFilterState, GhostAuraController (+1 more)
 
 ### Community 79 - "Community 79"
+Cohesion: 0.31
+Nodes (3): gameRoundBackgroundPath(), gameRoundBackgroundTextureKey(), ensureGameRoundBackgroundLoaded()
+
+### Community 80 - "Community 80"
+Cohesion: 0.36
+Nodes (9): playDieAnimEvents(), beginScoreAnimSession(), createScoreAnimPacing(), endScoreAnimSession(), pacingForFollowUp(), pacingForHandScore(), resolveGapScale(), scoreAnimGapScaleFromCount() (+1 more)
+
+### Community 81 - "Community 81"
+Cohesion: 0.07
+Nodes (33): resolveTagDescription(), TagCategory, TagDescription, TrailTagDef, TrailTagInstance, trailTags, TAG_STACK, PlayerSaveData (+25 more)
+
+### Community 82 - "Cluster 82"
 Cohesion: 0.21
-Nodes (4): PermitDef, wireShopCardHover(), wireShopCardPointerUp(), computeFittedRowSpacing()
+Nodes (6): bringModalInteractivesToTop(), finalizeModal(), OptionsModal, PreferencesSettingsModal, PreferencesSettingsModalOptions, ToggleCheckbox
 
-### Community 80 - "Trail Round Effects"
-Cohesion: 0.46
-Nodes (7): syncTrailRoundEffectsOnRestore(), RunStatusTraitPolarity, selectRunStatusTraits(), getPlayerTrailDebuffLines(), getTrailDebuffLines(), hasActiveTrailRoundEffects(), trailRoundEffectsFromModifiers()
-
-### Community 83 - "Action Tabs Layout"
+### Community 83 - "Community 83"
 Cohesion: 0.15
-Nodes (5): consumables(), getItemDisplayContext(), checkCondition(), resolveConsumableList(), ConsumableBar
-
-### Community 84 - "Cluster 84"
-Cohesion: 0.18
-Nodes (6): clearSceneCardTooltips(), ensureResizeHook(), resizeHookByScene, tooltipsByScene, trackCardTooltip(), ItemCardTooltip
+Nodes (11): PipEnhancementDef, pipEnhancements, CsvRow, formatTrailEventChoice(), formatTrailEventCondition(), formatTrailEventOutcomes(), itemDisplayContext, OUTPUT_DIR (+3 more)
 
 ### Community 85 - "Community 85"
-Cohesion: 0.17
-Nodes (13): animateDieCrack(), animateGrantToConsumableBar(), applyConsumableGrant(), DieAnimEventsConfig, ENHANCEMENT_NAMES, floatingText(), getSoundForType(), playAgainRetrigger() (+5 more)
+Cohesion: 0.14
+Nodes (3): getArcOffset(), PlayAreaDiceController, ScoreRowLayout
 
 ### Community 86 - "Professions Data"
 Cohesion: 0.07
@@ -605,29 +636,25 @@ Nodes (4): COPY_WIRED_SOURCES, GAME_ROOT, LIFECYCLE_ORCHESTRATORS, ROUND_BOUNDAR
 Cohesion: 0.08
 Nodes (24): Combo Text with Scaling, Common Visual Bugs to Avoid, Design Process, Entity Entrance Animations, Game UI/UX Designer, Hit Freeze Frame, Opening Moment, Output (+16 more)
 
-### Community 89 - "Cluster 89"
-Cohesion: 0.12
-Nodes (18): getDiceEnhancementById(), ProfessionDef, MARQUEE, RollMarqueeSelectionDeps, GridLayoutMetrics, PortraitViewMode, DiceVisualGroup, getDiceGroupDisplayLabel() (+10 more)
-
-### Community 90 - "Cluster 90"
-Cohesion: 0.17
-Nodes (6): EquipmentAlertType, EquipmentDef, ShopStockRow, ShopStockGenRow, EquipmentCard, RARITY_COLORS
+### Community 90 - "Community 90"
+Cohesion: 0.26
+Nodes (10): BoosterPackDiceTargetingDeps, getDiceSelectionMaxPicks(), getDiceSelectionMinPicks(), insertDiceAfterInOrder(), isDiceSelectionReady(), mergeCopyIntoRow(), refreshLineupDiceFromRun(), shouldUpdateDisplayedDiceValue() (+2 more)
 
 ### Community 91 - "Cluster 91"
 Cohesion: 0.16
 Nodes (17): createDieEdgeLoop(), DIE_EDGE_POINTS, DieOutlinePoint, cacheKey(), createImageEdgeLoop(), createOutwardNormals(), edgeLoopCache, EdgePoint (+9 more)
 
 ### Community 92 - "Community 92"
-Cohesion: 0.08
-Nodes (24): gameFacade, gameConfig, GAME, TRAIL_EVENT, EventBus, Events, Boot, buildVictoryGameOverData() (+16 more)
+Cohesion: 0.06
+Nodes (65): ProfessionDef, gameFacade, ANIM, COLORS, DICE, DIFFICULTIES, FONTS, GAME (+57 more)
 
-### Community 93 - "Cluster 93"
-Cohesion: 0.20
-Nodes (14): writeConsumables(), getRandomFrontierDef(), getShopRandomFrontierDef(), applyRandomAura(), generateRandomEquipment(), generateShopStock(), getShopEquipmentPool(), isEquipmentUnlocked() (+6 more)
+### Community 93 - "Community 93"
+Cohesion: 0.21
+Nodes (4): DiceSelectionConfig, GameConsumableTargetingController, BoosterPackSaveData, BoosterPackSceneState
 
-### Community 95 - "Cluster 95"
-Cohesion: 0.11
-Nodes (24): bindScenePlaybackRunner(), ScenePlaybackBindOptions, isAutoDrainCommand(), PlaybackHandlerContext, bindPlaybackRunner(), PlaybackRunnerContext, PlaybackRunnerHandle, PlaybackCommand (+16 more)
+### Community 95 - "Community 95"
+Cohesion: 0.26
+Nodes (12): AudioPreferences, DEFAULT_GAMEPLAY_PREFERENCES, GameplayPreferences, getGameplayPreferences(), initGameplayPreferences(), normalizeGameplay(), readFromStorage(), setGameplayPreferences() (+4 more)
 
 ### Community 100 - "Community 100"
 Cohesion: 0.09
@@ -636,10 +663,6 @@ Nodes (22): Advanced Patterns, Anti-Patterns (Avoid These), Button Pattern (Cont
 ### Community 101 - "Community 101"
 Cohesion: 0.09
 Nodes (22): Additional Components, Blitter, Common Patterns, Core Concepts, Creating and Positioning, Destroying Game Objects, Factory Methods, Flipping (+14 more)
-
-### Community 102 - "Community 102"
-Cohesion: 0.21
-Nodes (3): selectBossForLeg(), RoundInfoPanel, targetMilesForRound()
 
 ### Community 103 - "Community 103"
 Cohesion: 0.09
@@ -654,8 +677,8 @@ Cohesion: 0.36
 Nodes (4): ItemAura, effectPhaseFromSeed(), isRegistryAura(), ItemCardAuras
 
 ### Community 106 - "Community 106"
-Cohesion: 0.22
-Nodes (12): getTrailEventById(), getTrailEventMinimumLeg(), TrailEventCategory, TrailEventConditionType, TrailEventEffect, TrailEventEffectType, TrailEventOutcome, trailEvents (+4 more)
+Cohesion: 0.16
+Nodes (4): getRunState(), RunEconomyView, DicePouchModal, JourneyInfoModal
 
 ### Community 107 - "Community 107"
 Cohesion: 0.10
@@ -686,24 +709,24 @@ Cohesion: 0.13
 Nodes (14): Deprecated, Equipment Aura, Equipment Basic List, Equipment Overview, Legendaries, Phase 10, Phase 2, Phase 3 (+6 more)
 
 ### Community 114 - "Community 114"
-Cohesion: 0.12
-Nodes (16): PackDefinition, BoosterPackSaveData, CATEGORY_COLORS, CardWobbleMode, CardWobbleState, ClickAwayDismissOptions, hitIncludesObjectOrChild(), installClickAwayDismiss() (+8 more)
+Cohesion: 0.09
+Nodes (17): RollMarqueeSelectionDeps, RollRowControllerDeps, createHorizontalDragReorder(), DraggableGameObject, DragSlot, HorizontalDragReorder, HorizontalDragReorderConfig, SettleTweenStep (+9 more)
 
 ### Community 115 - "Community 115"
 Cohesion: 0.14
 Nodes (13): Source File Map, Alpha, API Quick Reference, Depth, Flip, Gotchas and Common Mistakes, Origin, Other (+5 more)
 
 ### Community 117 - "Community 117"
-Cohesion: 0.26
-Nodes (10): animateEquipmentFireDestruction(), animateEquipmentFireDestructionParallel(), animateEquipmentFireDestructionSequence(), EquipmentFireDestruction, EquipmentFireDestructionOptions, shakeEquipmentSourceCard(), playRoundStartDestructions(), AURA_COLORS (+2 more)
+Cohesion: 0.18
+Nodes (13): equipment(), removeEquipmentAtIndices(), getResolvedEquipment(), selectHasLuckyNumberEquipment(), selectLuckyNumberPip(), selectResolvedLoadedDieTarget(), resolveEquipmentList(), getResolvedLoadedDieTarget() (+5 more)
 
 ### Community 118 - "Community 118"
-Cohesion: 0.07
-Nodes (18): clearUserStatsStorage(), emptyStats(), getDifficultyBeatColor(), getDifficultyBeatStrokeColor(), getHighestDifficultyBeaten(), getHighestUnlockedDifficulty(), isDifficultyUnlocked(), normalizeDifficulty() (+10 more)
+Cohesion: 0.23
+Nodes (12): applyDiceEnhancementMutations(), ScoringMutations, ScoringPipelineContext, setDieEnhancement(), HeldInHandResult, ScoringContext, HandResult, ScoreAnimEvent (+4 more)
 
 ### Community 119 - "Community 119"
-Cohesion: 0.31
-Nodes (10): playDieAnimEvents(), beginScoreAnimSession(), createScoreAnimPacing(), endScoreAnimSession(), pacingForFollowUp(), pacingForHandScore(), resolveGapScale(), scoreAnimGapScaleFromCount() (+2 more)
+Cohesion: 0.19
+Nodes (10): AURA_COLORS, getAuraPrimary(), getDiceAtlasFrame(), resolveDiceAtlasFrame(), AURA_INFO, DiceScorePresentation, ENHANCEMENT_INFO, setStickerOrbitOrientation() (+2 more)
 
 ### Community 120 - "Community 120"
 Cohesion: 0.14
@@ -766,24 +789,20 @@ Cohesion: 0.17
 Nodes (11): frames, meta, app, format, image, scale, size, smartupdate (+3 more)
 
 ### Community 135 - "Community 135"
-Cohesion: 0.18
-Nodes (10): TagDescriptionContext, SerializedTagInstance, HandType, StoredTagInstance, equipmentPack, frontierPack, supplyPack, trailGuidePack (+2 more)
+Cohesion: 0.46
+Nodes (7): syncTrailRoundEffectsOnRestore(), RunStatusTraitPolarity, selectRunStatusTraits(), getPlayerTrailDebuffLines(), getTrailDebuffLines(), hasActiveTrailRoundEffects(), trailRoundEffectsFromModifiers()
 
 ### Community 136 - "Community 136"
-Cohesion: 0.33
-Nodes (8): EquipmentCatalogDef, getEquipmentDefById(), getEquipmentPool(), getItemAuraById(), resolveConsumableDef(), resolveConsumableInstance(), resolveEquipmentDef(), resolveEquipmentInstance()
+Cohesion: 0.41
+Nodes (12): pickDiceAuraWeighted(), applyAddSticker(), applyAura(), applyBumpValue(), applyClone(), applyCopy(), applyDiceSelectionEffect(), applyEnhance() (+4 more)
 
 ### Community 137 - "Community 137"
-Cohesion: 0.31
-Nodes (10): ActiveScene, getSaveFilename(), buildSnapshotFromScene(), downloadSave(), exportGameFromScene(), exportPreviousAutoSaveFromStorage(), performLoadGame(), pickAndParseSave() (+2 more)
+Cohesion: 0.15
+Nodes (8): InstantEffect, DiceSelectionState, SerializedPackItem, Die, DiceSelectionScene, DiceSpriteEntry, StoredPackItem, DiceGroup
 
 ### Community 138 - "Community 138"
-Cohesion: 0.13
-Nodes (19): PlayerSaveData, DifficultyLevel, HandStats, RunState, BOSS_PORTRAIT_SIZE, BOSS_PORTRAIT_TOP_GAP, computeLegRoundPanelGeometry(), createLegRoundPanels() (+11 more)
-
-### Community 139 - "Community 139"
-Cohesion: 0.20
-Nodes (6): CardActionTabConfig, ActionTabInstance, ActionTabsLayout, ActionTabsOptions, SideTabCorners, SideTabDirection
+Cohesion: 0.30
+Nodes (9): PACK_EXCLUDED_SUPPLY_IDS, parseWeightSupplyFromParams(), expectedRelativeRate(), getSupplyCardWeightForItem(), getSupplyCardWeightMultiplier(), pickWeightedSupplyCard(), pickWeightedSupplyCardsWithoutReplacement(), expectPickRateRatioNearWeight() (+1 more)
 
 ### Community 140 - "Community 140"
 Cohesion: 0.17
@@ -793,6 +812,10 @@ Nodes (11): frames, meta, app, format, image, scale, size, smartupdate (+3 more)
 Cohesion: 0.17
 Nodes (11): frames, meta, app, format, image, scale, size, smartupdate (+3 more)
 
+### Community 142 - "Community 142"
+Cohesion: 0.35
+Nodes (4): formatMult(), formatScientific(), formatScore(), formatScoreComponent()
+
 ### Community 143 - "Community 143"
 Cohesion: 0.18
 Nodes (10): Arcade Physics Setup, Choosing a Physics Engine, Collision Groups (Matter.js), Collisions, Mobile-Aware State Machine, Physics & Movement, Platformer Tips, Simple State Machine Implementation (+2 more)
@@ -801,25 +824,21 @@ Nodes (10): Arcade Physics Setup, Choosing a Physics Engine, Collision Groups (M
 Cohesion: 0.18
 Nodes (10): Card Types, Commands, Concept, Getting Started, Hand Types, Project Structure, Roadmap & issues, Tech Stack (+2 more)
 
-### Community 145 - "Community 145"
-Cohesion: 0.24
-Nodes (7): playCenterToast(), ConsumableAnimEvent, ModifierFeedbackPayload, PLAYBACK_COMMAND_KINDS, ToastTone, computeLayoutMetricsFromScene(), getContentLayoutCenter()
-
 ### Community 146 - "Community 146"
-Cohesion: 0.28
-Nodes (5): selectUsedEquipmentSlots(), selectShopAffordabilityInputs(), selectShopStockRevision(), shopStockRevisionKey(), StoredShopItem
+Cohesion: 0.25
+Nodes (4): DecimalSource, GameOverData, PayoutData, HUD
 
 ### Community 147 - "Community 147"
-Cohesion: 0.39
-Nodes (6): SerializedEquipmentInstance, EquipmentModifier, StoredEquipmentInstance, addModifierBadgeImage(), addProfessionSpecialBadgeImage(), modifierTextureKey()
+Cohesion: 0.28
+Nodes (4): BossTestModal, CatalogModalShell, finalizeCatalogModal(), EquipmentCatalogModal
 
-### Community 148 - "Community 148"
-Cohesion: 0.40
-Nodes (4): processEquipmentOnDayEnd(), processEquipmentOnDiceAdded(), processEquipmentOnPackOpened(), processEquipmentOnSupplyUsed()
+### Community 149 - "Community 149"
+Cohesion: 0.33
+Nodes (5): FrontierDiceSelectionDef, frontierEncounters, FrontierInstantEffect, FrontierInstantEffectType, DiceSelectionEffectType
 
-### Community 150 - "Community 150"
-Cohesion: 0.67
-Nodes (3): Examples, Flags, `list`: Project Introspection
+### Community 151 - "Community 151"
+Cohesion: 0.08
+Nodes (41): applyEquipmentAuraForSlot(), applyEquipmentAuras(), applyHolyAuraXMult(), findDeathPrevention(), findLowestHeldDieTarget(), handTypeMatches(), isLowestHeldDieTarget(), multiplyCtxXMult() (+33 more)
 
 ### Community 152 - "Community 152"
 Cohesion: 0.18
@@ -833,9 +852,21 @@ Nodes (11): blizzard, Category: weather, dust_storm, extreme_cold, extreme_heat,
 Cohesion: 0.20
 Nodes (9): Button Pattern (Container + Graphics + Text), Choosing the Right Base Class, Containers, Custom Game Objects, Game Objects, Groups (Object Pooling), Mobile-Friendly Input Pattern, Registering with GameObjectFactory (+1 more)
 
+### Community 155 - "Community 155"
+Cohesion: 0.33
+Nodes (3): initDevModeFromUrl(), root, PhaserGame()
+
+### Community 156 - "Community 156"
+Cohesion: 0.40
+Nodes (5): clearSceneCardTooltips(), ensureResizeHook(), resizeHookByScene, tooltipsByScene, trackCardTooltip()
+
 ### Community 157 - "Community 157"
 Cohesion: 0.20
 Nodes (9): **Applies To**, **Fix Action**, Game Ui Design - Validations, Godot UI Signal Emission Without Connection, **Id**, **Message**, **Pattern**, **Severity** (+1 more)
+
+### Community 158 - "Community 158"
+Cohesion: 0.60
+Nodes (5): TrailEventEffect, DiceSelectionEffectParams, DiceAura, DiceEnhancement, DiceSticker
 
 ### Community 159 - "Community 159"
 Cohesion: 0.20
@@ -973,10 +1004,6 @@ Nodes (9): Category: stranger, fellow_traveler, missing_person, native_guide, ol
 Cohesion: 0.22
 Nodes (8): compilerOptions, allowSyntheticDefaultImports, composite, module, moduleResolution, skipLibCheck, strict, include
 
-### Community 196 - "Community 196"
-Cohesion: 0.29
-Nodes (5): gameRoundBackgroundPath(), gameRoundBackgroundTextureKey(), getRunRoundBackgroundIndex(), pickGameRoundBackgroundIndex(), ensureGameRoundBackgroundLoaded()
-
 ### Community 197 - "Community 197"
 Cohesion: 0.25
 Nodes (8): Actionable error messages, `activate` flags, Clock skew, Exit Codes, Grace ladder, `license`: Manage Continuous Runtime License, Storage precedence, Subcommands
@@ -1101,6 +1128,10 @@ Nodes (5): Migration from knip, Step 1: Preview migration, Step 2: Apply migrati
 Cohesion: 0.50
 Nodes (3): Anti-Patterns, Game UI Design, Patterns
 
+### Community 231 - "Community 231"
+Cohesion: 0.67
+Nodes (3): Examples, Flags, `list`: Project Introspection
+
 ### Community 232 - "Community 232"
 Cohesion: 0.50
 Nodes (4): Arguments, `explain`: Rule Explanation, JSON Output Structure, Usage
@@ -1142,24 +1173,24 @@ Cohesion: 0.67
 Nodes (3): Full audit (default), Production audit, Production vs Full Audit
 
 ## Knowledge Gaps
-- **1479 isolated node(s):** `$schema`, `lsp`, `npm`, `name`, `baseURL` (+1474 more)
+- **1486 isolated node(s):** `$schema`, `lsp`, `npm`, `name`, `baseURL` (+1481 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **33 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `getRunState()` connect `Core Die Types` to `App Shell & Scenes`, `Store Actions & Selectors`, `Types & Formatting`, `Equipment & Tags`, `Serialization & Tooltips`, `Community 135`, `Shop Generation`, `Dev Modals & Catalog`, `Community 137`, `Community 136`, `Round FSM Actions`, `Save/Load & RNG`, `Dice Row Layout`, `Boss Effects`, `Community 138`, `Booster Pack Data`, `Scoring Pipeline`, `Community 147`, `Community 148`, `Equipment Animations`, `Booster Pack Scene`, `Community 146`, `Score Math & Targets`, `Permits & Shop`, `Hint Display System`, `Consumables System`, `Dice & Item Auras`, `Playback Queue`, `Boss Equipment UI`, `Score Animations`, `Trail Events Data`, `Difficulty & Stats`, `Trail Event Scene`, `Trail Event Logic`, `Run RNG & Packs`, `Equipment Pool Gen`, `Cluster 47`, `Store Subscriptions`, `Shop Buy Actions`, `Consumable Bar`, `Cluster 63`, `Run State Reads`, `Dice Selection Effects`, `Cluster 67`, `Community 196`, `Cluster 71`, `Community 79`, `Trail Round Effects`, `Cluster 82`, `Action Tabs Layout`, `Cluster 89`, `Community 92`, `Cluster 93`, `Cluster 94`, `Cluster 95`, `Community 102`, `Community 114`, `Community 116`, `Community 118`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
-- **Why does `Button` connect `Community 142` to `App Shell & Scenes`, `Playback Queue`, `Types & Formatting`, `Boss Equipment UI`, `Serialization & Tooltips`, `Community 102`, `Trail Event Scene`, `Dev Modals & Catalog`, `Community 138`, `Core Die Types`, `Community 114`, `Booster Pack Scene`, `Community 118`, `Cluster 95`, `Cluster 89`, `Community 92`, `Cluster 94`, `Cluster 63`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `PlayerState` connect `Cluster 22` to `App Shell & Scenes`, `Store Actions & Selectors`, `Dice Selection Effects`, `Misc Utilities`, `Equipment & Tags`, `Difficulty & Stats`, `Community 138`, `Round FSM Actions`, `Dice Row Layout`, `Community 79`, `Cluster 82`, `Store Subscriptions`, `Community 149`, `Cluster 90`, `Consumables System`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+- **Why does `getRunState()` connect `Community 106` to `Store Actions & Selectors`, `Types & Formatting`, `Equipment & Tags`, `Serialization & Tooltips`, `Item Card UI`, `Community 135`, `Community 136`, `Audio Preferences`, `Community 139`, `Save/Load & RNG`, `Dice Row Layout`, `Boss Effects`, `Round FSM Actions`, `Booster Pack Data`, `Scoring Pipeline`, `Booster Pack Scene`, `Community 148`, `Frontier & Item Defs`, `Cluster 22`, `Community 151`, `Permits & Shop`, `Consumables System`, `Dice Enhancements`, `Scene Layout Metrics`, `Dice Sprite Visuals`, `Dice & Item Auras`, `Playback Queue`, `Boss Equipment UI`, `Score Animations`, `Trail Events Data`, `Trail Event Scene`, `Bosses & Hands`, `Game Facade Modules`, `Aura Particles`, `Cluster 50`, `Game & Round State`, `Store Subscriptions`, `Community 54`, `Loaded Dice Effects`, `Community 65`, `Community 67`, `Cluster 71`, `Core Die Types`, `Community 79`, `Community 81`, `Community 90`, `Community 92`, `Community 93`, `Cluster 94`, `Community 102`, `Community 117`, `Community 118`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+- **Why does `DiceSprite` connect `Consumable Bar` to `Store Actions & Selectors`, `Community 137`, `Booster Pack Scene`, `Equipment Animations`, `Community 150`, `Dice Sprite Visuals`, `Boss Equipment UI`, `Effect Helpers`, `Difficulty & Stats`, `Game Facade Modules`, `Aura Particles`, `Cluster 63`, `Community 65`, `Cluster 82`, `Community 85`, `Community 89`, `Community 90`, `Community 92`, `Community 93`, `Community 106`, `Community 114`, `Community 116`, `Community 119`?**
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `Die` connect `Community 137` to `Store Actions & Selectors`, `Misc Utilities`, `Equipment & Tags`, `Serialization & Tooltips`, `Item Card UI`, `Community 136`, `Shop Generation`, `Dev Modals & Catalog`, `Audio Preferences`, `Round FSM Actions`, `Save/Load & RNG`, `Dice Row Layout`, `Boss Effects`, `Booster Pack Data`, `Scoring Pipeline`, `Booster Pack Scene`, `Equipment Animations`, `Cluster 22`, `Community 151`, `Permits & Shop`, `Dice Enhancements`, `Playback Queue`, `Difficulty & Stats`, `Aura Particles`, `Game & Round State`, `Store Subscriptions`, `Consumable Bar`, `Run State Reads`, `Community 65`, `Community 81`, `Community 85`, `Community 90`, `Community 92`, `Community 93`, `Community 106`, `Community 114`, `Community 118`, `Community 119`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **What connects `$schema`, `lsp`, `npm` to the rest of the system?**
-  _1479 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1486 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `App Shell & Scenes` be split into smaller, more focused modules?**
-  _Cohesion score 0.05485232067510549 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.14482758620689656 - nodes in this community are weakly interconnected._
+- **Should `Store Actions & Selectors` be split into smaller, more focused modules?**
+  _Cohesion score 0.10582010582010581 - nodes in this community are weakly interconnected._
 - **Should `Types & Formatting` be split into smaller, more focused modules?**
-  _Cohesion score 0.06247086247086247 - nodes in this community are weakly interconnected._
-- **Should `Game Scene Core` be split into smaller, more focused modules?**
-  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09659090909090909 - nodes in this community are weakly interconnected._

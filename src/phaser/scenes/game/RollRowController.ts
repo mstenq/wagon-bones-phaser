@@ -7,6 +7,7 @@ import type { Die } from '../../../game/types';
 import { DiceSprite } from '../../ui/DiceSprite';
 import { RollDiceDragReorder } from '../../ui/rollDiceDragReorder';
 import { getArcOffset } from './diceRowGeometry';
+import { tweenDieRowSpriteLayout, tweenDiceSelectLiftY } from './diceRowElasticTween';
 
 export type RollRowControllerDeps = {
   scene: Scene;
@@ -25,6 +26,7 @@ export type RollRowControllerDeps = {
   onDragBegin: () => void;
   getWasDragging: () => boolean;
   setWasDragging: (value: boolean) => void;
+  onLayoutChange?: () => void;
 };
 
 export class RollRowController {
@@ -67,6 +69,7 @@ export class RollRowController {
   }
 
   createRollRow(dice: Die[], y: number): DiceSprite[] {
+    this.destroyRollSprites();
     const sprites: DiceSprite[] = [];
     const scale = this.deps.getDiceScale();
     const spacing = this.deps.getDiceSpacing(dice.length);
@@ -81,32 +84,39 @@ export class RollRowController {
       sprite.setDepth(10);
       sprites.push(sprite);
     }
+    this.rollSprites = sprites;
+    this.deps.onLayoutChange?.();
     return sprites;
   }
 
   setupInteraction(): void {
-    for (let i = 0; i < this.rollSprites.length; i++) {
-      const sprite = this.rollSprites[i];
-
-      sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        this.deps.setWasDragging(false);
-        sprite.setData('rollClickRight', pointer.rightButtonDown());
-        this.rollDiceDrag.wirePointerDown(sprite, pointer);
-      });
-
-      sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-        if (pointer.wasTouch) return;
-        if (this.deps.getWasDragging() || this.deps.isAnimating() || this.deps.isMarqueeActive()) return;
-
-        if (this.deps.isConsumableTargeting()) {
-          this.deps.onConsumableTargetClick(sprite);
-          return;
-        }
-
-        const isRightClick = pointer.rightButtonReleased() || sprite.getData('rollClickRight') === true;
-        this.deps.onRollDieClick(sprite, isRightClick);
-      });
+    for (const sprite of this.rollSprites) {
+      this.wireSpriteInteraction(sprite);
     }
+  }
+
+  private wireSpriteInteraction(sprite: DiceSprite): void {
+    sprite.off('pointerdown');
+    sprite.off('pointerup');
+
+    sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.deps.setWasDragging(false);
+      sprite.setData('rollClickRight', pointer.rightButtonDown());
+      this.rollDiceDrag.wirePointerDown(sprite, pointer);
+    });
+
+    sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.wasTouch) return;
+      if (this.deps.getWasDragging() || this.deps.isAnimating() || this.deps.isMarqueeActive()) return;
+
+      if (this.deps.isConsumableTargeting()) {
+        this.deps.onConsumableTargetClick(sprite);
+        return;
+      }
+
+      const isRightClick = pointer.rightButtonReleased() || sprite.getData('rollClickRight') === true;
+      this.deps.onRollDieClick(sprite, isRightClick);
+    });
   }
 
   /** Sort roll sprites by die value and reposition (selected dice stay raised). */
@@ -122,9 +132,10 @@ export class RollRowController {
   }
 
   /** Reposition all roll sprites (row layout + selected lift + depth). */
-  reposition(animated: boolean, duration = 250): void {
+  reposition(animated: boolean, duration = 250, elasticLift?: boolean): void {
     if (this.rollSprites.length === 0) return;
 
+    const useElasticY = elasticLift ?? this.deps.isConsumableTargeting();
     const spacing = this.deps.getDiceSpacing(this.rollSprites.length);
     const scale = this.deps.getDiceScale();
     const totalWidth = (this.rollSprites.length - 1) * spacing;
@@ -137,31 +148,29 @@ export class RollRowController {
       sprite.setScale(scale);
       this.applyRollDieDepth(sprite);
 
-      if (animated) {
-        this.deps.scene.tweens.add({
-          targets: sprite,
-          x: targetX,
-          y: targetY,
-          rotation: arc.rotation,
-          duration,
-          ease: 'Power2',
-        });
-      } else {
-        sprite.setPosition(targetX, targetY);
-        sprite.rotation = arc.rotation;
-      }
+      tweenDieRowSpriteLayout(
+        this.deps.scene,
+        sprite,
+        { x: targetX, y: targetY, rotation: arc.rotation },
+        animated,
+        duration,
+        useElasticY,
+        { onYUpdate: () => sprite.syncTooltipPosition() },
+      );
     }
     this.deps.syncRolledDiceFromSprites();
+    this.deps.onLayoutChange?.();
   }
 
   animateSelectLift(sprite: DiceSprite, index: number): void {
     this.applyRollDieDepth(sprite);
-    this.deps.scene.tweens.add({
-      targets: sprite,
-      y: this.getRollDieY(index, sprite),
-      duration: 200,
-      ease: 'Power2',
+    const targetY = this.getRollDieY(index, sprite);
+    const syncTooltip = () => sprite.syncTooltipPosition();
+    tweenDiceSelectLiftY(this.deps.scene, sprite, targetY, {
+      onYUpdate: syncTooltip,
+      onYComplete: syncTooltip,
     });
+    this.deps.onLayoutChange?.();
   }
 
   getRollDieY(index: number, sprite: DiceSprite): number {

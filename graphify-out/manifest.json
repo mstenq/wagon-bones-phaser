@@ -110,9 +110,9 @@
     "semantic_hash": "a20dcd53511fe53b64b1b25349573d86"
   },
   "src/game/Constants.ts": {
-    "mtime": 1780834890.6568453,
-    "ast_hash": "c9b1b402238a170411fae7da00e9b166",
-    "semantic_hash": "c9b1b402238a170411fae7da00e9b166"
+    "mtime": 1780888447.6204696,
+    "ast_hash": "57155f668393d757922bdcbd376ac858",
+    "semantic_hash": ""
   },
   "src/game/ConsumablesSystem.ts": {
     "mtime": 1780845698.011472,
@@ -125,9 +125,9 @@
     "semantic_hash": "d142254d5f044e9ca337dae5fc80195d"
   },
   "src/game/DiceSelectionSystem.ts": {
-    "mtime": 1779924454.6187558,
-    "ast_hash": "3dd2d5ff2b6dd66ccaf3c887bf747841",
-    "semantic_hash": "3dd2d5ff2b6dd66ccaf3c887bf747841"
+    "mtime": 1780885486.2844632,
+    "ast_hash": "f61cf095e90fc0c3fc905b0e1edfaed2",
+    "semantic_hash": ""
   },
   "src/game/DiceSystem.ts": {
     "mtime": 1779991119.42043,
@@ -180,9 +180,9 @@
     "semantic_hash": "66bda66594fea6845b6c14f4f17c8d71"
   },
   "src/game/SaveLoad.ts": {
-    "mtime": 1780081713.5127833,
-    "ast_hash": "0d5f80d0daecbc463a003637e23978a4",
-    "semantic_hash": "0d5f80d0daecbc463a003637e23978a4"
+    "mtime": 1780887105.5043995,
+    "ast_hash": "5cdd5c40f58e74730506e2056a533da4",
+    "semantic_hash": ""
   },
   "src/game/TagSystem.ts": {
     "mtime": 1780845691.5363579,
@@ -235,8 +235,8 @@
     "semantic_hash": "2bc6a2f152fbde813631d50f9578874d"
   },
   "src/game/__tests__/consumables.test.ts": {
-    "mtime": 1780845713.1607587,
-    "ast_hash": "c063fae66b974bc315ff6e422d7b3f2b",
+    "mtime": 1780886974.1620238,
+    "ast_hash": "e3fd1bf9d043c65cfaced16ce61022b2",
     "semantic_hash": ""
   },
   "src/game/__tests__/decimal.test.ts": {
@@ -405,9 +405,9 @@
     "semantic_hash": "ecb460524fd9112b16595475f9117636"
   },
   "src/game/__tests__/store/runActions.test.ts": {
-    "mtime": 1780005445.1509988,
-    "ast_hash": "57abb80798ecbac1f1661941103d290e",
-    "semantic_hash": "57abb80798ecbac1f1661941103d290e"
+    "mtime": 1780883792.5551348,
+    "ast_hash": "3ee6d8acbc382209858ac1bf5db58a04",
+    "semantic_hash": ""
   },
   "src/game/__tests__/store/sceneActions.test.ts": {
     "mtime": 1779997088.400456,
@@ -770,9 +770,9 @@
     "semantic_hash": "8d9c83a588551d5a9f5987c24f026a3a"
   },
   "src/game/facade/diceSelection.ts": {
-    "mtime": 1779841202.7340107,
-    "ast_hash": "f2d192999ccfe9dbabbfdc3eb57e6218",
-    "semantic_hash": "f2d192999ccfe9dbabbfdc3eb57e6218"
+    "mtime": 1780887015.6779327,
+    "ast_hash": "a7f2752582e0563147301900d198ddd3",
+    "semantic_hash": ""
   },
   "src/game/facade/equipment.ts": {
     "mtime": 1779996934.3590772,
@@ -795,9 +795,9 @@
     "semantic_hash": "6554f0610701fdb37e7ca7ac4f12b88f"
   },
   "src/game/facade/pack.ts": {
-    "mtime": 1780081690.116762,
-    "ast_hash": "7e64c1239ece77b0c0f86b024f9bb56a",
-    "semantic_hash": "7e64c1239ece77b0c0f86b024f9bb56a"
+    "mtime": 1780887725.6590505,
+    "ast_hash": "9332cbb8d6abada2028e1a69eda42db0",
+    "semantic_hash": ""
   },
   "src/game/facade/playback.ts": {
     "mtime": 1779773527.0699115,
@@ -805,9 +805,9 @@
     "semantic_hash": "886b9e6e707292c94bb9060cfdc6a444"
   },
   "src/game/facade/round.ts": {
-    "mtime": 1779907702.1554167,
-    "ast_hash": "97ee3ff14036837db4b51f4e93bfa0cf",
-    "semantic_hash": "97ee3ff14036837db4b51f4e93bfa0cf"
+    "mtime": 1780887724.9920385,
+    "ast_hash": "373027fadb391baa8eee575dd2bc191a",
+    "semantic_hash": ""
   },
   "src/game/facade/run.ts": {
     "mtime": 1779773527.069962,
@@ -900,9 +900,9 @@
     "semantic_hash": "1ff18173de11be8d2ef222fa6a94c6ca"
   },
   "src/game/store/actions/diceActions.ts": {
-    "mtime": 1779650535.94262,
-    "ast_hash": "f54d2db7ab31f33320a56d3ba3322d14",
-    "semantic_hash": "f54d2db7ab31f33320a56d3ba3322d14"
+    "mtime": 1780883734.3732936,
+    "ast_hash": "992033c05ec69478d0d17c7ef822479e",
+    "semantic_hash": ""
   },
   "src/game/store/actions/economyActions.ts": {
     "mtime": 1780770376.7607126,
@@ -1020,9 +1020,9 @@
     "semantic_hash": "d09b5cd9098570b6e9652e1ff558c2b1"
   },
   "src/game/store/sceneStore.ts": {
-    "mtime": 1779650536.142592,
-    "ast_hash": "d60d0857b8977b938d08140779d8ef5c",
-    "semantic_hash": "d60d0857b8977b938d08140779d8ef5c"
+    "mtime": 1780887723.5454469,
+    "ast_hash": "497f3f84083e8da6b3b5b52cb2101758",
+    "semantic_hash": ""
   },
   "src/game/store/selectors/index.ts": {
     "mtime": 1779650536.152931,
@@ -1040,9 +1040,9 @@
     "semantic_hash": "1479aa3e2954311e5735e0c3a7ce4104"
   },
   "src/game/store/selectors/sceneSelectors.ts": {
-    "mtime": 1779650536.1799984,
+    "mtime": 1780887723.9750202,
     "ast_hash": "25d651de80f47f24cee59dd458a9d83b",
-    "semantic_hash": "25d651de80f47f24cee59dd458a9d83b"
+    "semantic_hash": ""
   },
   "src/game/store/selectors/uiSelectors.ts": {
     "mtime": 1780775959.9306738,
@@ -1060,9 +1060,9 @@
     "semantic_hash": "af9215bd618e686794d76f6978c518bd"
   },
   "src/game/store/types.ts": {
-    "mtime": 1780081693.8474436,
-    "ast_hash": "c2da3906cd5f6dea346711dca5388aa4",
-    "semantic_hash": "c2da3906cd5f6dea346711dca5388aa4"
+    "mtime": 1780886882.255595,
+    "ast_hash": "e145c8c205465adcdd0e583a74e71f0e",
+    "semantic_hash": ""
   },
   "src/game/store/uiEffectHelpers.ts": {
     "mtime": 1779996887.3173463,
@@ -1180,9 +1180,9 @@
     "semantic_hash": "6acb402de7aa03a2cabc17d29e086923"
   },
   "src/phaser/scenes/BoosterPackScene.ts": {
-    "mtime": 1780839266.1759486,
-    "ast_hash": "7957d3af99b435d36da90cb62ad63e52",
-    "semantic_hash": "7957d3af99b435d36da90cb62ad63e52"
+    "mtime": 1780887729.145343,
+    "ast_hash": "de8e632c88937d7f0ee1d08b9bb4bc7b",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/Boot.ts": {
     "mtime": 1779493377.4584496,
@@ -1190,9 +1190,9 @@
     "semantic_hash": "b9b9451cca5e091e3541787624ca3b27"
   },
   "src/phaser/scenes/DiceSelectionScene.ts": {
-    "mtime": 1779941645.4360206,
-    "ast_hash": "09a6f761503eec3549675483bac94f24",
-    "semantic_hash": "09a6f761503eec3549675483bac94f24"
+    "mtime": 1780883742.4490497,
+    "ast_hash": "8ea1f055420dd41b1cdfd7ed30dd9eca",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/DifficultySelectScene.ts": {
     "mtime": 1780731970.3637633,
@@ -1205,8 +1205,8 @@
     "semantic_hash": "460e659396e43769ac31ff31160101b7"
   },
   "src/phaser/scenes/GameScene.ts": {
-    "mtime": 1780857544.3546107,
-    "ast_hash": "f5b9f262b69b0b51c3aabbc33ff978fa",
+    "mtime": 1780886912.16415,
+    "ast_hash": "370d41b06c35772f4dd4e42bec6d213b",
     "semantic_hash": ""
   },
   "src/phaser/scenes/MainMenu.ts": {
@@ -1235,8 +1235,8 @@
     "semantic_hash": "642bf8b4555b982bcfff9d301e160f0b"
   },
   "src/phaser/scenes/ShopScene.ts": {
-    "mtime": 1780840184.8900094,
-    "ast_hash": "1401157a1384151ac9e953293c4931b4",
+    "mtime": 1780888452.9289494,
+    "ast_hash": "57863e3378cdcc62135bfe48f3c4a4c6",
     "semantic_hash": ""
   },
   "src/phaser/scenes/TrailEventScene.ts": {
@@ -1245,9 +1245,9 @@
     "semantic_hash": "622fe199dae4323d82dd034cde57d99b"
   },
   "src/phaser/scenes/boosterPack/packCardUseDispatcher.ts": {
-    "mtime": 1780839266.1759486,
-    "ast_hash": "6123fd31c4af8d9327a6fb4d7e14dc72",
-    "semantic_hash": "6123fd31c4af8d9327a6fb4d7e14dc72"
+    "mtime": 1780887727.7166457,
+    "ast_hash": "153c4777d47e47263d17d34352844f87",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/consumableResult.ts": {
     "mtime": 1779996937.375124,
@@ -1255,9 +1255,9 @@
     "semantic_hash": "e54c14d907c021c9ddfdc8823c28ef8e"
   },
   "src/phaser/scenes/game/GameConsumableTargetingController.ts": {
-    "mtime": 1780693873.2406797,
-    "ast_hash": "a7ce722b979f83299a334f8351b34107",
-    "semantic_hash": "a7ce722b979f83299a334f8351b34107"
+    "mtime": 1780859295.835541,
+    "ast_hash": "0889d8f9be757275ca412826d66d613a",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/game/GameSceneDevPanel.ts": {
     "mtime": 1780857539.6965845,
@@ -1265,9 +1265,9 @@
     "semantic_hash": ""
   },
   "src/phaser/scenes/game/PlayAreaDiceController.ts": {
-    "mtime": 1780754961.453277,
-    "ast_hash": "8cde10fcc64925563041914eab550755",
-    "semantic_hash": "8cde10fcc64925563041914eab550755"
+    "mtime": 1780885433.7732732,
+    "ast_hash": "900f3e3f7d355f75daa91749833e786b",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/game/RollMarqueeSelection.ts": {
     "mtime": 1780690587.5615165,
@@ -1275,19 +1275,19 @@
     "semantic_hash": "4a4f9c1f6f1545529a13ea5bfa46e9ab"
   },
   "src/phaser/scenes/game/RollRowController.ts": {
-    "mtime": 1780700509.4512098,
-    "ast_hash": "09607bd5510066cbc7268b4a0b3a1a49",
-    "semantic_hash": "09607bd5510066cbc7268b4a0b3a1a49"
+    "mtime": 1780885432.898258,
+    "ast_hash": "77b800902b8ca97d9391076698c96e89",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/game/ScoreRowLayout.ts": {
-    "mtime": 1780700745.3889265,
-    "ast_hash": "9bd5fc923b6521baee2860c9238c9342",
-    "semantic_hash": "9bd5fc923b6521baee2860c9238c9342"
+    "mtime": 1780860032.8517215,
+    "ast_hash": "efa5033d87f783cfc51b02d2895a7c45",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/game/diceRowGeometry.ts": {
-    "mtime": 1780696774.2560534,
-    "ast_hash": "cb969253828ea4ce626b150adca49fd4",
-    "semantic_hash": "cb969253828ea4ce626b150adca49fd4"
+    "mtime": 1780860025.4916997,
+    "ast_hash": "84b2b1413b975969c1f77cf2d258348e",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/immediatePackFlow.ts": {
     "mtime": 1780007831.5238233,
@@ -1325,14 +1325,14 @@
     "semantic_hash": "040944fa051fd66e84807d8727600418"
   },
   "src/phaser/ui/CardBar.ts": {
-    "mtime": 1780845685.9464035,
-    "ast_hash": "b0c51af0cba28c544d479b2cc1334e04",
+    "mtime": 1780888190.4388778,
+    "ast_hash": "a3980f2daf3f59be037de05e681e07e4",
     "semantic_hash": ""
   },
   "src/phaser/ui/ConsumableBar.ts": {
-    "mtime": 1780726824.8514705,
-    "ast_hash": "b4e7ba9973511a421fd6f15173207e89",
-    "semantic_hash": "b4e7ba9973511a421fd6f15173207e89"
+    "mtime": 1780888184.0000288,
+    "ast_hash": "870c30bc7231b48d6070ed29db4f8724",
+    "semantic_hash": ""
   },
   "src/phaser/ui/DiceCardVisual.ts": {
     "mtime": 1779677072.5806255,
@@ -1350,8 +1350,8 @@
     "semantic_hash": "548ec6d04f1c0985b2c36616d802708b"
   },
   "src/phaser/ui/DiceSprite.ts": {
-    "mtime": 1780856032.0075676,
-    "ast_hash": "11d687e461a261751af23768d8c90409",
+    "mtime": 1780859506.389926,
+    "ast_hash": "e25748e65da2f19187eac883c8ef1e12",
     "semantic_hash": ""
   },
   "src/phaser/ui/DifficultyAssets.ts": {
@@ -1365,8 +1365,8 @@
     "semantic_hash": "4a246828a8867f033deeb34f1a619b81"
   },
   "src/phaser/ui/EquipmentBar.ts": {
-    "mtime": 1780841121.4233136,
-    "ast_hash": "02da80b0408ed7e4ab10f935bd914164",
+    "mtime": 1780888178.5089355,
+    "ast_hash": "2bac9002b9aa86adfdd91e5c1042770e",
     "semantic_hash": ""
   },
   "src/phaser/ui/EquipmentCard.ts": {
@@ -1430,9 +1430,9 @@
     "semantic_hash": "1987451ed80090a8a06b59e8813901fb"
   },
   "src/phaser/ui/SceneLayout.ts": {
-    "mtime": 1780794731.1785834,
-    "ast_hash": "d1ed444763e37d96d56497e164bddcf0",
-    "semantic_hash": "d1ed444763e37d96d56497e164bddcf0"
+    "mtime": 1780858113.5075245,
+    "ast_hash": "6e3360892d0dcd624a7b0881db9dd3da",
+    "semantic_hash": ""
   },
   "src/phaser/ui/SeededRunModal.ts": {
     "mtime": 1780731652.597717,
@@ -1520,9 +1520,9 @@
     "semantic_hash": "084ac6a0c11997d0e0eeca9f8431bc7f"
   },
   "src/phaser/ui/itemCard/ItemCardChrome.ts": {
-    "mtime": 1780784151.9370313,
-    "ast_hash": "e8db16f1a72ebe9cec4733fa790f6f94",
-    "semantic_hash": "e8db16f1a72ebe9cec4733fa790f6f94"
+    "mtime": 1780888556.0679605,
+    "ast_hash": "83fd7609ea4aaa29a1b39bbaf2465ccf",
+    "semantic_hash": ""
   },
   "src/phaser/ui/itemCard/ItemCardHints.ts": {
     "mtime": 1780793737.8773324,
@@ -1830,8 +1830,8 @@
     "semantic_hash": ""
   },
   "BUGS.md": {
-    "mtime": 1780694472.508597,
-    "ast_hash": "f6779838623ea401acd028a92b673882",
+    "mtime": 1780885045.0492275,
+    "ast_hash": "eb50f18ced38b36f3306e548dedca509",
     "semantic_hash": ""
   },
   "GAME_BOSS_OVERVIEW.md": {
@@ -5865,8 +5865,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/definitions/arcane.ts": {
-    "mtime": 1780856032.1585076,
-    "ast_hash": "f0ce6e7d16e2aba747d5d57320e8cd8f",
+    "mtime": 1780860085.4516208,
+    "ast_hash": "8b13af5ffa84cf3a96f083726dbebc09",
     "semantic_hash": ""
   },
   "ARCANE.md": {
@@ -5875,8 +5875,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/definitions/holy.ts": {
-    "mtime": 1780856032.1244235,
-    "ast_hash": "2ed9f6204bae7b2fa5fd9e724d228fb2",
+    "mtime": 1780860085.4956634,
+    "ast_hash": "57e9ce4e2b3604f255d6197f2867736b",
     "semantic_hash": ""
   },
   "HOLY.md": {
@@ -6122,6 +6122,41 @@
   "public/assets/backgrounds/old/shop.png": {
     "mtime": 1778377196.1150503,
     "ast_hash": "02fbfca325741b13e166eff303ec8963",
+    "semantic_hash": ""
+  },
+  "src/phaser/scenes/game/DiceRowBackdrop.ts": {
+    "mtime": 1780860085.6727965,
+    "ast_hash": "33779f77e7a8ce78d1f06d6d91fb37b4",
+    "semantic_hash": ""
+  },
+  "src/phaser/scenes/game/diceRowElasticTween.ts": {
+    "mtime": 1780860024.628686,
+    "ast_hash": "302bccb395d980111d75caa4b61ccafa",
+    "semantic_hash": ""
+  },
+  "src/phaser/scenes/game/DiceRowBackdropController.ts": {
+    "mtime": 1780860085.6760437,
+    "ast_hash": "1486ef7511e67e488177eaf54d71f3dd",
+    "semantic_hash": ""
+  },
+  "src/phaser/scenes/boosterPack/BoosterPackDiceTargetingController.ts": {
+    "mtime": 1780885827.3303547,
+    "ast_hash": "ceedc9304fa23b9ea0f01764c2d78252",
+    "semantic_hash": ""
+  },
+  "src/game/__tests__/visibleDiceRow.test.ts": {
+    "mtime": 1780887015.3152807,
+    "ast_hash": "940b934ddbe8078fd0d103d6a99d3aa9",
+    "semantic_hash": ""
+  },
+  "src/game/visibleDiceRow.ts": {
+    "mtime": 1780887103.7089026,
+    "ast_hash": "edfef5789710049567ce90a533e299ab",
+    "semantic_hash": ""
+  },
+  "src/phaser/ui/itemCard/priceTagLayout.ts": {
+    "mtime": 1780888556.107066,
+    "ast_hash": "c7ff55025063bc944986a99c747c1f3b",
     "semantic_hash": ""
   }
 }

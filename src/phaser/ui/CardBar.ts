@@ -34,6 +34,7 @@ export abstract class CardBar extends GameObjects.Container {
   protected readonly barPadding: number;
   protected readonly hideCardHints: boolean;
   protected readonly cardCenterY: number;
+  protected baseBarDepth: number = UI.CONSUMABLE_BAR_DEPTH;
 
   // Drag state (manual pointer tracking — Phaser setDraggable is unreliable on touch)
   private draggingCard: ItemCard | null = null;
@@ -82,7 +83,7 @@ export abstract class CardBar extends GameObjects.Container {
     this.slotCountText.setDepth(-5);
     this.add(this.slotCountText);
 
-    this.setDepth(150);
+    this.setDepth(this.baseBarDepth);
     scene.add.existing(this);
 
     this.cardDragReorder = createHorizontalDragReorder({
@@ -120,6 +121,7 @@ export abstract class CardBar extends GameObjects.Container {
         this.setAllCardTooltipsSuppressed(false);
         this.resumeWobble(card);
         this.flushPendingRebuild();
+        this.tryRestoreBarDepth();
       },
       onReleaseWithoutDrag: (card) => {
         const index = this.cards.indexOf(card);
@@ -458,6 +460,7 @@ export abstract class CardBar extends GameObjects.Container {
 
     card.setDepth(200);
     this.bringToTop(card);
+    this.elevateBarForInteraction();
 
     card.showActionTabs(tabs);
     this.activeTabCard = card;
@@ -474,6 +477,15 @@ export abstract class CardBar extends GameObjects.Container {
       this.dismissClickAway();
       this.dismissClickAway = null;
     }
+  }
+
+  private elevateBarForInteraction(): void {
+    this.setDepth(UI.CARD_BAR_INTERACTION_DEPTH);
+  }
+
+  protected tryRestoreBarDepth(): void {
+    if (this.isCardInteractionBusy() || this.activeTabCard) return;
+    this.setDepth(this.baseBarDepth);
   }
 
   // ─── Sell Animation ───
@@ -502,6 +514,7 @@ export abstract class CardBar extends GameObjects.Container {
         this.onSellComplete(index);
         // Successful sell rebuilds via store subscription; only rebuild if sell failed.
         if (this.cards.length === cardCountBefore) this.rebuildCards();
+        this.tryRestoreBarDepth();
       },
     });
   }
@@ -536,6 +549,7 @@ export abstract class CardBar extends GameObjects.Container {
       this.activeTabCard = null;
     }
     this.clearDismissClickAway();
+    this.tryRestoreBarDepth();
   }
 
   // ─── Drag-to-Reorder ───
@@ -619,6 +633,7 @@ export abstract class CardBar extends GameObjects.Container {
     this.hoveredCard = null;
     card.setDepth(200);
     this.bringToTop(card);
+    this.elevateBarForInteraction();
     card.scaleX = 1.03;
     card.scaleY = 1.03;
   }

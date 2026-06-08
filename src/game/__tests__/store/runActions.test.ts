@@ -101,6 +101,38 @@ describe('run store actions', () => {
     expect(runStore.getState().nextDieId).toBe(1);
   });
 
+  test('diceActions insertDiceAfter places dice beside the anchor', () => {
+    const anchor = diceActions.addDie({
+      id: 'temp-a',
+      value: 2,
+      enhancement: null,
+      sticker: null,
+      aura: null,
+      bonusMiles: 0,
+    });
+    const tail = diceActions.addDie({
+      id: 'temp-b',
+      value: 8,
+      enhancement: null,
+      sticker: null,
+      aura: null,
+      bonusMiles: 0,
+    });
+
+    const [copy] = diceActions.insertDiceAfter(anchor.id, [
+      {
+        id: 'temp-copy',
+        value: 2,
+        enhancement: null,
+        sticker: null,
+        aura: null,
+        bonusMiles: 0,
+      },
+    ]);
+
+    expect(runStore.getState().dice.map((d) => d.id)).toEqual([anchor.id, copy!.id, tail.id]);
+  });
+
   test('equipmentActions buy and sell update store', () => {
     economyActions.setBalance(100);
     const def = item('horseshoe').def;

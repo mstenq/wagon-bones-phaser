@@ -180,6 +180,9 @@ export interface BoosterPackSaveData {
   picksRemaining: number;
   effectivePickCount?: number;
   usedCardIndices: number[];
+  lineupDieIds?: string[];
+  lineupSelectedDieIds?: string[];
+  pendingDiceSelectionConfig?: BoosterPackSceneState['pendingDiceSelectionConfig'];
 }
 
 export interface TrailEventSaveData {
@@ -367,6 +370,9 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
           picksRemaining: data.picksRemaining,
           effectivePickCount: data.effectivePickCount ?? 0,
           usedCardIndices: [...data.usedCardIndices],
+          lineupDieIds: [...(data.lineupDieIds ?? [])],
+          lineupSelectedDieIds: data.lineupSelectedDieIds ? [...data.lineupSelectedDieIds] : undefined,
+          pendingDiceSelectionConfig: data.pendingDiceSelectionConfig ?? null,
         },
         trailEvent: null,
         payout: null,
@@ -592,6 +598,11 @@ export function boosterPackSceneStateToSaveData(pack: BoosterPackSceneState): Bo
     picksRemaining: pack.picksRemaining,
     effectivePickCount: pack.effectivePickCount,
     usedCardIndices: [...pack.usedCardIndices],
+    ...((pack.lineupDieIds?.length ?? 0) > 0 ? { lineupDieIds: [...pack.lineupDieIds!] } : {}),
+    ...(pack.lineupSelectedDieIds && pack.lineupSelectedDieIds.length > 0
+      ? { lineupSelectedDieIds: [...pack.lineupSelectedDieIds] }
+      : {}),
+    ...(pack.pendingDiceSelectionConfig ? { pendingDiceSelectionConfig: pack.pendingDiceSelectionConfig } : {}),
   };
 }
 

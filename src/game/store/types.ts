@@ -247,6 +247,11 @@ export interface BoosterPackSceneState {
   /** Total picks allowed this open (base pickCount + equipment bonus). */
   effectivePickCount: number;
   usedCardIndices: number[];
+  /** Ordered die IDs visible in the pack targeting lineup. */
+  lineupDieIds: string[];
+  /** Survives resize/autosave while targeting dice in pack. */
+  lineupSelectedDieIds?: string[];
+  pendingDiceSelectionConfig?: DiceSelectionConfig | null;
 }
 
 export interface TrailEventSceneState {

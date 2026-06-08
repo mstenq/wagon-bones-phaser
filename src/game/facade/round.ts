@@ -15,6 +15,8 @@ import {
   setSelectedForScoreDice,
   syncRolledDiceFromFaces,
 } from '../store/roundWrites';
+import type { DiceSelectionResult } from '../DiceSelectionSystem';
+import { applyCopyAfterSelection } from '../visibleDiceRow';
 import type { RoundSidebarOverlay } from '../store/types';
 import { getRoundState } from '../store/roundStore';
 import { getRunState, runActions } from '../store/runStore';
@@ -174,5 +176,9 @@ export const gameRound = {
 
   removeDestroyedDiceFromRound(destroyedIds: Set<string>): void {
     removeDestroyedDiceFromRound(destroyedIds);
+  },
+
+  applyCopyAfterSelection(result: DiceSelectionResult, sourceDie: Die | undefined): Die[] {
+    return applyCopyAfterSelection(result, sourceDie);
   },
 };

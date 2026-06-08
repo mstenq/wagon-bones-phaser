@@ -288,12 +288,12 @@ function drawEdgeLightLane(
     const wave =
       0.5 +
       0.5 *
-      Math.sin(
-        time * (HOLY_TUNE.speedBase + lane * HOLY_TUNE.speedStep) * TAU +
-        tAlong * waveFreq * TAU +
-        lane * 1.7 +
-        jitter,
-      );
+        Math.sin(
+          time * (HOLY_TUNE.speedBase + lane * HOLY_TUNE.speedStep) * TAU +
+            tAlong * waveFreq * TAU +
+            lane * 1.7 +
+            jitter,
+        );
     const flicker = hash(Math.floor(time * (8 + lane * 2)) + idx * 19.31 + lane * 71.7);
     const lit = wave * 0.7 + flicker * 0.3 > hostTune.thresholdBase + lane * hostTune.thresholdStep;
     if (!lit) {

@@ -60,6 +60,7 @@ import { RollMarqueeSelection } from './game/RollMarqueeSelection';
 import { RollRowController } from './game/RollRowController';
 import { ScoreRowLayout, type ScoreLayoutGate } from './game/ScoreRowLayout';
 import { GameSceneDevPanel } from './game/GameSceneDevPanel';
+import { DiceRowBackdropController } from './game/DiceRowBackdropController';
 
 export class GameScene extends Scene {
   private roundSessionActive = false;
@@ -81,6 +82,7 @@ export class GameScene extends Scene {
 
   // Pre-roll hand row (SELECT phase)
   private playArea!: PlayAreaDiceController;
+  private diceRowBackdropController!: DiceRowBackdropController;
 
   // Buttons
   private readyBtn: Button;
@@ -174,15 +176,6 @@ export class GameScene extends Scene {
       this.roundSessionActive = false;
     });
 
-    this.scoreRowLayout = new ScoreRowLayout({
-      scene: this,
-      contentCenterX: () => this.contentCX,
-      getRollRowY: () => this.rollRowY,
-      getScoreRowY: () => this.scoreRowY,
-      getDiceSpacing: (count) => this.getDiceSpacing(count),
-      getDiceScale: () => this.getDiceScale(),
-    });
-
     this.consumableTargeting = new GameConsumableTargetingController({
       scene: this,
       getContentCenterX: () => this.contentCX,
@@ -192,8 +185,9 @@ export class GameScene extends Scene {
       hideAllButtons: () => this.hideAllButtons(),
       restorePhaseUi: () => this.restorePhaseUiAfterTargeting(),
       syncRollDieVisuals: () => this.syncRollDieVisuals(),
-      repositionRollRow: (animated, duration) => this.rollRow.reposition(animated, duration),
-      repositionPlayArea: (animated, duration) => this.playArea.reposition(animated, duration),
+      repositionRollRow: (animated, duration, elasticLift) => this.rollRow.reposition(animated, duration, elasticLift),
+      repositionPlayArea: (animated, duration, elasticLift) =>
+        this.playArea.reposition(animated, duration, elasticLift),
       setPlayAreaTargetingInteractive: (enabled) => this.playArea.setTargetingInteractive(enabled),
       getSelectedDiceIds: () => this.selectedDiceIds,
       setSelectedDiceIds: (ids) => {
@@ -227,6 +221,7 @@ export class GameScene extends Scene {
       setWasDragging: (value) => {
         this.wasDragging = value;
       },
+      onLayoutChange: () => this.notifyDiceRowLayoutChange(),
     });
 
     this.playArea = new PlayAreaDiceController({
@@ -237,6 +232,31 @@ export class GameScene extends Scene {
       isConsumableTargeting: () => this.consumableTargeting.isActive(),
       isConsumableTargetDie: (sprite) => this.consumableTargeting.isTargetDie(sprite),
       onConsumableTargetClick: (sprite) => this.consumableTargeting.onTargetClick(sprite),
+      onLayoutChange: () => this.notifyDiceRowLayoutChange(),
+    });
+
+    this.diceRowBackdropController = new DiceRowBackdropController({
+      getRollSprites: () => this.rollRow.getRollSprites(),
+      getPlayAreaSprites: () => this.playArea.getSprites(),
+      getSelectedDiceIds: () => this.selectedDiceIds,
+      isConsumableTargeting: () => this.consumableTargeting.isActive(),
+      isConsumableTargetDie: (sprite) => this.consumableTargeting.isTargetDie(sprite),
+      getRollRowY: () => this.rollRowY,
+      getScoreRowY: () => this.scoreRowY,
+      getDiceSpacing: (count) => this.getDiceSpacing(count),
+      getDiceScale: () => this.getDiceScale(),
+      getContentCenterX: () => this.contentCX,
+    });
+
+    this.scoreRowLayout = new ScoreRowLayout({
+      scene: this,
+      contentCenterX: () => this.contentCX,
+      getRollRowY: () => this.rollRowY,
+      getScoreRowY: () => this.scoreRowY,
+      getDiceSpacing: (count) => this.getDiceSpacing(count),
+      getDiceScale: () => this.getDiceScale(),
+      onLayoutTransitionStart: () => this.diceRowBackdropController.onScoreLayoutStart(),
+      onLayoutTransitionEnd: () => this.diceRowBackdropController.onScoreLayoutEnd(),
     });
 
     this.rollMarquee = new RollMarqueeSelection({
@@ -390,6 +410,8 @@ export class GameScene extends Scene {
     this.hudBottomReserve = hud.bottomReserve;
     this.showRollInstruction = hud.showInstruction;
 
+    this.diceRowBackdropController.rebuild(this);
+
     const { btnY, btnCenterX, instructionY } = hud;
     const playAreaW = this.contentW;
     const bossWarningY = height * UI.GAME_BOSS_WARNING_Y_RATIO;
@@ -488,6 +510,10 @@ export class GameScene extends Scene {
 
   private getDiceScale(): number {
     return computeDiceDisplayScale(this.contentW);
+  }
+
+  private notifyDiceRowLayoutChange(): void {
+    this.diceRowBackdropController.sync();
   }
 
   private onResize(): void {
@@ -614,7 +640,7 @@ export class GameScene extends Scene {
 
     // Create sprites for rolled dice
     const rolled = selectRolledDice();
-    this.rollSprites = this.rollRow.createRollRow(rolled, this.rollRowY);
+    this.rollRow.createRollRow(rolled, this.rollRowY);
 
     // Play roll animation
     this.animating = true;
@@ -749,7 +775,7 @@ export class GameScene extends Scene {
     this.hideAllButtons();
 
     const rolled = selectRolledDice();
-    this.rollSprites = this.rollRow.createRollRow(rolled, this.rollRowY);
+    this.rollRow.createRollRow(rolled, this.rollRowY);
     this.rollRow.setupInteraction();
     this.rollMarquee.setup();
 
@@ -948,6 +974,7 @@ export class GameScene extends Scene {
     this.rollRow.destroyRollSprites();
     this.playArea.clear();
     this.rollMarquee.destroy();
+    this.diceRowBackdropController?.reset();
   }
 
   private hideAllButtons(): void {
@@ -1406,7 +1433,8 @@ export class GameScene extends Scene {
 
   private async handleConsumableTargetingApply(config: DiceSelectionConfig, selectedDice: Die[]): Promise<void> {
     const effectType = config.effectType;
-    const resultMsg = gameFacade.diceSelection.applyEffect(config, selectedDice);
+    const result = gameFacade.diceSelection.applyEffect(config, selectedDice);
+    const resultMsg = result.message;
     const affectedIds = new Set(selectedDice.map((d) => d.id));
 
     const text = this.add
@@ -1436,7 +1464,34 @@ export class GameScene extends Scene {
       return;
     }
 
+    if (effectType === 'COPY' && result.addedDice && result.addedDice.length > 0) {
+      gameFacade.round.applyCopyAfterSelection(result, selectedDice[0]);
+      this.rebuildActiveDiceRowFromStore();
+      return;
+    }
+
     this.refreshDiceSpritesAfterEffect(affectedIds, effectType);
+  }
+
+  private rebuildActiveDiceRowFromStore(): void {
+    const phase = selectRoundPhase();
+    if (phase === 'ROLL') {
+      const rolled = selectRolledDice();
+      this.rollRow.createRollRow(rolled, this.rollRowY);
+      this.rollRow.setupInteraction();
+      this.syncRollDieVisuals();
+      this.rollRow.reposition(false);
+      this.rollMarquee.setup();
+      this.applyBossRollDiceState();
+      return;
+    }
+
+    if (phase === 'SELECT') {
+      this.playArea.setY(this.rollRowY);
+      this.playArea.buildHand(selectHandDice());
+      this.playArea.reposition(false);
+      this.updateDrawButtons();
+    }
   }
 
   /** Refresh dice sprites in-place after a consumable effect changes dice data */

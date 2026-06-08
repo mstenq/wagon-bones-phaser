@@ -96,13 +96,18 @@ export const sceneActions = {
   },
 
   enterBoosterPack(pack: BoosterPackSceneState): void {
-    sceneStore.setState((state) => ({ ...state, activeScene: 'BoosterPack', boosterPack: pack }));
+    sceneStore.setState((state) => ({
+      ...state,
+      activeScene: 'BoosterPack',
+      boosterPack: { ...pack, lineupDieIds: pack.lineupDieIds ?? [] },
+    }));
   },
 
   patchBoosterPack(partial: Partial<BoosterPackSceneState>): void {
     sceneStore.setState((state) => {
       if (!state.boosterPack) return state;
-      return { ...state, boosterPack: { ...state.boosterPack, ...partial } };
+      const next = { ...state.boosterPack, ...partial };
+      return { ...state, boosterPack: { ...next, lineupDieIds: next.lineupDieIds ?? [] } };
     });
   },
 
@@ -117,6 +122,14 @@ export const sceneActions = {
 
   clearBoosterPack(): void {
     sceneStore.setState((state) => ({ ...state, boosterPack: null }));
+  },
+
+  patchPackLineupSelection(lineupSelectedDieIds: string[]): void {
+    sceneActions.patchBoosterPack({ lineupSelectedDieIds });
+  },
+
+  setPendingPackDiceSelection(pendingDiceSelectionConfig: BoosterPackSceneState['pendingDiceSelectionConfig']): void {
+    sceneActions.patchBoosterPack({ pendingDiceSelectionConfig });
   },
 
   enterTrailEvent(trail: TrailEventSceneState): void {

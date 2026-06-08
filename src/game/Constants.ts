@@ -294,6 +294,12 @@ export const UI = {
   CONSUMABLE_BAR_COMPACT_MAX_RATIO: 0.38,
   /** Gap between equipment and consumable bars */
   CARD_BAR_GAP: 8,
+  /** Scene depth for the consumable card bar (created after equipment bar). */
+  CONSUMABLE_BAR_DEPTH: 150,
+  /** Equipment bar sits above consumable bar so right-edge sell tabs are not covered. */
+  EQUIP_BAR_DEPTH: 160,
+  /** Raised while a card is dragged or action tabs are open. */
+  CARD_BAR_INTERACTION_DEPTH: 175,
   /** Top inset for cards inside the bar background */
   CARD_BAR_TOP_INSET: 8,
   /** Base card scale for both equipment and consumable bars at full content width */
@@ -350,7 +356,11 @@ export const UI = {
   CARD_SHADOW_OFFSET: 4,
   CARD_SHADOW_ALPHA: 0.35,
   CARD_PRICE_TAG_H: 26,
+  CARD_PRICE_TAG_W: 50,
   CARD_PRICE_TAG_GAP: 6,
+  CARD_PRICE_TAG_FONT: 14,
+  /** Floor for shop/sell price labels on narrow screens (px). */
+  CARD_PRICE_TAG_FONT_MIN: 16,
   CARD_TOOLTIP_PAD: 10,
   CARD_TOOLTIP_TITLE_FONT_SIZE: 16,
   CARD_TOOLTIP_FONT_SIZE: 14,
@@ -423,6 +433,14 @@ export const UI = {
   /** Non-scoring kickers sit this many px below the scoring line (Balatro play line) */
   DICE_SCORE_FILLER_DROP_Y: 50,
   DICE_SCORE_FILLER_ALPHA: 0.72,
+  /** Horizontal inset around dice row backdrop (px) */
+  DICE_ROW_BACKDROP_PAD_X: 14,
+  /** Vertical inset around dice row backdrop (px) */
+  DICE_ROW_BACKDROP_PAD_Y: 10,
+  /** Corner radius for dice row backdrop (matches card bars) */
+  DICE_ROW_BACKDROP_RADIUS: 8,
+  /** Gap between score-row dice bottom and dice row backdrop top during scoring */
+  DICE_ROW_BACKDROP_SCORE_CLEARANCE: 8,
   FELT_PADDING: 12,
   FELT_ALPHA: 0.4,
   FELT_RADIUS: 16,
@@ -479,6 +497,9 @@ export const ANIM = {
   DICE_SCORE_PUNCH_MULT: 1.2,
   /** Tween duration when moving locked dice into the score line */
   DICE_SCORE_LAYOUT_DURATION: 400,
+  /** Shared elastic timing for dice row backdrop resize and die select lift/drop */
+  DICE_ROW_ELASTIC_DURATION: 420,
+  DICE_ROW_ELASTIC_EASE_PARAMS: [1.05, 0.85] as [number, number],
   SCORE_STEP_DELAY: 200, // ms between each scoring step (dice, equip, held)
   SCORE_SUBSTEP_DELAY: 200, // ms between sub-events on the same die (miles → mult → etc)
   SCORE_FINAL_FLASH_DELAY: 300,

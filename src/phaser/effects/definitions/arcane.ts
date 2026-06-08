@@ -275,13 +275,13 @@ export const arcaneEffect: EffectDefinition = {
       const pulse =
         ARCANE_TUNE.pulse.base +
         pulse01(t, ARCANE_TUNE.pulse.layer1PeriodBase + seed * ARCANE_TUNE.pulse.layer1PeriodSeedScale) *
-        ARCANE_TUNE.pulse.layer1Weight +
+          ARCANE_TUNE.pulse.layer1Weight +
         pulse01(
           t,
           ARCANE_TUNE.pulse.layer2PeriodBase + seed * ARCANE_TUNE.pulse.layer2PeriodSeedScale,
           ARCANE_TUNE.pulse.layer2Phase,
         ) *
-        ARCANE_TUNE.pulse.layer2Weight;
+          ARCANE_TUNE.pulse.layer2Weight;
       const hoverBoost = frame.hovered ? ARCANE_TUNE.hoverBoost : 1.0;
       const activeBoost = frame.activated ? ARCANE_TUNE.activeBoost : 1.0;
       const amp = ARCANE_TUNE.baseAmplitude * pulse * hoverBoost * activeBoost;
@@ -365,17 +365,17 @@ export const arcaneEffect: EffectDefinition = {
           const drift =
             Math.sin(
               t * microDriftSpeed +
-              idx * ARCANE_TUNE.shape.driftIndexScale +
-              lanePhase * ARCANE_TUNE.shape.driftPhaseScale +
-              jitterSeed * ARCANE_TUNE.shape.driftSeedScale +
-              phaseNudge * ARCANE_TUNE.shape.driftPhaseNudgeScale,
+                idx * ARCANE_TUNE.shape.driftIndexScale +
+                lanePhase * ARCANE_TUNE.shape.driftPhaseScale +
+                jitterSeed * ARCANE_TUNE.shape.driftSeedScale +
+                phaseNudge * ARCANE_TUNE.shape.driftPhaseNudgeScale,
             ) * ARCANE_TUNE.shape.driftAmplitude;
           const wobble = Math.sin(t * laneSpeed + idx * laneFreq + lanePhase + jitterSeed * TAU + drift + phaseNudge);
           const tangentWiggle = Math.cos(
             t * (laneSpeed * ARCANE_TUNE.shape.tangentWiggleScale) +
-            idx * ARCANE_TUNE.shape.tangentIndexScale +
-            jitterSeed * ARCANE_TUNE.shape.tangentSeedScale +
-            drift * ARCANE_TUNE.shape.tangentDriftScale,
+              idx * ARCANE_TUNE.shape.tangentIndexScale +
+              jitterSeed * ARCANE_TUNE.shape.tangentSeedScale +
+              drift * ARCANE_TUNE.shape.tangentDriftScale,
           );
           const offsetN =
             wobble *
@@ -389,13 +389,13 @@ export const arcaneEffect: EffectDefinition = {
           const gateWave =
             0.5 +
             0.5 *
-            Math.sin(
-              t * (ARCANE_TUNE.gate.waveFrequencyBase + lane * ARCANE_TUNE.gate.waveFrequencyStep) +
-              idx * ARCANE_TUNE.gate.waveIndexScale +
-              lanePhase +
-              drift +
-              phaseNudge * ARCANE_TUNE.gate.wavePhaseNudgeScale,
-            );
+              Math.sin(
+                t * (ARCANE_TUNE.gate.waveFrequencyBase + lane * ARCANE_TUNE.gate.waveFrequencyStep) +
+                  idx * ARCANE_TUNE.gate.waveIndexScale +
+                  lanePhase +
+                  drift +
+                  phaseNudge * ARCANE_TUNE.gate.wavePhaseNudgeScale,
+              );
           const gate = gateWave * ARCANE_TUNE.gate.waveWeight + gateNoise * ARCANE_TUNE.gate.noiseWeight;
           const lit = gate > laneThreshold;
 

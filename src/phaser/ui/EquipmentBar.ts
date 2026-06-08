@@ -40,6 +40,7 @@ import {
   syncEquipmentDisplayOrder,
 } from '../../game/BossEffectsSystem';
 import { applyEquipmentModifierDestructions, type EquipmentModifierRoundResult } from '../../game/EquipmentModifiers';
+import { UI } from '../../game/Constants';
 import { bindGameObject } from '../store/subscribe';
 
 export class EquipmentBar extends CardBar {
@@ -49,6 +50,8 @@ export class EquipmentBar extends CardBar {
 
   constructor(scene: Scene, x: number, y: number, width: number, height: number, cardLayout: CardBarMetrics) {
     super(scene, x, y, width, height, cardLayout);
+    this.baseBarDepth = UI.EQUIP_BAR_DEPTH;
+    this.setDepth(UI.EQUIP_BAR_DEPTH);
 
     bindGameObject(this, runStore, selectEquipmentBarSnapshot, () => this.rebuildFromStore(), {
       equalityFn: (a, b) => a === b,

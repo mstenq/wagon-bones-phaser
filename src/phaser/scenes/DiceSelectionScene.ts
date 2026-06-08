@@ -237,7 +237,7 @@ export class DiceSelectionScene extends Scene {
     // Show result briefly then return
     const { width, height } = this.scale;
     this.add
-      .text(width / 2, height * 0.62, result, {
+      .text(width / 2, height * 0.62, result.message, {
         fontFamily: 'Arial Black',
         fontSize: '24px',
         color: '#66ff66',

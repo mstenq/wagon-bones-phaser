@@ -28,6 +28,7 @@ SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; gameplay lives in Phase
 1. **`bun run typecheck`**
 2. **`bun run check`**
 3. **`bun run build`** — when you changed Phaser scenes, Vite config, or the production bundle
+4. **`graphify update .`** — **last step only**, after everything above passes. Kick it off in the background and **do not wait** for it to finish; rebuilds are slow and never block shipping the task.
 
 Fix failures in code you touched. Pre-existing `tsc` errors elsewhere: clear only when you edit those files.
 
@@ -42,7 +43,7 @@ Fix failures in code you touched. Pre-existing `tsc` errors elsewhere: clear onl
 | Explain a symbol | `graphify explain "<concept>"` |
 | Community overview | `graphify-out/GRAPH_REPORT.md` or `graphify-out/wiki/index.md` if present |
 
-After modifying code in a session: **`graphify update .`** (AST-only, no API cost). See `.cursor/rules/graphify.mdc`.
+After modifying code in a session: run **`graphify update .`** as the **final** step (AST-only, no API cost). Fire-and-forget — start it in the background and move on; do not poll or block on completion. See `.cursor/rules/graphify.mdc`.
 
 ## Architecture (constitution only)
 
