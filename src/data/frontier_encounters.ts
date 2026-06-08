@@ -2,6 +2,7 @@
 // Typed encounter data following the trail_tags.ts pattern.
 // Each encounter may use dice selection, an instant effect, or explicit handler logic.
 
+import type { ConsumableUseMode } from './consumableTypes';
 import type { DiceSelectionEffectParams, DiceSelectionEffectType } from '../game/DiceSelectionSystem';
 import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
 import type { HintSegment } from './items';
@@ -33,6 +34,7 @@ export interface FrontierEncounterDef {
   id: string;
   name: string;
   description: string;
+  useMode: ConsumableUseMode;
   /** Show Buy & Use action in shop (for non-targeting cards). */
   shopBuyAndUse?: boolean;
   diceSelection?: FrontierDiceSelectionDef;
@@ -47,6 +49,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'gold_rush',
     name: 'Gold Rush',
     description: 'Add golden dollar sticker to one die',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
       pickCount: 1,
@@ -58,6 +61,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'snake_oil_salesman',
     name: 'Snake Oil Salesman',
     description: 'Add purple flower sticker to one die',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
       pickCount: 1,
@@ -69,6 +73,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'spirit_guide',
     name: 'Spirit Guide',
     description: 'Add blue moon sticker to one die',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
       pickCount: 1,
@@ -80,6 +85,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'deputize',
     name: 'Deputize',
     description: 'Add red bullet sticker to one die',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
       pickCount: 1,
@@ -91,12 +97,14 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'blood_moon',
     name: 'Blood Moon',
     description: 'Add ghost aura to random item, -1 reroll',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
   {
     id: 'spirit_shaman',
     name: 'Spirit Shaman',
     description: 'Bless one dice with random aura',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
       pickCount: 1,
@@ -108,21 +116,27 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'raid',
     name: 'Raid',
     description: 'Destroy 5 random dice from active pool, gain $20',
+    useMode: 'visible_dice',
   },
   {
     id: 'skin_walker',
     name: 'Skin Walker',
     description: 'Copy random item, destroy all others',
+    useMode: 'any_time',
+    shopBuyAndUse: true,
   },
   {
     id: 'priests_blessing',
     name: "Priest's Blessing",
     description: 'Add holy aura to random item, delete all others',
+    useMode: 'any_time',
+    shopBuyAndUse: true,
   },
   {
     id: 'seeing_double',
     name: 'Seeing Double',
     description: 'Create 2 copies of a dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
       pickCount: 1,
@@ -134,6 +148,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'magic_beans',
     name: 'Magic Beans',
     description: 'Create rare item, money is set to $0',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     instantEffect: {
       type: 'CREATE_EQUIPMENT',
@@ -146,6 +161,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'pandoras_box',
     name: "Pandora's Box",
     description: 'Create legendary item (very rare)',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     instantEffect: {
       type: 'CREATE_EQUIPMENT',
@@ -157,6 +173,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'spiritual_journey',
     name: 'Spiritual Journey',
     description: 'Increase all trail knowledge by 1 (very rare)',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     instantEffect: { type: 'UPGRADE_ALL_HANDS' },
   },
@@ -164,12 +181,14 @@ const frontierEncounters: FrontierEncounterDef[] = [
     id: 'all_in',
     name: 'All In',
     description: 'Double your money. Lose all rerolls this round',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
   {
     id: 'echo_of_the_damned',
     name: 'Echo of the Damned',
     description: 'Your next played hand retriggers all scoring dice (stacks)',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
 ];

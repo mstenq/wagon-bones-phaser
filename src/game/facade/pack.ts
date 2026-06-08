@@ -6,7 +6,7 @@ import {
   getRandomSupplyDef,
   useConsumableDirectly,
   type ConsumableDef,
-  type UseConsumableContext,
+  type ConsumableEffectContext,
   type UseConsumableResult,
 } from '../ConsumablesSystem';
 import { applyDiceSelectionEffect, type DiceSelectionConfig, type DiceSelectionResult } from '../DiceSelectionSystem';
@@ -32,7 +32,7 @@ export type {
   PackDefinition,
   PackItem,
   ConsumableDef,
-  UseConsumableContext,
+  ConsumableEffectContext,
   UseConsumableResult,
   DiceSelectionConfig,
   ConsumableInstance,
@@ -117,7 +117,7 @@ export const gamePack = {
     return syncPackLineupAfterSelection(result, selectedDice);
   },
 
-  useConsumableDirectly(def: ConsumableDef, context: UseConsumableContext = {}): UseConsumableResult {
+  useConsumableDirectly(def: ConsumableDef, context: ConsumableEffectContext = {}): UseConsumableResult {
     const result = useConsumableDirectly(def, context);
     enqueueConsumablePlayback(result);
     return result;
@@ -129,7 +129,7 @@ export const gamePack = {
     return result;
   },
 
-  useFromPouch(consumed: ConsumableInstance, context: UseConsumableContext = {}): UseConsumableResult {
+  useFromPouch(consumed: ConsumableInstance, context: ConsumableEffectContext = {}): UseConsumableResult {
     return gameConsumable.use(consumed, context);
   },
 

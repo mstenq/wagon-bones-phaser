@@ -8,24 +8,16 @@ type FailurePopupConfig = {
   sound?: () => void;
 };
 
-/** Route consumable use results (dice selection redirect only — animations via playback queue). */
+/** Route consumable use results (animations via playback queue; dice targeting is inline per scene). */
 export function handleStandardConsumableResult(
   scene: Scene,
   _sidebar: Sidebar,
   result: UseConsumableResult,
-  returnScene: string,
+  _returnScene: string,
   failurePopup?: FailurePopupConfig,
 ): void {
   if (!result.success && result.failReason && failurePopup) {
     showConsumableFailure(scene, result.failReason, failurePopup);
-  }
-
-  if (result.diceSelection) {
-    scene.scene.start('DiceSelection', {
-      config: result.diceSelection,
-      returnScene,
-      returnSceneData: {},
-    });
   }
 }
 

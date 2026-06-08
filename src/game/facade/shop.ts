@@ -10,7 +10,7 @@ import type { Die } from '../types';
 import { shopActions } from '../store/actions/shopActions';
 import { shopBuyActions, type ShopBuyFailReason, type ShopBuyResult } from '../store/actions/shopBuyActions';
 import { shopSceneActions } from '../store/actions/shopSceneActions';
-import type { UseConsumableContext, UseConsumableResult } from '../ConsumablesSystem';
+import type { ConsumableEffectContext, UseConsumableResult } from '../ConsumablesSystem';
 import { enqueueConsumablePlayback } from '../store/uiEffectHelpers';
 import type { RunState, ShopSceneState } from '../store/types';
 import { getRunState } from '../store/runStore';
@@ -56,7 +56,7 @@ export const gameShop = {
     return shopBuyActions.buyConsumable(def, cost);
   },
 
-  buyAndUseConsumable(def: ConsumableDef, cost: number, context: UseConsumableContext = {}): UseConsumableResult {
+  buyAndUseConsumable(def: ConsumableDef, cost: number, context: ConsumableEffectContext = {}): UseConsumableResult {
     const result = shopBuyActions.buyAndUseConsumable(def, cost, context);
     enqueueConsumablePlayback(result);
     return result;

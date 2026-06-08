@@ -4,7 +4,7 @@
 
 import { Scene } from 'phaser';
 import { getItemDisplayContext } from '../../game/displayContext';
-import { ConsumableDef, getConsumableAtlasKey } from '../../game/ConsumablesSystem';
+import { type ConsumableDef, type ConsumableInstance, getConsumableAtlasKey } from '../../game/ConsumablesSystem';
 import { consumableActions } from '../../game/store/actions/consumableActions';
 import { resolveConsumableList } from '../../game/store/resolve';
 import { runStore } from '../../game/store/runStore';
@@ -19,12 +19,33 @@ import { CardBar } from './CardBar';
 import { computeCompactCardSpacing, type CardBarMetrics } from './SceneLayout';
 import { bindGameObject } from '../store/subscribe';
 
+export type ConsumableTargetingRequest = {
+  index: number;
+  instance: ConsumableInstance;
+};
+
+export type ConsumableTargetingCommitRequest = {
+  index: number;
+  instance: ConsumableInstance;
+  bumpDirection?: 'up' | 'down';
+};
+
+export type ConsumableBarTargetingState = {
+  activeIndex: number | null;
+  ready: boolean;
+  diceReady: boolean;
+  needsBumpDirection: boolean;
+};
+
 export class ConsumableBar extends CardBar {
   private canUsePredicate: ((def: ConsumableDef) => boolean) | null = null;
+  private targetingStateProvider: (() => ConsumableBarTargetingState) | null = null;
   private slotLabel = '';
   private canUseSecondHelpings = false;
   /** Skip store-driven rebuild while a use animation is playing (store already updated). */
   private suppressStoreRebuild = false;
+  /** Block spurious tab dismiss on the same pointer gesture as USE (card tap-up race). */
+  private suppressTabDismissCancel = false;
 
   constructor(scene: Scene, x: number, y: number, width: number, height: number, cardLayout: CardBarMetrics) {
     super(scene, x, y, width, height, cardLayout);
@@ -76,6 +97,39 @@ export class ConsumableBar extends CardBar {
     this.rebuildCards();
   }
 
+  setTargetingStateProvider(provider: (() => ConsumableBarTargetingState) | null): void {
+    this.targetingStateProvider = provider;
+    this.rebuildCards();
+  }
+
+  /** Rebuild action tabs when scene eligibility changes (e.g. ROLL phase unlocks medicine). */
+  refreshUseEligibility(): void {
+    if (this.suppressStoreRebuild) return;
+    const targetingState = this.targetingStateProvider?.() ?? null;
+    if (targetingState?.activeIndex != null) {
+      this.refreshTargetingTabs(targetingState.activeIndex);
+      return;
+    }
+    this.rebuildCards();
+  }
+
+  refreshTargetingTabs(index: number): void {
+    const card = this.cards[index];
+    if (!card) return;
+    const targetingState = this.targetingStateProvider?.() ?? null;
+    const instant = targetingState?.activeIndex === index;
+    console.log('[consumable-tabs] refreshTargetingTabs', { index, instant, targetingState });
+    this.ensureActionTabsOpen(card, index, instant);
+  }
+
+  protected shouldSuppressTabDismiss(): boolean {
+    return this.suppressTabDismissCancel;
+  }
+
+  getCardAt(index: number): ItemCard | undefined {
+    return this.cards[index];
+  }
+
   /** Consumables fan/overlap in a narrow bar; compress further only when slots exceed width. */
   protected getCardSpacing(count: number): number {
     if (count <= 1) return 0;
@@ -112,6 +166,37 @@ export class ConsumableBar extends CardBar {
     if (!consumable) return null;
 
     const tabs: CardActionTabConfig[] = [];
+    const targetingState = this.targetingStateProvider?.() ?? null;
+    const isArmed = targetingState?.activeIndex === index;
+
+    if (isArmed) {
+      if (targetingState.needsBumpDirection) {
+        tabs.push({
+          label: '+1\nUP',
+          color: targetingState.diceReady ? 0x338833 : 0x555555,
+          textColor: targetingState.diceReady ? '#ffffff' : '#bbbbbb',
+          disabled: !targetingState.diceReady,
+          callback: () => this.onCommitTargeting(consumable, index, 'up'),
+        });
+        tabs.push({
+          label: '-1\nDOWN',
+          color: targetingState.diceReady ? 0x883333 : 0x555555,
+          textColor: targetingState.diceReady ? '#ffffff' : '#bbbbbb',
+          disabled: !targetingState.diceReady,
+          callback: () => this.onCommitTargeting(consumable, index, 'down'),
+        });
+        return tabs;
+      }
+
+      tabs.push({
+        label: 'USE',
+        color: targetingState.ready ? 0x2255aa : 0x555555,
+        textColor: targetingState.ready ? '#ffffff' : '#bbbbbb',
+        disabled: !targetingState.ready,
+        callback: () => this.onCommitTargeting(consumable, index),
+      });
+      return tabs;
+    }
 
     const canUse = consumable.def.id !== 'second_helpings' || this.canUseSecondHelpings;
     const canUseInScene = this.canUsePredicate ? this.canUsePredicate(consumable.def) : true;
@@ -142,16 +227,66 @@ export class ConsumableBar extends CardBar {
     this.emit('consumable-changed');
   }
 
-  private onUseConsumable(card: ItemCard, consumableIndex: number): void {
-    this.suppressStoreRebuild = true;
-    this.beginCardRemoval(card);
+  protected onActionTabsDismissed(card: ItemCard, index: number): void {
+    const targetingState = this.targetingStateProvider?.() ?? null;
+    if (targetingState?.activeIndex !== index) return;
 
-    const consumed = consumableActions.useConsumable(consumableIndex);
-    if (!consumed) {
-      this.suppressStoreRebuild = false;
+    if (this.suppressTabDismissCancel) {
+      console.log('[consumable-tabs] suppressed dismiss-cancel (same gesture), reopening tabs');
+      this.scene.time.delayedCall(0, () => {
+        const state = this.targetingStateProvider?.() ?? null;
+        if (state?.activeIndex === index) {
+          this.ensureActionTabsOpen(card, index, true);
+        }
+      });
       return;
     }
 
+    console.log('[consumable-tabs] dismiss → cancel targeting', {
+      index,
+      needsBump: targetingState.needsBumpDirection,
+    });
+    this.emit('consumable-cancel-targeting', { index });
+  }
+
+  private onUseConsumable(card: ItemCard, consumableIndex: number): void {
+    const consumable = resolveConsumableList()[consumableIndex];
+    if (!consumable) return;
+
+    const targetingState = this.targetingStateProvider?.() ?? null;
+    if (targetingState?.activeIndex === consumableIndex) {
+      this.onCommitTargeting(consumable, consumableIndex);
+      return;
+    }
+
+    if (consumable.def.diceSelection) {
+      this.suppressTabDismissCancel = true;
+      console.log('[consumable-tabs] USE → arm', { consumableIndex, defId: consumable.def.id });
+      this.scene.time.delayedCall(0, () => {
+        this.suppressTabDismissCancel = false;
+      });
+      this.emit('consumable-arm-targeting', {
+        index: consumableIndex,
+        instance: consumable,
+      } satisfies ConsumableTargetingRequest);
+      return;
+    }
+
+    this.consumeAndAnimateCard(card, consumableIndex);
+  }
+
+  private onCommitTargeting(instance: ConsumableInstance, index: number, bumpDirection?: 'up' | 'down'): void {
+    this.emit('consumable-commit-targeting', {
+      index,
+      instance,
+      bumpDirection,
+    } satisfies ConsumableTargetingCommitRequest);
+  }
+
+  /** Play the standard use animation after logic has removed the card from the store. */
+  playUseSuccessAnimation(card: ItemCard, onComplete?: () => void): void {
+    this.suppressStoreRebuild = true;
+    this.beginCardRemoval(card);
     this.scene.sound.play('sfx_card_fan', { volume: 0.5 });
 
     this.scene.tweens.add({
@@ -165,10 +300,24 @@ export class ConsumableBar extends CardBar {
       onComplete: () => {
         this.suppressStoreRebuild = false;
         if (card.scene) card.destroy();
-        this.emit('consumable-used', consumed);
         this.rebuildCards();
         this.tryRestoreBarDepth();
+        onComplete?.();
       },
+    });
+  }
+
+  private consumeAndAnimateCard(card: ItemCard, consumableIndex: number): void {
+    this.suppressStoreRebuild = true;
+
+    const consumed = consumableActions.useConsumable(consumableIndex);
+    if (!consumed) {
+      this.suppressStoreRebuild = false;
+      return;
+    }
+
+    this.playUseSuccessAnimation(card, () => {
+      this.emit('consumable-used', consumed);
     });
   }
 }

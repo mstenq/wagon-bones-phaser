@@ -15,10 +15,14 @@ import {
   finalizeConsumableEquipmentEvents,
   isSecondHelpingsCloneTarget,
   grantGhostMedicine,
-  canUseConsumableInShop,
   bumpAllSellValues,
-  canBuyAndUseConsumableInShop,
 } from '../ConsumablesSystem';
+import {
+  canBuyAndUseConsumableInShop,
+  canUseConsumable,
+  canUseConsumableInShop,
+} from '../consumables/consumableUseContext';
+import type { ConsumableUseMode } from '../../data/consumableTypes';
 import { getRunState } from '../store/runStore';
 import { selectRunStatusTraits } from '../runStatusTraits';
 import { shouldPromptRoundModifications } from '../store/selectors/uiSelectors';
@@ -65,20 +69,19 @@ describe('ConsumableDef creation', () => {
     const card = supplyCardsData.find((c) => c.id === 'shallow_grave')!;
     const def = createSupplyConsumableDef(card);
     expect(def.diceSelection).toBeDefined();
-    expect(def.diceSelection!.drawCount).toBe(5);
+    expect(def.diceSelection!.drawCount).toBe(0);
     expect(def.diceSelection!.pickCount).toBe(2);
     expect(getDiceSelectionMinPicks(def.diceSelection!)).toBe(2);
   });
 
-  test('two-die enhance supply cards require only one selection', () => {
-    const card = supplyCardsData.find((c) => c.id === 'buzzards')!;
+  test('enhance supply cards can apply to fewer than their max picks', () => {
+    const card = supplyCardsData.find((c) => c.id === 'coffee_tin')!;
     const def = createSupplyConsumableDef(card);
-    expect(def.diceSelection!.pickCount).toBe(3);
+    expect(def.diceSelection!.pickCount).toBe(2);
     expect(def.diceSelection!.minPickCount).toBe(1);
     expect(isDiceSelectionReady(def.diceSelection!, 1)).toBe(true);
     expect(isDiceSelectionReady(def.diceSelection!, 0)).toBe(false);
     expect(isDiceSelectionReady(def.diceSelection!, 2)).toBe(true);
-    expect(isDiceSelectionReady(def.diceSelection!, 3)).toBe(true);
   });
 
   test('createTrailGuideConsumableDef creates a valid def', () => {
@@ -599,12 +602,10 @@ describe('pre-roll consumable targeting regression', () => {
     const loadedDef = getSupplyDefById('loaded');
     expect(loadedDef).not.toBeNull();
 
-    const useResult = executeConsumableEffect(createConsumableInstance(loadedDef!));
-    expect(useResult.success).toBe(true);
-    expect(useResult.diceSelection).toBeDefined();
+    expect(loadedDef!.diceSelection).toBeDefined();
 
     const target = game.state.hand[0];
-    const applyMessage = applyDiceSelectionEffect(useResult.diceSelection!, [target]);
+    const applyMessage = applyDiceSelectionEffect(loadedDef!.diceSelection!, [target]);
 
     expect(applyMessage.message).toContain('Enhanced 1 dice');
     const updated = player.dice.find((d) => d.id === target.id);
@@ -1031,19 +1032,14 @@ describe('frontier encounter wiring and raid rules', () => {
 });
 
 describe('supply/frontier execution parity for shared effect engines', () => {
-  test('both supply and frontier diceSelection cards return targeting configs before applying effects', () => {
+  test('both supply and frontier diceSelection cards expose targeting configs on the def', () => {
     const player = resetPlayerState();
     player.dice = [die({ value: 2 }), die({ value: 4 }), die({ value: 6 }), die({ value: 8 }), die({ value: 10 })];
     const supplyDef = getSupplyDefById('shallow_grave')!;
     const frontierDef = getFrontierDefById('gold_rush')!;
 
-    const supplyResult = executeConsumableEffect(createConsumableInstance(supplyDef));
-    const frontierResult = executeConsumableEffect(createConsumableInstance(frontierDef));
-
-    expect(supplyResult.success).toBe(true);
-    expect(frontierResult.success).toBe(true);
-    expect(supplyResult.diceSelection).toBeDefined();
-    expect(frontierResult.diceSelection).toBeDefined();
+    expect(supplyDef.diceSelection).toBeDefined();
+    expect(frontierDef.diceSelection).toBeDefined();
     expect(player.dice).toHaveLength(5);
   });
 
@@ -1070,24 +1066,126 @@ describe('supply/frontier execution parity for shared effect engines', () => {
   });
 });
 
+const EXPECTED_USE_MODES: Record<string, ConsumableUseMode> = {
+  coffee_tin: 'visible_dice',
+  buzzards: 'visible_dice',
+  rabbits_foot: 'visible_dice',
+  firewood: 'visible_dice',
+  loaded: 'visible_dice',
+  pick_axe: 'visible_dice',
+  pan_for_gold: 'visible_dice',
+  chisel: 'visible_dice',
+  shallow_grave: 'visible_dice',
+  mirage: 'visible_dice',
+  medicine: 'scored_dice',
+  treasure_map: 'any_time',
+  trade: 'any_time',
+  doctor: 'any_time',
+  compass: 'any_time',
+  supply_cache: 'any_time',
+  ingenuity: 'any_time',
+  bless: 'any_time',
+  second_helpings: 'any_time',
+  omen_stone: 'any_time',
+  shop_pass: 'any_time',
+  fools_gold: 'any_time',
+  trading_post: 'any_time',
+  gold_rush: 'visible_dice',
+  snake_oil_salesman: 'visible_dice',
+  spirit_guide: 'visible_dice',
+  deputize: 'visible_dice',
+  spirit_shaman: 'visible_dice',
+  raid: 'visible_dice',
+  seeing_double: 'visible_dice',
+  blood_moon: 'any_time',
+  skin_walker: 'any_time',
+  priests_blessing: 'any_time',
+  magic_beans: 'any_time',
+  pandoras_box: 'any_time',
+  spiritual_journey: 'any_time',
+  all_in: 'any_time',
+  echo_of_the_damned: 'any_time',
+};
+
+for (const tg of trailGuidesData) {
+  EXPECTED_USE_MODES[tg.id] = 'any_time';
+}
+
+const shopContext = { scene: 'shop' as const, source: 'bar' as const };
+const gameRollContext = (visibleDieIds: string[], scoreableDieIds: string[], isScoreActionVisible: boolean) => ({
+  scene: 'game' as const,
+  source: 'bar' as const,
+  phase: 'ROLL' as const,
+  visibleDieIds,
+  scoreableDieIds,
+  isScoreActionVisible,
+});
+const gameSelectContext = (visibleDieIds: string[]) => ({
+  scene: 'game' as const,
+  source: 'bar' as const,
+  phase: 'SELECT' as const,
+  visibleDieIds,
+  scoreableDieIds: [] as string[],
+  isScoreActionVisible: false,
+});
+const packContext = (visibleDieIds: string[]) => ({
+  scene: 'booster_pack' as const,
+  source: 'pack_card' as const,
+  visibleDieIds,
+});
+
+describe('consumable use mode manifest', () => {
+  test('every consumable has exactly one use mode matching GAME_CONSUMABLES_OVERVIEW', () => {
+    const allDefs = [
+      ...supplyCardsData.map((card) => createSupplyConsumableDef(card)),
+      ...trailGuidesData.map((tg) => createTrailGuideConsumableDef(tg)),
+      ...frontierEncountersData.map((fe) => createFrontierConsumableDef(fe)),
+    ];
+    expect(allDefs).toHaveLength(47);
+    for (const def of allDefs) {
+      expect(def.useMode).toBeDefined();
+      expect(EXPECTED_USE_MODES[def.id]).toBe(def.useMode);
+    }
+    expect(Object.keys(EXPECTED_USE_MODES)).toHaveLength(47);
+  });
+
+  test('shallow_grave and mirage metadata fixes', () => {
+    const shallowGrave = supplyCardsData.find((c) => c.id === 'shallow_grave')!;
+    const mirage = supplyCardsData.find((c) => c.id === 'mirage')!;
+    expect(shallowGrave.description).toBe('Choose 2 dice to destroy');
+    expect(shallowGrave.diceSelection!.drawCount).toBe(0);
+    expect(mirage.description).toBe('Pick 2 dice - left becomes a copy of right');
+    expect(mirage.diceSelection!.drawCount).toBe(0);
+  });
+});
+
 describe('shop consumable use gating', () => {
-  test('shop blocks ENHANCE and ADD_STICKER dice selection cards', () => {
-    const enhanceDef = getSupplyDefById('loaded')!;
-    const stickerDef = getFrontierDefById('gold_rush')!;
-
-    expect(canUseConsumableInShop(enhanceDef)).toBe(false);
-    expect(canUseConsumableInShop(stickerDef)).toBe(false);
+  test('shop blocks visible_dice and scored_dice cards', () => {
+    const visibleDiceIds = [
+      'loaded',
+      'shallow_grave',
+      'mirage',
+      'gold_rush',
+      'spirit_shaman',
+      'raid',
+      'seeing_double',
+    ] as const;
+    for (const id of visibleDiceIds) {
+      const def =
+        id === 'loaded' || id === 'shallow_grave' || id === 'mirage' ? getSupplyDefById(id)! : getFrontierDefById(id)!;
+      expect(canUseConsumableInShop(def)).toBe(false);
+      expect(canUseConsumable(def, shopContext).allowed).toBe(false);
+    }
+    expect(canUseConsumableInShop(getSupplyDefById('medicine')!)).toBe(false);
   });
 
-  test('shop allows non-dice-edit cards and non-blocked dice selection effects', () => {
-    const destroyDef = getSupplyDefById('shallow_grave')!;
-    const instantDef = getSupplyDefById('treasure_map')!;
-
-    expect(canUseConsumableInShop(destroyDef)).toBe(true);
-    expect(canUseConsumableInShop(instantDef)).toBe(true);
+  test('shop allows any_time cards', () => {
+    expect(canUseConsumableInShop(getSupplyDefById('treasure_map')!)).toBe(true);
+    expect(canUseConsumableInShop(getFrontierDefById('skin_walker')!)).toBe(true);
+    expect(canUseConsumableInShop(getTrailGuideDefById('tg_pair')!)).toBe(true);
   });
 
-  test('shop buy-and-use eligibility is data-driven for non-instant supply/frontier cards', () => {
+  test('shop buy-and-use eligibility is use-mode driven for any_time cards', () => {
     expect(canBuyAndUseConsumableInShop(getSupplyDefById('doctor')!)).toBe(true);
     expect(canBuyAndUseConsumableInShop(getSupplyDefById('trading_post')!)).toBe(true);
     expect(canBuyAndUseConsumableInShop(getSupplyDefById('treasure_map')!)).toBe(true);
@@ -1095,8 +1193,57 @@ describe('shop consumable use gating', () => {
     expect(canBuyAndUseConsumableInShop(getFrontierDefById('echo_of_the_damned')!)).toBe(true);
     expect(canBuyAndUseConsumableInShop(getFrontierDefById('magic_beans')!)).toBe(true);
     expect(canBuyAndUseConsumableInShop(getFrontierDefById('blood_moon')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('skin_walker')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('priests_blessing')!)).toBe(true);
+    expect(canBuyAndUseConsumableInShop(getTrailGuideDefById('tg_pair')!)).toBe(true);
   });
 
+  test('shop buy-and-use requires shopBuyAndUse flag', () => {
+    const treasureMap = getSupplyDefById('treasure_map')!;
+    expect(treasureMap.shopBuyAndUse).toBe(true);
+    expect(canBuyAndUseConsumableInShop(treasureMap)).toBe(true);
+
+    const withoutFlag = { ...treasureMap, shopBuyAndUse: false };
+    expect(canBuyAndUseConsumableInShop(withoutFlag)).toBe(false);
+  });
+
+  test('shop buy-and-use blocks visible_dice and scored_dice cards', () => {
+    expect(canBuyAndUseConsumableInShop(getSupplyDefById('loaded')!)).toBe(false);
+    expect(canBuyAndUseConsumableInShop(getSupplyDefById('shallow_grave')!)).toBe(false);
+    expect(canBuyAndUseConsumableInShop(getSupplyDefById('medicine')!)).toBe(false);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('raid')!)).toBe(false);
+    expect(canBuyAndUseConsumableInShop(getFrontierDefById('seeing_double')!)).toBe(false);
+  });
+});
+
+describe('medicine scored-dice eligibility', () => {
+  const medicineDef = () => getSupplyDefById('medicine')!;
+  const dieIds = ['d1', 'd2', 'd3'];
+
+  test('blocked in shop and booster packs', () => {
+    expect(canUseConsumable(medicineDef(), shopContext).allowed).toBe(false);
+    expect(canUseConsumable(medicineDef(), packContext(dieIds)).allowed).toBe(false);
+  });
+
+  test('blocked in game SELECT phase and when score action is hidden', () => {
+    expect(canUseConsumable(medicineDef(), gameSelectContext(dieIds)).allowed).toBe(false);
+    expect(canUseConsumable(medicineDef(), gameRollContext(dieIds, dieIds, false)).allowed).toBe(false);
+  });
+
+  test('allowed in game ROLL when score action is visible and scored dice exist', () => {
+    expect(canUseConsumable(medicineDef(), gameRollContext(dieIds, ['d1', 'd2'], true)).allowed).toBe(true);
+  });
+
+  test('visible_dice cards work in game and packs but not shop', () => {
+    const buzzards = getSupplyDefById('buzzards')!;
+    expect(canUseConsumable(buzzards, shopContext).allowed).toBe(false);
+    expect(canUseConsumable(buzzards, gameSelectContext(dieIds)).allowed).toBe(true);
+    expect(canUseConsumable(buzzards, packContext(dieIds)).allowed).toBe(true);
+    expect(canUseConsumable(buzzards, packContext([])).allowed).toBe(false);
+  });
+});
+
+describe('shop consumable buy-and-use integration', () => {
   test('shop buy-and-use works with full consumable slots for non-targeting supply/frontier cards', () => {
     const { player } = setupGame({ money: 100, equipment: [item('horseshoe')] });
     player.maxConsumableSlots = 0;

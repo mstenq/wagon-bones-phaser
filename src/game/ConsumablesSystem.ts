@@ -18,6 +18,7 @@ import { pickEquipmentAuraWeighted } from './auraRng';
 import { rngFloat, rngPick, rngShuffle } from './RunRng';
 import { pickWeightedSupplyCard } from './supplyCardWeights';
 import { enqueueToastFeedback } from './playback/feedback';
+import type { ConsumableUseMode } from '../data/consumableTypes';
 
 const HAND_TABLE: HandDefinition[] = hands;
 
@@ -54,6 +55,8 @@ export interface ConsumableDef {
   description: string;
   category: ConsumableCategory;
   cost: number;
+  /** When this consumable may be used (shop, game, packs). */
+  useMode: ConsumableUseMode;
   /** Show Buy & Use action in shop (for non-targeting cards). */
   shopBuyAndUse?: boolean;
   aura?: ItemAura | null;
@@ -95,6 +98,7 @@ export function createSupplyConsumableDef(cardData: SupplyCardDef, aura?: ItemAu
     description: cardData.description,
     category: 'supply',
     cost: 3,
+    useMode: cardData.useMode,
     shopBuyAndUse: cardData.shopBuyAndUse,
     aura: aura ?? null,
     display: (round, player) => ({ hint: [], tooltip: display(round, player) }),
@@ -132,6 +136,8 @@ export function createTrailGuideConsumableDef(tgData: TrailGuideDef, aura?: Item
     description: tgData.description,
     category: 'trail_guide',
     cost: 3,
+    useMode: 'any_time',
+    shopBuyAndUse: true,
     aura: aura ?? null,
     handType: tgData.handType,
     display: (round, player) => ({ hint: [], tooltip: display(round, player) }),
@@ -152,6 +158,7 @@ export function createFrontierConsumableDef(feData: FrontierEncounterDef, aura?:
     description: feData.description,
     category: 'frontier',
     cost: 4,
+    useMode: feData.useMode,
     shopBuyAndUse: feData.shopBuyAndUse,
     aura: aura ?? null,
     display: (round, player) => ({ hint: [], tooltip: display(round, player) }),
@@ -271,28 +278,6 @@ export function nextLastUsedConsumableIdAfterUse(usedDef: ConsumableDef, previou
   return usedDef.id;
 }
 
-/** Shop context has no natural dice board; block dice-edit cards there. */
-export function canUseConsumableInShop(def: ConsumableDef): boolean {
-  if (def.id === 'raid') return false;
-  const effectType = def.diceSelection?.effectType;
-  if (!effectType) return true;
-  if (effectType === 'ENHANCE' || effectType === 'ADD_STICKER') return false;
-  return true;
-}
-
-/** Check if a consumable can be used immediately ("Buy & Use" eligible). */
-export function canBuyAndUseConsumableInShop(
-  def: ConsumableDef,
-  lastUsedDef: ConsumableDef | null = resolveLastUsedConsumableDef(),
-): boolean {
-  if (def.category === 'trail_guide') return true;
-  // second_helpings requires a previous supply or trail guide to clone
-  if (def.id === 'second_helpings') {
-    return isSecondHelpingsCloneTarget(lastUsedDef);
-  }
-  return def.shopBuyAndUse === true;
-}
-
 // ─── Shop Generation ───
 
 /** Generate random consumable cards for the shop.
@@ -380,7 +365,7 @@ export interface UseConsumableResult {
   equipmentCreatedCount?: number;
 }
 
-export interface UseConsumableContext {
+export interface ConsumableEffectContext {
   /** Dice IDs currently visible/targetable in the active scene */
   visibleDiceIds?: string[];
 }
@@ -435,7 +420,7 @@ export function finalizeConsumableEquipmentEvents(events: ConsumableAnimEvent[] 
  */
 export function executeConsumableEffect(
   consumed: ConsumableInstance,
-  context: UseConsumableContext = {},
+  context: ConsumableEffectContext = {},
 ): UseConsumableResult {
   const def = consumed.def;
   const run = getRunState();
@@ -486,9 +471,9 @@ export function executeConsumableEffect(
     };
   }
 
-  // ─── Dice selection cards (shallow_grave, mirage, etc.) ───
+  // ─── Dice selection cards — effect applied via applyConsumableTargetingCommit ───
   if (def.diceSelection) {
-    return { success: true, diceSelection: def.diceSelection };
+    return { success: true };
   }
 
   // ─── Instant effects ───
@@ -756,7 +741,7 @@ export function executeConsumableEffect(
  * Handles lastUsedConsumable tracking (skips for second_helpings which reads the previous value).
  * Use this instead of manually setting lastUsedConsumable + calling executeConsumableEffect.
  */
-export function useConsumableDirectly(def: ConsumableDef, context: UseConsumableContext = {}): UseConsumableResult {
+export function useConsumableDirectly(def: ConsumableDef, context: ConsumableEffectContext = {}): UseConsumableResult {
   const consumed = createConsumableInstance(def);
   const previousLastUsedId = getRunState().lastUsedConsumableId;
   if (def.id === 'second_helpings') {

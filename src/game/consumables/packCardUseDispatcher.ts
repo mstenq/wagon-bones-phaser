@@ -1,27 +1,17 @@
 // ─── Booster pack card-use category dispatch (game facade only, no Phaser) ───
 
-import { gameFacade } from '../../../game/facade';
-import type { PackItem, UseConsumableResult } from '../../../game/facade/pack';
-import {
-  createFrontierConsumableDef,
-  createSupplyConsumableDef,
-  createTrailGuideConsumableDef,
-} from '../../../game/facade/pack';
-import { trackConsumableUse } from '../../../game/ConsumablesSystem';
-import { getRunState } from '../../../game/store';
-import { resolveEquipmentList } from '../../../game/store/resolve';
-import { selectEquipmentSlotsFree } from '../../../game/store/selectors/runSelectors';
-import { isDiceSelectionReady } from '../../../game/facade/diceSelection';
+import { gameFacade } from '../facade';
+import type { PackItem, UseConsumableResult } from '../facade/pack';
+import { createFrontierConsumableDef, createSupplyConsumableDef, createTrailGuideConsumableDef } from '../facade/pack';
+import { getRunState } from '../store';
+import { resolveEquipmentList } from '../store/resolve';
+import { selectEquipmentSlotsFree } from '../store/selectors/runSelectors';
 
-import trailGuidesData from '../../../data/trail_guides';
-import supplyCardsData from '../../../data/supply_cards';
-import frontierEncountersData from '../../../data/frontier_encounters';
-import type { ConsumableDef } from '../../../game/ConsumablesSystem';
-
+import trailGuidesData from '../../data/trail_guides';
+import supplyCardsData from '../../data/supply_cards';
+import frontierEncountersData from '../../data/frontier_encounters';
 export type PackCardUseContext = {
-  selectedDiceIds: Set<string>;
   equipmentCountBefore: number;
-  cardNeedsDiceSelection: (item: PackItem) => boolean;
 };
 
 export type PackCardUseOutcome = {
@@ -36,22 +26,6 @@ export function packCardNeedsEquipSlot(item: PackItem): boolean {
   if (item.category === 'equipment' && item.equipmentDef) return true;
   if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
   return false;
-}
-
-function resolvePackItemConsumableDef(item: PackItem): ConsumableDef | null {
-  if (item.category === 'supply' && item.supplyCardId) {
-    const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
-    return cardData ? createSupplyConsumableDef(cardData) : null;
-  }
-  if (item.category === 'trail_guide' && item.trailGuideId) {
-    const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
-    return tg ? createTrailGuideConsumableDef(tg) : null;
-  }
-  if (item.category === 'frontier' && item.frontierEncounterId) {
-    const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
-    return fe ? createFrontierConsumableDef(fe) : null;
-  }
-  return null;
 }
 
 export function canAcquirePackCardItem(item: PackItem, run = getRunState()): boolean {
@@ -71,26 +45,8 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
   let consumableResult: UseConsumableResult | undefined;
   let feedbackText: string | undefined;
 
-  if (ctx.cardNeedsDiceSelection(item)) {
-    const config = item.diceSelection!;
-    if (!isDiceSelectionReady(config, ctx.selectedDiceIds.size)) {
-      return { status: 'blocked' };
-    }
-
-    const lineupDice = gameFacade.pack.getLineupDice();
-    const selectedDice = lineupDice.filter((d) => ctx.selectedDiceIds.has(d.id));
-    const diceSelectionResult = gameFacade.pack.applyDiceSelectionToLineup(config, selectedDice);
-    feedbackText = diceSelectionResult.message;
-
-    const consumableDef = resolvePackItemConsumableDef(item);
-    if (consumableDef) {
-      trackConsumableUse(consumableDef);
-    }
-
-    return {
-      status: 'ready',
-      outcome: { equipmentPopInCount, feedbackText },
-    };
+  if (item.diceSelection) {
+    return { status: 'blocked' };
   }
 
   if (item.category === 'equipment' && item.equipmentDef) {

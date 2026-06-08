@@ -24,8 +24,13 @@ export interface ActionTabsOptions {
   playSound?: boolean;
 }
 
+export type ActionTabsShowOptions = {
+  /** Skip slide-in tween when refreshing tabs during an active pointer gesture. */
+  instant?: boolean;
+};
+
 export interface ActionTabsHandle {
-  show(tabs: CardActionTabConfig[]): void;
+  show(tabs: CardActionTabConfig[], options?: ActionTabsShowOptions): void;
   hide(animate?: boolean): void;
   getContainers(): GameObjects.Container[];
   readonly visible: boolean;
@@ -108,7 +113,8 @@ export function createActionTabs(options: ActionTabsOptions): ActionTabsHandle {
       return actionTabs.map((tab) => tab.container);
     },
 
-    show(tabs: CardActionTabConfig[]) {
+    show(tabs: CardActionTabConfig[], options?: ActionTabsShowOptions) {
+      const instant = options?.instant ?? false;
       handle.hide();
 
       tabsVisible = true;
@@ -275,17 +281,19 @@ export function createActionTabs(options: ActionTabsOptions): ActionTabsHandle {
 
           const finalX = anchorX;
           const hiddenX = side === 'right' ? anchorX - tabW : anchorX + tabW;
-          tabContainer.x = hiddenX;
+          tabContainer.x = instant ? finalX : hiddenX;
           parent.add(tabContainer);
           parent.sendToBack(tabContainer);
 
-          scene.tweens.add({
-            targets: tabContainer,
-            x: finalX,
-            duration: 200,
-            ease: 'Back.easeOut',
-            delay: i * 50,
-          });
+          if (!instant) {
+            scene.tweens.add({
+              targets: tabContainer,
+              x: finalX,
+              duration: 200,
+              ease: 'Back.easeOut',
+              delay: i * 50,
+            });
+          }
 
           actionTabs.push({ container: tabContainer, config: cfg, side });
         }

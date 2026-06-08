@@ -13,7 +13,6 @@ import { DifficultySelectScene } from '../phaser/scenes/DifficultySelectScene';
 import { ShopScene } from '../phaser/scenes/ShopScene';
 import { RoundSelectScene } from '../phaser/scenes/RoundSelectScene';
 import { BoosterPackScene } from '../phaser/scenes/BoosterPackScene';
-import { DiceSelectionScene } from '../phaser/scenes/DiceSelectionScene';
 import { GameScene } from '../phaser/scenes/GameScene';
 import { PayoutScene } from '../phaser/scenes/PayoutScene';
 import { TrailEventScene } from '../phaser/scenes/TrailEventScene';
@@ -42,7 +41,6 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     ShopScene,
     RoundSelectScene,
     BoosterPackScene,
-    DiceSelectionScene,
     GameScene,
     PayoutScene,
     TrailEventScene,

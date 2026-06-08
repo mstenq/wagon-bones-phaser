@@ -49,9 +49,10 @@ export function deserializeRoundState(data: SerializedRoundRuntimeState | null):
 }
 
 export function serializeSceneState(state: SceneRuntimeState): SerializedSceneRuntimeState {
-  return cloneJson(state);
+  const { consumableTargeting: _, ...rest } = state;
+  return { ...cloneJson(rest), consumableTargeting: null };
 }
 
 export function deserializeSceneState(data: SerializedSceneRuntimeState): SceneRuntimeState {
-  return cloneJson(data);
+  return { ...cloneJson(data), consumableTargeting: null };
 }

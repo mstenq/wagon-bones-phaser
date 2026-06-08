@@ -11,7 +11,7 @@ import { UI } from '../../game/Constants';
 import type { EquipmentInstance } from '../../game/ItemsSystem';
 import type { ItemDisplayResult } from '../../game/ItemsSystem';
 import type { RoundHintContext, ItemDisplayContext } from '../../game/displayContext';
-import { createActionTabs, type ActionTabsHandle } from './actionTabs';
+import { createActionTabs, type ActionTabsHandle, type ActionTabsShowOptions } from './actionTabs';
 import { ItemCardAuras } from './itemCard/ItemCardAuras';
 import { ItemCardBadges } from './itemCard/ItemCardBadges';
 import { ItemCardChrome } from './itemCard/ItemCardChrome';
@@ -236,8 +236,8 @@ export class ItemCard extends GameObjects.Container {
     this.hints.update(round, player, (r, p) => this.resolveDisplay(r, p));
   }
 
-  showActionTabs(tabs: CardActionTabConfig[]): void {
-    this.actionTabs.show(tabs);
+  showActionTabs(tabs: CardActionTabConfig[], options?: ActionTabsShowOptions): void {
+    this.actionTabs.show(tabs, options);
     this.tooltip.showActive((r, p) => this.resolveDisplay(r, p));
   }
 

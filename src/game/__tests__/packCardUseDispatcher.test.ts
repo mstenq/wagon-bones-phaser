@@ -4,19 +4,23 @@ import {
   canAcquirePackCardItem,
   packCardNeedsEquipSlot,
   resolvePackCardUse,
-} from '../../phaser/scenes/boosterPack/packCardUseDispatcher';
+} from '../consumables/packCardUseDispatcher';
 import type { PackItem } from '../BoosterPackSystem';
 import { die, item, itemWithAura, setupGame } from './testHelpers';
 import { getPlayerState, resetPlayerState } from './testRunPlayer';
 import { getTrailGuideDefById } from '../ConsumablesSystem';
 import { initPackLineup } from '../visibleDiceRow';
 import { sceneActions } from '../store/sceneStore';
+import { applyConsumableTargetingCommit } from '../consumables/applyConsumableTargeting';
+import {
+  beginConsumableTargeting,
+  commitConsumableTargeting,
+  toggleTargetDie,
+} from '../consumables/consumableTargetingSession';
 import supplyCardsData from '../../data/supply_cards';
 
 const emptyCtx = {
-  selectedDiceIds: new Set<string>(),
   equipmentCountBefore: 0,
-  cardNeedsDiceSelection: () => false,
 };
 
 function equipmentPackItem(defId: string): PackItem {
@@ -94,36 +98,8 @@ describe('packCardUseDispatcher inventory checks', () => {
     );
     expect(result.status).toBe('blocked');
   });
-});
 
-describe('packCardUseDispatcher consumable history', () => {
-  function enterTestPack(): void {
-    sceneActions.enterBoosterPack({
-      packDefId: 'supply_standard',
-      returnScene: 'Shop',
-      queuedPackDefIds: [],
-      contents: [],
-      picksRemaining: 2,
-      effectivePickCount: 2,
-      usedCardIndices: [],
-      lineupDieIds: [],
-    });
-  }
-
-  test('dice-selection supply cards update lastUsedConsumable for second_helpings', () => {
-    resetPlayerState();
-    const player = getPlayerState();
-    player.maxConsumableSlots = 4;
-    const d1 = die({ value: 1 });
-    const d2 = die({ value: 2 });
-    player.dice = [d1, d2];
-
-    const tgDef = getTrailGuideDefById('tg_high_value')!;
-    player.lastUsedConsumable = tgDef;
-
-    enterTestPack();
-    initPackLineup();
-
+  test('resolvePackCardUse blocks dice-selection cards (use targeting commit instead)', () => {
     const panCardData = supplyCardsData.find((c) => c.id === 'pan_for_gold')!;
     const panCard: PackItem = {
       id: 'pan_for_gold',
@@ -141,14 +117,60 @@ describe('packCardUseDispatcher consumable history', () => {
         : undefined,
     };
 
-    const diceCtx = {
-      selectedDiceIds: new Set([d1.id, d2.id]),
-      equipmentCountBefore: 0,
-      cardNeedsDiceSelection: () => true,
+    expect(resolvePackCardUse(panCard, emptyCtx).status).toBe('blocked');
+  });
+});
+
+describe('packCardUseDispatcher consumable history', () => {
+  function enterTestPack(): void {
+    sceneActions.enterBoosterPack({
+      packDefId: 'supply_standard',
+      returnScene: 'Shop',
+      queuedPackDefIds: [],
+      contents: [],
+      picksRemaining: 2,
+      effectivePickCount: 2,
+      usedCardIndices: [],
+      lineupDieIds: [],
+    });
+  }
+
+  test('pack-card targeting commit updates lastUsedConsumable for second_helpings', () => {
+    resetPlayerState();
+    const player = getPlayerState();
+    player.maxConsumableSlots = 4;
+    const d1 = die({ value: 1 });
+    const d2 = die({ value: 2 });
+    player.dice = [d1, d2];
+
+    const tgDef = getTrailGuideDefById('tg_high_value')!;
+    player.lastUsedConsumable = tgDef;
+
+    enterTestPack();
+    const lineup = initPackLineup();
+
+    const panCardData = supplyCardsData.find((c) => c.id === 'pan_for_gold')!;
+    const diceSelection = {
+      ...panCardData.diceSelection!,
+      cardName: panCardData.name,
+      description: panCardData.description,
+      skippable: true,
     };
 
-    const panResult = resolvePackCardUse(panCard, diceCtx);
-    expect(panResult.status).toBe('ready');
+    const packContext = {
+      scene: 'booster_pack' as const,
+      source: 'pack_card' as const,
+      visibleDieIds: lineup.map((d) => d.id),
+    };
+
+    beginConsumableTargeting({ kind: 'pack_card', cardIndex: 0, defId: 'pan_for_gold' }, packContext, diceSelection);
+    toggleTargetDie(lineup[0]!.id);
+    toggleTargetDie(lineup[1]!.id);
+    const committed = commitConsumableTargeting();
+    expect(committed.ok).toBe(true);
+    if (!committed.ok) return;
+
+    applyConsumableTargetingCommit(committed.commit, { surface: 'pack_lineup' });
     expect(player.lastUsedConsumable?.id).toBe('pan_for_gold');
 
     const secondHelpingsData = supplyCardsData.find((c) => c.id === 'second_helpings')!;

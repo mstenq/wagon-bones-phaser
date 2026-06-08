@@ -14,7 +14,10 @@ export type PlayAreaDiceControllerDeps = {
   getContentCenterX: () => number;
   isConsumableTargeting: () => boolean;
   isConsumableTargetDie: (sprite: DiceSprite) => boolean;
+  isConsumablePrePickDie?: (sprite: DiceSprite) => boolean;
+  isConsumablePrePickActive?: () => boolean;
   onConsumableTargetClick: (sprite: DiceSprite) => void;
+  onConsumablePrePickClick?: (sprite: DiceSprite) => void;
   onLayoutChange?: () => void;
 };
 
@@ -91,6 +94,17 @@ export class PlayAreaDiceController {
     for (const sprite of this.sprites) {
       if (enabled) {
         sprite.setInteractive({ useHandCursor: true });
+      } else if (!this.deps.isConsumablePrePickActive?.()) {
+        sprite.disableInteractive();
+      }
+    }
+  }
+
+  setPrePickInteractive(enabled: boolean): void {
+    for (const sprite of this.sprites) {
+      if (this.deps.isConsumableTargeting()) continue;
+      if (enabled) {
+        sprite.setInteractive({ useHandCursor: true });
       } else {
         sprite.disableInteractive();
       }
@@ -118,18 +132,27 @@ export class PlayAreaDiceController {
     sprite.on('pointerup', () => {
       if (this.deps.isConsumableTargeting()) {
         this.deps.onConsumableTargetClick(sprite);
+        return;
+      }
+      if (this.deps.isConsumablePrePickActive?.()) {
+        this.deps.onConsumablePrePickClick?.(sprite);
       }
     });
+  }
+
+  private isDieHighlighted(sprite: DiceSprite): boolean {
+    if (this.deps.isConsumableTargetDie(sprite)) return true;
+    return this.deps.isConsumablePrePickDie?.(sprite) ?? false;
   }
 
   private getDieY(index: number, sprite: DiceSprite): number {
     const scale = this.deps.getDiceScale();
     const arc = getArcOffset(index, this.sprites.length, scale);
-    const lift = this.deps.isConsumableTargetDie(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
+    const lift = this.isDieHighlighted(sprite) ? UI.DICE_LOCKED_LIFT_Y : 0;
     return this.rowY + arc.y - lift;
   }
 
   private applyDieDepth(sprite: DiceSprite): void {
-    sprite.setDepth(this.deps.isConsumableTargetDie(sprite) ? 15 : 10);
+    sprite.setDepth(this.isDieHighlighted(sprite) ? 15 : 10);
   }
 }

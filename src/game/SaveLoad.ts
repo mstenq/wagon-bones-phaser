@@ -182,7 +182,6 @@ export interface BoosterPackSaveData {
   usedCardIndices: number[];
   lineupDieIds?: string[];
   lineupSelectedDieIds?: string[];
-  pendingDiceSelectionConfig?: BoosterPackSceneState['pendingDiceSelectionConfig'];
 }
 
 export interface TrailEventSaveData {
@@ -337,6 +336,7 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
         trailEvent: null,
         payout: null,
         roundSelect: null,
+        consumableTargeting: null,
       };
     case 'Shop': {
       const data = scene as ShopSaveData;
@@ -355,6 +355,7 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
         trailEvent: null,
         payout: null,
         roundSelect: null,
+        consumableTargeting: null,
       };
     }
     case 'BoosterPack': {
@@ -372,11 +373,11 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
           usedCardIndices: [...data.usedCardIndices],
           lineupDieIds: [...(data.lineupDieIds ?? [])],
           lineupSelectedDieIds: data.lineupSelectedDieIds ? [...data.lineupSelectedDieIds] : undefined,
-          pendingDiceSelectionConfig: data.pendingDiceSelectionConfig ?? null,
         },
         trailEvent: null,
         payout: null,
         roundSelect: null,
+        consumableTargeting: null,
       };
     }
     case 'TrailEvent': {
@@ -392,6 +393,7 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
         },
         payout: null,
         roundSelect: null,
+        consumableTargeting: null,
       };
     }
     case 'RoundSelect':
@@ -402,6 +404,7 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
         trailEvent: null,
         payout: null,
         roundSelect: null,
+        consumableTargeting: null,
       };
   }
 }
@@ -602,7 +605,6 @@ export function boosterPackSceneStateToSaveData(pack: BoosterPackSceneState): Bo
     ...(pack.lineupSelectedDieIds && pack.lineupSelectedDieIds.length > 0
       ? { lineupSelectedDieIds: [...pack.lineupSelectedDieIds] }
       : {}),
-    ...(pack.pendingDiceSelectionConfig ? { pendingDiceSelectionConfig: pack.pendingDiceSelectionConfig } : {}),
   };
 }
 

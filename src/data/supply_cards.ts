@@ -2,6 +2,7 @@
 // Typed supply card data following the trail_tags.ts pattern.
 // Each card may use dice selection, an instant effect, or explicit handler logic.
 
+import type { ConsumableUseMode } from './consumableTypes';
 import type { DiceSelectionEffectParams, DiceSelectionEffectType } from '../game/DiceSelectionSystem';
 import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
 import { getLoadedDiceMultiplier } from '../game/equipmentUtils';
@@ -34,6 +35,7 @@ export interface SupplyCardDef {
   id: string;
   name: string;
   description: string;
+  useMode: ConsumableUseMode;
   /** Show Buy & Use action in shop (for non-targeting cards). */
   shopBuyAndUse?: boolean;
   diceSelection?: SupplyDiceSelectionDef;
@@ -53,9 +55,11 @@ const supplyCards: SupplyCardDef[] = [
     id: 'coffee_tin',
     name: 'Coffee Tin',
     description: 'Make 2 steel dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
+      minPickCount: 1,
       effectType: 'ENHANCE',
       effectParams: { enhancement: 'steel' },
     },
@@ -64,6 +68,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'buzzards',
     name: 'Buzzards',
     description: 'Make 3 bone dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 3,
@@ -76,6 +81,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'rabbits_foot',
     name: "Rabbit's Foot",
     description: 'Make 3 lucky dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 3,
@@ -88,6 +94,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'firewood',
     name: 'Firewood',
     description: 'Make 3 wooden dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 3,
@@ -100,6 +107,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'loaded',
     name: 'Loaded',
     description: 'Make 3 loaded dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 3,
@@ -112,6 +120,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'pick_axe',
     name: 'Pick Axe',
     description: 'Make 2 diamond dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
@@ -124,6 +133,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'pan_for_gold',
     name: 'Pan for Gold',
     description: 'Make 2 golden dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
@@ -136,6 +146,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'chisel',
     name: 'Chisel',
     description: 'Make 2 stone dice',
+    useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
@@ -148,15 +159,17 @@ const supplyCards: SupplyCardDef[] = [
     id: 'treasure_map',
     name: 'Treasure Map',
     description: 'Double your money (max $20)',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     instantEffect: { type: 'DOUBLE_MONEY', maxGain: 20 },
   },
   {
     id: 'shallow_grave',
     name: 'Shallow Grave',
-    description: 'Choose 2 from 5 random dice to destroy',
+    description: 'Choose 2 dice to destroy',
+    useMode: 'visible_dice',
     diceSelection: {
-      drawCount: 5,
+      drawCount: 0,
       pickCount: 2,
       effectType: 'DESTROY',
       effectParams: {},
@@ -166,6 +179,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'trade',
     name: 'Trade',
     description: 'Get money equal to equipment value (max $50)',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     instantEffect: { type: 'TRADE_EQUIPMENT', maxGain: 50 },
     tooltip: (_round, player) => {
@@ -178,24 +192,28 @@ const supplyCards: SupplyCardDef[] = [
     id: 'doctor',
     name: 'Doctor',
     description: 'Creates 2 medicine cards',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
   {
     id: 'compass',
     name: 'Compass',
     description: 'Get 2 random trail guides',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
   {
     id: 'supply_cache',
     name: 'Supply Cache',
     description: 'Get 2 random supply cards',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
   {
     id: 'ingenuity',
     name: 'Ingenuity',
     description: 'Get 1 random piece of equipment',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     instantEffect: {
       type: 'CREATE_EQUIPMENT',
@@ -206,9 +224,10 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'mirage',
     name: 'Mirage',
-    description: 'Pick 2 of 5 random dice — left becomes a copy of right',
+    description: 'Pick 2 dice - left becomes a copy of right',
+    useMode: 'visible_dice',
     diceSelection: {
-      drawCount: 5,
+      drawCount: 0,
       pickCount: 2,
       effectType: 'CLONE',
       effectParams: {},
@@ -218,6 +237,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'bless',
     name: 'Bless',
     description: '1 in 4 chance to bless equipment with aura',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     tooltip: (_round, player) => [[segment(`Current odds: ${oddsText(1, 4, player)}`, 'odds')]],
   },
@@ -225,6 +245,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'second_helpings',
     name: 'Second Helpings',
     description: 'Creates last used supply/trail guide',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     tooltip: (_round, player) => {
       const lastId = player.lastUsedConsumableId;
@@ -239,6 +260,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'medicine',
     name: 'Medicine',
     description: 'Choose a die — bump its value up or down by 1',
+    useMode: 'scored_dice',
     diceSelection: {
       drawCount: 5,
       pickCount: 1,
@@ -250,18 +272,21 @@ const supplyCards: SupplyCardDef[] = [
     id: 'omen_stone',
     name: 'Omen Stone',
     description: 'Prevent the next negative trail event effects',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
   {
     id: 'shop_pass',
     name: 'Shop Pass',
     description: 'Reroll shop for free on your next shop visit',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
   {
     id: 'fools_gold',
     name: "Fool's Gold",
     description: '50% chance to gain $30. Otherwise lose half your money',
+    useMode: 'any_time',
     shopBuyAndUse: true,
     tooltip: (_round, player) => [
       [segment(`Gain $30 odds: ${oddsText(1, 2, player)}`, 'odds')],
@@ -272,6 +297,7 @@ const supplyCards: SupplyCardDef[] = [
     id: 'trading_post',
     name: 'Trading Post',
     description: 'Increase sell value of all equipment and consumables by $1',
+    useMode: 'any_time',
     shopBuyAndUse: true,
   },
 ];

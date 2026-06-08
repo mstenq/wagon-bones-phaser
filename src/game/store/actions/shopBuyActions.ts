@@ -6,7 +6,7 @@ import type { ConsumableDef } from '../../ConsumablesSystem';
 import {
   isSecondHelpingsCloneTarget,
   useConsumableDirectly,
-  type UseConsumableContext,
+  type ConsumableEffectContext,
   type UseConsumableResult,
 } from '../../ConsumablesSystem';
 import type { PermitDef } from '../../PermitsSystem';
@@ -63,7 +63,7 @@ export const shopBuyActions = {
     return { ok: true };
   },
 
-  buyAndUseConsumable(def: ConsumableDef, cost: number, context: UseConsumableContext = {}): UseConsumableResult {
+  buyAndUseConsumable(def: ConsumableDef, cost: number, context: ConsumableEffectContext = {}): UseConsumableResult {
     if (def.id === 'second_helpings' && !isSecondHelpingsCloneTarget(resolveLastUsedConsumableDef())) {
       return { success: false, failReason: 'No previous consumable used!' };
     }

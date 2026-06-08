@@ -2,6 +2,7 @@
 // Plain data shapes that will replace PlayerState, GameState, and scene-local buffers.
 
 import type { DiceSelectionConfig } from '../DiceSelectionSystem';
+import type { ConsumableTargetingSession } from '../consumables/consumableTargetingSession';
 import type { InstantEffect } from '../BoosterPackSystem';
 import type { TrailEventModifiers, TrailRoundEffects } from '../trailEventDefaults';
 import {
@@ -249,9 +250,8 @@ export interface BoosterPackSceneState {
   usedCardIndices: number[];
   /** Ordered die IDs visible in the pack targeting lineup. */
   lineupDieIds: string[];
-  /** Survives resize/autosave while targeting dice in pack. */
+  /** Survives resize/autosave while preselecting or targeting dice in pack. */
   lineupSelectedDieIds?: string[];
-  pendingDiceSelectionConfig?: DiceSelectionConfig | null;
 }
 
 export interface TrailEventSceneState {
@@ -290,6 +290,8 @@ export interface SceneRuntimeState {
   trailEvent: TrailEventSceneState | null;
   payout: PayoutSceneState | null;
   roundSelect: RoundSelectSceneState | null;
+  /** Transient in-roll targeting; not persisted across save/load. */
+  consumableTargeting: ConsumableTargetingSession | null;
 }
 
 // ─── Initial state helpers ───

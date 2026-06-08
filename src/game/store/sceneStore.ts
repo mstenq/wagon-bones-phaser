@@ -3,6 +3,7 @@
 
 import { createStore } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
+import type { ConsumableTargetingSession } from '../consumables/consumableTargetingSession';
 import type {
   ActiveSceneKey,
   BoosterPackSceneState,
@@ -21,6 +22,7 @@ export function createInitialSceneState(): SceneRuntimeState {
     trailEvent: null,
     payout: null,
     roundSelect: null,
+    consumableTargeting: null,
   };
 }
 
@@ -59,7 +61,12 @@ export const sceneActions = {
       trailEvent: null,
       payout: null,
       roundSelect: null,
+      consumableTargeting: null,
     });
+  },
+
+  setConsumableTargeting(consumableTargeting: ConsumableTargetingSession | null): void {
+    sceneStore.setState({ consumableTargeting });
   },
 
   enterShop(shop: ShopSceneState): void {
@@ -126,10 +133,6 @@ export const sceneActions = {
 
   patchPackLineupSelection(lineupSelectedDieIds: string[]): void {
     sceneActions.patchBoosterPack({ lineupSelectedDieIds });
-  },
-
-  setPendingPackDiceSelection(pendingDiceSelectionConfig: BoosterPackSceneState['pendingDiceSelectionConfig']): void {
-    sceneActions.patchBoosterPack({ pendingDiceSelectionConfig });
   },
 
   enterTrailEvent(trail: TrailEventSceneState): void {

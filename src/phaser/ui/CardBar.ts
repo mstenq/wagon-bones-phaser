@@ -156,6 +156,14 @@ export abstract class CardBar extends GameObjects.Container {
     return false;
   }
 
+  /** Subclasses can observe click-away/toggle dismissal of an active card. */
+  protected onActionTabsDismissed(_card: ItemCard, _index: number): void {}
+
+  /** Subclasses suppress spurious tab dismiss on the same pointer gesture (e.g. USE → bump tabs). */
+  protected shouldSuppressTabDismiss(): boolean {
+    return false;
+  }
+
   /** Subclasses may disable drag-reorder (e.g. Land Slide hidden equipment) */
   protected isDragReorderEnabled(): boolean {
     return true;
@@ -472,6 +480,25 @@ export abstract class CardBar extends GameObjects.Container {
     });
   }
 
+  protected refreshOpenActionTabs(card: ItemCard, index: number, instant = false): void {
+    if (this.activeTabCard !== card) return;
+    const tabs = this.buildActionTabs(card, index);
+    if (!tabs || tabs.length === 0) {
+      this.dismissActiveTab();
+      return;
+    }
+    card.showActionTabs(tabs, instant ? { instant: true } : undefined);
+  }
+
+  /** Keep action tabs visible for an armed card (re-open after a spurious dismiss). */
+  protected ensureActionTabsOpen(card: ItemCard, index: number, instant = false): void {
+    if (this.activeTabCard === card) {
+      this.refreshOpenActionTabs(card, index, instant);
+      return;
+    }
+    this.openActionTabsForCard(card, index);
+  }
+
   private clearDismissClickAway(): void {
     if (this.dismissClickAway) {
       this.dismissClickAway();
@@ -529,6 +556,7 @@ export abstract class CardBar extends GameObjects.Container {
   private dismissActiveTab(): void {
     if (this.activeTabCard) {
       const card = this.activeTabCard;
+      const index = this.cards.indexOf(card);
       card.hideActionTabs(true);
 
       this.applyCardDepths();
@@ -547,6 +575,9 @@ export abstract class CardBar extends GameObjects.Container {
       });
 
       this.activeTabCard = null;
+      if (index >= 0) {
+        this.onActionTabsDismissed(card, index);
+      }
     }
     this.clearDismissClickAway();
     this.tryRestoreBarDepth();
@@ -599,6 +630,7 @@ export abstract class CardBar extends GameObjects.Container {
           onTap: (activeCard, upPointer) => {
             const hitObjects = this.scene.input.hitTestPointer(upPointer);
             if (this.hitIncludesActionTab(hitObjects, activeCard)) return;
+            if (this.shouldSuppressTabDismiss()) return;
             this.dismissActiveTab();
           },
         });
