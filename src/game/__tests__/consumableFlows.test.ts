@@ -344,7 +344,7 @@ describe('consumableFlowHarness — booster pack flows', () => {
     expect(player.lastUsedConsumable?.id).toBe('pan_for_gold');
   });
 
-  test('pack card: seeds from ambient preselect and truncates excess picks', () => {
+  test('pack card: rejects too many pre-selected dice', () => {
     const { player } = setupGame();
     const dice = [die({ value: 1 }), die({ value: 2 }), die({ value: 3 })];
     player.dice = dice;
@@ -357,14 +357,45 @@ describe('consumableFlowHarness — booster pack flows', () => {
     const ctx = packCardContext(lineupIds);
     const diceSelection = packDiceSelection('shallow_grave');
 
-    armPackCardTargeting(0, 'shallow_grave', diceSelection, {
+    const result = armPackCardTargeting(0, 'shallow_grave', diceSelection, {
       eligibilityContext: ctx,
       surface: 'pack_lineup',
     });
 
-    const session = getActiveConsumableTargeting()!;
-    expect(session.selectedDieIds).toHaveLength(2);
-    expect(session.selectedDieIds).toEqual(lineupIds.slice(0, 2));
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('Select at most');
+    expect(getActiveConsumableTargeting()).toBeNull();
+  });
+
+  test('pack mirage clone respects preselect order not lineup order', () => {
+    const { player } = setupGame();
+    const left = die({ value: 1, enhancement: 'lucky' });
+    const right = die({ value: 2 });
+    const extra = die({ value: 3 });
+    player.dice = [left, right, extra];
+
+    enterTestBoosterPack();
+    const lineup = initPackLineup();
+    const lineupIds = lineup.map((d) => d.id);
+    // Pick right before left — row order would clone lucky onto left; pick order clones onto right.
+    setPackLineupSelectedDieIds([right.id, left.id]);
+
+    const ctx = packCardContext(lineupIds);
+    const diceSelection = packDiceSelection('mirage');
+
+    const armResult = armPackCardTargeting(0, 'mirage', diceSelection, {
+      eligibilityContext: ctx,
+      surface: 'pack_lineup',
+    });
+    expect(armResult.ok).toBe(true);
+
+    const commitResult = commitConsumableTargetingFlow({
+      eligibilityContext: ctx,
+      surface: 'pack_lineup',
+    });
+    expect(commitResult.ok).toBe(true);
+    expect(player.dice.find((d) => d.id === right.id)?.enhancement).toBe('lucky');
+    expect(player.dice.find((d) => d.id === left.id)?.enhancement).toBe('lucky');
   });
 
   test('cancel pack session writes session selection back to ambient lineup store', () => {

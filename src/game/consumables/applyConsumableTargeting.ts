@@ -47,15 +47,20 @@ function withBumpDirection(
   return next;
 }
 
+function diceInCommitOrder(pool: Die[], selectedDieIds: string[]): Die[] {
+  const byId = new Map(pool.map((die) => [die.id, die]));
+  return selectedDieIds.map((id) => byId.get(id)).filter((die): die is Die => die !== undefined);
+}
+
 function selectGameDice(commit: ConsumableTargetingCommit): Die[] {
   const context = commit.useContext;
   if (context.scene !== 'game') return [];
   const pool = context.phase === 'ROLL' ? selectRolledDice() : selectHandDice();
-  return pool.filter((die) => commit.selectedDieIds.includes(die.id));
+  return diceInCommitOrder(pool, commit.selectedDieIds);
 }
 
 function selectPackDice(commit: ConsumableTargetingCommit): Die[] {
-  return selectPackLineupDice().filter((die) => commit.selectedDieIds.includes(die.id));
+  return diceInCommitOrder(selectPackLineupDice(), commit.selectedDieIds);
 }
 
 function applyToSurface(

@@ -208,6 +208,9 @@ export function cancelConsumableTargeting(): void {
   if (session?.useContext.scene === 'booster_pack') {
     sceneActions.patchPackLineupSelection([...session.selectedDieIds]);
   }
+  if (session?.useContext.scene === 'game') {
+    sceneActions.patchConsumableSeedSelection([...session.selectedDieIds]);
+  }
   sceneActions.setConsumableTargeting(null);
 }
 

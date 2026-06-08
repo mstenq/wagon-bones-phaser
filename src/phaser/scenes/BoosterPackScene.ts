@@ -6,6 +6,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameFacade } from '../../game/facade';
+import { canAcquirePackCardItem, packCardNeedsEquipSlot, resolvePackCardUse } from '../../game/facade/pack';
 import type { PackDefinition, PackItem } from '../../game/facade/pack';
 import {
   canUseConsumable,
@@ -28,7 +29,6 @@ import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/s
 import { getBonusPackPicks } from '../../game/effects/helpers';
 import {
   getDiceSelectionMaxPicks,
-  getDiceSelectionMinPicks,
   isDiceSelectionReady,
   type DiceSelectionConfig,
 } from '../../game/facade/diceSelection';
@@ -51,11 +51,8 @@ import {
 import { computeFittedRowSpacing } from '../ui/SceneLayout';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import { computeDiceRowLayout, getArcOffset, getRowXPositions } from './game/diceRowGeometry';
-import {
-  canAcquirePackCardItem,
-  packCardNeedsEquipSlot,
-  resolvePackCardUse,
-} from '../../game/consumables/packCardUseDispatcher';
+import { armPackCardTargeting, commitConsumableTargetingFlow } from '../../game/consumables/consumableFlowHarness';
+import { formatLineupTargetingInstruction } from '../../game/consumables/formatTargetingInstruction';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { ConsumableBarTargetingBridge } from './game/ConsumableBarTargetingBridge';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
@@ -873,11 +870,11 @@ export class BoosterPackScene extends Scene {
     // BUMP_VALUE gets two tabs (+1 / -1)
     if (item.diceSelection && item.diceSelection.effectType === 'BUMP_VALUE') {
       return [
-        this.buildPackUseTab(sprite, '+1\nUP', 0x338833, () => {
-          void this.onUsePackDiceCard(sprite, 'up');
-        }),
         this.buildPackUseTab(sprite, '-1\nDOWN', 0x883333, () => {
           void this.onUsePackDiceCard(sprite, 'down');
+        }),
+        this.buildPackUseTab(sprite, '+1\nUP', 0x338833, () => {
+          void this.onUsePackDiceCard(sprite, 'up');
         }),
       ];
     }
@@ -1019,29 +1016,8 @@ export class BoosterPackScene extends Scene {
       return;
     }
 
-    const min = getDiceSelectionMinPicks(config);
-    const max = getDiceSelectionMaxPicks(config);
     const selected = getPackLineupSelectedDieIds().length;
-    const isClone = config.effectType === 'CLONE';
-    const useLabel = 'USE';
-
-    if (selected < min) {
-      const hint = isClone ? 'Drag to order — left copies right. ' : '';
-      const need = min - selected;
-      if (min === max) {
-        this.instructionText.setText(`${hint}Select ${need} more dice from the lineup`);
-      } else {
-        this.instructionText.setText(`${hint}Select at least ${need} more die${need === 1 ? '' : 's'} (up to ${max})`);
-      }
-    } else if (selected < max) {
-      this.instructionText.setText(
-        isClone ? 'Ready! Left die will copy the right' : `Ready! Pick another die or click ${useLabel}`,
-      );
-    } else {
-      this.instructionText.setText(
-        isClone ? 'Ready! Left die will copy the right' : `Ready! Click ${useLabel} to apply`,
-      );
-    }
+    this.instructionText.setText(formatLineupTargetingInstruction(config, selected));
   }
 
   private shouldShowDiceLineup(): boolean {
@@ -1333,51 +1309,41 @@ export class BoosterPackScene extends Scene {
     };
   }
 
-  private beginPackCardTargeting(sprite: CardSprite): void {
+  private beginPackCardTargeting(sprite: CardSprite): boolean {
     const item = sprite.item;
     const config = item.diceSelection;
     const defId = resolvePackItemDefId(item);
-    if (!config || !defId || !this.hasDiceSelectionLineup) return;
+    if (!config || !defId || !this.hasDiceSelectionLineup) return false;
 
-    const existing = gameFacade.consumable.targeting.active();
-    if (existing?.source.kind === 'pack_card' && existing.source.cardIndex === sprite.index) {
-      return;
-    }
-
-    gameFacade.consumable.targeting.cancel();
-
-    const seedIds = getPackLineupSelectedDieIds();
-    const begin = gameFacade.consumable.targeting.begin(
-      { kind: 'pack_card', cardIndex: sprite.index, defId },
-      this.getPackCardUseContext(),
-      config,
-    );
-    if (!begin.ok) {
-      this.showFloatingText(begin.reason);
+    const result = armPackCardTargeting(sprite.index, defId, config, {
+      eligibilityContext: this.getPackCardUseContext(),
+      surface: 'pack_lineup',
+    });
+    if (!result.ok) {
+      this.showFloatingText(result.reason ?? 'Could not target dice');
       this.sound.play('sfx_cancel', { volume: 0.5 });
-      return;
-    }
-
-    for (const dieId of seedIds) {
-      gameFacade.consumable.targeting.toggleDie(dieId);
+      return false;
     }
 
     this.syncLineupFromTargetingSession();
+    return true;
   }
 
   private async onUsePackDiceCard(sprite: CardSprite, bumpDirection?: 'up' | 'down'): Promise<void> {
     if (sprite.used || sprite.useInProgress) return;
     if (!sprite.item.diceSelection) return;
 
-    this.beginPackCardTargeting(sprite);
+    if (!this.beginPackCardTargeting(sprite)) return;
 
-    if (bumpDirection) {
-      gameFacade.consumable.targeting.setBumpDirection(bumpDirection);
-    }
-
-    const commitResult = gameFacade.consumable.targeting.commit();
-    if (!commitResult.ok) {
-      this.showFloatingText(commitResult.reason);
+    const result = commitConsumableTargetingFlow(
+      {
+        eligibilityContext: this.getPackCardUseContext(),
+        surface: 'pack_lineup',
+      },
+      bumpDirection,
+    );
+    if (!result.ok) {
+      this.showFloatingText(result.reason ?? 'Could not apply card');
       this.sound.play('sfx_cancel', { volume: 0.5 });
       this.updateActiveTabEnabled();
       return;
@@ -1385,15 +1351,14 @@ export class BoosterPackScene extends Scene {
 
     if (!this.beginPackCardUse(sprite)) return;
 
-    const result = gameFacade.consumable.targeting.applyCommit(commitResult.commit, { surface: 'pack_lineup' });
-    if (!result.ok) {
+    if (!result.applied) {
       this.unlockPackCardAfterFailedUse(sprite);
-      this.showFloatingText(result.reason);
+      this.showFloatingText('Could not apply card');
       this.sound.play('sfx_cancel', { volume: 0.5 });
       return;
     }
 
-    this.showFloatingText(result.diceResult.message);
+    this.showFloatingText(result.applied.diceResult.message);
     this.finishUseCard(sprite);
   }
 

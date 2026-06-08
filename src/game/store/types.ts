@@ -292,6 +292,8 @@ export interface SceneRuntimeState {
   roundSelect: RoundSelectSceneState | null;
   /** Transient in-roll targeting; not persisted across save/load. */
   consumableTargeting: ConsumableTargetingSession | null;
+  /** Transient SELECT-phase dice pre-picked before arming a consumable. Not persisted. */
+  consumableSeedDieIds?: string[];
 }
 
 // ─── Initial state helpers ───

@@ -22,7 +22,11 @@ import {
   toggleTargetDie,
   type ConsumableTargetingSource,
 } from './consumableTargetingSession';
-import { getPackLineupSelectedDieIds, setPackLineupSelectedDieIds } from './packLineupSelection';
+import {
+  getPackLineupSelectedDieIds,
+  setGameConsumableSeedDieIds,
+  setPackLineupSelectedDieIds,
+} from './ambientDiceSelection';
 
 export type ConsumableFlowStep =
   | { action: 'set_seed'; dieIds: string[] }
@@ -117,6 +121,11 @@ export function armPackCardTargeting(
   cancelConsumableTargeting();
 
   const seedIds = getPackLineupSelectedDieIds();
+  const maxPicks = getDiceSelectionMaxPicks(diceSelection);
+  if (seedIds.length > maxPicks) {
+    return fail('failed', `Select at most ${maxPicks} dice`);
+  }
+
   const begin = beginConsumableTargeting(
     { kind: 'pack_card', cardIndex, defId },
     options.eligibilityContext,
@@ -180,6 +189,7 @@ export function runConsumableFlow(steps: ConsumableFlowStep[], options: Consumab
   for (const step of steps) {
     if (step.action === 'set_seed') {
       seedDieIds = [...step.dieIds];
+      setGameConsumableSeedDieIds(step.dieIds);
       continue;
     }
 

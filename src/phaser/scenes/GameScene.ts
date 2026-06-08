@@ -13,7 +13,11 @@ import type {
   ConsumableEligibilityContext,
   ConsumableInstance,
 } from '../../game/facade/consumable';
-import { canUseConsumable as isConsumableEligible } from '../../game/facade/consumable';
+import {
+  canUseConsumable as isConsumableEligible,
+  getGameConsumableSeedDieIds,
+  setGameConsumableSeedDieIds,
+} from '../../game/facade/consumable';
 import type { DiceSelectionConfig } from '../../game/facade/diceSelection';
 import { shouldUpdateDisplayedDiceValue } from '../../game/facade/diceSelection';
 import { getRoundHintContext } from '../../game/displayContext';
@@ -109,9 +113,6 @@ export class GameScene extends Scene {
   // Roll-phase dice UI: selected = score hand; rerollLocked = keep face, not scored
   private selectedDiceIds: Set<string> = new Set();
   private rerollLockedDiceIds: Set<string> = new Set();
-  /** SELECT-phase dice picked before arming a visible-dice consumable */
-  private consumablePrePickIds: Set<string> = new Set();
-
   // Sort control
   private sortBtn: Button;
 
@@ -250,7 +251,7 @@ export class GameScene extends Scene {
       getContentCenterX: () => this.contentCX,
       isConsumableTargeting: () => this.consumableTargeting.isActive(),
       isConsumableTargetDie: (sprite) => this.consumableTargeting.isTargetDie(sprite),
-      isConsumablePrePickDie: (sprite) => this.consumablePrePickIds.has(sprite.dieData.id),
+      isConsumablePrePickDie: (sprite) => getGameConsumableSeedDieIds().includes(sprite.dieData.id),
       isConsumablePrePickActive: () => selectRoundPhase() === 'SELECT' && !this.consumableTargeting.isActive(),
       onConsumableTargetClick: (sprite) => this.consumableTargeting.onTargetClick(sprite),
       onConsumablePrePickClick: (sprite) => this.onPlayAreaPrePickClick(sprite),
@@ -580,7 +581,7 @@ export class GameScene extends Scene {
 
     const hand = selectHandDice();
     this.playArea.buildHand(hand);
-    this.consumablePrePickIds.clear();
+    sceneActions.patchConsumableSeedSelection([]);
     this.playArea.setPrePickInteractive(true);
     const playAreaSprites = this.playArea.getSprites();
 
@@ -669,7 +670,7 @@ export class GameScene extends Scene {
 
   private enterRollPhase(): void {
     this.clearSprites();
-    this.consumablePrePickIds.clear();
+    sceneActions.patchConsumableSeedSelection([]);
     this.playArea.setPrePickInteractive(false);
     this.selectedDiceIds.clear();
     this.rerollLockedDiceIds.clear();
@@ -1231,15 +1232,17 @@ export class GameScene extends Scene {
 
   private onPlayAreaPrePickClick(sprite: DiceSprite): void {
     const id = sprite.dieData.id;
-    if (this.consumablePrePickIds.has(id)) {
-      this.consumablePrePickIds.delete(id);
+    const selected = new Set(getGameConsumableSeedDieIds());
+    if (selected.has(id)) {
+      selected.delete(id);
       sprite.setSelected(false);
       this.sound.play('sfx_card_slide2', { volume: 0.25 });
     } else {
-      this.consumablePrePickIds.add(id);
+      selected.add(id);
       sprite.setSelected(true);
       this.sound.play('sfx_highlight1', { volume: 0.3 });
     }
+    setGameConsumableSeedDieIds([...selected]);
     this.playArea.reposition(true);
   }
 
@@ -1247,7 +1250,7 @@ export class GameScene extends Scene {
     const visible = new Set(this.getVisibleDieIds());
     const phase = selectRoundPhase();
     if (phase === 'SELECT') {
-      return [...this.consumablePrePickIds].filter((id) => visible.has(id));
+      return getGameConsumableSeedDieIds().filter((id) => visible.has(id));
     }
     if (phase === 'ROLL') {
       return [...this.selectedDiceIds].filter((id) => visible.has(id));

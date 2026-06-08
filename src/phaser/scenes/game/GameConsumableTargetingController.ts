@@ -5,6 +5,7 @@ import type { Scene } from 'phaser';
 import type { DiceSelectionConfig } from '../../../game/facade/diceSelection';
 import { gameFacade } from '../../../game/facade';
 import { getTargetableDieIds } from '../../../game/facade/consumable';
+import { formatTargetingInstruction } from '../../../game/consumables/formatTargetingInstruction';
 import { selectHandDice, selectRolledDice, selectRoundPhase } from '../../../game/store/selectors/roundSelectors';
 import { DiceSprite } from '../../ui/DiceSprite';
 
@@ -133,24 +134,6 @@ export class GameConsumableTargetingController {
     const snap = gameFacade.consumable.targeting.snapshot();
     if (!snap.active) return;
 
-    const text = this.deps.getInstructionText();
-    const name = snap.cardName || 'Effect';
-
-    if (snap.validationReason) {
-      text.setText(`${name}: ${snap.validationReason}`);
-      return;
-    }
-
-    if (snap.needsBumpDirection) {
-      text.setText(`${name}: Ready! Choose +1 or -1 on the card`);
-      return;
-    }
-
-    if (snap.selectedCount < snap.maxPicks) {
-      text.setText(`${name}: Ready! Pick another die or click USE on the card`);
-      return;
-    }
-
-    text.setText(`${name}: Ready! Click USE on the card`);
+    this.deps.getInstructionText().setText(formatTargetingInstruction(snap));
   }
 }

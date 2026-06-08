@@ -175,36 +175,36 @@ describe('pickWeightedSupplyCard', () => {
 
 describe('getRandomSupplyDef weighted distribution', () => {
   test('gold_tooth roughly doubles pan_for_gold picks', () => {
-    initRunRng('supply-weight-gold-tooth');
     setupGame({ equipment: [] });
+    initRunRng('supply-weight-gold-tooth');
     const baseline = measurePickRate('pan_for_gold', 8000);
 
-    initRunRng('supply-weight-gold-tooth');
     setupGame({ equipment: [item('gold_tooth')] });
+    initRunRng('supply-weight-gold-tooth');
     const weighted = measurePickRate('pan_for_gold', 8000);
 
     expectPickRateRatioNearWeight(weighted / baseline, 2);
   });
 
   test('wood_axe and covered_wagon roughly quadruple firewood picks', () => {
-    initRunRng('supply-weight-firewood-base');
     setupGame({ equipment: [] });
+    initRunRng('supply-weight-firewood-base');
     const baseline = measurePickRate('firewood', 8000);
 
-    initRunRng('supply-weight-firewood-stack');
     setupGame({ equipment: [item('wood_axe'), item('covered_wagon')] });
+    initRunRng('supply-weight-firewood-stack');
     const weighted = measurePickRate('firewood', 8000);
 
     expectPickRateRatioNearWeight(weighted / baseline, 4);
   });
 
   test('iron_furnace, iron_spurs, and alchemy_kit multiply to ~8× coffee_tin pick rate', () => {
-    initRunRng('supply-weight-coffee-base');
     setupGame({ equipment: [] });
+    initRunRng('supply-weight-coffee-base');
     const baseline = measurePickRate('coffee_tin', 8000);
 
-    initRunRng('supply-weight-coffee-steel-trio');
     setupGame({ equipment: [item('iron_furnace'), item('iron_spurs'), item('alchemy_kit')] });
+    initRunRng('supply-weight-coffee-steel-trio');
     const weighted = measurePickRate('coffee_tin', 8000);
 
     expectPickRateRatioNearWeight(weighted / baseline, 8);
@@ -230,12 +230,12 @@ describe('getRandomSupplyDef weighted distribution', () => {
 
 describe('Supply Cache uses supply weights', () => {
   function measureCachePanRate(seed: string, equipment: ReturnType<typeof item>[]): number {
-    initRunRng(seed);
     const { player } = setupGame({ equipment });
     player.maxConsumableSlots = 40;
+    initRunRng(seed);
     const cacheDef = getSupplyDefById('supply_cache')!;
     let panHits = 0;
-    const runs = 1500;
+    const runs = 8000;
 
     for (let i = 0; i < runs; i++) {
       player.consumables = [];

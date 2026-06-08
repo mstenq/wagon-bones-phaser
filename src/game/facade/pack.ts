@@ -48,6 +48,15 @@ export {
 
 export { getPackDefById };
 
+export {
+  canAcquirePackCardItem,
+  packCardNeedsEquipSlot,
+  resolvePackCardUse,
+  type PackCardUseContext,
+  type PackCardUseOutcome,
+  type PackCardUseResult,
+} from '../consumables/packCardUseDispatcher';
+
 export type PackOpenResult = {
   contents: PackItem[];
   picksRemaining: number;

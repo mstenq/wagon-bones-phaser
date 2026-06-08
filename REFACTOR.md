@@ -17,91 +17,67 @@ Goals reference: [GAME_CONSUMABLES_OVERVIEW.md](GAME_CONSUMABLES_OVERVIEW.md)
 
 ---
 
-## 1. Unify pack-card targeting with the bar bridge (high priority)
+## 1. Unify pack-card targeting with the bar bridge (high priority) — ✅ done
 
-**Problem:** Pack cards use a hand-rolled duplicate in `BoosterPackScene` (`beginPackCardTargeting`, `onUsePackDiceCard`) while bar cards go through `ConsumableBarTargetingBridge`. Behavior has already diverged:
+**Problem:** Pack cards used a hand-rolled duplicate in `BoosterPackScene` while bar cards went through `ConsumableBarTargetingBridge`.
 
-| Behavior | Bar (`ConsumableBarTargetingBridge`) | Pack card (`BoosterPackScene`) |
-|----------|---------------------------------------|--------------------------------|
-| Too many pre-selected dice | Hard fail: `Select at most N dice` | Silently truncated via `toggleDie` max cap |
-| Tab enabled state | `snapshot.ready` / `isTargetingCommitReady` | `isDiceSelectionReady` only |
-| Instruction copy | `getConsumableTargetingSnapshot()` (game) | Hand-rolled strings in `updateInstructionText` |
+**Done:**
 
-**Fix:**
-
-1. Extend `consumableFlowHarness.ts` (or rename to `consumableTargetingOrchestration.ts`) with `armPackCard` / shared `commitTargeting` used by both paths.
-2. Point `ConsumableBarTargetingBridge` at the harness (drop inline begin/seed/commit).
-3. Point `BoosterPackScene` pack-card USE at the same harness.
-4. **Pick one seed validation policy** (recommend: fail loud everywhere, matching bar). Update `consumableFlows.test.ts` when changed.
-
-**Delete:** `beginPackCardTargeting` and inline commit logic from `BoosterPackScene` once harness is wired.
+- `ConsumableBarTargetingBridge` delegates to `consumableFlowHarness` (`armBarConsumableTargeting`, `commitConsumableTargetingFlow`)
+- `BoosterPackScene` pack-card USE delegates to the same harness (`armPackCardTargeting`, `commitConsumableTargetingFlow`)
+- Pack-card arm now **fails loud** on too many pre-selected dice (matches bar policy)
 
 ---
 
-## 2. Unify pre-selection model (high priority)
+## 2. Unify pre-selection model (high priority) — ✅ done
 
-**Problem:** “Pick dice first, then card” uses two mechanisms:
+**Done:**
 
-- **GameScene:** ephemeral `consumablePrePickIds` `Set` (cleared on phase transitions)
-- **BoosterPack:** `lineupSelectedDieIds` in scene store + session when armed
-
-`onLineupDieClick` branches on `targeting.active()` — ambient store vs session.
-
-**Fix:**
-
-1. One ambient selection store (scene store field or `packLineupSelection` generalized to `ambientDiceSelection`).
-2. Always writable when no session; session seeds from ambient on arm and takes over.
-3. `cancel` restores ambient from session (already partially true for pack via `cancelConsumableTargeting`).
-4. Remove `consumablePrePickIds` from `GameScene`; use the shared store or harness-level seed passed from play-area selection synced to store.
-
-**Tests to update:** `consumableFlows.test.ts` `set_seed` / `preselect_pack` steps should converge to one `preselect` step.
+- `ambientDiceSelection.ts` — shared ambient read/write for `game` and `booster_pack`
+- Game SELECT pre-picks live in `scene.consumableSeedDieIds` (not ephemeral `Set`)
+- `cancelConsumableTargeting` restores game ambient seeds from session (pack already did this)
+- `consumablePrePickIds` removed from `GameScene`
 
 ---
 
-## 3. Decompose `BoosterPackScene` (high priority)
+## 3. Decompose `BoosterPackScene` (high priority) — pending
 
-**Problem:** File is ~1430 lines and grew during this refactor. Targeting, lineup, and tab-dismiss logic belong elsewhere.
+**Problem:** File is ~1400 lines. Targeting orchestration is now in the harness; lineup rendering/drag still lives in the scene.
 
-**Extract:**
+**Extract (still TODO):**
 
 | Module | Responsibility |
 |--------|----------------|
 | `BoosterPackLineupController.ts` | Render lineup, drag-reorder, click → selection, sync from session |
-| `PackCardTargetingBridge.ts` or harness callbacks | Pack-card arm/commit (or fold into unified harness) |
-| `formatTargetingInstruction.ts` | Shared instruction text from `getConsumableTargetingSnapshot()` |
+| `formatTargetingInstruction.ts` | ✅ Shared instruction text |
+| Harness callbacks | ✅ Pack-card arm/commit via harness |
 
 `BoosterPackScene` should wire layout, card sprites, and shell — not own targeting policy.
 
 ---
 
-## 4. Shared instruction text (medium priority)
+## 4. Shared instruction text (medium priority) — ✅ done
 
-**Problem:** `GameConsumableTargetingController.updateInstructionText` uses `getConsumableTargetingSnapshot()`. `BoosterPackScene.updateInstructionText` reimplements min/max/clone copy.
-
-**Fix:** `formatTargetingInstruction(snapshot, { cloneOrderHint?: boolean })` in `src/game/consumables/` (pure). Both scenes call it.
-
----
-
-## 5. Remove debug logging (must do before merge)
-
-Strip `[consumable-tabs]` `console.log` from:
-
-- `src/phaser/ui/ConsumableBar.ts`
-- `src/phaser/scenes/game/ConsumableBarTargetingBridge.ts`
+- `src/game/consumables/formatTargetingInstruction.ts`
+- `GameConsumableTargetingController` and `BoosterPackScene` call it
 
 ---
 
-## 6. Preserve dice selection order on commit (medium priority)
+## 5. Remove debug logging (must do before merge) — ✅ done
 
-**Problem:** `applyConsumableTargeting.selectPackDice` / `selectGameDice` filter the visible row by id but return dice in **row order**, not `commit.selectedDieIds` order. Mirage / CLONE uses `selectedDice[0]` as left and `selectedDice[1]` as right — wrong when pick order differs from lineup/hand order.
-
-**Fix:** Map `commit.selectedDieIds` to dice in that order (drop missing ids). Add harness test for pack mirage with out-of-order preselect once fixed.
+Stripped `[consumable-tabs]` `console.log` from `ConsumableBar.ts` and `ConsumableBarTargetingBridge.ts`.
 
 ---
 
-## 7. Atomic commit order (medium priority)
+## 6. Preserve dice selection order on commit (medium priority) — ✅ done
 
-**Problem:** `applyConsumableTargetingCommit` applies dice **before** `consumableActions.useConsumable`. Stale bar index after reorder could mutate dice then fail consume.
+`applyConsumableTargeting` maps `commit.selectedDieIds` to dice in pick order (not row order). Harness test added for pack mirage out-of-order preselect.
+
+---
+
+## 7. Atomic commit order (medium priority) — pending
+
+**Problem:** `applyConsumableTargetingCommit` applies dice **before** `consumableActions.useConsumable`.
 
 **Fix (pick one):**
 
@@ -110,11 +86,11 @@ Strip `[consumable-tabs]` `console.log` from:
 
 ---
 
-## 8. Boundary cleanup (low priority)
+## 8. Boundary cleanup (low priority) — partial
 
-- `BoosterPackScene` imports `packCardUseDispatcher` from `src/game/consumables/` — route through `gameFacade.pack` per AGENTS.md.
-- Consider moving `packCardUseDispatcher.ts` under `src/game/facade/pack.ts` or `src/game/pack/`.
-- Rename `getTargetingState().diceReady` → `diceCountReady` and `ready` → `commitReady` to avoid misuse.
+- ✅ `BoosterPackScene` routes pack-card dispatch through `gameFacade.pack`
+- Consider moving `packCardUseDispatcher.ts` under `src/game/facade/pack.ts` or `src/game/pack/`
+- Rename `getTargetingState().diceReady` → `diceCountReady` and `ready` → `commitReady` to avoid misuse
 
 ---
 
@@ -128,15 +104,15 @@ Strip `[consumable-tabs]` `console.log` from:
 
 ## 10. Refactor sequence (recommended order)
 
-1. ✅ **Lock behavior:** `consumableFlowHarness.ts` + `consumableFlows.test.ts` (this PR)
-2. Remove `console.log`s
-3. Wire bridge → harness; green tests
-4. Wire pack-card path → harness; align seed validation; update tests if policy changes
-5. Extract `formatTargetingInstruction`
-6. Unify pre-selection store; remove `consumablePrePickIds`
-7. Extract `BoosterPackLineupController` + shrink `BoosterPackScene`
-8. Facade import cleanup
-9. `bun run check` + `bun run build`
+1. ✅ **Lock behavior:** `consumableFlowHarness.ts` + `consumableFlows.test.ts`
+2. ✅ Remove `console.log`s
+3. ✅ Wire bridge → harness; green tests
+4. ✅ Wire pack-card path → harness; align seed validation; update tests
+5. ✅ Extract `formatTargetingInstruction`
+6. ✅ Unify pre-selection store; remove `consumablePrePickIds`
+7. ⬜ Extract `BoosterPackLineupController` + shrink `BoosterPackScene`
+8. ⬜ Facade import cleanup (rename targeting state fields)
+9. ⬜ `bun run check` + `bun run build`
 
 ---
 
@@ -156,7 +132,7 @@ When refactoring, every UI path should delegate to the harness:
 | UI gesture | Harness step / function |
 |------------|-------------------------|
 | Pre-pick lineup dice (pack) | `preselect_pack` / `setPackLineupSelectedDieIds` |
-| Pre-pick hand dice (game SELECT) | `set_seed` |
+| Pre-pick hand dice (game SELECT) | `set_seed` / `setGameConsumableSeedDieIds` |
 | Consumable bar USE (dice card) | `arm_bar` → optional toggles → `commit` |
 | Pack card tab open (dice card) | `arm_pack_card` |
 | Pack / bar USE confirm | `commit` (+ `bump` if medicine) |

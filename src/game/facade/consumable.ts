@@ -72,7 +72,15 @@ export {
   isTargetingCommitReady,
 } from '../consumables/consumableTargetingSession';
 
-export { getPackLineupSelectedDieIds, setPackLineupSelectedDieIds } from '../consumables/packLineupSelection';
+export {
+  getAmbientSelectedDieIds,
+  getGameConsumableSeedDieIds,
+  getPackLineupSelectedDieIds,
+  setAmbientSelectedDieIds,
+  setGameConsumableSeedDieIds,
+  setPackLineupSelectedDieIds,
+  type AmbientDiceSelectionScene,
+} from '../consumables/ambientDiceSelection';
 export { resolvePackItemDefId } from '../consumables/packCardDefId';
 
 export const gameConsumable = {

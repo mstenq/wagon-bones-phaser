@@ -118,7 +118,6 @@ export class ConsumableBar extends CardBar {
     if (!card) return;
     const targetingState = this.targetingStateProvider?.() ?? null;
     const instant = targetingState?.activeIndex === index;
-    console.log('[consumable-tabs] refreshTargetingTabs', { index, instant, targetingState });
     this.ensureActionTabsOpen(card, index, instant);
   }
 
@@ -172,18 +171,18 @@ export class ConsumableBar extends CardBar {
     if (isArmed) {
       if (targetingState.needsBumpDirection) {
         tabs.push({
-          label: '+1\nUP',
-          color: targetingState.diceReady ? 0x338833 : 0x555555,
-          textColor: targetingState.diceReady ? '#ffffff' : '#bbbbbb',
-          disabled: !targetingState.diceReady,
-          callback: () => this.onCommitTargeting(consumable, index, 'up'),
-        });
-        tabs.push({
           label: '-1\nDOWN',
           color: targetingState.diceReady ? 0x883333 : 0x555555,
           textColor: targetingState.diceReady ? '#ffffff' : '#bbbbbb',
           disabled: !targetingState.diceReady,
           callback: () => this.onCommitTargeting(consumable, index, 'down'),
+        });
+        tabs.push({
+          label: '+1\nUP',
+          color: targetingState.diceReady ? 0x338833 : 0x555555,
+          textColor: targetingState.diceReady ? '#ffffff' : '#bbbbbb',
+          disabled: !targetingState.diceReady,
+          callback: () => this.onCommitTargeting(consumable, index, 'up'),
         });
         return tabs;
       }
@@ -232,7 +231,6 @@ export class ConsumableBar extends CardBar {
     if (targetingState?.activeIndex !== index) return;
 
     if (this.suppressTabDismissCancel) {
-      console.log('[consumable-tabs] suppressed dismiss-cancel (same gesture), reopening tabs');
       this.scene.time.delayedCall(0, () => {
         const state = this.targetingStateProvider?.() ?? null;
         if (state?.activeIndex === index) {
@@ -242,10 +240,6 @@ export class ConsumableBar extends CardBar {
       return;
     }
 
-    console.log('[consumable-tabs] dismiss → cancel targeting', {
-      index,
-      needsBump: targetingState.needsBumpDirection,
-    });
     this.emit('consumable-cancel-targeting', { index });
   }
 
@@ -261,7 +255,6 @@ export class ConsumableBar extends CardBar {
 
     if (consumable.def.diceSelection) {
       this.suppressTabDismissCancel = true;
-      console.log('[consumable-tabs] USE → arm', { consumableIndex, defId: consumable.def.id });
       this.scene.time.delayedCall(0, () => {
         this.suppressTabDismissCancel = false;
       });

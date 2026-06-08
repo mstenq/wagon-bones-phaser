@@ -23,6 +23,7 @@ export function createInitialSceneState(): SceneRuntimeState {
     payout: null,
     roundSelect: null,
     consumableTargeting: null,
+    consumableSeedDieIds: undefined,
   };
 }
 
@@ -133,6 +134,10 @@ export const sceneActions = {
 
   patchPackLineupSelection(lineupSelectedDieIds: string[]): void {
     sceneActions.patchBoosterPack({ lineupSelectedDieIds });
+  },
+
+  patchConsumableSeedSelection(consumableSeedDieIds: string[]): void {
+    sceneStore.setState({ consumableSeedDieIds });
   },
 
   enterTrailEvent(trail: TrailEventSceneState): void {

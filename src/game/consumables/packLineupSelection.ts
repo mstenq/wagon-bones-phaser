@@ -1,21 +1,13 @@
 // ─── Booster pack lineup dice pre-selection (No Phaser imports) ───
+// Re-exports from ambientDiceSelection for existing call sites.
 
-import { getSceneState, sceneActions } from '../store/sceneStore';
-import { getActiveConsumableTargeting } from './consumableTargetingSession';
-
-/** Selected lineup dice from an active pack targeting session, or ambient store selection. */
-export function getPackLineupSelectedDieIds(): string[] {
-  const session = getActiveConsumableTargeting();
-  if (session?.useContext.scene === 'booster_pack') {
-    return [...session.selectedDieIds];
-  }
-  return [...(getSceneState().boosterPack?.lineupSelectedDieIds ?? [])];
-}
-
-export function setPackLineupSelectedDieIds(ids: string[]): void {
-  const session = getActiveConsumableTargeting();
-  if (session?.useContext.scene === 'booster_pack') {
-    return;
-  }
-  sceneActions.patchPackLineupSelection(ids);
-}
+export {
+  getAmbientSelectedDieIds,
+  getGameConsumableSeedDieIds,
+  getPackLineupSelectedDieIds,
+  setAmbientSelectedDieIds,
+  setGameConsumableSeedDieIds,
+  setPackLineupSelectedDieIds,
+  clearAmbientSelectedDieIds,
+  type AmbientDiceSelectionScene,
+} from './ambientDiceSelection';
