@@ -7,7 +7,6 @@
 - bad water event only gives "drink it" as an option which is lame.
 - blood_moon - should realy be negative 1 hand size instead of rerolls.
 - medicine - should not be able to use while in shop or booster packs (Only makes sense to change dice value in game after a roll/reroll)
-- can't reorder dice pre initial roll. Need this so you can use mirage pre first roll.
 
 ## New Feature Ideas
 - new permits for luck:

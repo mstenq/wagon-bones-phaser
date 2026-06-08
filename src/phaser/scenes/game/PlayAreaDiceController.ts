@@ -1,9 +1,11 @@
-// ─── SELECT-phase hand dice row: sprites, layout, consumable-target pointer wiring ───
+// ─── SELECT-phase hand dice row: sprites, layout, drag reorder, consumable-target pointer wiring ───
 
+import * as Phaser from 'phaser';
 import type { Scene } from 'phaser';
 import { UI } from '../../../game/Constants';
 import type { Die } from '../../../game/types';
 import { DiceSprite } from '../../ui/DiceSprite';
+import { PlayAreaDiceDragReorder } from '../../ui/playAreaDiceDragReorder';
 import { getArcOffset, getRowXPositions } from './diceRowGeometry';
 import { tweenDieRowSpriteLayout } from './diceRowElasticTween';
 
@@ -12,20 +14,46 @@ export type PlayAreaDiceControllerDeps = {
   getDiceSpacing: (count: number) => number;
   getDiceScale: () => number;
   getContentCenterX: () => number;
+  isAnimating: () => boolean;
   isConsumableTargeting: () => boolean;
   isConsumableTargetDie: (sprite: DiceSprite) => boolean;
   isConsumablePrePickDie?: (sprite: DiceSprite) => boolean;
   isConsumablePrePickActive?: () => boolean;
   onConsumableTargetClick: (sprite: DiceSprite) => void;
   onConsumablePrePickClick?: (sprite: DiceSprite) => void;
+  syncHandDiceFromSprites: () => void;
+  onDragBegin: () => void;
+  getWasDragging: () => boolean;
+  setWasDragging: (value: boolean) => void;
   onLayoutChange?: () => void;
 };
 
 export class PlayAreaDiceController {
   private sprites: DiceSprite[] = [];
   private rowY = 0;
+  private readonly handDiceDrag: PlayAreaDiceDragReorder;
 
-  constructor(private readonly deps: PlayAreaDiceControllerDeps) {}
+  constructor(private readonly deps: PlayAreaDiceControllerDeps) {
+    this.handDiceDrag = new PlayAreaDiceDragReorder({
+      scene: deps.scene,
+      getSprites: () => this.sprites,
+      contentCenterX: deps.getContentCenterX,
+      getDiceSpacing: deps.getDiceSpacing,
+      getDiceScale: deps.getDiceScale,
+      getDieY: (index, sprite) => this.getDieY(index, sprite),
+      getArcOffset,
+      isDieLifted: (sprite) => this.isDieHighlighted(sprite),
+      syncHandDiceFromSprites: deps.syncHandDiceFromSprites,
+      onTouchTap: (sprite) => this.onSpriteTap(sprite),
+      onDragBegin: deps.onDragBegin,
+      canStart: (sprite) => {
+        if (deps.isAnimating() || this.handDiceDrag.isDragging()) return false;
+        if (deps.isConsumableTargeting()) return false;
+        return this.sprites.includes(sprite);
+      },
+      canTap: () => !deps.isAnimating() && !deps.isConsumableTargeting(),
+    });
+  }
 
   getSprites(): DiceSprite[] {
     return this.sprites;
@@ -39,7 +67,7 @@ export class PlayAreaDiceController {
     this.rowY = y;
   }
 
-  /** Build the hand row at the current Y; sprites are non-interactive until targeting enables them. */
+  /** Build the hand row at the current Y; sprites are non-interactive until pre-pick enables them. */
   buildHand(dice: Die[]): void {
     this.clear();
     const scale = this.deps.getDiceScale();
@@ -52,7 +80,7 @@ export class PlayAreaDiceController {
       sprite.setScale(scale);
       sprite.rotation = arc.rotation;
       sprite.setDepth(10);
-      this.wireSprite(sprite);
+      this.wireSpriteInteraction(sprite);
       sprite.disableInteractive();
       this.sprites.push(sprite);
     }
@@ -109,6 +137,14 @@ export class PlayAreaDiceController {
         sprite.disableInteractive();
       }
     }
+    if (!enabled) {
+      this.stopDrag();
+    }
+  }
+
+  stopDrag(): void {
+    this.handDiceDrag.stop();
+    DiceSprite.suppressTooltips = false;
   }
 
   removeSprite(sprite: DiceSprite): void {
@@ -118,26 +154,41 @@ export class PlayAreaDiceController {
 
   /** Append a sprite wired for consumable targeting; non-interactive by default. */
   addSprite(sprite: DiceSprite): void {
-    this.wireSprite(sprite);
+    this.wireSpriteInteraction(sprite);
     sprite.disableInteractive();
     this.sprites.push(sprite);
   }
 
   clear(): void {
+    this.stopDrag();
     for (const s of this.sprites) s.destroy();
     this.sprites = [];
   }
 
-  private wireSprite(sprite: DiceSprite): void {
-    sprite.on('pointerup', () => {
-      if (this.deps.isConsumableTargeting()) {
-        this.deps.onConsumableTargetClick(sprite);
-        return;
-      }
-      if (this.deps.isConsumablePrePickActive?.()) {
-        this.deps.onConsumablePrePickClick?.(sprite);
-      }
+  private wireSpriteInteraction(sprite: DiceSprite): void {
+    sprite.off('pointerdown');
+    sprite.off('pointerup');
+
+    sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.deps.setWasDragging(false);
+      this.handDiceDrag.wirePointerDown(sprite, pointer);
     });
+
+    sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.wasTouch) return;
+      if (this.deps.getWasDragging() || this.deps.isAnimating()) return;
+      this.onSpriteTap(sprite);
+    });
+  }
+
+  private onSpriteTap(sprite: DiceSprite): void {
+    if (this.deps.isConsumableTargeting()) {
+      this.deps.onConsumableTargetClick(sprite);
+      return;
+    }
+    if (this.deps.isConsumablePrePickActive?.()) {
+      this.deps.onConsumablePrePickClick?.(sprite);
+    }
   }
 
   private isDieHighlighted(sprite: DiceSprite): boolean {

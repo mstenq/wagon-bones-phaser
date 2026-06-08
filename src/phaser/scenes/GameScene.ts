@@ -249,12 +249,21 @@ export class GameScene extends Scene {
       getDiceSpacing: (count) => this.getDiceSpacing(count),
       getDiceScale: () => this.getDiceScale(),
       getContentCenterX: () => this.contentCX,
+      isAnimating: () => this.animating,
       isConsumableTargeting: () => this.consumableTargeting.isActive(),
       isConsumableTargetDie: (sprite) => this.consumableTargeting.isTargetDie(sprite),
       isConsumablePrePickDie: (sprite) => getGameConsumableSeedDieIds().includes(sprite.dieData.id),
       isConsumablePrePickActive: () => selectRoundPhase() === 'SELECT' && !this.consumableTargeting.isActive(),
       onConsumableTargetClick: (sprite) => this.consumableTargeting.onTargetClick(sprite),
       onConsumablePrePickClick: (sprite) => this.onPlayAreaPrePickClick(sprite),
+      syncHandDiceFromSprites: () => this.syncHandDiceFromSprites(),
+      onDragBegin: () => {
+        this.wasDragging = true;
+      },
+      getWasDragging: () => this.wasDragging,
+      setWasDragging: (value) => {
+        this.wasDragging = value;
+      },
       onLayoutChange: () => this.notifyDiceRowLayoutChange(),
     });
 
@@ -1094,6 +1103,11 @@ export class GameScene extends Scene {
     gameFacade.round.syncRolledDiceFromFaces(this.rollSprites.map((s) => s.dieData));
   }
 
+  /** Keep SELECT-phase hand order aligned with play-area sprite order (mirage left→right). */
+  private syncHandDiceFromSprites(): void {
+    gameFacade.round.setHandDice(this.playArea.getSprites().map((s) => s.dieData));
+  }
+
   private onSortDice(): void {
     this.rollRow.sortAndReposition();
   }
@@ -1250,7 +1264,8 @@ export class GameScene extends Scene {
     const visible = new Set(this.getVisibleDieIds());
     const phase = selectRoundPhase();
     if (phase === 'SELECT') {
-      return getGameConsumableSeedDieIds().filter((id) => visible.has(id));
+      const selected = new Set(getGameConsumableSeedDieIds().filter((id) => visible.has(id)));
+      return this.getVisibleDieIds().filter((id) => selected.has(id));
     }
     if (phase === 'ROLL') {
       return [...this.selectedDiceIds].filter((id) => visible.has(id));
@@ -1604,6 +1619,7 @@ export class GameScene extends Scene {
     if (phase === 'SELECT') {
       this.playArea.setY(this.rollRowY);
       this.playArea.buildHand(selectHandDice());
+      this.playArea.setPrePickInteractive(true);
       this.playArea.reposition(false);
       this.updateDrawButtons();
     }
