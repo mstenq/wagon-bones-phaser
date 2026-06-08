@@ -506,13 +506,17 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
   }
   const { modalRegion } = metrics;
   sidebar.setJourneyInfoCallback(() => {
-    openRunModalSingleton(scene, 'journey-info', () =>
-      new JourneyInfoModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y),
+    openRunModalSingleton(
+      scene,
+      'journey-info',
+      () => new JourneyInfoModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y),
     );
   });
   sidebar.setOptionsCallback(() => {
-    openRunModalSingleton(scene, 'options', () =>
-      new OptionsModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y),
+    openRunModalSingleton(
+      scene,
+      'options',
+      () => new OptionsModal(scene, modalRegion.x, modalRegion.w, modalRegion.h, modalRegion.y),
     );
   });
   sidebar.setModifiersCallback(() => {
