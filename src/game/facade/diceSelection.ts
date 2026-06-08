@@ -8,13 +8,19 @@ import {
   isDiceSelectionReady,
   shouldUpdateDisplayedDiceValue,
   type DiceSelectionConfig,
+  type DiceSelectionResult,
 } from '../DiceSelectionSystem';
 
-export type { DiceSelectionConfig, DiceSelectionEffectType } from '../DiceSelectionSystem';
+export type {
+  DiceLineupSyncOptions,
+  DiceSelectionConfig,
+  DiceSelectionEffectType,
+  DiceSelectionResult,
+} from '../DiceSelectionSystem';
 export { getDiceSelectionMaxPicks, getDiceSelectionMinPicks, isDiceSelectionReady, shouldUpdateDisplayedDiceValue };
 
 export const gameDiceSelection = {
-  applyEffect(config: DiceSelectionConfig, selectedDice: Die[]): string {
+  applyEffect(config: DiceSelectionConfig, selectedDice: Die[]): DiceSelectionResult {
     return applyDiceSelectionEffect(config, selectedDice);
   },
 };

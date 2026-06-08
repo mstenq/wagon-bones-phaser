@@ -69,6 +69,7 @@ export class RollRowController {
   }
 
   createRollRow(dice: Die[], y: number): DiceSprite[] {
+    this.destroyRollSprites();
     const sprites: DiceSprite[] = [];
     const scale = this.deps.getDiceScale();
     const spacing = this.deps.getDiceSpacing(dice.length);
@@ -89,28 +90,33 @@ export class RollRowController {
   }
 
   setupInteraction(): void {
-    for (let i = 0; i < this.rollSprites.length; i++) {
-      const sprite = this.rollSprites[i];
-
-      sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        this.deps.setWasDragging(false);
-        sprite.setData('rollClickRight', pointer.rightButtonDown());
-        this.rollDiceDrag.wirePointerDown(sprite, pointer);
-      });
-
-      sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-        if (pointer.wasTouch) return;
-        if (this.deps.getWasDragging() || this.deps.isAnimating() || this.deps.isMarqueeActive()) return;
-
-        if (this.deps.isConsumableTargeting()) {
-          this.deps.onConsumableTargetClick(sprite);
-          return;
-        }
-
-        const isRightClick = pointer.rightButtonReleased() || sprite.getData('rollClickRight') === true;
-        this.deps.onRollDieClick(sprite, isRightClick);
-      });
+    for (const sprite of this.rollSprites) {
+      this.wireSpriteInteraction(sprite);
     }
+  }
+
+  private wireSpriteInteraction(sprite: DiceSprite): void {
+    sprite.off('pointerdown');
+    sprite.off('pointerup');
+
+    sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.deps.setWasDragging(false);
+      sprite.setData('rollClickRight', pointer.rightButtonDown());
+      this.rollDiceDrag.wirePointerDown(sprite, pointer);
+    });
+
+    sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.wasTouch) return;
+      if (this.deps.getWasDragging() || this.deps.isAnimating() || this.deps.isMarqueeActive()) return;
+
+      if (this.deps.isConsumableTargeting()) {
+        this.deps.onConsumableTargetClick(sprite);
+        return;
+      }
+
+      const isRightClick = pointer.rightButtonReleased() || sprite.getData('rollClickRight') === true;
+      this.deps.onRollDieClick(sprite, isRightClick);
+    });
   }
 
   /** Sort roll sprites by die value and reposition (selected dice stay raised). */

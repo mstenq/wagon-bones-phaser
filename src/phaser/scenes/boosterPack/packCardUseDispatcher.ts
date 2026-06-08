@@ -10,8 +10,7 @@ import {
 import { getRunState } from '../../../game/store';
 import { resolveEquipmentList } from '../../../game/store/resolve';
 import { selectEquipmentSlotsFree } from '../../../game/store/selectors/runSelectors';
-import { isDiceSelectionReady } from '../../../game/DiceSelectionSystem';
-import type { Die } from '../../../game/types';
+import { isDiceSelectionReady } from '../../../game/facade/diceSelection';
 
 import trailGuidesData from '../../../data/trail_guides';
 import supplyCardsData from '../../../data/supply_cards';
@@ -19,7 +18,6 @@ import frontierEncountersData from '../../../data/frontier_encounters';
 
 export type PackCardUseContext = {
   selectedDiceIds: Set<string>;
-  lineupDice: Die[];
   equipmentCountBefore: number;
   cardNeedsDiceSelection: (item: PackItem) => boolean;
 };
@@ -44,8 +42,10 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
       return { status: 'blocked' };
     }
 
-    const selectedDice = ctx.lineupDice.filter((d) => ctx.selectedDiceIds.has(d.id));
-    feedbackText = gameFacade.pack.applyDiceSelection(config, selectedDice);
+    const lineupDice = gameFacade.pack.getLineupDice();
+    const selectedDice = lineupDice.filter((d) => ctx.selectedDiceIds.has(d.id));
+    const diceSelectionResult = gameFacade.pack.applyDiceSelectionToLineup(config, selectedDice);
+    feedbackText = diceSelectionResult.message;
     return {
       status: 'ready',
       outcome: { equipmentPopInCount, feedbackText },
@@ -96,7 +96,7 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
 
     const def = createFrontierConsumableDef(fe);
     consumableResult = gameFacade.pack.useConsumableDirectly(def, {
-      visibleDiceIds: ctx.lineupDice.map((d) => d.id),
+      visibleDiceIds: gameFacade.pack.getLineupDice().map((d) => d.id),
     });
     if (!consumableResult.success && consumableResult.failReason) {
       feedbackText = consumableResult.failReason;

@@ -11,13 +11,34 @@ import { selectRefreshCost } from '../selectors/runSelectors';
 
 export const diceActions = {
   addDie(die: Die): Die {
+    const [added] = diceActions.insertDiceAfter(null, [die]);
+    return added!;
+  },
+
+  /** Insert dice immediately after `afterDieId`, or append when the anchor id is missing. */
+  insertDiceAfter(afterDieId: string | null, templates: Die[]): Die[] {
+    if (templates.length === 0) return [];
+
     const state = getRunState();
-    const added: Die = { ...die, id: `die_player_${state.nextDieId}` };
-    const nextDieId = state.nextDieId + 1;
+    const afterIndex = afterDieId ? state.dice.findIndex((d) => d.id === afterDieId) : -1;
+    const insertAt = afterIndex >= 0 ? afterIndex + 1 : state.dice.length;
+
+    let nextDieId = state.nextDieId;
+    const added = templates.map((template) => {
+      const die: Die = { ...template, id: `die_player_${nextDieId}` };
+      nextDieId += 1;
+      return die;
+    });
+
     const equipment = resolveEquipmentList();
-    processEquipmentOnDiceAdded(equipment);
+    for (let i = 0; i < added.length; i++) {
+      processEquipmentOnDiceAdded(equipment);
+    }
+
+    const dice = [...state.dice];
+    dice.splice(insertAt, 0, ...added);
     runStore.setState({
-      dice: [...state.dice, added],
+      dice,
       nextDieId,
       equipment: storedFromEquipmentInstances(equipment),
     });

@@ -107,27 +107,80 @@ export function drawDiceForSelection(count: number): Die[] {
 
 // ─── Applying Effects ───
 
+export interface DiceSelectionResult {
+  message: string;
+  addedDice?: Die[];
+}
+
+/** Where to place COPY effect dice in a visible row (lineup / roll / hand order). */
+export interface DiceLineupSyncOptions {
+  addedDice: Die[];
+  insertAfterDieId: string;
+}
+
+export function buildCopyLineupSync(
+  result: DiceSelectionResult,
+  sourceDieId: string | undefined,
+): DiceLineupSyncOptions | undefined {
+  if (!sourceDieId || !result.addedDice || result.addedDice.length === 0) {
+    return undefined;
+  }
+  return { addedDice: result.addedDice, insertAfterDieId: sourceDieId };
+}
+
+export function mergeCopyIntoRow(row: Die[], sync: DiceLineupSyncOptions): Die[] {
+  return insertDiceAfterInOrder(row, sync.insertAfterDieId, sync.addedDice);
+}
+
 /**
  * Apply the selected effect to the player's actual dice.
- * Returns a description of what happened.
+ * Returns a description of what happened (and any dice created in-place).
  */
-export function applyDiceSelectionEffect(config: DiceSelectionConfig, selectedDice: Die[]): string {
+export function applyDiceSelectionEffect(config: DiceSelectionConfig, selectedDice: Die[]): DiceSelectionResult {
   switch (config.effectType) {
     case 'DESTROY':
-      return applyDestroy(selectedDice);
+      return { message: applyDestroy(selectedDice) };
     case 'COPY':
       return applyCopy(selectedDice, config.effectParams.copyCount ?? 2);
     case 'ADD_STICKER':
-      return applyAddSticker(selectedDice, config.effectParams.sticker!);
+      return { message: applyAddSticker(selectedDice, config.effectParams.sticker!) };
     case 'CLONE':
-      return applyClone(selectedDice);
+      return { message: applyClone(selectedDice) };
     case 'APPLY_AURA':
-      return applyAura(selectedDice, config.effectParams.aura ?? null);
+      return { message: applyAura(selectedDice, config.effectParams.aura ?? null) };
     case 'BUMP_VALUE':
-      return applyBumpValue(selectedDice, config.effectParams.bumpDirection ?? 'up');
+      return { message: applyBumpValue(selectedDice, config.effectParams.bumpDirection ?? 'up') };
     case 'ENHANCE':
-      return applyEnhance(selectedDice, config.effectParams.enhancement ?? null);
+      return { message: applyEnhance(selectedDice, config.effectParams.enhancement ?? null) };
   }
+}
+
+/** Insert dice immediately to the right of `afterDieId` in a visible row (sprite / lineup order). */
+export function insertDiceAfterInOrder(row: Die[], afterDieId: string, inserted: Die[]): Die[] {
+  if (inserted.length === 0) return row.map((d) => ({ ...d }));
+  const next = row.map((d) => ({ ...d }));
+  const afterIndex = next.findIndex((d) => d.id === afterDieId);
+  const insertAt = afterIndex >= 0 ? afterIndex + 1 : next.length;
+  for (let i = 0; i < inserted.length; i++) {
+    next.splice(insertAt + i, 0, { ...inserted[i]! });
+  }
+  return next;
+}
+
+/** Refresh lineup dice from the run collection; drop destroyed dice without pulling in pouch dice. */
+export function refreshLineupDiceFromRun(lineup: Die[], runDice: Die[]): Die[] {
+  const runDiceById = new Map(runDice.map((d) => [d.id, d]));
+  return lineup.flatMap((die) => {
+    const fresh = runDiceById.get(die.id);
+    return fresh ? [{ ...fresh }] : [];
+  });
+}
+
+/** Refresh lineup data and optionally insert explicit new copies (e.g. Seeing Double). */
+export function syncLineupAfterDiceEffect(lineup: Die[], runDice: Die[], sync?: DiceLineupSyncOptions): Die[] {
+  const refreshed = refreshLineupDiceFromRun(lineup, runDice);
+  if (!sync) return refreshed;
+  return mergeCopyIntoRow(refreshed, sync);
 }
 
 function applyDestroy(selectedDice: Die[]): string {
@@ -146,15 +199,18 @@ function applyDestroy(selectedDice: Die[]): string {
   return `Destroyed ${removed} dice`;
 }
 
-function applyCopy(selectedDice: Die[], copyCount: number): string {
+function applyCopy(selectedDice: Die[], copyCount: number): DiceSelectionResult {
   const die = selectedDice[0];
-  if (!die) return 'No die selected';
+  if (!die) return { message: 'No die selected' };
   const original = findRunDie(die.id);
-  if (!original) return 'Die not found';
-  for (let i = 0; i < copyCount; i++) {
-    diceActions.addDie({ ...original });
-  }
-  return `Created ${copyCount} copies`;
+  if (!original) return { message: 'Die not found' };
+
+  const templates = Array.from({ length: copyCount }, () => ({
+    ...original,
+    value: die.value,
+  }));
+  const addedDice = diceActions.insertDiceAfter(die.id, templates);
+  return { message: `Created ${copyCount} copies`, addedDice };
 }
 
 function applyAddSticker(selectedDice: Die[], sticker: DiceSticker): string {

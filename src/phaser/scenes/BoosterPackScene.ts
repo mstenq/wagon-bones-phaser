@@ -28,7 +28,8 @@ import {
   getDiceSelectionMaxPicks,
   getDiceSelectionMinPicks,
   isDiceSelectionReady,
-} from '../../game/DiceSelectionSystem';
+  type DiceSelectionConfig,
+} from '../../game/facade/diceSelection';
 import { Die } from '../../game/types';
 import { TEXT_COLORS, FONTS, UI, ANIM, DICE } from '../../game/Constants';
 import { Button } from '../ui/Button';
@@ -44,12 +45,11 @@ import { ConsumableBar } from '../ui/ConsumableBar';
 import { computeFittedRowSpacing } from '../ui/SceneLayout';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import { computeDiceRowLayout, getArcOffset, getRowXPositions } from './game/diceRowGeometry';
+import { BoosterPackDiceTargetingController } from './boosterPack/BoosterPackDiceTargetingController';
 import { resolvePackCardUse } from './boosterPack/packCardUseDispatcher';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import type { BoosterPackSceneState } from '../../game/store/types';
-import { rngShuffle } from '../../game/RunRng';
-
 import trailGuidesData from '../../data/trail_guides';
 import supplyCardsData from '../../data/supply_cards';
 import frontierEncountersData from '../../data/frontier_encounters';
@@ -103,8 +103,7 @@ export class BoosterPackScene extends Scene {
   private cardY: number = 0;
   private hasDiceSelectionLineup: boolean = false;
 
-  // Dice lineup (displayed above cards)
-  private lineupDice: Die[] = [];
+  // Dice lineup (displayed above cards; data lives in scene store)
   private lineupSprites: DiceSprite[] = [];
   private lineupLockIcons: Phaser.GameObjects.Text[] = [];
   private selectedDiceIds: Set<string> = new Set();
@@ -117,6 +116,7 @@ export class BoosterPackScene extends Scene {
   private activeTabCard: CardSprite | null = null;
   private dismissClickAway: (() => void) | null = null;
   private pendingUsedCardIndices: number[] = [];
+  private packDiceTargeting!: BoosterPackDiceTargetingController;
 
   constructor() {
     super('BoosterPack');
@@ -155,6 +155,7 @@ export class BoosterPackScene extends Scene {
   }
 
   private buildPackSceneState(): BoosterPackSceneState {
+    const existing = getSceneState().boosterPack;
     return {
       packDefId: this.packDef.id,
       returnScene: this.returnScene,
@@ -163,6 +164,9 @@ export class BoosterPackScene extends Scene {
       picksRemaining: this.picksRemaining,
       effectivePickCount: this.effectivePickCount,
       usedCardIndices: this.cardSprites.filter((s) => s.used).map((s) => s.index),
+      lineupDieIds: existing?.lineupDieIds ?? [],
+      lineupSelectedDieIds: [...this.selectedDiceIds],
+      pendingDiceSelectionConfig: this.packDiceTargeting?.getConfig() ?? existing?.pendingDiceSelectionConfig ?? null,
     };
   }
 
@@ -197,10 +201,12 @@ export class BoosterPackScene extends Scene {
     }
 
     this.cardSprites = [];
-    this.selectedDiceIds = new Set();
+    const storedSelection = getSceneState().boosterPack?.lineupSelectedDieIds;
+    this.selectedDiceIds = new Set(storedSelection ?? []);
     this.activeTabCard = null;
 
     this.initLineupDragReorder();
+    this.initPackDiceTargeting();
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
@@ -227,7 +233,7 @@ export class BoosterPackScene extends Scene {
         });
       },
       canStart: (sprite) => {
-        return !!(this.activeTabCard?.item.diceSelection && !sprite._disabled);
+        return !!(this.getLineupDiceConfig() && !sprite._disabled);
       },
       getPointerOffset: (sprite, pointer) => ({
         x: pointer.worldX - sprite.x,
@@ -246,8 +252,7 @@ export class BoosterPackScene extends Scene {
         sprite.y = pointer.worldY - ctx.offsetY + ANIM.CARD_DRAG_LIFT_Y;
       },
       onReorder: (fromIndex, toIndex) => {
-        const die = this.lineupDice.splice(fromIndex, 1)[0]!;
-        this.lineupDice.splice(toIndex, 0, die);
+        gameFacade.pack.reorderLineup(fromIndex, toIndex);
         const lockIcon = this.lineupLockIcons.splice(fromIndex, 1)[0]!;
         this.lineupLockIcons.splice(toIndex, 0, lockIcon);
       },
@@ -288,6 +293,27 @@ export class BoosterPackScene extends Scene {
       playSettleSound: true,
       onReleaseWithoutDrag: (sprite) => {
         this.onLineupDieClick(sprite);
+      },
+    });
+  }
+
+  private initPackDiceTargeting(): void {
+    this.packDiceTargeting = new BoosterPackDiceTargetingController({
+      scene: this,
+      getContentCenterX: () => this.contentCX,
+      getContentBottom: () => this.contentBottom,
+      getSelectedDiceIds: () => this.selectedDiceIds,
+      clearSelectedDiceIds: () => this.selectedDiceIds.clear(),
+      clearLineupSelections: () => this.clearLineupSelections(),
+      setLineupInteractive: (enabled) => this.setLineupInteractive(enabled),
+      dismissActiveTab: () => this.dismissActiveTab(),
+      updateInstructionText: () => this.updateInstructionText(),
+      getLineupDice: () => gameFacade.pack.getLineupDice(),
+      onApply: (config, selectedDice) => {
+        const result = gameFacade.pack.applyDiceSelectionToLineup(config, selectedDice);
+        this.showFloatingText(result.message);
+        sceneActions.setPendingPackDiceSelection(null);
+        this.renderLineupFromStore();
       },
     });
   }
@@ -358,10 +384,19 @@ export class BoosterPackScene extends Scene {
     if (showLineup) {
       const run = getRunState();
       const spent = new Set(run.spentDiceIds);
-      const lineupCount = Math.min(run.handSize, run.dice.filter((d) => !spent.has(d.id)).length);
+      const defaultLineupCount = Math.min(run.handSize, run.dice.filter((d) => !spent.has(d.id)).length);
+      const lineupDice = gameFacade.pack.getLineupDice();
+      const lineupCount = lineupDice.length > 0 ? lineupDice.length : defaultLineupCount;
       const diceLayout = computeDiceRowLayout(Math.max(1, lineupCount), this.contentW);
       this.lineupY = headerBottom + diceLayout.dieSize / 2 + Math.floor(8 * uiScale);
-      this.buildDiceLineup();
+      if (lineupDice.length === 0) {
+        gameFacade.pack.initLineup();
+      }
+      this.renderLineupFromStore();
+      const pendingConfig = getSceneState().boosterPack?.pendingDiceSelectionConfig;
+      if (pendingConfig) {
+        this.packDiceTargeting.enter(pendingConfig, { keepSelection: true });
+      }
 
       const instructionY = this.lineupY + diceLayout.dieSize / 2 + UI.DICE_ARC_HEIGHT * diceLayout.scale + 12;
       this.instructionText = this.add
@@ -448,30 +483,27 @@ export class BoosterPackScene extends Scene {
 
   // ─── Dice Lineup ───
 
-  private buildDiceLineup(): void {
-    const run = getRunState();
-    const spent = new Set(run.spentDiceIds);
-    const nonSpent = run.dice.filter((d) => !spent.has(d.id));
-    const shuffled = rngShuffle('dice', nonSpent);
-    const dice = shuffled.slice(0, Math.min(run.handSize, shuffled.length));
-    this.layoutDiceLineup(dice);
+  private renderLineupFromStore(): void {
+    const storedSelection = getSceneState().boosterPack?.lineupSelectedDieIds;
+    const selection = new Set(storedSelection ?? this.selectedDiceIds);
+    this.selectedDiceIds = selection;
+    this.layoutDiceLineup(gameFacade.pack.getLineupDice(), selection);
   }
 
-  /** Lay out dice in the given order (no shuffle). Used on pack open and after lineup count changes. */
+  /** Lay out dice in store order (sprites only). */
   private layoutDiceLineup(dice: Die[], restoreSelection?: Set<string>): void {
     const selected = restoreSelection ?? new Set<string>();
-    this.clearDiceLineup();
-    this.lineupDice = dice.map((d) => ({ ...d }));
+    this.clearDiceLineupSprites();
 
-    if (this.lineupDice.length === 0) return;
+    if (dice.length === 0) return;
 
-    const diceLayout = computeDiceRowLayout(this.lineupDice.length, this.contentW);
-    const positions = getRowXPositions(this.lineupDice.length, this.contentCX, diceLayout.spacing);
+    const diceLayout = computeDiceRowLayout(dice.length, this.contentW);
+    const positions = getRowXPositions(dice.length, this.contentCX, diceLayout.spacing);
     const lockOffsetY = DICE.SIZE * diceLayout.scale * 0.62;
 
-    for (let i = 0; i < this.lineupDice.length; i++) {
-      const die = this.lineupDice[i]!;
-      const arc = getArcOffset(i, this.lineupDice.length, diceLayout.scale);
+    for (let i = 0; i < dice.length; i++) {
+      const die = dice[i]!;
+      const arc = getArcOffset(i, dice.length, diceLayout.scale);
       const x = positions[i];
       const y = this.lineupY + arc.y;
 
@@ -498,53 +530,21 @@ export class BoosterPackScene extends Scene {
     }
 
     this.setLineupInteractive(false);
+    sceneActions.patchPackLineupSelection([...this.selectedDiceIds]);
   }
 
-  /**
-   * After a pack card or pouch consumable mutates dice, refresh visuals without reshuffling.
-   * Preserves lineup order; drops destroyed dice and relayouts only when the count changes.
-   */
-  private syncDiceLineupFromRun(): void {
-    if (!this.hasDiceSelectionLineup || this.lineupDice.length === 0) return;
-
-    const run = getRunState();
-    const runDiceById = new Map(run.dice.map((d) => [d.id, d]));
-    const oldSelected = new Set(this.selectedDiceIds);
-
-    const nextLineup: Die[] = [];
-    for (const die of this.lineupDice) {
-      const fresh = runDiceById.get(die.id);
-      if (fresh) nextLineup.push({ ...fresh });
-    }
-
-    this.lineupDice = nextLineup;
-    this.selectedDiceIds.clear();
-    for (const die of nextLineup) {
-      if (oldSelected.has(die.id)) this.selectedDiceIds.add(die.id);
-    }
-
-    if (nextLineup.length !== this.lineupSprites.length) {
-      this.layoutDiceLineup(nextLineup, new Set(this.selectedDiceIds));
-      return;
-    }
-
-    for (let i = 0; i < this.lineupSprites.length; i++) {
-      const die = nextLineup[i]!;
-      this.lineupSprites[i]!.setDieData(die);
-      const isSelected = this.selectedDiceIds.has(die.id);
-      this.lineupSprites[i]!.setSelected(isSelected);
-      this.lineupLockIcons[i]?.setVisible(isSelected);
-    }
-  }
-
-  private clearDiceLineup(): void {
+  private clearDiceLineupSprites(): void {
     this.cancelLineupDrag();
     for (const s of this.lineupSprites) s.destroy();
     for (const icon of this.lineupLockIcons) icon.destroy();
     this.lineupSprites = [];
     this.lineupLockIcons = [];
-    this.lineupDice = [];
+  }
+
+  private clearDiceLineup(): void {
+    this.clearDiceLineupSprites();
     this.selectedDiceIds.clear();
+    sceneActions.patchBoosterPack({ lineupDieIds: [], lineupSelectedDieIds: [] });
   }
 
   private setLineupInteractive(enabled: boolean): void {
@@ -568,7 +568,7 @@ export class BoosterPackScene extends Scene {
 
   private wireLineupSpriteInteraction(sprite: DiceSprite): void {
     sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (!this.activeTabCard?.item.diceSelection || sprite._disabled) return;
+      if (!this.getLineupDiceConfig() || sprite._disabled) return;
       this.lineupDragReorder.wirePointerDown(sprite, pointer, sprite);
     });
   }
@@ -579,10 +579,10 @@ export class BoosterPackScene extends Scene {
   }
 
   private onLineupDieClick(sprite: DiceSprite): void {
-    if (!this.activeTabCard) return;
+    if (!this.getLineupDiceConfig()) return;
     const index = this.lineupSprites.indexOf(sprite);
     if (index < 0) return;
-    const die = this.lineupDice[index];
+    const die = gameFacade.pack.getLineupDice()[index];
     if (!die) return;
 
     const lockIcon = this.lineupLockIcons[index];
@@ -602,8 +602,10 @@ export class BoosterPackScene extends Scene {
       this.sound.play('sfx_highlight1', { volume: 0.3 });
     }
 
+    sceneActions.patchPackLineupSelection([...this.selectedDiceIds]);
     this.updateInstructionText();
     this.updateActiveTabEnabled();
+    this.packDiceTargeting.updateApplyEnabled();
   }
 
   // ─── Card Display ───
@@ -969,8 +971,12 @@ export class BoosterPackScene extends Scene {
     return !!item.diceSelection;
   }
 
+  private getLineupDiceConfig(): DiceSelectionConfig | null {
+    return this.activeTabCard?.item.diceSelection ?? this.packDiceTargeting.getConfig();
+  }
+
   private getMaxDicePicks(): number {
-    const config = this.activeTabCard?.item.diceSelection;
+    const config = this.getLineupDiceConfig();
     if (!config) return 0;
     return getDiceSelectionMaxPicks(config);
   }
@@ -995,15 +1001,17 @@ export class BoosterPackScene extends Scene {
   }
 
   private updateInstructionText(): void {
-    if (!this.activeTabCard || !this.cardNeedsDiceSelection(this.activeTabCard.item)) {
+    const config = this.getLineupDiceConfig();
+    if (!config) {
       this.instructionText.setText('');
       return;
     }
-    const config = this.activeTabCard.item.diceSelection!;
+
     const min = getDiceSelectionMinPicks(config);
     const max = getDiceSelectionMaxPicks(config);
     const selected = this.selectedDiceIds.size;
     const isClone = config.effectType === 'CLONE';
+    const useLabel = this.packDiceTargeting.isActive() ? 'Apply' : 'USE';
 
     if (selected < min) {
       const hint = isClone ? 'Drag to order — left copies right. ' : '';
@@ -1015,10 +1023,12 @@ export class BoosterPackScene extends Scene {
       }
     } else if (selected < max) {
       this.instructionText.setText(
-        isClone ? 'Ready! Left die will copy the right' : 'Ready! Pick another die or click USE',
+        isClone ? 'Ready! Left die will copy the right' : `Ready! Pick another die or click ${useLabel}`,
       );
     } else {
-      this.instructionText.setText(isClone ? 'Ready! Left die will copy the right' : 'Ready! Click USE to apply');
+      this.instructionText.setText(
+        isClone ? 'Ready! Left die will copy the right' : `Ready! Click ${useLabel} to apply`,
+      );
     }
   }
 
@@ -1028,7 +1038,7 @@ export class BoosterPackScene extends Scene {
 
   private canUseConsumableFromBar(def: ConsumableDef): boolean {
     if (this.isPackDiceTargetingPending()) return false;
-    if (def.id === 'raid') return this.lineupDice.length > 0;
+    if (def.id === 'raid') return gameFacade.pack.getLineupDice().length > 0;
     return canUseConsumableInShop(def);
   }
 
@@ -1073,7 +1083,6 @@ export class BoosterPackScene extends Scene {
     const run = getRunState();
     const useResult = resolvePackCardUse(item, {
       selectedDiceIds: this.selectedDiceIds,
-      lineupDice: this.lineupDice,
       equipmentCountBefore: resolveEquipmentList(run).length,
       cardNeedsDiceSelection: (packItem) => this.cardNeedsDiceSelection(packItem),
     });
@@ -1114,10 +1123,8 @@ export class BoosterPackScene extends Scene {
     if (this.picksRemaining <= 0) {
       this.clearDiceLineup();
       this.time.delayedCall(800, () => this.exitBoosterPackFlow());
-    } else {
-      if (this.hasDiceSelectionLineup) {
-        this.syncDiceLineupFromRun();
-      }
+    } else if (this.hasDiceSelectionLineup) {
+      this.renderLineupFromStore();
     }
   }
 
@@ -1223,9 +1230,10 @@ export class BoosterPackScene extends Scene {
 
   private tearDownPackLayout(): void {
     clearSceneCardTooltips(this);
+    this.packDiceTargeting.exit();
     this.dismissActiveTab();
     this.lineupDragReorder.stop();
-    this.clearDiceLineup();
+    this.clearDiceLineupSprites();
 
     for (const sprite of this.cardSprites) {
       sprite.itemCard?.hideTooltip();
@@ -1256,6 +1264,8 @@ export class BoosterPackScene extends Scene {
       this.queuedPackDefIds = [...stored.queuedPackDefIds];
       this.returnScene = stored.returnScene;
     }
+
+    this.syncPackToStore();
     this.tearDownPackLayout();
     this.buildLayout();
   }
@@ -1265,8 +1275,10 @@ export class BoosterPackScene extends Scene {
   }
 
   private isPackDiceTargetingPending(): boolean {
-    if (!this.activeTabCard?.item.diceSelection) return false;
-    const config = this.activeTabCard.item.diceSelection;
+    if (this.packDiceTargeting.isTargetingPending(this.selectedDiceIds.size)) {
+      return true;
+    }
+    const config = this.activeTabCard?.item.diceSelection;
     if (!config) return false;
     return this.selectedDiceIds.size < getDiceSelectionMinPicks(config);
   }
@@ -1279,16 +1291,23 @@ export class BoosterPackScene extends Scene {
 
   private async handleConsumableUsedAsync(consumed: ConsumableInstance): Promise<void> {
     const result = gameFacade.pack.useFromPouch(consumed, {
-      visibleDiceIds: this.lineupDice.map((d) => d.id),
+      visibleDiceIds: gameFacade.pack.getLineupDice().map((d) => d.id),
     });
-    this.syncDiceLineupFromRun();
 
     if (!result.success && result.failReason) {
       // Keep pack-specific failure styling while sharing follow-up flow.
       this.showFloatingText(result.failReason);
       this.sound.play('sfx_cancel', { volume: 0.5 });
+      return;
     }
 
+    if (result.diceSelection && this.hasDiceSelectionLineup) {
+      sceneActions.setPendingPackDiceSelection(result.diceSelection);
+      this.packDiceTargeting.enter(result.diceSelection);
+      return;
+    }
+
+    this.renderLineupFromStore();
     this.runShell?.handleConsumableResult(result);
   }
 }

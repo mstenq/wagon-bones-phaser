@@ -3,6 +3,7 @@ import './setup';
 import { resetDieIds, setupGame, setBoss, die, item, equipWithModifiers, calculateTestScore } from './testHelpers';
 import { resetPlayerState } from './testRunPlayer';
 import {
+  createFrontierConsumableDef,
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
   createConsumableInstance,
@@ -28,9 +29,15 @@ import {
   applyDiceSelectionEffect,
   DiceSelectionConfig,
   getDiceSelectionMinPicks,
+  insertDiceAfterInOrder,
   isDiceSelectionReady,
+  refreshLineupDiceFromRun,
   shouldUpdateDisplayedDiceValue,
+  syncLineupAfterDiceEffect,
 } from '../DiceSelectionSystem';
+import { syncRolledDiceFromFaces } from '../store/roundWrites';
+import { selectRolledDice } from '../store/selectors/roundSelectors';
+import { applyCopyAfterSelection } from '../visibleDiceRow';
 import { DiceEnhancement, HandType } from '../types';
 import { getItemDisplayContext } from '../displayContext';
 import supplyCardsData from '../../data/supply_cards';
@@ -599,7 +606,7 @@ describe('pre-roll consumable targeting regression', () => {
     const target = game.state.hand[0];
     const applyMessage = applyDiceSelectionEffect(useResult.diceSelection!, [target]);
 
-    expect(applyMessage).toContain('Enhanced 1 dice');
+    expect(applyMessage.message).toContain('Enhanced 1 dice');
     const updated = player.dice.find((d) => d.id === target.id);
     expect(updated?.enhancement).toBe('loaded');
   });
@@ -614,9 +621,115 @@ describe('pre-roll consumable targeting regression', () => {
     const config = createSupplyConsumableDef(buzzards).diceSelection!;
 
     const msg = applyDiceSelectionEffect(config, [d1]);
-    expect(msg).toBe('Enhanced 1 dice to bone');
+    expect(msg.message).toBe('Enhanced 1 dice to bone');
     expect(player.dice.find((d) => d.id === d1.id)?.enhancement).toBe('bone');
     expect(player.dice.find((d) => d.id === d2.id)?.enhancement).toBeNull();
+  });
+
+  test('seeing_double inserts copies immediately after the source die', () => {
+    const player = resetPlayerState();
+    const d1 = die({ value: 1 });
+    const d2 = die({ value: 2, enhancement: 'lucky' });
+    const d3 = die({ value: 3 });
+    player.dice = [d1, d2, d3];
+
+    const seeingDouble = frontierEncountersData.find((encounter) => encounter.id === 'seeing_double')!;
+    const config = createFrontierConsumableDef(seeingDouble).diceSelection!;
+
+    const result = applyDiceSelectionEffect(config, [d2]);
+    expect(result.message).toBe('Created 2 copies');
+    expect(result.addedDice).toHaveLength(2);
+
+    const ids = player.dice.map((d) => d.id);
+    expect(ids).toEqual([d1.id, d2.id, result.addedDice![0]!.id, result.addedDice![1]!.id, d3.id]);
+    expect(player.dice[2]?.enhancement).toBe('lucky');
+    expect(player.dice[3]?.enhancement).toBe('lucky');
+  });
+
+  test('insertDiceAfterInOrder respects visible row order after reordering', () => {
+    const d1 = die({ value: 1 });
+    const d2 = die({ value: 2 });
+    const d3 = die({ value: 3 });
+    const d4 = die({ value: 4 });
+    const reordered = [d1, d4, d2, d3];
+    const copy1 = die({ value: 4 });
+    const copy2 = die({ value: 4 });
+
+    const next = insertDiceAfterInOrder(reordered, d4.id, [copy1, copy2]);
+    expect(next.map((d) => d.id)).toEqual([d1.id, d4.id, copy1.id, copy2.id, d2.id, d3.id]);
+  });
+
+  test('seeing_double copies keep the selected face value in the collection', () => {
+    const player = resetPlayerState();
+    const source = die({ value: 3 });
+    player.dice = [source];
+
+    const seeingDouble = frontierEncountersData.find((encounter) => encounter.id === 'seeing_double')!;
+    const config = createFrontierConsumableDef(seeingDouble).diceSelection!;
+    applyDiceSelectionEffect(config, [{ ...source, value: 9 }]);
+
+    expect(player.dice[1]?.value).toBe(9);
+    expect(player.dice[2]?.value).toBe(9);
+  });
+
+  test('seeing_double inserts copies into rolled row state beside the source die', () => {
+    const player = resetPlayerState();
+    const dice = Array.from({ length: 5 }, (_, i) => die({ value: i + 1 }));
+    player.dice = dice;
+
+    const { game } = setupGame({ dice });
+    game.startRound();
+    game.selectForRoll(dice.map((d) => d.id));
+
+    const reordered = [dice[0]!, dice[4]!, dice[1]!, dice[2]!, dice[3]!];
+    syncRolledDiceFromFaces(reordered);
+
+    const seeingDouble = frontierEncountersData.find((encounter) => encounter.id === 'seeing_double')!;
+    const config = createFrontierConsumableDef(seeingDouble).diceSelection!;
+    const target = { ...reordered[1]!, value: 12 };
+    const result = applyDiceSelectionEffect(config, [target]);
+    applyCopyAfterSelection(result, target);
+
+    const rolledIds = selectRolledDice().map((d) => d.id);
+    expect(rolledIds).toHaveLength(7);
+    expect(rolledIds[0]).toBe(dice[0]!.id);
+    expect(rolledIds[1]).toBe(dice[4]!.id);
+    expect(rolledIds[2]).toBe(result.addedDice![0]!.id);
+    expect(rolledIds[3]).toBe(result.addedDice![1]!.id);
+    expect(rolledIds[4]).toBe(dice[1]!.id);
+    expect(selectRolledDice()[2]?.value).toBe(12);
+  });
+
+  test('refreshLineupDiceFromRun updates lineup dice without pulling in pouch dice', () => {
+    const d1 = die({ value: 1 });
+    const d2 = die({ value: 2, aura: 'fire' });
+    const d3 = die({ value: 3 });
+    const pouchOnly = die({ value: 12 });
+
+    const lineup = [d1, d2, d3];
+    const runDice = [d1, d2, d3, pouchOnly, die({ value: 5 }), die({ value: 6 })];
+    const refreshed = refreshLineupDiceFromRun(lineup, runDice);
+
+    expect(refreshed.map((d) => d.id)).toEqual([d1.id, d2.id, d3.id]);
+    expect(refreshed[1]?.aura).toBe('fire');
+  });
+
+  test('syncLineupAfterDiceEffect inserts explicit copies beside their source die', () => {
+    const d1 = die({ value: 1 });
+    const d2 = die({ value: 2 });
+    const copy1 = die({ value: 2 });
+    const copy2 = die({ value: 2 });
+    const d3 = die({ value: 3 });
+    const pouchOnly = die({ value: 12 });
+
+    const lineup = [d1, d2, d3];
+    const runDice = [d1, d2, copy1, copy2, d3, pouchOnly];
+    const merged = syncLineupAfterDiceEffect(lineup, runDice, {
+      addedDice: [copy1, copy2],
+      insertAfterDieId: d2.id,
+    });
+
+    expect(merged.map((d) => d.id)).toEqual([d1.id, d2.id, copy1.id, copy2.id, d3.id]);
   });
 
   test('enhancing stone dice assigns a random face value', () => {

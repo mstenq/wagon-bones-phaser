@@ -1433,7 +1433,8 @@ export class GameScene extends Scene {
 
   private async handleConsumableTargetingApply(config: DiceSelectionConfig, selectedDice: Die[]): Promise<void> {
     const effectType = config.effectType;
-    const resultMsg = gameFacade.diceSelection.applyEffect(config, selectedDice);
+    const result = gameFacade.diceSelection.applyEffect(config, selectedDice);
+    const resultMsg = result.message;
     const affectedIds = new Set(selectedDice.map((d) => d.id));
 
     const text = this.add
@@ -1463,7 +1464,34 @@ export class GameScene extends Scene {
       return;
     }
 
+    if (effectType === 'COPY' && result.addedDice && result.addedDice.length > 0) {
+      gameFacade.round.applyCopyAfterSelection(result, selectedDice[0]);
+      this.rebuildActiveDiceRowFromStore();
+      return;
+    }
+
     this.refreshDiceSpritesAfterEffect(affectedIds, effectType);
+  }
+
+  private rebuildActiveDiceRowFromStore(): void {
+    const phase = selectRoundPhase();
+    if (phase === 'ROLL') {
+      const rolled = selectRolledDice();
+      this.rollRow.createRollRow(rolled, this.rollRowY);
+      this.rollRow.setupInteraction();
+      this.syncRollDieVisuals();
+      this.rollRow.reposition(false);
+      this.rollMarquee.setup();
+      this.applyBossRollDiceState();
+      return;
+    }
+
+    if (phase === 'SELECT') {
+      this.playArea.setY(this.rollRowY);
+      this.playArea.buildHand(selectHandDice());
+      this.playArea.reposition(false);
+      this.updateDrawButtons();
+    }
   }
 
   /** Refresh dice sprites in-place after a consumable effect changes dice data */

@@ -9,7 +9,13 @@ import {
   type UseConsumableContext,
   type UseConsumableResult,
 } from '../ConsumablesSystem';
-import { applyDiceSelectionEffect, type DiceSelectionConfig } from '../DiceSelectionSystem';
+import { applyDiceSelectionEffect, type DiceSelectionConfig, type DiceSelectionResult } from '../DiceSelectionSystem';
+import {
+  initPackLineup,
+  reorderPackLineup,
+  selectPackLineupDice,
+  syncPackLineupAfterSelection,
+} from '../visibleDiceRow';
 import { acquireEquipmentInstance } from '../EquipmentModifiers';
 import { processEquipmentOnPackOpened, processEquipmentOnPackSkipped } from '../EquipmentEffects';
 import { getBonusPackPicks } from '../effects/helpers';
@@ -85,8 +91,30 @@ export const gamePack = {
     diceActions.addDie(die);
   },
 
-  applyDiceSelection(config: DiceSelectionConfig, selectedDice: Die[]): string {
+  applyDiceSelection(config: DiceSelectionConfig, selectedDice: Die[]): DiceSelectionResult {
     return applyDiceSelectionEffect(config, selectedDice);
+  },
+
+  applyDiceSelectionToLineup(config: DiceSelectionConfig, selectedDice: Die[]): DiceSelectionResult {
+    const result = applyDiceSelectionEffect(config, selectedDice);
+    syncPackLineupAfterSelection(result, selectedDice);
+    return result;
+  },
+
+  initLineup(): Die[] {
+    return initPackLineup();
+  },
+
+  reorderLineup(fromIndex: number, toIndex: number): void {
+    reorderPackLineup(fromIndex, toIndex);
+  },
+
+  getLineupDice(): Die[] {
+    return selectPackLineupDice();
+  },
+
+  syncLineupAfterSelection(result: DiceSelectionResult, selectedDice: Die[]): Die[] {
+    return syncPackLineupAfterSelection(result, selectedDice);
   },
 
   useConsumableDirectly(def: ConsumableDef, context: UseConsumableContext = {}): UseConsumableResult {
