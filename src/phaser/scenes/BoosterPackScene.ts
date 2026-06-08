@@ -7,7 +7,12 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameFacade } from '../../game/facade';
 import type { ConsumableInstance, PackDefinition, PackItem } from '../../game/facade/pack';
-import { getConsumableAtlasKey, isSecondHelpingsCloneTarget } from '../../game/facade/consumable';
+import {
+  canUseConsumableInShop,
+  getConsumableAtlasKey,
+  isSecondHelpingsCloneTarget,
+  type ConsumableDef,
+} from '../../game/facade/consumable';
 import {
   createFrontierConsumableDef,
   createSupplyConsumableDef,
@@ -294,7 +299,7 @@ export class BoosterPackScene extends Scene {
       consumableReturnScene: 'BoosterPack',
       showConsumableFailurePopup: false,
       autoDestroyOnShutdown: false,
-      canUseConsumable: (def) => def.id !== 'raid' && !this.isPackDiceTargetingPending(),
+      canUseConsumable: (def) => this.canUseConsumableFromBar(def),
       onConsumableUsed: (consumed) => {
         void this.handleConsumableUsed(consumed);
       },
@@ -345,8 +350,9 @@ export class BoosterPackScene extends Scene {
 
     const headerBottom = titleY + Math.floor(52 * uiScale);
 
-    // ─── Dice lineup (above cards) — only for packs with dice-selection cards ───
-    const showLineup = this.contents.some((item) => !!item.diceSelection);
+    // ─── Dice lineup (above cards) — supply/frontier packs always show dice so pouch
+    // consumables (e.g. Raid) and non-targeting frontier cards can see the active pool.
+    const showLineup = this.shouldShowDiceLineup();
     this.hasDiceSelectionLineup = showLineup;
     let cardsAreaTop = headerBottom + Math.floor(16 * uiScale);
     if (showLineup) {
@@ -1016,10 +1022,41 @@ export class BoosterPackScene extends Scene {
     }
   }
 
+  private shouldShowDiceLineup(): boolean {
+    return this.packDef.category === 'supply' || this.packDef.category === 'frontier';
+  }
+
+  private canUseConsumableFromBar(def: ConsumableDef): boolean {
+    if (this.isPackDiceTargetingPending()) return false;
+    if (def.id === 'raid') return this.lineupDice.length > 0;
+    return canUseConsumableInShop(def);
+  }
+
   private lockPackCard(sprite: CardSprite): void {
     sprite.itemCard?.prepareForRemoval();
     sprite.container.disableInteractive();
     this.dismissActiveTab();
+  }
+
+  private unlockPackCardAfterFailedUse(sprite: CardSprite): void {
+    sprite.useInProgress = false;
+    sprite.container.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, this.cardW, this.cardH),
+      Phaser.Geom.Rectangle.Contains,
+    );
+    if (sprite.itemCard) {
+      sprite.itemCard.setInteractive(
+        new Phaser.Geom.Rectangle(0, 0, this.cardW, this.cardH),
+        Phaser.Geom.Rectangle.Contains,
+      );
+    }
+    sprite.container.setDepth(10);
+    this.tweens.add({
+      targets: sprite.container,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 150,
+    });
   }
 
   private beginPackCardUse(sprite: CardSprite): boolean {
@@ -1044,7 +1081,16 @@ export class BoosterPackScene extends Scene {
     if (useResult.status === 'blocked') return;
     if (!this.beginPackCardUse(sprite)) return;
 
-    const { equipmentPopInCount, feedbackText } = useResult.outcome;
+    const { equipmentPopInCount, feedbackText, consumableResult } = useResult.outcome;
+    if (consumableResult && !consumableResult.success) {
+      this.unlockPackCardAfterFailedUse(sprite);
+      if (feedbackText) {
+        this.showFloatingText(feedbackText);
+        this.sound.play('sfx_cancel', { volume: 0.5 });
+      }
+      return;
+    }
+
     if (feedbackText) {
       this.showFloatingText(feedbackText);
     }

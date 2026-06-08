@@ -1205,8 +1205,8 @@
     "semantic_hash": "460e659396e43769ac31ff31160101b7"
   },
   "src/phaser/scenes/GameScene.ts": {
-    "mtime": 1780859296.2328303,
-    "ast_hash": "cdb04f53999303221a14c933387e004e",
+    "mtime": 1780860085.8013604,
+    "ast_hash": "5dc3663618c30661a27fa4c10da84903",
     "semantic_hash": ""
   },
   "src/phaser/scenes/MainMenu.ts": {
@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   "src/phaser/scenes/game/PlayAreaDiceController.ts": {
-    "mtime": 1780859295.1010976,
-    "ast_hash": "7438726ba90aa195ab64c60b39faf017",
+    "mtime": 1780860031.2557924,
+    "ast_hash": "900f3e3f7d355f75daa91749833e786b",
     "semantic_hash": ""
   },
   "src/phaser/scenes/game/RollMarqueeSelection.ts": {
@@ -1275,18 +1275,18 @@
     "semantic_hash": "4a4f9c1f6f1545529a13ea5bfa46e9ab"
   },
   "src/phaser/scenes/game/RollRowController.ts": {
-    "mtime": 1780859294.6541164,
-    "ast_hash": "801e6b841887bc80b4c21af1556ceb87",
+    "mtime": 1780860030.0248322,
+    "ast_hash": "666a274dcc118b6cae84833f28e1b9f8",
     "semantic_hash": ""
   },
   "src/phaser/scenes/game/ScoreRowLayout.ts": {
-    "mtime": 1780700745.3889265,
-    "ast_hash": "9bd5fc923b6521baee2860c9238c9342",
-    "semantic_hash": "9bd5fc923b6521baee2860c9238c9342"
+    "mtime": 1780860032.8517215,
+    "ast_hash": "efa5033d87f783cfc51b02d2895a7c45",
+    "semantic_hash": ""
   },
   "src/phaser/scenes/game/diceRowGeometry.ts": {
-    "mtime": 1780858913.1617968,
-    "ast_hash": "8832d3c9ee2e7540a2ecf49e3731a5dd",
+    "mtime": 1780860025.4916997,
+    "ast_hash": "84b2b1413b975969c1f77cf2d258348e",
     "semantic_hash": ""
   },
   "src/phaser/scenes/immediatePackFlow.ts": {
@@ -5865,8 +5865,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/definitions/arcane.ts": {
-    "mtime": 1780856032.1585076,
-    "ast_hash": "f0ce6e7d16e2aba747d5d57320e8cd8f",
+    "mtime": 1780860085.4516208,
+    "ast_hash": "8b13af5ffa84cf3a96f083726dbebc09",
     "semantic_hash": ""
   },
   "ARCANE.md": {
@@ -5875,8 +5875,8 @@
     "semantic_hash": ""
   },
   "src/phaser/effects/definitions/holy.ts": {
-    "mtime": 1780856032.1244235,
-    "ast_hash": "2ed9f6204bae7b2fa5fd9e724d228fb2",
+    "mtime": 1780860085.4956634,
+    "ast_hash": "57e9ce4e2b3604f255d6197f2867736b",
     "semantic_hash": ""
   },
   "HOLY.md": {
@@ -6125,13 +6125,18 @@
     "semantic_hash": ""
   },
   "src/phaser/scenes/game/DiceRowBackdrop.ts": {
-    "mtime": 1780859276.4438064,
-    "ast_hash": "344a4623f6be037bf68ddbaaf9a888b8",
+    "mtime": 1780860085.6727965,
+    "ast_hash": "33779f77e7a8ce78d1f06d6d91fb37b4",
     "semantic_hash": ""
   },
   "src/phaser/scenes/game/diceRowElasticTween.ts": {
-    "mtime": 1780859494.8892374,
-    "ast_hash": "95625b8d2955c5c3268531ad10e4bf92",
+    "mtime": 1780860024.628686,
+    "ast_hash": "302bccb395d980111d75caa4b61ccafa",
+    "semantic_hash": ""
+  },
+  "src/phaser/scenes/game/DiceRowBackdropController.ts": {
+    "mtime": 1780860085.6760437,
+    "ast_hash": "1486ef7511e67e488177eaf54d71f3dd",
     "semantic_hash": ""
   }
 }
