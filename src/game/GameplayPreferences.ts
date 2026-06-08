@@ -10,7 +10,7 @@ export interface GameplayPreferences {
 }
 
 export const DEFAULT_GAMEPLAY_PREFERENCES: GameplayPreferences = {
-  autoRollFirstHand: false,
+  autoRollFirstHand: true,
   stationaryStickers: false,
 };
 
