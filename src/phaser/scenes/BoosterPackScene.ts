@@ -836,12 +836,7 @@ export class BoosterPackScene extends Scene {
     });
   }
 
-  private buildPackUseTab(
-    sprite: CardSprite,
-    label: string,
-    color: number,
-    onUse: () => void,
-  ): CardActionTabConfig {
+  private buildPackUseTab(sprite: CardSprite, label: string, color: number, onUse: () => void): CardActionTabConfig {
     const canAcquire = canAcquirePackCardItem(sprite.item);
     return {
       label,
@@ -1231,10 +1226,6 @@ export class BoosterPackScene extends Scene {
   }
 
   // ─── Helpers ───
-
-  private cardNeedsEquipSlot(item: PackItem): boolean {
-    return packCardNeedsEquipSlot(item);
-  }
 
   private updatePicksText(): void {
     if (this.picksRemaining <= 0) {

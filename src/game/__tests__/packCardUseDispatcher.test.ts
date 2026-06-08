@@ -19,7 +19,7 @@ function equipmentPackItem(defId: string): PackItem {
   return {
     id: defId,
     name: instance.def.name,
-    description: instance.def.description,
+    description: '',
     category: 'equipment',
     equipmentDef: instance.def,
   };
