@@ -18,6 +18,7 @@ import { ItemCardChrome } from './itemCard/ItemCardChrome';
 import { ItemCardHints } from './itemCard/ItemCardHints';
 import { ItemCardTooltip } from './itemCard/ItemCardTooltip';
 import type { CardActionTabConfig, CardData, ItemCardLayout, ItemCardOptions } from './itemCard/itemCardTypes';
+import { getCardTopClearance } from './itemCard/priceTagLayout';
 
 export type { CardActionTabConfig, CardData, ItemCardOptions } from './itemCard/itemCardTypes';
 
@@ -50,6 +51,7 @@ export class ItemCard extends GameObjects.Container {
       cardH: CARD_H * cardScale,
       cardScale,
       tabAnchorX: this._options.tabAnchorX ?? (CARD_W * cardScale) / 2,
+      topClearance: getCardTopClearance(this._options, def),
     };
 
     this.chrome = new ItemCardChrome(scene, this, this.layout, def, this._options);
