@@ -39,6 +39,7 @@ import {
   type ShopActiveTabHandle,
 } from './shop/shopCardInteractions';
 import { PermitDef, generateShopPermit, getPermitShopDiscount, getDiscountedShopPrice } from '../../game/PermitsSystem';
+import { computePriceTagMetrics } from '../ui/itemCard/priceTagLayout';
 import { Die } from '../../game/types';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
 import { type SerializedShopItem, serializeEquipmentInstance, deserializeEquipmentInstance } from '../../game/SaveLoad';
@@ -605,7 +606,7 @@ export class ShopScene extends Scene {
     const CARD_H = UI.CARD_H * cardScale;
     const CARD_W = UI.CARD_W * cardScale;
     const PREFERRED_SPACING = cardBar.cardSpacing;
-    const PRICE_TAG_SPACE = Math.ceil(36 * cardBar.displayScale);
+    const PRICE_TAG_SPACE = computePriceTagMetrics(cardScale).spaceAbove;
     const BTN_COL_W = Math.max(96, Math.floor(130 * cardBar.displayScale));
     const rowInnerH = CARD_H + PRICE_TAG_SPACE + BOX_PAD * 2;
     const box1Top = contentTop + 4;

@@ -4,12 +4,11 @@ import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../../game/Constants';
 import type { CardData, CardTextureSource, ItemCardLayout, ItemCardOptions } from './itemCardTypes';
+import { computePriceTagMetrics } from './priceTagLayout';
 
 const CARD_RADIUS = UI.CARD_RADIUS;
 const SHADOW_OFFSET = UI.CARD_SHADOW_OFFSET;
 const SHADOW_ALPHA = UI.CARD_SHADOW_ALPHA;
-const PRICE_TAG_H = UI.CARD_PRICE_TAG_H;
-const PRICE_TAG_GAP = UI.CARD_PRICE_TAG_GAP;
 
 export interface ItemCardContentResult {
   cardImage: GameObjects.Image | null;
@@ -256,21 +255,32 @@ export class ItemCardChrome {
     if ((showCost && this.def.cost !== undefined) || this.options.sellValue !== undefined) {
       const value = this.options.sellValue !== undefined ? this.options.sellValue : this.def.cost!;
       const prefix = this.options.sellValue !== undefined ? 'Sell $' : '$';
-      const tagY = -hh - PRICE_TAG_GAP * scale - (PRICE_TAG_H * scale) / 2;
+      const priceTag = computePriceTagMetrics(scale);
+      const tagY = -hh - priceTag.gap - priceTag.tagH / 2;
 
       const tagBg = this.scene.add.graphics();
-      const tagW = 50 * scale;
-      const tagH = PRICE_TAG_H * scale;
       tagBg.fillStyle(0x222233, 0.95);
-      tagBg.fillRoundedRect(-tagW / 2, tagY - tagH / 2, tagW, tagH, 6 * scale);
-      tagBg.lineStyle(1.5 * scale, 0x555577, 0.8);
-      tagBg.strokeRoundedRect(-tagW / 2, tagY - tagH / 2, tagW, tagH, 6 * scale);
+      tagBg.fillRoundedRect(
+        -priceTag.tagW / 2,
+        tagY - priceTag.tagH / 2,
+        priceTag.tagW,
+        priceTag.tagH,
+        6 * priceTag.tagScale,
+      );
+      tagBg.lineStyle(1.5 * priceTag.tagScale, 0x555577, 0.8);
+      tagBg.strokeRoundedRect(
+        -priceTag.tagW / 2,
+        tagY - priceTag.tagH / 2,
+        priceTag.tagW,
+        priceTag.tagH,
+        6 * priceTag.tagScale,
+      );
       this.card.add(tagBg);
 
       costText = this.scene.add
         .text(0, tagY, `${prefix}${value}`, {
           fontFamily: 'Arial Black',
-          fontSize: `${Math.round(14 * scale)}px`,
+          fontSize: `${priceTag.fontSize}px`,
           color: '#ffd700',
           align: 'center',
         })

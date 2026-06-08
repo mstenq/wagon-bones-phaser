@@ -356,7 +356,11 @@ export const UI = {
   CARD_SHADOW_OFFSET: 4,
   CARD_SHADOW_ALPHA: 0.35,
   CARD_PRICE_TAG_H: 26,
+  CARD_PRICE_TAG_W: 50,
   CARD_PRICE_TAG_GAP: 6,
+  CARD_PRICE_TAG_FONT: 14,
+  /** Floor for shop/sell price labels on narrow screens (px). */
+  CARD_PRICE_TAG_FONT_MIN: 16,
   CARD_TOOLTIP_PAD: 10,
   CARD_TOOLTIP_TITLE_FONT_SIZE: 16,
   CARD_TOOLTIP_FONT_SIZE: 14,
