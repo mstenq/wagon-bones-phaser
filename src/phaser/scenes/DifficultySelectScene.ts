@@ -14,6 +14,8 @@ import { startAutoSaveLoop } from '../AutoSaveManager';
 import { getHighestUnlockedDifficulty, isDifficultyUnlocked } from '../../game/UserStats';
 import { isPortraitLayout } from '../ui/SceneLayout';
 import { SeededRunModal } from '../ui/SeededRunModal';
+import { wireTapOnlySession } from '../ui/pointerDragSession';
+import { createScrollableViewport, type ScrollableViewportHandle } from '../ui/ScrollableViewport';
 
 const BASE_CARD_W = 230;
 const BASE_CARD_H = 250;
@@ -50,14 +52,8 @@ export class DifficultySelectScene extends Scene {
   private professionId: string | null = null;
   private cards: Phaser.GameObjects.Container[] = [];
   private gridLayout: GridLayoutMetrics;
-  private scrollContainer: Phaser.GameObjects.Container | null = null;
+  private gridViewport: ScrollableViewportHandle | null = null;
   private contentHeight = 0;
-  private scrollAreaTop = 0;
-  private scrollAreaH = 0;
-  private scrollDragging = false;
-  private scrollPointerId: number | null = null;
-  private scrollStartY = 0;
-  private dragStartY = 0;
   private seededRunModal: SeededRunModal | null = null;
 
   constructor() {
@@ -70,6 +66,8 @@ export class DifficultySelectScene extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
+      this.gridViewport?.destroy();
+      this.gridViewport = null;
       this.seededRunModal?.destroy();
       this.seededRunModal = null;
     });
@@ -325,18 +323,19 @@ export class DifficultySelectScene extends Scene {
     const startX = panelPad + cardW / 2 + (usableW - totalGridW) / 2;
     this.contentHeight = rowHeights.reduce((sum, h, i) => sum + h + (i < rowHeights.length - 1 ? cardGap : 0), 0);
 
-    this.scrollAreaTop = gridTop;
-    this.scrollAreaH = height - FOOTER_RESERVE - gridTop;
+    const scrollAreaH = height - FOOTER_RESERVE - gridTop;
 
-    const scrollContainer = this.add.container(0, gridTop);
-    scrollContainer.setDepth(40);
-    this.scrollContainer = scrollContainer;
-
-    let gridOffsetY = 0;
-    if (this.contentHeight <= this.scrollAreaH) {
-      gridOffsetY = (this.scrollAreaH - this.contentHeight) / 2;
-      scrollContainer.y = gridTop + gridOffsetY;
-    }
+    this.gridViewport?.destroy();
+    const viewport = createScrollableViewport({
+      scene: this,
+      x: 0,
+      y: gridTop,
+      width,
+      height: scrollAreaH,
+      contentCenterX: 0,
+      depth: 40,
+    });
+    this.gridViewport = viewport;
 
     this.cards = [];
     let rowY = 0;
@@ -360,71 +359,11 @@ export class DifficultySelectScene extends Scene {
         cardH,
         diff.level > this.maxUnlocked,
       );
-      scrollContainer.add(card);
+      viewport.content.add(card);
       this.cards.push(card);
     });
 
-    const clipTop = this.add.graphics();
-    clipTop.fillStyle(COLORS.BG_PRIMARY, 1);
-    clipTop.fillRect(0, 0, width, gridTop);
-    clipTop.setDepth(50);
-
-    const clipBottomY = height - FOOTER_RESERVE;
-    const clipBottom = this.add.graphics();
-    clipBottom.fillStyle(COLORS.BG_PRIMARY, 1);
-    clipBottom.fillRect(0, clipBottomY, width, height - clipBottomY);
-    clipBottom.setDepth(50);
-
-    if (this.contentHeight > this.scrollAreaH) {
-      this.bindGridScroll();
-    }
-  }
-
-  private bindGridScroll(): void {
-    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gos: unknown[], _dx: number, dy: number) => {
-      this.doGridScroll(dy);
-    });
-
-    const resetScroll = (pointer: Phaser.Input.Pointer) => {
-      if (this.scrollPointerId !== pointer.id) return;
-      this.scrollDragging = false;
-      this.scrollPointerId = null;
-    };
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (!this.scrollContainer) return;
-      if (pointer.y < this.scrollAreaTop || pointer.y > this.scrollAreaTop + this.scrollAreaH) return;
-
-      this.scrollDragging = true;
-      this.scrollPointerId = pointer.id;
-      this.dragStartY = pointer.y;
-      this.scrollStartY = this.scrollContainer.y;
-    });
-
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!this.scrollDragging || this.scrollPointerId !== pointer.id || !this.scrollContainer) return;
-
-      const dy = pointer.y - this.dragStartY;
-      this.scrollContainer.y = Phaser.Math.Clamp(
-        this.scrollStartY + dy,
-        this.scrollAreaTop + this.scrollAreaH - this.contentHeight,
-        this.scrollAreaTop,
-      );
-    });
-
-    this.input.on('pointerup', resetScroll);
-    this.input.on('pointerupoutside', resetScroll);
-  }
-
-  private doGridScroll(dy: number): void {
-    if (!this.scrollContainer || this.contentHeight <= this.scrollAreaH) return;
-
-    const nextY = this.scrollContainer.y - dy * 0.5;
-    this.scrollContainer.y = Phaser.Math.Clamp(
-      nextY,
-      this.scrollAreaTop + this.scrollAreaH - this.contentHeight,
-      this.scrollAreaTop,
-    );
+    viewport.setContentHeight(this.contentHeight);
   }
 
   private createDifficultyCard(
@@ -514,7 +453,11 @@ export class DifficultySelectScene extends Scene {
         }
       });
 
-      hitZone.on('pointerdown', () => this.selectDifficulty(level));
+      hitZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        wireTapOnlySession(this, level, pointer, hitZone, {
+          onTap: () => this.selectDifficulty(level),
+        });
+      });
     }
 
     container.setData('level', level);

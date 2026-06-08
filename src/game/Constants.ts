@@ -450,6 +450,16 @@ export const UI = {
   MODAL_BG: 0x151528,
   MODAL_BORDER: 0x555588,
   MODAL_RADIUS: 12,
+
+  // Scrollable viewport (catalog modals, select scenes)
+  /** Exponential deceleration time constant for kinetic scroll (ms). */
+  SCROLL_KINETIC_TIME_MS: 325,
+  /** Mouse wheel delta scale (higher = faster scroll). */
+  SCROLL_WHEEL_SCALE: 0.5,
+  /** Minimum release velocity (px/s) to trigger kinetic coast. */
+  SCROLL_KINETIC_MIN_VELOCITY: 10,
+  /** Kinetic amplitude damping factor applied on release. */
+  SCROLL_KINETIC_AMPLITUDE_FACTOR: 0.8,
 } as const;
 
 // ─── Tag Stack ───

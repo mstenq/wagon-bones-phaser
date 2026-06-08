@@ -31,8 +31,6 @@ export class BossTestModal extends GameObjects.Container {
       screenW,
       screenH: height,
       contentY,
-      clipX: contentX,
-      clipW: width,
       panel: { panelX, panelY, panelW, panelH },
       title: 'Test Boss',
       subtitle: 'Jump to boss round (round 3)',

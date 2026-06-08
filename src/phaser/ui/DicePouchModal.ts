@@ -5,7 +5,7 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { TEXT_COLORS, FONTS, UI, DICE } from '../../game/Constants';
+import { TEXT_COLORS, FONTS, DICE } from '../../game/Constants';
 import { getRunState, runStore } from '../../game/store/runStore';
 import { selectAvailableDice, selectSpentDice } from '../../game/store/selectors/runSelectors';
 import { Die } from '../../game/types';
@@ -16,6 +16,12 @@ import { isDevMode } from '../../game/DevMode';
 import diceAuras from '../../data/dice_auras';
 import diceEnhancements from '../../data/dice_enhancements';
 import pipEnhancements from '../../data/pip_enhancements';
+import {
+  CATALOG_CHROME_DEPTH,
+  createCatalogModalShell,
+  finalizeCatalogModal,
+  type CatalogModalShell,
+} from './catalogModal';
 
 type FilterMode = 'all' | 'available' | 'spent';
 
@@ -26,57 +32,42 @@ interface DiceGroup {
   isSpent: boolean; // true if these dice are in the spent pile
 }
 
+const PANEL_MARGIN = 16;
+const PANEL_MAX_WIDTH = 700;
+const PANEL_WIDTH_INSET = 40;
+
 export class DicePouchModal extends GameObjects.Container {
   private diceSprites: DiceSprite[] = [];
   private filterMode: FilterMode = 'all';
   private filterBtns: Button[] = [];
-  private diceContainer: GameObjects.Container;
-  private panelX: number;
-  private panelY: number;
-  private panelW: number;
-  private panelH: number;
+  private shell!: CatalogModalShell;
 
   constructor(scene: Scene, contentX: number, width: number, height: number, contentY = 0) {
     super(scene, 0, 0);
 
-    // Dim background (full screen)
-    const dim = scene.add.graphics();
-    dim.fillStyle(0x000000, UI.MODAL_DIM_ALPHA);
-    dim.fillRect(0, contentY, scene.scale.width, height);
-    dim.setInteractive(
-      new Phaser.Geom.Rectangle(0, contentY, scene.scale.width, height),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    this.add(dim);
-
-    // Modal panel
-    const panelW = Math.min(width - 40, 700);
-    const panelH = Math.min(height - 80, 500);
+    const panelW = Math.min(width - PANEL_WIDTH_INSET, PANEL_MAX_WIDTH);
+    const panelH = height - PANEL_MARGIN * 2;
     const panelX = contentX + (width - panelW) / 2;
     const panelY = contentY + (height - panelH) / 2;
-    this.panelX = panelX;
-    this.panelY = panelY;
-    this.panelW = panelW;
-    this.panelH = panelH;
 
-    const panel = scene.add.graphics();
-    panel.fillStyle(UI.MODAL_BG, 1);
-    panel.fillRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
-    panel.lineStyle(2, UI.MODAL_BORDER, 1);
-    panel.strokeRoundedRect(panelX, panelY, panelW, panelH, UI.MODAL_RADIUS);
-    this.add(panel);
+    this.shell = createCatalogModalShell({
+      scene,
+      parent: this,
+      screenW: scene.scale.width,
+      screenH: height,
+      contentY,
+      panel: { panelX, panelY, panelW, panelH },
+      title: 'Dice Pouch',
+      titleFontSize: '24px',
+      titleY: 24,
+      listTopOffset: 90,
+      listBottomOffset: 48,
+      closeLabel: 'Close',
+      closeBottomOffset: 28,
+      onClose: () => this.destroy(),
+    });
 
-    // Title
-    const title = scene.add
-      .text(panelX + panelW / 2, panelY + 24, 'Dice Pouch', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '24px',
-        color: TEXT_COLORS.GOLD,
-      })
-      .setOrigin(0.5);
-    this.add(title);
-
-    // Filter buttons
+    // Filter buttons (fixed header above scroll area)
     const filterY = panelY + 56;
     const filterLabels: { label: string; mode: FilterMode }[] = [
       { label: 'All', mode: 'all' },
@@ -91,29 +82,20 @@ export class DicePouchModal extends GameObjects.Container {
     for (let i = 0; i < filterLabels.length; i++) {
       const { label, mode } = filterLabels[i];
       const btn = new Button(scene, filterStartX + i * (filterBtnW + filterGap), filterY, label, filterBtnW, 28);
+      btn.setDepth(CATALOG_CHROME_DEPTH);
       btn.onClick(() => {
         this.filterMode = mode;
         this.updateFilterButtons();
         this.renderDice();
       });
-      this.add(btn);
+      this.shell.track(btn);
       this.filterBtns.push(btn);
     }
-
-    // Close button
-    const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 30, 'Close', 120, 34);
-    closeBtn.onClick(() => this.destroy());
-    this.add(closeBtn);
-
-    // Dice container
-    this.diceContainer = scene.add.container(0, 0);
-    this.add(this.diceContainer);
 
     this.updateFilterButtons();
     this.renderDice();
 
-    this.setDepth(500);
-    scene.add.existing(this);
+    finalizeCatalogModal(this, scene);
   }
 
   private updateFilterButtons(): void {
@@ -151,16 +133,13 @@ export class DicePouchModal extends GameObjects.Container {
   }
 
   private renderDice(): void {
-    // Clear old
     for (const s of this.diceSprites) s.destroy();
     this.diceSprites = [];
-    this.diceContainer.removeAll(true);
+    this.shell.scrollContainer.removeAll(true);
 
     const run = getRunState();
-    const { panelX, panelY, panelW, panelH } = this;
-    const startY = panelY + 80;
-    const availH = panelH - 120;
-    const summaryY = startY + 12;
+    const { panelW } = this.shell.panel;
+    const summaryY = 12;
     const gridStartY = summaryY + 22 + DICE.SIZE / 2;
 
     let dice = run.dice;
@@ -174,17 +153,17 @@ export class DicePouchModal extends GameObjects.Container {
 
     if (dice.length === 0) {
       const emptyText = this.scene.add
-        .text(panelX + panelW / 2, startY + availH / 2, 'No dice', {
+        .text(0, this.shell.scrollAreaH / 2, 'No dice', {
           fontFamily: FONTS.PRIMARY,
           fontSize: '16px',
           color: TEXT_COLORS.DISABLED,
         })
         .setOrigin(0.5);
-      this.diceContainer.add(emptyText);
+      this.shell.scrollContainer.add(emptyText);
+      this.shell.setContentHeight(this.shell.scrollAreaH);
       return;
     }
 
-    // Group dice by visual identity
     const markSpent = this.filterMode === 'all';
     const groups = this.groupDice(dice, markSpent);
 
@@ -193,7 +172,7 @@ export class DicePouchModal extends GameObjects.Container {
     const cols = Math.max(1, Math.floor((panelW - 40) / spacing));
     const totalGroups = groups.length;
     const totalW = (Math.min(totalGroups, cols) - 1) * spacing;
-    const gridStartX = panelX + panelW / 2 - totalW / 2;
+    const gridStartX = -totalW / 2;
 
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
@@ -204,12 +183,11 @@ export class DicePouchModal extends GameObjects.Container {
 
       const sprite = new DiceSprite(this.scene, x, y, group.representative);
 
-      // Dim spent dice in "all" mode
       if (this.filterMode === 'all' && group.isSpent) {
         sprite.setAlpha(0.4);
       }
 
-      this.diceContainer.add(sprite);
+      this.shell.scrollContainer.add(sprite);
       this.diceSprites.push(sprite);
 
       const countLabel = this.scene.add
@@ -219,7 +197,7 @@ export class DicePouchModal extends GameObjects.Container {
           color: group.isSpent ? TEXT_COLORS.DISABLED : TEXT_COLORS.SECONDARY,
         })
         .setOrigin(0.5);
-      this.diceContainer.add(countLabel);
+      this.shell.scrollContainer.add(countLabel);
 
       if (isDevMode()) {
         const wrench = this.scene.add
@@ -227,7 +205,6 @@ export class DicePouchModal extends GameObjects.Container {
             fontSize: '14px',
           })
           .setOrigin(0.5)
-          .setDepth(550)
           .setInteractive({ useHandCursor: true });
         wrench.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
           pointer.event.stopPropagation();
@@ -235,11 +212,10 @@ export class DicePouchModal extends GameObjects.Container {
         });
         wrench.on('pointerover', () => wrench.setScale(1.2));
         wrench.on('pointerout', () => wrench.setScale(1));
-        this.diceContainer.add(wrench);
+        this.shell.scrollContainer.add(wrench);
       }
     }
 
-    // Summary text
     const summaryParts: string[] = [];
     if (this.filterMode === 'all') {
       summaryParts.push(`${selectAvailableDice(run).length} available, ${spentCount} spent`);
@@ -247,13 +223,17 @@ export class DicePouchModal extends GameObjects.Container {
       summaryParts.push(`${dice.length} dice`);
     }
     const countText = this.scene.add
-      .text(panelX + panelW / 2, summaryY, summaryParts.join(''), {
+      .text(0, summaryY, summaryParts.join(''), {
         fontFamily: FONTS.PRIMARY,
         fontSize: '12px',
         color: TEXT_COLORS.MUTED,
       })
       .setOrigin(0.5);
-    this.diceContainer.add(countText);
+    this.shell.scrollContainer.add(countText);
+
+    const numRows = Math.ceil(groups.length / cols);
+    const contentHeight = gridStartY + numRows * rowStep + DICE.SIZE / 2 + 16;
+    this.shell.setContentHeight(contentHeight);
   }
 
   private devEditDiceGroup(group: DiceGroup): void {
@@ -320,5 +300,12 @@ export class DicePouchModal extends GameObjects.Container {
     if (!changed) return;
     runStore.setState({ dice: nextDice });
     this.renderDice();
+  }
+
+  destroy(fromScene?: boolean): void {
+    for (const s of this.diceSprites) s.destroy();
+    this.diceSprites = [];
+    this.shell.destroyManagedObjects();
+    super.destroy(fromScene);
   }
 }

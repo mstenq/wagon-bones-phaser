@@ -1,5 +1,5 @@
 // ─── catalogModal ───
-// Shared scroll list container, clipping bands, and scroll input for catalog-style
+// Shared scroll list container, masking, and scroll input for catalog-style
 // modals (Equipment catalog, Boss test picker, …). Shell chrome comes from modalShell.ts.
 
 import * as Phaser from 'phaser';
@@ -12,12 +12,14 @@ import {
   createModalPanelStroke,
   createModalTitle,
 } from './modalShell';
+import { createScrollableViewport, type ScrollableViewportHandle } from './ScrollableViewport';
 
 export const CATALOG_MODAL_DEPTH = 500;
 export const CATALOG_SCROLL_DEPTH = 501;
-export const CATALOG_CLIP_DEPTH = 502;
 export const CATALOG_CHROME_DEPTH = 503;
 export const CATALOG_CLOSE_DEPTH = 504;
+
+const LIST_FRAME_INSET = 12;
 
 export interface CatalogPanelBounds {
   panelX: number;
@@ -31,9 +33,6 @@ export interface CatalogModalShellOptions {
   parent: GameObjects.Container;
   screenW: number;
   screenH: number;
-  /** Horizontal bounds for outer clip bands (defaults to full screen width). */
-  clipX?: number;
-  clipW?: number;
   /** Top of modal region (portrait top bar offset). Default 0. */
   contentY?: number;
   panel: CatalogPanelBounds;
@@ -69,8 +68,6 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
     parent,
     screenW,
     screenH,
-    clipX = 0,
-    clipW = screenW,
     contentY = 0,
     panel,
     title,
@@ -120,22 +117,10 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
   const listBottom = panelY + panelH - listBottomOffset;
   const scrollAreaTop = listTop;
   const scrollAreaH = listBottom - listTop;
+  const viewportX = panelX + LIST_FRAME_INSET;
+  const viewportW = panelW - LIST_FRAME_INSET * 2;
 
-  const scrollContainer = scene.add.container(panelX + panelW / 2, listTop);
-  scrollContainer.setDepth(CATALOG_SCROLL_DEPTH);
-  track(scrollContainer);
-
-  const clipTop = scene.add.graphics();
-  clipTop.fillStyle(UI.MODAL_BG, 1);
-  clipTop.fillRect(clipX, 0, clipW, listTop);
-  clipTop.setDepth(CATALOG_CLIP_DEPTH);
-  track(clipTop);
-
-  const clipBottom = scene.add.graphics();
-  clipBottom.fillStyle(UI.MODAL_BG, 1);
-  clipBottom.fillRect(clipX, listBottom, clipW, screenH - listBottom);
-  clipBottom.setDepth(CATALOG_CLIP_DEPTH);
-  track(clipBottom);
+  let viewport: ScrollableViewportHandle | undefined;
 
   const headerCover = scene.add.graphics();
   headerCover.fillStyle(UI.MODAL_BG, 1);
@@ -149,13 +134,24 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
   footerCover.setDepth(CATALOG_CHROME_DEPTH);
   track(footerCover);
 
+  viewport = createScrollableViewport({
+    scene,
+    x: viewportX,
+    y: listTop,
+    width: viewportW,
+    height: scrollAreaH,
+    contentCenterX: panelX + panelW / 2,
+    depth: CATALOG_SCROLL_DEPTH,
+  });
+  parent.add(viewport.root);
+
   const panelFrame = createModalPanelStroke(scene, panel);
   panelFrame.setDepth(CATALOG_CHROME_DEPTH);
   track(panelFrame);
 
   const listFrame = scene.add.graphics();
   listFrame.lineStyle(1, COLORS.SIDEBAR_SECTION_BORDER, 0.6);
-  listFrame.strokeRect(panelX + 12, listTop, panelW - 24, scrollAreaH);
+  listFrame.strokeRect(viewportX, listTop, viewportW, scrollAreaH);
   listFrame.setDepth(CATALOG_CHROME_DEPTH);
   track(listFrame);
 
@@ -167,51 +163,13 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
   closeBtn.setDepth(CATALOG_CLOSE_DEPTH);
   track(closeBtn);
 
-  let scrollHandlers: CatalogScrollHandlers | undefined;
-
   const setContentHeight = (contentHeight: number): void => {
-    if (contentHeight <= scrollAreaH) {
-      const offset = (scrollAreaH - contentHeight) / 2;
-      scrollContainer.y = listTop + offset;
-    }
-
-    if (contentHeight > scrollAreaH) {
-      scrollHandlers = bindCatalogScrollInput(scene, {
-        panelX,
-        panelW,
-        listTop,
-        listBottom,
-        scrollAreaTop,
-        scrollAreaH,
-        contentHeight,
-        scrollContainer,
-        getIsDragging: () => scrollState.isDragging,
-        setIsDragging: (value) => {
-          scrollState.isDragging = value;
-        },
-        getDragStartY: () => scrollState.dragStartY,
-        setDragStartY: (value) => {
-          scrollState.dragStartY = value;
-        },
-        getScrollStartY: () => scrollState.scrollStartY,
-        setScrollStartY: (value) => {
-          scrollState.scrollStartY = value;
-        },
-      });
-    }
-  };
-
-  const scrollState = {
-    isDragging: false,
-    dragStartY: 0,
-    scrollStartY: 0,
+    viewport?.setContentHeight(contentHeight);
   };
 
   const destroyManagedObjects = (): void => {
-    if (scrollHandlers) {
-      removeCatalogScrollInput(scene, scrollHandlers);
-      scrollHandlers = undefined;
-    }
+    viewport?.destroy();
+    viewport = undefined;
     for (const obj of sceneObjects) {
       obj.destroy();
     }
@@ -219,7 +177,7 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
   };
 
   return {
-    scrollContainer,
+    scrollContainer: viewport.content,
     scrollAreaTop,
     scrollAreaH,
     listTop,
@@ -229,86 +187,6 @@ export function createCatalogModalShell(options: CatalogModalShellOptions): Cata
     setContentHeight,
     destroyManagedObjects,
   };
-}
-
-interface CatalogScrollBindings {
-  panelX: number;
-  panelW: number;
-  listTop: number;
-  listBottom: number;
-  scrollAreaTop: number;
-  scrollAreaH: number;
-  contentHeight: number;
-  scrollContainer: Phaser.GameObjects.Container;
-  getIsDragging: () => boolean;
-  setIsDragging: (value: boolean) => void;
-  getDragStartY: () => number;
-  setDragStartY: (value: number) => void;
-  getScrollStartY: () => number;
-  setScrollStartY: (value: number) => void;
-}
-
-interface CatalogScrollHandlers {
-  wheel: (
-    pointer: Phaser.Input.Pointer,
-    gameObjects: Phaser.GameObjects.GameObject[],
-    deltaX: number,
-    deltaY: number,
-    deltaZ: number,
-  ) => void;
-  pointerDown: (pointer: Phaser.Input.Pointer) => void;
-  pointerMove: (pointer: Phaser.Input.Pointer) => void;
-  pointerUp: () => void;
-}
-
-function bindCatalogScrollInput(scene: Scene, bindings: CatalogScrollBindings): CatalogScrollHandlers {
-  const doScroll = (dy: number): void => {
-    const newY = bindings.scrollContainer.y - dy * 0.5;
-    bindings.scrollContainer.y = Phaser.Math.Clamp(
-      newY,
-      bindings.scrollAreaTop + bindings.scrollAreaH - bindings.contentHeight,
-      bindings.scrollAreaTop,
-    );
-  };
-
-  const handlers: CatalogScrollHandlers = {
-    wheel: (_pointer, _gos, _dx, dy) => {
-      doScroll(dy);
-    },
-    pointerDown: (pointer) => {
-      if (pointer.x < bindings.panelX || pointer.x > bindings.panelX + bindings.panelW) return;
-      if (pointer.y < bindings.listTop || pointer.y > bindings.listBottom) return;
-      bindings.setIsDragging(true);
-      bindings.setDragStartY(pointer.y);
-      bindings.setScrollStartY(bindings.scrollContainer.y);
-    },
-    pointerMove: (pointer) => {
-      if (!bindings.getIsDragging()) return;
-      const dy = pointer.y - bindings.getDragStartY();
-      bindings.scrollContainer.y = Phaser.Math.Clamp(
-        bindings.getScrollStartY() + dy,
-        bindings.scrollAreaTop + bindings.scrollAreaH - bindings.contentHeight,
-        bindings.scrollAreaTop,
-      );
-    },
-    pointerUp: () => {
-      bindings.setIsDragging(false);
-    },
-  };
-
-  scene.input.on('wheel', handlers.wheel);
-  scene.input.on('pointerdown', handlers.pointerDown);
-  scene.input.on('pointermove', handlers.pointerMove);
-  scene.input.on('pointerup', handlers.pointerUp);
-
-  return handlers;
-}
-
-function removeCatalogScrollInput(scene: Scene, handlers: CatalogScrollHandlers): void {
-  scene.input.off('wheel', handlers.wheel);
-  scene.input.off('pointerdown', handlers.pointerDown);
-  scene.input.off('pointermove', handlers.pointerMove);
-  scene.input.off('pointerup', handlers.pointerUp);
 }
 
 export function finalizeCatalogModal(container: GameObjects.Container, scene: Scene): void {

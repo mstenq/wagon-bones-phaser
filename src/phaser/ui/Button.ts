@@ -4,6 +4,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
+import { getPointerDragDistance } from './pointerDragTrack';
 
 const DEFAULT_BG = COLORS.BTN_DEFAULT;
 const HOVER_BG = COLORS.BTN_HOVER;
@@ -33,6 +34,8 @@ export class Button extends GameObjects.Container {
   private onClickCallback: (() => void) | null = null;
   private _bgColor: number = DEFAULT_BG;
   private _hoverColor: number = HOVER_BG;
+  private _touchStartX = 0;
+  private _touchStartY = 0;
 
   constructor(scene: Scene, x: number, y: number, text: string, width = 160, height = 44) {
     super(scene, x, y);
@@ -59,13 +62,21 @@ export class Button extends GameObjects.Container {
     this.on('pointerout', () => {
       if (this._enabled) this.drawBg(this._bgColor);
     });
-    this.on('pointerdown', () => {
-      if (this._enabled && this.onClickCallback) {
-        if (this.scene.sound?.get('sfx_button') || this.scene.cache?.audio?.exists('sfx_button')) {
-          this.scene.sound.play('sfx_button', { volume: 0.4 });
-        }
-        this.onClickCallback();
+    this.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this._enabled) return;
+      if (pointer.wasTouch) {
+        this._touchStartX = pointer.worldX;
+        this._touchStartY = pointer.worldY;
+        return;
       }
+      this.fireClick();
+    });
+    this.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (!this._enabled || !pointer.wasTouch) return;
+      const dx = pointer.worldX - this._touchStartX;
+      const dy = pointer.worldY - this._touchStartY;
+      if (Math.hypot(dx, dy) >= getPointerDragDistance(pointer)) return;
+      this.fireClick();
     });
 
     this.drawBg(DEFAULT_BG);
@@ -75,6 +86,14 @@ export class Button extends GameObjects.Container {
   onClick(cb: () => void): this {
     this.onClickCallback = cb;
     return this;
+  }
+
+  private fireClick(): void {
+    if (!this._enabled || !this.onClickCallback) return;
+    if (this.scene.sound?.get('sfx_button') || this.scene.cache?.audio?.exists('sfx_button')) {
+      this.scene.sound.play('sfx_button', { volume: 0.4 });
+    }
+    this.onClickCallback();
   }
 
   setEnabled(enabled: boolean): this {

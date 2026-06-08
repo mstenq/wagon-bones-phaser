@@ -15,7 +15,7 @@ import { DiceSprite } from '../ui/DiceSprite';
 import { getDiceGroupDisplayLabel, groupDiceByVisualIdentity } from '../ui/diceGrouping';
 import { isPortraitLayout } from '../ui/SceneLayout';
 import { wireTapOnlySession } from '../ui/pointerDragSession';
-import { getPointerDragDistance } from '../ui/pointerDragTrack';
+import { createScrollableViewport, type ScrollableViewportHandle } from '../ui/ScrollableViewport';
 
 const GRID_CARD_W = 148;
 const GRID_CARD_H = 148;
@@ -59,15 +59,9 @@ export class ProfessionSelectScene extends Scene {
   private backBtn: Button | null = null;
   private prevProfBtn: Button | null = null;
   private nextProfBtn: Button | null = null;
-  private scrollContainer: Phaser.GameObjects.Container;
+  private gridViewport!: ScrollableViewportHandle;
   private detailContainer: Phaser.GameObjects.Container;
   private contentHeight = 0;
-  private gridOffsetY = 0;
-  private gridScrollPending = false;
-  private gridScrollDragging = false;
-  private gridScrollPointerId: number | null = null;
-  private gridScrollStartX = 0;
-  private gridScrollStartY = 0;
   private dragStartY = 0;
   private scrollStartY = 0;
   private leftPanelW = 0;
@@ -107,6 +101,7 @@ export class ProfessionSelectScene extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
+      this.gridViewport?.destroy();
       this.destroyDiceSprites();
     });
 
@@ -241,12 +236,16 @@ export class ProfessionSelectScene extends Scene {
     const scrollAreaBottom = height - 80;
     const scrollAreaH = scrollAreaBottom - scrollAreaTop;
 
-    this.scrollContainer = this.add.container(0, scrollAreaTop);
-
-    if (this.contentHeight <= scrollAreaH) {
-      this.gridOffsetY = (scrollAreaH - this.contentHeight) / 2;
-      this.scrollContainer.y = scrollAreaTop + this.gridOffsetY;
-    }
+    this.gridViewport = createScrollableViewport({
+      scene: this,
+      x: 0,
+      y: scrollAreaTop,
+      width: this.leftPanelW,
+      height: scrollAreaH,
+      contentCenterX: 0,
+      depth: 40,
+    });
+    this.gridViewport.setInputEnabled(this.isGridScrollActive());
 
     this.cards = [];
     profs.forEach((prof, i) => {
@@ -255,95 +254,33 @@ export class ProfessionSelectScene extends Scene {
       const cx = startX + col * (cardW + cardGap);
       const cy = cardH / 2 + row * (cardH + cardGap);
       const card = this.createProfessionCard(prof, cx, cy);
-      this.scrollContainer.add(card);
+      this.gridViewport.content.add(card);
       this.cards.push(card);
     });
 
-    const clipTop = this.add.graphics();
-    clipTop.fillStyle(COLORS.BG_PRIMARY, 1);
-    clipTop.fillRect(0, 0, this.leftPanelW, scrollAreaTop);
-    clipTop.setDepth(50);
-    this.gridChrome.push(clipTop);
+    this.gridViewport.setContentHeight(this.contentHeight);
+    this.gridChrome.push(this.gridViewport.root);
 
-    const clipBottom = this.add.graphics();
-    clipBottom.fillStyle(COLORS.BG_PRIMARY, 1);
-    clipBottom.fillRect(0, scrollAreaBottom, this.leftPanelW, height - scrollAreaBottom);
-    clipBottom.setDepth(50);
-    this.gridChrome.push(clipBottom);
-    this.gridChrome.push(this.scrollContainer);
-
-    if (this.contentHeight > scrollAreaH) {
-      this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gos: unknown[], _dx: number, dy: number) => {
-        if (!this.isGridScrollActive()) return;
-        this.doScroll(dy, scrollAreaTop, scrollAreaH);
-      });
-    }
-
-    if (this.isPortrait || this.contentHeight > scrollAreaH) {
-      const resetGridScroll = (pointer: Phaser.Input.Pointer) => {
-        if (this.gridScrollPointerId !== pointer.id) return;
-        this.gridScrollPending = false;
-        this.gridScrollDragging = false;
-        this.gridScrollPointerId = null;
-      };
-
+    if (this.isPortrait) {
       this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        if (this.isPortrait && this.portraitViewMode === 'detail') {
-          if (pointer.y >= this.sceneHeight - PORTRAIT_BOTTOM_BAR_H) return;
-          this.isDetailDragging = true;
-          this.dragStartY = pointer.y;
-          this.scrollStartY = this.detailContainer.y;
-          return;
-        }
-        if (!this.isGridScrollActive()) return;
-        if (pointer.y < scrollAreaTop || pointer.y > scrollAreaBottom) return;
-
-        this.gridScrollPending = true;
-        this.gridScrollDragging = false;
-        this.gridScrollPointerId = pointer.id;
-        this.gridScrollStartX = pointer.worldX;
-        this.gridScrollStartY = pointer.worldY;
+        if (this.portraitViewMode !== 'detail') return;
+        if (pointer.y >= this.sceneHeight - PORTRAIT_BOTTOM_BAR_H) return;
+        this.isDetailDragging = true;
         this.dragStartY = pointer.y;
-        this.scrollStartY = this.scrollContainer.y;
+        this.scrollStartY = this.detailContainer.y;
       });
       this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-        if (this.isDetailDragging) {
-          const dy = pointer.y - this.dragStartY;
-          this.detailContainer.y = Phaser.Math.Clamp(this.scrollStartY + dy, this.detailScrollMinY, DETAIL_TOP_PAD);
-          this.repositionDiceSprites();
-          return;
-        }
-
-        if (this.gridScrollPointerId !== pointer.id) return;
-        if (!this.gridScrollPending && !this.gridScrollDragging) return;
-
-        if (!this.gridScrollDragging) {
-          const dx = pointer.worldX - this.gridScrollStartX;
-          const dy = pointer.worldY - this.gridScrollStartY;
-          if (Math.hypot(dx, dy) < getPointerDragDistance(pointer)) return;
-          this.gridScrollDragging = true;
-          this.gridScrollPending = false;
-        }
-
+        if (!this.isDetailDragging) return;
         const dy = pointer.y - this.dragStartY;
-        this.scrollContainer.y = Phaser.Math.Clamp(
-          this.scrollStartY + dy,
-          scrollAreaTop + scrollAreaH - this.contentHeight,
-          scrollAreaTop,
-        );
+        this.detailContainer.y = Phaser.Math.Clamp(this.scrollStartY + dy, this.detailScrollMinY, DETAIL_TOP_PAD);
+        this.repositionDiceSprites();
       });
-      const onPointerEnd = (pointer: Phaser.Input.Pointer) => {
-        resetGridScroll(pointer);
+      const onPointerEnd = () => {
         this.isDetailDragging = false;
       };
       this.input.on('pointerup', onPointerEnd);
       this.input.on('pointerupoutside', onPointerEnd);
     }
-  }
-
-  private doScroll(dy: number, scrollAreaTop: number, scrollAreaH: number): void {
-    const newY = this.scrollContainer.y - dy * 0.5;
-    this.scrollContainer.y = Phaser.Math.Clamp(newY, scrollAreaTop + scrollAreaH - this.contentHeight, scrollAreaTop);
   }
 
   private computeGridLayout(): GridLayoutMetrics {
@@ -524,6 +461,7 @@ export class ProfessionSelectScene extends Scene {
     this.portraitViewMode = 'grid';
     this.isDetailDragging = false;
     this.detailContainer.y = DETAIL_TOP_PAD;
+    this.gridViewport.setInputEnabled(true);
     this.setGridChromeVisible(true);
     this.detailContainer.setVisible(false);
     this.destroyDiceSprites();
@@ -535,6 +473,7 @@ export class ProfessionSelectScene extends Scene {
 
   private showPortraitDetail(): void {
     this.portraitViewMode = 'detail';
+    this.gridViewport.setInputEnabled(false);
     this.setGridChromeVisible(false);
     this.detailContainer.setVisible(true);
     this.detailContainer.y = DETAIL_TOP_PAD;
