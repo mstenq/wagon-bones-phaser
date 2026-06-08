@@ -341,6 +341,18 @@ function writeEquipment(list: EquipmentInstance[]): void {
   replaceEquipmentList(list);
 }
 
+/** Record last-used consumable history (and supply counter) without executing card effects. */
+export function trackConsumableUse(def: ConsumableDef): void {
+  const run = getRunState();
+  const patch: { lastUsedConsumableId: string | null; supplyCardsUsed?: number } = {
+    lastUsedConsumableId: nextLastUsedConsumableIdAfterUse(def, run.lastUsedConsumableId),
+  };
+  if (def.category === 'supply') {
+    patch.supplyCardsUsed = run.supplyCardsUsed + 1;
+  }
+  runActions.patch(patch);
+}
+
 /** Add a medicine supply card with ghost aura (Doctor profession, trail events, etc.). */
 export function grantGhostMedicine(): boolean {
   const ghostAura = getItemAuraById('ghost');

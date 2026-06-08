@@ -7,6 +7,7 @@ import {
   createSupplyConsumableDef,
   createTrailGuideConsumableDef,
 } from '../../../game/facade/pack';
+import { trackConsumableUse } from '../../../game/ConsumablesSystem';
 import { getRunState } from '../../../game/store';
 import { resolveEquipmentList } from '../../../game/store/resolve';
 import { selectEquipmentSlotsFree } from '../../../game/store/selectors/runSelectors';
@@ -15,6 +16,7 @@ import { isDiceSelectionReady } from '../../../game/facade/diceSelection';
 import trailGuidesData from '../../../data/trail_guides';
 import supplyCardsData from '../../../data/supply_cards';
 import frontierEncountersData from '../../../data/frontier_encounters';
+import type { ConsumableDef } from '../../../game/ConsumablesSystem';
 
 export type PackCardUseContext = {
   selectedDiceIds: Set<string>;
@@ -34,6 +36,22 @@ export function packCardNeedsEquipSlot(item: PackItem): boolean {
   if (item.category === 'equipment' && item.equipmentDef) return true;
   if (item.instantEffect?.type === 'CREATE_EQUIPMENT') return true;
   return false;
+}
+
+function resolvePackItemConsumableDef(item: PackItem): ConsumableDef | null {
+  if (item.category === 'supply' && item.supplyCardId) {
+    const cardData = supplyCardsData.find((c) => c.id === item.supplyCardId);
+    return cardData ? createSupplyConsumableDef(cardData) : null;
+  }
+  if (item.category === 'trail_guide' && item.trailGuideId) {
+    const tg = trailGuidesData.find((t) => t.id === item.trailGuideId);
+    return tg ? createTrailGuideConsumableDef(tg) : null;
+  }
+  if (item.category === 'frontier' && item.frontierEncounterId) {
+    const fe = frontierEncountersData.find((f) => f.id === item.frontierEncounterId);
+    return fe ? createFrontierConsumableDef(fe) : null;
+  }
+  return null;
 }
 
 export function canAcquirePackCardItem(item: PackItem, run = getRunState()): boolean {
@@ -63,6 +81,12 @@ export function resolvePackCardUse(item: PackItem, ctx: PackCardUseContext): Pac
     const selectedDice = lineupDice.filter((d) => ctx.selectedDiceIds.has(d.id));
     const diceSelectionResult = gameFacade.pack.applyDiceSelectionToLineup(config, selectedDice);
     feedbackText = diceSelectionResult.message;
+
+    const consumableDef = resolvePackItemConsumableDef(item);
+    if (consumableDef) {
+      trackConsumableUse(consumableDef);
+    }
+
     return {
       status: 'ready',
       outcome: { equipmentPopInCount, feedbackText },

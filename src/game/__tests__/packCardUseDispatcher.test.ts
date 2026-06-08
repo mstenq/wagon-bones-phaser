@@ -6,7 +6,12 @@ import {
   resolvePackCardUse,
 } from '../../phaser/scenes/boosterPack/packCardUseDispatcher';
 import type { PackItem } from '../BoosterPackSystem';
-import { item, itemWithAura, setupGame } from './testHelpers';
+import { die, item, itemWithAura, setupGame } from './testHelpers';
+import { getPlayerState, resetPlayerState } from './testRunPlayer';
+import { getTrailGuideDefById } from '../ConsumablesSystem';
+import { initPackLineup } from '../visibleDiceRow';
+import { sceneActions } from '../store/sceneStore';
+import supplyCardsData from '../../data/supply_cards';
 
 const emptyCtx = {
   selectedDiceIds: new Set<string>(),
@@ -88,5 +93,77 @@ describe('packCardUseDispatcher inventory checks', () => {
       emptyCtx,
     );
     expect(result.status).toBe('blocked');
+  });
+});
+
+describe('packCardUseDispatcher consumable history', () => {
+  function enterTestPack(): void {
+    sceneActions.enterBoosterPack({
+      packDefId: 'supply_standard',
+      returnScene: 'Shop',
+      queuedPackDefIds: [],
+      contents: [],
+      picksRemaining: 2,
+      effectivePickCount: 2,
+      usedCardIndices: [],
+      lineupDieIds: [],
+    });
+  }
+
+  test('dice-selection supply cards update lastUsedConsumable for second_helpings', () => {
+    resetPlayerState();
+    const player = getPlayerState();
+    player.maxConsumableSlots = 4;
+    const d1 = die({ value: 1 });
+    const d2 = die({ value: 2 });
+    player.dice = [d1, d2];
+
+    const tgDef = getTrailGuideDefById('tg_high_value')!;
+    player.lastUsedConsumable = tgDef;
+
+    enterTestPack();
+    initPackLineup();
+
+    const panCardData = supplyCardsData.find((c) => c.id === 'pan_for_gold')!;
+    const panCard: PackItem = {
+      id: 'pan_for_gold',
+      name: panCardData.name,
+      description: panCardData.description,
+      category: 'supply',
+      supplyCardId: 'pan_for_gold',
+      diceSelection: panCardData.diceSelection
+        ? {
+            ...panCardData.diceSelection,
+            cardName: panCardData.name,
+            description: panCardData.description,
+            skippable: true,
+          }
+        : undefined,
+    };
+
+    const diceCtx = {
+      selectedDiceIds: new Set([d1.id, d2.id]),
+      equipmentCountBefore: 0,
+      cardNeedsDiceSelection: () => true,
+    };
+
+    const panResult = resolvePackCardUse(panCard, diceCtx);
+    expect(panResult.status).toBe('ready');
+    expect(player.lastUsedConsumable?.id).toBe('pan_for_gold');
+
+    const secondHelpingsData = supplyCardsData.find((c) => c.id === 'second_helpings')!;
+    const secondHelpingsCard: PackItem = {
+      id: 'second_helpings',
+      name: secondHelpingsData.name,
+      description: secondHelpingsData.description,
+      category: 'supply',
+      supplyCardId: 'second_helpings',
+    };
+
+    const shResult = resolvePackCardUse(secondHelpingsCard, emptyCtx);
+    expect(shResult.status).toBe('ready');
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0]!.def.id).toBe('pan_for_gold');
+    expect(player.consumables[0]!.def.category).toBe('supply');
   });
 });
