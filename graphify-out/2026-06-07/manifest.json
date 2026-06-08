@@ -110,8 +110,8 @@
     "semantic_hash": "a20dcd53511fe53b64b1b25349573d86"
   },
   "src/game/Constants.ts": {
-    "mtime": 1780888173.7498546,
-    "ast_hash": "a1bbce05e3308ac8b6687079103fed46",
+    "mtime": 1780888447.6204696,
+    "ast_hash": "57155f668393d757922bdcbd376ac858",
     "semantic_hash": ""
   },
   "src/game/ConsumablesSystem.ts": {
@@ -1235,8 +1235,8 @@
     "semantic_hash": "642bf8b4555b982bcfff9d301e160f0b"
   },
   "src/phaser/scenes/ShopScene.ts": {
-    "mtime": 1780840184.8900094,
-    "ast_hash": "1401157a1384151ac9e953293c4931b4",
+    "mtime": 1780888452.9289494,
+    "ast_hash": "57863e3378cdcc62135bfe48f3c4a4c6",
     "semantic_hash": ""
   },
   "src/phaser/scenes/TrailEventScene.ts": {
@@ -1520,9 +1520,9 @@
     "semantic_hash": "084ac6a0c11997d0e0eeca9f8431bc7f"
   },
   "src/phaser/ui/itemCard/ItemCardChrome.ts": {
-    "mtime": 1780784151.9370313,
-    "ast_hash": "e8db16f1a72ebe9cec4733fa790f6f94",
-    "semantic_hash": "e8db16f1a72ebe9cec4733fa790f6f94"
+    "mtime": 1780888556.0679605,
+    "ast_hash": "83fd7609ea4aaa29a1b39bbaf2465ccf",
+    "semantic_hash": ""
   },
   "src/phaser/ui/itemCard/ItemCardHints.ts": {
     "mtime": 1780793737.8773324,
@@ -6152,6 +6152,11 @@
   "src/game/visibleDiceRow.ts": {
     "mtime": 1780887103.7089026,
     "ast_hash": "edfef5789710049567ce90a533e299ab",
+    "semantic_hash": ""
+  },
+  "src/phaser/ui/itemCard/priceTagLayout.ts": {
+    "mtime": 1780888556.107066,
+    "ast_hash": "c7ff55025063bc944986a99c747c1f3b",
     "semantic_hash": ""
   }
 }
