@@ -68,6 +68,8 @@ export interface ItemCardLayout {
   cardH: number;
   cardScale: number;
   tabAnchorX: number;
+  /** Extra space above card top (e.g. shop price tag) for active tooltip placement. */
+  topClearance: number;
 }
 
 export const RARITY_LABELS: Record<string, string> = {

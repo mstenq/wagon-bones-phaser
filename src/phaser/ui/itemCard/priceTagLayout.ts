@@ -1,4 +1,5 @@
 import { UI } from '../../../game/Constants';
+import type { CardData, ItemCardOptions } from './itemCardTypes';
 
 export interface PriceTagMetrics {
   tagScale: number;
@@ -20,4 +21,13 @@ export function computePriceTagMetrics(cardScale: number): PriceTagMetrics {
   const gap = UI.CARD_PRICE_TAG_GAP * tagScale;
   const spaceAbove = Math.ceil(gap + tagH);
   return { tagScale, fontSize, tagW, tagH, gap, spaceAbove };
+}
+
+/** Vertical space above the card top reserved for a price/sell tag (0 when none). */
+export function getCardTopClearance(options: ItemCardOptions, def: CardData): number {
+  const mode = options.mode ?? 'inventory';
+  const showCost = options.showCost ?? mode === 'shop';
+  const hasPriceTag = (showCost && def.cost !== undefined) || options.sellValue !== undefined;
+  if (!hasPriceTag) return 0;
+  return computePriceTagMetrics(options.cardScale ?? 1).spaceAbove;
 }

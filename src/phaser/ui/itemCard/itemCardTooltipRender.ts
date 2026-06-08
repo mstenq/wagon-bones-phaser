@@ -295,14 +295,22 @@ export function createTooltipBackground(scene: Scene, width: number, height: num
 export function getCardWorldHalfExtents(
   card: GameObjects.Container,
   layout: ItemCardLayout,
-): { halfW: number; halfH: number } {
+): { halfW: number; halfH: number; topClearance: number } {
   const matrix = card.getWorldTransformMatrix();
   const scratch = new Phaser.Math.Vector2();
   matrix.transformPoint(-layout.cardW / 2, 0, scratch);
   const halfW = Math.abs(scratch.x - matrix.tx);
   matrix.transformPoint(0, -layout.cardH / 2, scratch);
-  const halfH = Math.abs(scratch.y - matrix.ty);
-  return { halfW, halfH };
+  const cardTopY = scratch.y;
+  const halfH = Math.abs(cardTopY - matrix.ty);
+
+  let topClearance = 0;
+  if (layout.topClearance > 0) {
+    matrix.transformPoint(0, -layout.cardH / 2 - layout.topClearance, scratch);
+    topClearance = Math.abs(cardTopY - scratch.y);
+  }
+
+  return { halfW, halfH, topClearance };
 }
 
 export function computeTooltipPosition(
@@ -313,7 +321,7 @@ export function computeTooltipPosition(
   tooltipH: number,
   scale: Phaser.Scale.ScaleManager,
   placement: TooltipPlacement = 'side',
-  worldHalfExtents?: { halfW: number; halfH: number },
+  worldHalfExtents?: { halfW: number; halfH: number; topClearance?: number },
 ): { x: number; y: number } {
   const hw = worldHalfExtents?.halfW ?? layout.cardW / 2;
   const hh = worldHalfExtents?.halfH ?? layout.cardH / 2;
@@ -321,8 +329,9 @@ export function computeTooltipPosition(
   let ty: number;
 
   if (placement === 'above') {
+    const topClearance = worldHalfExtents?.topClearance ?? 0;
     tx = worldX - tooltipW / 2;
-    ty = worldY - hh - tooltipH - 10;
+    ty = worldY - hh - topClearance - tooltipH - 10;
   } else {
     tx = worldX - hw - tooltipW - 10;
     ty = worldY - tooltipH / 2;
