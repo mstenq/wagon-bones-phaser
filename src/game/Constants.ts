@@ -278,6 +278,16 @@ export const UI = {
   /** Fixed sidebar width in landscape (portrait uses top bar instead). */
   SIDEBAR_WIDTH: 330,
   TOP_BAR_BASE_HEIGHT: 120,
+  TOP_BAR_PAD: 10,
+  TOP_BAR_HEADER_H: 40,
+  TOP_BAR_SCORE_ROW_H: 60,
+  TOP_BAR_DIFFICULTY_ICON_SIZE: 28,
+  TOP_BAR_CTRL_BTN_W: 44,
+  TOP_BAR_CTRL_BTN_H: 38,
+  TOP_BAR_CTRL_GAP: 6,
+  TOP_BAR_PILL_W: 114,
+  TOP_BAR_PILL_H: 26,
+  TOP_BAR_SCORE_BLOCK_RATIO: 0.34,
   /** Portrait reference width for UI scale (typical phone) */
   UI_SCALE_REF_WIDTH: 420,
   UI_SCALE_MIN: 0.72,

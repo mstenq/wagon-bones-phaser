@@ -1,8 +1,10 @@
 // ─── RoundModificationsModal ───
-// Portrait top bar: full list of boss effects and run status traits.
+// Portrait top bar: profession info, boss effects, and run status traits.
 
 import { GameObjects, Scene } from 'phaser';
 import { TEXT_COLORS, FONTS } from '../../game/Constants';
+import type { ProfessionDef } from '../../data/professions';
+import { getRunProfession } from '../../game/store/runReads';
 import { selectRunSidebarModel } from '../../game/store/selectors/uiSelectors';
 import { Button } from './Button';
 import { createModalShell, finalizeModal } from './modalShell';
@@ -14,10 +16,11 @@ export class RoundModificationsModal extends GameObjects.Container {
     super(scene, 0, 0);
 
     const model = selectRunSidebarModel();
-    const traitCount = model.statusTraits.length + (model.boss ? 1 : 0);
-    const panelHeight = Math.min(height - 40, Math.max(220, 120 + traitCount * 72));
+    const profession = getRunProfession();
+    const traitCount = model.statusTraits.length + (model.boss ? 1 : 0) + (profession ? 1 : 0);
+    const panelHeight = Math.min(height - 40, Math.max(260, 140 + traitCount * 72));
 
-    const { layout, dim, panel, title } = createModalShell(scene, 'Round Modifiers', {
+    const { layout, dim, panel, title } = createModalShell(scene, 'Round Info', {
       contentX,
       width,
       height,
@@ -31,6 +34,10 @@ export class RoundModificationsModal extends GameObjects.Container {
 
     let y = panelY + 58;
 
+    if (profession) {
+      y += this.addProfessionSection(scene, panelX, panelW, y, profession) + SECTION_GAP;
+    }
+
     if (model.boss) {
       y += this.addBossSection(scene, panelX, panelW, y, model.boss) + SECTION_GAP;
     }
@@ -43,7 +50,7 @@ export class RoundModificationsModal extends GameObjects.Container {
       y += this.addTraitSection(scene, panelX, panelW, y, trait.label, trait.lines, 'negative') + SECTION_GAP;
     }
 
-    if (!model.boss && model.statusTraits.length === 0) {
+    if (!profession && !model.boss && model.statusTraits.length === 0) {
       const empty = scene.add.text(panelX + panelW / 2, panelY + panelH / 2, 'No active modifiers', {
         fontFamily: FONTS.PRIMARY,
         fontSize: '14px',
@@ -58,6 +65,80 @@ export class RoundModificationsModal extends GameObjects.Container {
     this.add(closeBtn);
 
     finalizeModal(this, scene);
+  }
+
+  private addProfessionSection(scene: Scene, panelX: number, panelW: number, y: number, prof: ProfessionDef): number {
+    const pad = 12;
+    const imgSize = 48;
+    const bodyX = panelX + pad + imgSize + 8;
+    const bodyW = panelW - pad * 2 - imgSize - 16;
+
+    const titleText = scene.add.text(bodyX, y + 8, prof.title, {
+      fontFamily: FONTS.HEADING,
+      fontSize: '14px',
+      color: TEXT_COLORS.GOLD,
+    });
+
+    const nameText = scene.add.text(bodyX, y + 24, prof.name, {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '12px',
+      color: TEXT_COLORS.PRIMARY,
+    });
+
+    const descText = scene.add.text(bodyX, y + 40, prof.description, {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '12px',
+      color: TEXT_COLORS.SECONDARY,
+      wordWrap: { width: bodyW },
+      lineSpacing: 2,
+    });
+
+    let bodyBottom = y + 40 + descText.height;
+
+    let synergyName: GameObjects.Text | null = null;
+    let synergyEffect: GameObjects.Text | null = null;
+    if (prof.specialEquipment) {
+      synergyName = scene.add.text(bodyX, bodyBottom + 8, `Equipment Synergy: ${prof.specialEquipment.name}`, {
+        fontFamily: FONTS.HEADING,
+        fontSize: '12px',
+        color: TEXT_COLORS.GOLD,
+        wordWrap: { width: bodyW },
+      });
+      synergyEffect = scene.add.text(bodyX, synergyName.y + synergyName.height + 4, prof.specialEquipment.effect, {
+        fontFamily: FONTS.PRIMARY,
+        fontSize: '11px',
+        color: TEXT_COLORS.SECONDARY,
+        wordWrap: { width: bodyW },
+        lineSpacing: 2,
+      });
+      bodyBottom = synergyEffect.y + synergyEffect.height;
+    }
+
+    const sectionH = Math.max(72, bodyBottom - y + 12);
+
+    const bg = scene.add.graphics();
+    bg.fillStyle(0x1a1a30, 1);
+    bg.fillRoundedRect(panelX + pad, y, panelW - pad * 2, sectionH, 6);
+    bg.lineStyle(1, 0x444466, 0.9);
+    bg.strokeRoundedRect(panelX + pad, y, panelW - pad * 2, sectionH, 6);
+    this.add(bg);
+
+    this.add([titleText, nameText, descText]);
+    if (synergyName && synergyEffect) {
+      this.add([synergyName, synergyEffect]);
+    }
+
+    const atlasFrame = `${prof.id}.png`;
+    const profTexture = scene.textures.get('professions');
+    const canUseAtlas = scene.textures.exists('professions') && profTexture.has(atlasFrame);
+    if (canUseAtlas) {
+      const img = scene.add.image(panelX + pad + 6 + imgSize / 2, y + sectionH / 2, 'professions', atlasFrame);
+      const scale = imgSize / Math.max(img.width, img.height);
+      img.setScale(scale);
+      this.add(img);
+    }
+
+    return sectionH;
   }
 
   private addBossSection(
