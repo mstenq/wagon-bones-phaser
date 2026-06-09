@@ -119,7 +119,7 @@ export class Sidebar extends GameObjects.Container {
       this.buildSidebarContent(scene, width, height);
     }
 
-    this.setDepth(200);
+    this.setDepth(UI.SIDEBAR_DEPTH);
     this.setScrollFactor(0);
     scene.add.existing(this);
   }

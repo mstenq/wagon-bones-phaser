@@ -294,12 +294,14 @@ export const UI = {
   CONSUMABLE_BAR_COMPACT_MAX_RATIO: 0.38,
   /** Gap between equipment and consumable bars */
   CARD_BAR_GAP: 8,
+  /** Sidebar (landscape) and top bar (portrait) chrome — below card bars. */
+  SIDEBAR_DEPTH: 200,
   /** Scene depth for the consumable card bar (created after equipment bar). */
-  CONSUMABLE_BAR_DEPTH: 150,
+  CONSUMABLE_BAR_DEPTH: 210,
   /** Equipment bar sits above consumable bar so right-edge sell tabs are not covered. */
-  EQUIP_BAR_DEPTH: 160,
+  EQUIP_BAR_DEPTH: 220,
   /** Raised while a card is dragged or action tabs are open. */
-  CARD_BAR_INTERACTION_DEPTH: 175,
+  CARD_BAR_INTERACTION_DEPTH: 235,
   /** Top inset for cards inside the bar background */
   CARD_BAR_TOP_INSET: 8,
   /** Base card scale for both equipment and consumable bars at full content width */
@@ -369,7 +371,7 @@ export const UI = {
   CARD_TOOLTIP_MAX_WIDTH: 280,
   /** Hover tooltip depth (scene root). */
   CARD_TOOLTIP_DEPTH: 1000,
-  /** Active/pinned tooltip depth — must render above sidebar/topbar (depth 200). */
+  /** Active/pinned tooltip depth — must render above sidebar/topbar (SIDEBAR_DEPTH). */
   CARD_TOOLTIP_ACTIVE_DEPTH: 2500,
 
   /** On-card hint panel (equipment / shop preview rows) */

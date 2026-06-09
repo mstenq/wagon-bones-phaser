@@ -551,6 +551,11 @@ export function createLayout(scene: Scene, options?: LayoutOptions): LayoutResul
     metrics.cardBar,
   );
 
+  // Card bars above sidebar/topbar so cards, tabs, and drag lifts overlap HUD chrome.
+  sidebar.setDepth(UI.SIDEBAR_DEPTH);
+  equipBar.setDepth(UI.EQUIP_BAR_DEPTH);
+  consumableBar.setDepth(UI.CONSUMABLE_BAR_DEPTH);
+
   // ─── Dice Pouch (bottom-right) ───
   const pouchX = width - metrics.pouchMargin - UI.POUCH_SIZE;
   const pouchY = height - metrics.pouchMargin - UI.POUCH_SIZE;
