@@ -303,16 +303,31 @@ describe('Binoculars trail guide targeting', () => {
     }
   });
 
-  test('does not inject owned target trail guide when binoculars permit is owned', () => {
+  test('injects most-played trail guide when already in consumable bar (binoculars overrides duplicate filter)', () => {
     const player = getPlayerState();
     player.purchasedPermits.push('binoculars');
-    player.getHandStats(HandType.PAIR).timesPlayed = 10;
-    const owned = getTrailGuideDefById('tg_pair')!;
-    player.consumables = [createConsumableInstance(owned)];
+    player.getHandStats(HandType.HIGH_VALUE).timesPlayed = 20;
+    player.getHandStats(HandType.PAIR).timesPlayed = 3;
+    const owned = getTrailGuideDefById('tg_high_value')!;
+    player.consumables = [createConsumableInstance(owned), createConsumableInstance(owned)];
 
     for (let i = 0; i < 40; i++) {
       const items = generatePackContents(trailGuidePack);
-      expect(items.some((packItem) => packItem.trailGuideId === 'tg_pair')).toBe(false);
+      expect(items.some((packItem) => packItem.trailGuideId === 'tg_high_value')).toBe(true);
+    }
+  });
+
+  test('binoculars forced guide is only one copy per pack without counterfeit_goods', () => {
+    const player = getPlayerState();
+    player.purchasedPermits.push('binoculars');
+    player.getHandStats(HandType.HIGH_VALUE).timesPlayed = 20;
+    const owned = getTrailGuideDefById('tg_high_value')!;
+    player.consumables = [createConsumableInstance(owned), createConsumableInstance(owned)];
+
+    for (let i = 0; i < 50; i++) {
+      const items = generatePackContents(trailGuidePack);
+      const highValueCount = items.filter((packItem) => packItem.trailGuideId === 'tg_high_value').length;
+      expect(highValueCount).toBe(1);
     }
   });
 

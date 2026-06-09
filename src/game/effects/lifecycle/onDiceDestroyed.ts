@@ -5,14 +5,8 @@ import { walkEquipmentLifecycle } from '../../equipmentUtils';
 import { dispatchLifecycle } from './dispatch';
 import { effectRegistry } from '../registry';
 
-effectRegistry.registerLifecycle('on-dice-destroyed', (equip, count, enhancedCount) => {
+effectRegistry.registerLifecycle('on-dice-destroyed', (equip, _count, enhancedCount) => {
   switch (equip.def.effectType) {
-    case 'DICE_DESTROYED_MILES_GAIN': {
-      const value = (equip.def.effectParams.value as number) ?? 66;
-      const destroyed = (count as number) ?? 1;
-      equip.state.miles = (equip.state.miles ?? 0) + value * destroyed;
-      break;
-    }
     case 'ENHANCED_DESTROYED_XMULT': {
       const enhanced = (enhancedCount as number) ?? 0;
       if (enhanced > 0) {

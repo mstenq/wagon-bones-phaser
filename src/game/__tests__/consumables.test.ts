@@ -929,7 +929,7 @@ describe('frontier encounter wiring and raid rules', () => {
     ];
     const hidden = [die({ value: 9 }), die({ value: 10 })];
     player.dice = [...visible, ...hidden];
-    player.equipment = [item('six_feet_under'), item('book_of_the_dead')];
+    player.equipment = [item('book_of_the_dead')];
 
     const def = getFrontierDefById('raid')!;
     const result = executeConsumableEffect(createConsumableInstance(def), {
@@ -940,7 +940,6 @@ describe('frontier encounter wiring and raid rules', () => {
     const removedVisibleCount = visible.filter((d) => !remainingIds.has(d.id)).length;
     const removedEnhancedCount = visible.filter((d) => !remainingIds.has(d.id) && d.enhancement !== null).length;
     const removedHiddenCount = hidden.filter((d) => !remainingIds.has(d.id)).length;
-    const sixFeetUnder = player.equipment.find((e) => e.def.id === 'six_feet_under');
     const bookOfTheDead = player.equipment.find((e) => e.def.id === 'book_of_the_dead');
 
     expect(result.success).toBe(true);
@@ -953,7 +952,6 @@ describe('frontier encounter wiring and raid rules', () => {
     expect(removedVisibleCount).toBe(5);
     expect(removedHiddenCount).toBe(0);
     expect(player.economy.balance).toBe(20);
-    expect(sixFeetUnder?.state.miles).toBe(330);
     expect(bookOfTheDead?.state.xMult).toBe(1 + removedEnhancedCount);
   });
 

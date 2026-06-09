@@ -249,7 +249,7 @@ describe('item auras', () => {
   test('fire aura anim plays before later-slot additive (bar order)', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(4, 2),
-      equipment: [itemWithAura('antique_revolver', 'fire'), itemWithState('old_calendar', { mult: 3, miles: 8 })],
+      equipment: [itemWithAura('antique_revolver', 'fire'), itemWithState('pocket_watch', { mult: 3, miles: 8 })],
     });
     const fireIdx = result.animEvents.findIndex(
       (e) => e.target.kind === 'equip' && e.target.equipIndex === 0 && e.popupType === 'mult' && e.value === 10,

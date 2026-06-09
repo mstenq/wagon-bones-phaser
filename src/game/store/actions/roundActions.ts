@@ -53,7 +53,7 @@ import {
   getInspectorRollSizeForDay,
 } from '../../BossEffectsSystem';
 import { generateRandomEquipment, isEquipmentCursed } from '../../ItemsSystem';
-import { getPermitAuraMultiplier } from '../../PermitsSystem';
+import { applySurveyorsScopeScoring, getPermitAuraMultiplier } from '../../PermitsSystem';
 import { acquireRewardEquipmentInstance } from '../../EquipmentModifiers';
 import { pickGameRoundBackgroundIndex } from '../../roundBackgrounds';
 import { getRunState, runActions } from '../runStore';
@@ -75,7 +75,7 @@ import {
   selectIsBossRound,
   selectTargetMiles,
 } from '../selectors/runSelectors';
-import { replaceEquipmentList, resolveEquipmentList } from '../resolve';
+import { replaceEquipmentList, resolveConsumableList, resolveEquipmentList } from '../resolve';
 import { diceActions } from './diceActions';
 import { consumableActions } from './consumableActions';
 import { progressionActions } from './progressionActions';
@@ -526,7 +526,7 @@ export const roundActions = {
       mutations: mergedMutations,
     };
 
-    const finalResult = applyEquipmentEffects(afterHeldResult, scoringEquipment, {
+    const afterEquipmentResult = applyEquipmentEffects(afterHeldResult, scoringEquipment, {
       handResult: leveledResult,
       scoringDice: selectedDice,
       heldDice,
@@ -539,6 +539,13 @@ export const roundActions = {
       handType,
       professionId: run.professionId,
     });
+
+    const finalResult = applySurveyorsScopeScoring(
+      afterEquipmentResult,
+      handType,
+      resolveConsumableList(),
+      run.purchasedPermits,
+    );
 
     applyScoringMutations(finalResult.mutations, {
       deferConsumableGrants: options?.deferConsumableGrants,

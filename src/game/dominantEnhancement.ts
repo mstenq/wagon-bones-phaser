@@ -66,7 +66,6 @@ export function getDominantEnhancementDisplayNames(dice: Die[]): string[] {
     .map((id) => getDiceEnhancementById(id)?.name ?? id)
     .sort((a, b) => a.localeCompare(b));
 }
-
 const SUPPLY_CARD_DISPLAY_NAMES: Record<string, string> = {
   buzzards: 'Buzzards',
   rabbits_foot: "Rabbit's Foot",
@@ -85,3 +84,4 @@ export function getDominantEnhancementSupplyNames(dice: Die[]): string[] {
     .filter((name): name is string => typeof name === 'string' && name.length > 0)
     .sort((a, b) => a.localeCompare(b));
 }
+

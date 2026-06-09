@@ -1691,70 +1691,70 @@ describe('New utility equipment lifecycle effects', () => {
     expectMirrorLakeDoesNotChangeScore('pawn_broker');
   });
 
-  test('old calendar gains miles from days left and mult from rerolls left at leg round end', () => {
-    const calendar = item('old_calendar');
-    const { game, player } = setupGame({ equipment: [calendar] });
+  test('pocket watch gains miles from days left and mult from rerolls left at leg round end', () => {
+    const watch = item('pocket_watch');
+    const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
     const round = getRoundState()!;
     roundActions.patch({ rerollsRemaining: 3 });
     processEndOfRound(player.equipment, { isLegRoundEnd: true });
-    const inst = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    const inst = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
     const daysLeft = round.config.maxDays - round.day + 1;
-    expect(inst.state.miles).toBe(daysLeft);
+    expect(inst.state.miles).toBe(daysLeft * 10);
     expect(inst.state.mult).toBe(3);
   });
 
-  test('old calendar does not tick on mid-round day end', () => {
-    const calendar = item('old_calendar');
-    const { game, player } = setupGame({ equipment: [calendar] });
+  test('pocket watch does not tick on mid-round day end', () => {
+    const watch = item('pocket_watch');
+    const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
     processEndOfRound(player.equipment, { isLegRoundEnd: false });
-    const inst = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    const inst = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect(inst.state.miles).toBe(0);
     expect(inst.state.mult).toBe(0);
   });
 
-  test('old calendar ticks once per leg round through endDay', () => {
-    const calendar = item('old_calendar');
-    const { game, player } = setupGame({ equipment: [calendar] });
+  test('pocket watch ticks once per leg round through endDay', () => {
+    const watch = item('pocket_watch');
+    const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
     game.config.targetMiles = D(999_999);
     const maxDays = getRoundState()!.config.maxDays;
     for (let day = 0; day < maxDays - 1; day++) {
       playScoredDayAndEnd(game, { avoidWin: true });
     }
-    const instMid = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    const instMid = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect(instMid.state.miles ?? 0).toBe(0);
     playScoredDayAndEnd(game, { avoidWin: true });
-    const instEnd = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    const instEnd = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect((instEnd.state.miles ?? 0) > 0).toBe(true);
   });
 
   test('Mirror Lake doubles leg-round-end state tick', () => {
-    const calendar = item('old_calendar');
-    const { game, player } = setupGame({ equipment: [calendar] });
+    const watch = item('pocket_watch');
+    const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
     const round = getRoundState()!;
     roundActions.patch({ rerollsRemaining: 3 });
     processEndOfRound(player.equipment, { isLegRoundEnd: true });
-    const alone = player.equipment.find((e) => e.def.id === 'old_calendar')!;
+    const alone = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
     const daysLeft = round.config.maxDays - round.day + 1;
     expect(alone.state.mult).toBe(3);
-    expect(alone.state.miles).toBe(daysLeft);
+    expect(alone.state.miles).toBe(daysLeft * 10);
 
     const { game: game2, player: player2 } = setupGame({
-      equipment: [item('mirror_lake'), item('old_calendar')],
+      equipment: [item('mirror_lake'), item('pocket_watch')],
     });
     game2.startRound();
     roundActions.patch({ rerollsRemaining: 3 });
     processEndOfRound(player2.equipment, { isLegRoundEnd: true });
-    const withMirror = player2.equipment.find((e) => e.def.id === 'old_calendar')!;
+    const withMirror = player2.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect(withMirror.state.mult).toBe(6);
-    expect(withMirror.state.miles).toBe(daysLeft * 2);
+    expect(withMirror.state.miles).toBe(daysLeft * 10 * 2);
   });
 
-  test('Mirror Lake does not change score vs old calendar alone', () => {
-    expectMirrorLakeDoesNotChangeScore('old_calendar');
+  test('Mirror Lake does not change score vs pocket watch alone', () => {
+    expectMirrorLakeDoesNotChangeScore('pocket_watch');
   });
 
   test('offering bowl destroys a consumable and stores mult on round start', () => {

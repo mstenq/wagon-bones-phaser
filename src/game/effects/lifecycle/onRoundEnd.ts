@@ -114,14 +114,17 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       }
       break;
     }
-    case 'OLD_CALENDAR': {
+    case 'POCKET_WATCH': {
       if (!ctx.isLegRoundEnd) break;
       const round = getRoundState();
       if (!round) break;
+      const params = equip.def.effectParams as Record<string, unknown>;
+      const milesPerDayLeft = (params.milesPerDayLeft as number) ?? 10;
+      const multPerRerollsLeft = (params.multPerRerollsLeft as number) ?? 1;
       const daysLeft = Math.max(0, round.config.maxDays - round.day + 1);
       const rerollsLeft = Math.max(0, round.rerollsRemaining);
-      equip.state.mult = (equip.state.mult ?? 0) + rerollsLeft;
-      equip.state.miles = (equip.state.miles ?? 0) + daysLeft;
+      equip.state.mult = (equip.state.mult ?? 0) + rerollsLeft * multPerRerollsLeft;
+      equip.state.miles = (equip.state.miles ?? 0) + daysLeft * milesPerDayLeft;
       break;
     }
     case 'SANDWICH': {

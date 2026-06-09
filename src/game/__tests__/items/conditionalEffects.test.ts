@@ -683,10 +683,10 @@ describe('MULT_PER_MONEY_CHUNK: Oil Baron', () => {
   });
 });
 
-// ─── MULT_PER_MISSING_DICE: Ghost Town ───
+// ─── MILES_PER_MISSING_DICE: Ghost Town ───
 
-describe('MULT_PER_MISSING_DICE: Ghost Town', () => {
-  test('adds +10 mult per die below starting collection size', () => {
+describe('MILES_PER_MISSING_DICE: Ghost Town', () => {
+  test('adds +30 miles per die below starting collection size', () => {
     const scoredDice = diceWithValue(5, 2);
     const { game, player } = setupGame({
       equipment: [item('ghost_town')],
@@ -699,11 +699,11 @@ describe('MULT_PER_MISSING_DICE: Ghost Town', () => {
     game.state.selectedForRoll = game.state.rolledDice;
     game.selectForScore(game.state.rolledDice.map((d) => d.id));
     const result = game.calculateScore()!;
-    // 5 missing dice → +50 mult → 51 total
-    expect(result.mult).toBeMult(51);
+    // 5 missing dice → +150 miles on top of hand base miles
+    expect(result.miles).toBeMiles(170);
   });
 
-  test('Mirror Lake doubles mult per missing die', () => {
+  test('Mirror Lake doubles miles per missing die', () => {
     const scoredDice = diceWithValue(5, 2);
     const runGhostTownMirror = () => {
       const { game, player } = setupGame({
@@ -734,6 +734,62 @@ describe('MULT_PER_MISSING_DICE: Ghost Town', () => {
     const alone = runGhostTownAlone();
     resetDieIds();
     const withMirror = runGhostTownMirror();
+    const aloneBonus = Number(alone.miles) - 20;
+    expect(Number(withMirror.miles)).toBe(20 + aloneBonus * 2);
+  });
+});
+
+// ─── MULT_PER_MISSING_DICE: Six Feet Under ───
+
+describe('MULT_PER_MISSING_DICE: Six Feet Under', () => {
+  test('adds +6 mult per die below starting collection size', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const { game, player } = setupGame({
+      equipment: [item('six_feet_under')],
+      dice: [...scoredDice, ...diceWithValue(1, 18)],
+    });
+    player.startingDiceCount = 25;
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = player.dice.slice(0, 2);
+    game.state.selectedForRoll = game.state.rolledDice;
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    const result = game.calculateScore()!;
+    // 5 missing dice → +30 mult → 31 total
+    expect(result.mult).toBeMult(31);
+  });
+
+  test('Mirror Lake doubles mult per missing die', () => {
+    const scoredDice = diceWithValue(5, 2);
+    const runSixFeetMirror = () => {
+      const { game, player } = setupGame({
+        equipment: [item('mirror_lake'), item('six_feet_under')],
+        dice: [...scoredDice, ...diceWithValue(1, 18)],
+      });
+      player.startingDiceCount = 25;
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = player.dice.slice(0, 2);
+      game.state.selectedForRoll = game.state.rolledDice;
+      game.selectForScore(game.state.rolledDice.map((d) => d.id));
+      return game.calculateScore()!;
+    };
+    const runSixFeetAlone = () => {
+      const { game, player } = setupGame({
+        equipment: [item('six_feet_under')],
+        dice: [...scoredDice, ...diceWithValue(1, 18)],
+      });
+      player.startingDiceCount = 25;
+      game.startRound();
+      game.state.phase = 'ROLL';
+      game.state.rolledDice = player.dice.slice(0, 2);
+      game.state.selectedForRoll = game.state.rolledDice;
+      game.selectForScore(game.state.rolledDice.map((d) => d.id));
+      return game.calculateScore()!;
+    };
+    const alone = runSixFeetAlone();
+    resetDieIds();
+    const withMirror = runSixFeetMirror();
     const aloneBonus = Number(alone.mult) - 1;
     expect(Number(withMirror.mult)).toBe(1 + aloneBonus * 2);
   });

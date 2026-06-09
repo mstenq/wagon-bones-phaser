@@ -11,11 +11,7 @@ import {
   pushEquipmentState,
   syncEquipmentInstances,
 } from '../testHelpers';
-import {
-  processEquipmentOnDiceDestroyed,
-  processEquipmentOnRoundStart,
-  processGoldHeldAtRoundEnd,
-} from '../../EquipmentEffects';
+import { processEquipmentOnRoundStart, processGoldHeldAtRoundEnd } from '../../EquipmentEffects';
 import { gt } from '../../scoreMath';
 import { GAMEPLAY } from '../../Constants';
 
@@ -968,31 +964,5 @@ describe('STACKED_DECK: Stacked Deck', () => {
       equipment: [item('one_eyed_jack')],
     });
     expect(result.totalValue).toBe(7);
-  });
-});
-
-// ─── DICE_DESTROYED_MILES_GAIN: Six Feet Under ───
-
-describe('DICE_DESTROYED_MILES_GAIN: Six Feet Under', () => {
-  test('gains 66 miles per destroyed die', () => {
-    const inst = item('six_feet_under');
-    setupGame({ equipment: [inst], dice: diceWithValue(5, 3) });
-    processEquipmentOnDiceDestroyed([inst], 2);
-    expect(inst.state.miles).toBe(132);
-
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
-      equipment: [inst],
-    });
-    expect(gt(result.miles, 132)).toBe(true);
-  });
-
-  test('Mirror Lake copies six feet under destroyed miles', () => {
-    const { player } = setupGame({
-      equipment: [item('mirror_lake'), item('six_feet_under')],
-      dice: diceWithValue(5, 3),
-    });
-    processEquipmentOnDiceDestroyed(player.equipment, 2);
-    expect(player.equipment[1]?.state.miles).toBe(132);
   });
 });

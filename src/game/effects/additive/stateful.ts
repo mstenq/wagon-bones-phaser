@@ -88,7 +88,7 @@ effectRegistry.registerAdditive('ENHANCED_SPENT_MILES_GAIN', (ctx, equip, index)
   }
 });
 
-effectRegistry.registerAdditive('OLD_CALENDAR', (ctx, equip, index) => {
+effectRegistry.registerAdditive('POCKET_WATCH', (ctx, equip, index) => {
   const multVal = equip.state.mult ?? 0;
   const milesVal = equip.state.miles ?? 0;
   if (multVal > 0) {

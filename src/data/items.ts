@@ -61,7 +61,7 @@ import {
   type EquipmentUnlockCondition,
 } from '../game/equipmentUnlock';
 import { enhancementMatchesTarget, hasAlchemyKit } from '../game/alchemyKit';
-import { getDominantEnhancementDisplayNames, getDominantEnhancementSupplyNames } from '../game/dominantEnhancement';
+import { getDominantEnhancementDisplayNames } from '../game/dominantEnhancement';
 import { getMostUsedSupplyNames } from '../game/handStatsHelpers';
 
 /** Card-bar alert wiggle when an effect's ready-to-use condition is met */
@@ -2882,19 +2882,20 @@ const items: ItemDef[] = [
     cardTemplate: 'white-text-black-outline',
     cost: 6,
     rarity: 'uncommon',
-    effectType: 'MULT_PER_MISSING_DICE',
-    effectParams: { value: 10 },
+    effectType: 'MILES_PER_MISSING_DICE',
+    effectParams: { value: 30 },
     display: (_round, player) => {
+      const perDie = 30;
       const missing = Math.max(0, player.startingDiceCount - player.dice.length);
       const hint =
         missing > 0
-          ? [[mult(`+${missing * 10}`), condition(`${missing} dice lost`)]]
-          : [[mult('+10'), condition('per missing die')], [inactive('Full herd')]];
+          ? [[miles(`+${missing * perDie}`), condition(`${missing} dice lost`)]]
+          : [[miles('+30'), condition('per missing die')], [inactive('Full herd')]];
       return {
         hint,
         tooltip: [
-          [mult('+10'), text(" mult for each dice below the collection's starting size")],
-          [text('Currently: '), mult(`+${missing * 10}`)],
+          [miles('+30'), text(" miles for each dice below the collection's starting size")],
+          [text('Currently: '), miles(`+${missing * perDie}`)],
         ],
       };
     },
@@ -2939,17 +2940,20 @@ const items: ItemDef[] = [
     cost: 5,
     rarity: 'common',
     modifierImmunity: ['perishable'],
-    effectType: 'DICE_DESTROYED_MILES_GAIN',
-    effectParams: { value: 66 },
-    initialState: { miles: 0 },
+    effectType: 'MULT_PER_MISSING_DICE',
+    effectParams: { value: 6 },
     display: (_round, player) => {
-      const equip = player.equipment.find((e) => e.def.id === 'six_feet_under');
-      const m = equip?.state.miles ?? 0;
+      const perDie = 6;
+      const missing = Math.max(0, player.startingDiceCount - player.dice.length);
+      const hint =
+        missing > 0
+          ? [[mult(`+${missing * perDie}`), condition(`${missing} dice lost`)]]
+          : [[mult('+6'), condition('per missing die')], [inactive('Full herd')]];
       return {
-        hint: [[miles(`+${m}`)]],
+        hint,
         tooltip: [
-          [text('Item gains '), miles('+66'), text(' miles for every dice that is destroyed')],
-          [text('Currently: '), miles(`+${m}`)],
+          [mult('+6'), text(" mult for each dice below the collection's starting size")],
+          [text('Currently: '), mult(`+${missing * perDie}`)],
         ],
       };
     },
@@ -3104,23 +3108,29 @@ const items: ItemDef[] = [
     }),
   },
   {
-    id: 'old_calendar',
-    name: 'Old Calendar',
+    id: 'pocket_watch',
+    name: 'Pocket Watch',
     cardTemplate: 'white-text-black-outline',
     cost: 4,
     rarity: 'common',
-    effectType: 'OLD_CALENDAR',
-    effectParams: {},
+    effectType: 'POCKET_WATCH',
+    effectParams: { milesPerDayLeft: 10, multPerRerollsLeft: 1 },
     initialState: { mult: 0, miles: 0 },
     modifierImmunity: ['perishable'],
     display: (_round, player) => {
-      const equip = findOwnedEquip(player, 'old_calendar');
+      const equip = findOwnedEquip(player, 'pocket_watch');
       const milesVal = equip?.state.miles ?? 0;
       const multVal = equip?.state.mult ?? 0;
       return {
         hint: [[miles(`+${milesVal}`)], [mult(`+${multVal}`)]],
         tooltip: [
-          [text('Gains miles equal to travel days left and mult equal to rerolls left after each round')],
+          [
+            text('Gains '),
+            miles('+10'),
+            text(' miles per travel day left and '),
+            mult('+1'),
+            text(' mult per reroll left after each round'),
+          ],
           [text('Currently: '), miles(`+${milesVal}`), text(', '), mult(`+${multVal}`)],
         ],
       };
@@ -3457,9 +3467,7 @@ const items: ItemDef[] = [
     effectParams: { count: 3, weightSupplyByDominantEnhancement: 2 },
     display: (_round, player) => {
       const enhancementNames = getDominantEnhancementDisplayNames(player.dice);
-      const supplyNames = getDominantEnhancementSupplyNames(player.dice);
       const enhancementLabel = enhancementNames.length > 0 ? enhancementNames.join(' / ') : 'your top enhancement';
-      const supplyLabel = supplyNames.length > 0 ? supplyNames.join(' / ') : 'matching supply cards';
       let hint: HintSegment[][];
       if (enhancementNames.length === 0) {
         hint = [[inactive('No enhanced dice', 'sm')], [condition('day start', 'xs')]];

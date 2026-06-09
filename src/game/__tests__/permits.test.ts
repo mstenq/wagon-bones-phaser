@@ -18,9 +18,63 @@ import {
   hasPermitDiceInShop,
   getPermitBossRerollLimit,
 } from '../PermitsSystem';
+import { createTrailGuideConsumableDef, type ConsumableDef } from '../ConsumablesSystem';
+import { getItemAuraById } from '../ItemsSystem';
+import trailGuidesData from '../../data/trail_guides';
+import { HandType, type ScoreResult } from '../types';
+import { roundActions } from '../store';
 import { GAMEPLAY } from '../Constants';
-import { lt } from '../scoreMath';
+import { lt, multiplyScore, ONE } from '../scoreMath';
+
+function stackScopeMult(count: number) {
+  let mult = ONE;
+  for (let i = 0; i < count; i++) {
+    mult = multiplyScore(mult, 1.5);
+  }
+  return mult;
+}
 import { devGrantPermit } from '../DevMode';
+
+function pairTrailGuideDef(): ConsumableDef {
+  const tg = trailGuidesData.find((t) => t.handType === HandType.PAIR)!;
+  return createTrailGuideConsumableDef(tg);
+}
+
+function fullHouseTrailGuideDef(): ConsumableDef {
+  const tg = trailGuidesData.find((t) => t.handType === HandType.FULL_HOUSE)!;
+  return createTrailGuideConsumableDef(tg);
+}
+
+function scopeAnimEvents(result: ScoreResult) {
+  return result.animEvents.filter((e) => e.popupType === 'xmult' && e.target.kind === 'consumable');
+}
+
+function scorePairWithConsumables(opts: { purchasedPermits?: string[]; consumableDefs: ConsumableDef[] }) {
+  const scoredDice = diceWithValue(5, 2);
+  const { game, player } = setupGame({
+    dice: [...scoredDice, ...diceWithValue(1, 50)],
+    equipment: [],
+  });
+  if (opts.purchasedPermits) {
+    player.purchasedPermits = opts.purchasedPermits;
+  }
+  for (const def of opts.consumableDefs) {
+    const added = player.addConsumable(def);
+    if (!added) throw new Error(`Failed to add consumable: ${def.id}`);
+  }
+  game.startRound();
+  roundActions.patch({
+    phase: 'ROLL',
+    rolledDice: scoredDice.map((d) => ({ id: d.id, value: d.value })),
+    selectedForRollIds: scoredDice.map((d) => d.id),
+    dieValuesByDieId: Object.fromEntries(scoredDice.map((d) => [d.id, d.value])),
+    rerollsRemaining: 6,
+  });
+  game.selectForScore(scoredDice.map((d) => d.id));
+  const result = game.calculateScore();
+  if (!result) throw new Error('calculateScore returned null');
+  return { result, player };
+}
 
 beforeEach(() => {
   resetDieIds();
@@ -511,6 +565,92 @@ describe('Permit queries: TRAIL_GUIDE_MULT', () => {
 
   test("Surveyor's Scope gives x1.5", () => {
     expect(getPermitTrailGuideMult(['surveyors_scope'])).toBe(1.5);
+  });
+});
+
+describe("Surveyor's Scope scoring", () => {
+  test('matching trail guide in bar gives x1.5 mult and consumable anim event', () => {
+    const { result } = scorePairWithConsumables({
+      purchasedPermits: ['surveyors_scope'],
+      consumableDefs: [pairTrailGuideDef()],
+    });
+    expect(result.mult).toBeMultCloseTo(1.5, 5);
+    const events = scopeAnimEvents(result);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual(
+      expect.objectContaining({
+        popupType: 'xmult',
+        value: 1.5,
+        target: { kind: 'consumable', consumableIndex: 0 },
+      }),
+    );
+  });
+
+  test('without permit, matching trail guide does not change mult', () => {
+    const { result } = scorePairWithConsumables({
+      consumableDefs: [pairTrailGuideDef()],
+    });
+    expect(result.mult).toBeMult(1);
+    expect(scopeAnimEvents(result)).toHaveLength(0);
+  });
+
+  test('non-matching trail guide in bar does not apply', () => {
+    const { result } = scorePairWithConsumables({
+      purchasedPermits: ['surveyors_scope'],
+      consumableDefs: [fullHouseTrailGuideDef()],
+    });
+    expect(result.mult).toBeMult(1);
+    expect(scopeAnimEvents(result)).toHaveLength(0);
+  });
+
+  test('two matching trail guides stack to x2.25', () => {
+    const pairDef = pairTrailGuideDef();
+    const ghostAura = getItemAuraById('ghost')!;
+    const { result } = scorePairWithConsumables({
+      purchasedPermits: ['surveyors_scope'],
+      consumableDefs: [
+        { ...pairDef, aura: ghostAura },
+        { ...pairDef, aura: ghostAura },
+      ],
+    });
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
+    expect(scopeAnimEvents(result)).toHaveLength(2);
+  });
+
+  test('ghost copy stacks with original matching guide', () => {
+    const pairDef = pairTrailGuideDef();
+    const ghostAura = getItemAuraById('ghost')!;
+    const { result } = scorePairWithConsumables({
+      purchasedPermits: ['surveyors_scope'],
+      consumableDefs: [pairDef, { ...pairDef, aura: ghostAura }],
+    });
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
+    const events = scopeAnimEvents(result);
+    expect(events).toHaveLength(2);
+    expect(events.map((e) => (e.target.kind === 'consumable' ? e.target.consumableIndex : -1))).toEqual([0, 1]);
+  });
+
+  test('single ghost-aura matching guide still applies x1.5', () => {
+    const pairDef = pairTrailGuideDef();
+    const ghostAura = getItemAuraById('ghost')!;
+    const { result } = scorePairWithConsumables({
+      purchasedPermits: ['surveyors_scope'],
+      consumableDefs: [{ ...pairDef, aura: ghostAura }],
+    });
+    expect(result.mult).toBeMultCloseTo(1.5, 5);
+    expect(scopeAnimEvents(result)).toHaveLength(1);
+  });
+
+  test('many matching trail guides stack per card (N=12)', () => {
+    const pairDef = pairTrailGuideDef();
+    const ghostAura = getItemAuraById('ghost')!;
+    const count = 12;
+    const { result } = scorePairWithConsumables({
+      purchasedPermits: ['surveyors_scope'],
+      consumableDefs: Array.from({ length: count }, () => ({ ...pairDef, aura: ghostAura })),
+    });
+    expect(result.mult).toBeMult(stackScopeMult(count));
+    expect(scopeAnimEvents(result)).toHaveLength(count);
   });
 });
 

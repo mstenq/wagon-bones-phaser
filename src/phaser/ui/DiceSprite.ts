@@ -55,8 +55,7 @@ function createBonusMilesBadge(scene: Scene, amount: number): GameObjects.Contai
   circle.strokeCircle(0, 0, radius);
 
   const digits = `${amount}`;
-  const fontSize =
-    digits.length >= 3 ? DICE.BONUS_MILES_BADGE_FONT_SIZE - 3 : DICE.BONUS_MILES_BADGE_FONT_SIZE;
+  const fontSize = digits.length >= 3 ? DICE.BONUS_MILES_BADGE_FONT_SIZE - 3 : DICE.BONUS_MILES_BADGE_FONT_SIZE;
   const label = scene.add
     .text(0, 0, digits, {
       fontFamily: 'Arial',

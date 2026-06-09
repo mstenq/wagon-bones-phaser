@@ -398,7 +398,8 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
   const run = getRunState();
   const excludeIds = getConsumablePackExcludeIds(run);
   const pickedTarget = hasPermitTrailGuideTargeting(run.purchasedPermits) ? pickTargetTrailGuideForRun(run) : null;
-  const targetGuide = pickedTarget && !isExcludedId(pickedTarget.id, excludeIds) ? pickedTarget : null;
+  // Binoculars always injects the most-played guide, even when copies are already in the consumable bar.
+  const targetGuide = pickedTarget;
   const packExcludeIds =
     targetGuide && !playerAllowsDuplicateItems(run) ? [...(excludeIds ?? []), targetGuide.id] : excludeIds;
 

@@ -163,9 +163,10 @@ Golden Spike - $7 - uncommon - all scored dice have a 1 in 4 chance to turn into
 Sheriff’s Badge - $5 - uncommon - sell this item to disable the current boss effect
 Double Barrel - $5 - common - first played 2 pip dice gives x2 mult when scored
 Raffle Ticket - $6 - uncommon - at the end of each round add $1 of sell value to each piece of equipment
-Ghost Town - $6 - uncommon - +10 mult for each dice below the collections starting size
+Ghost Town - $6 - uncommon - +30 miles for each dice below the collection's starting size
 Savings Account - $5 - uncommon - earn an extra $1 of interest for every $5 you have at end of round. Henry Pritchard (Accountant) earns an additional $1 for every $5.
-Six Feet Under - $5 - common - item gains 66 miles for every dice that is destroyed
+Six Feet Under - $5 - common - +6 mult for each dice below the collection's starting size
+Pocket Watch - $4 - common - gains +10 miles per travel day left and +1 mult per reroll left after each round
 Eight Second Ride - $8 - rare - Each consecutive scored 8 gains +0.5 xMult over the previous (x1,x1.5,x2,x2.5, x3...)
 Stacked Deck - $10 - rare - Loaded dice are considered all pip values for equipment effects
 

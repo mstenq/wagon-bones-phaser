@@ -148,11 +148,11 @@ sheriffs_badge,Sheriff's Badge,5,uncommon,Sell this item to disable the current 
 bounty_contract,Bounty Contract,6,uncommon,Sell this item to gain a free Twin Wagon tag
 double_barrel,Double Barrel,5,common,First played  2  pip die gives  x2  mult when scored
 raffle_ticket,Raffle Ticket,6,uncommon,At the end of each round add  $1  of sell value to each piece of equipment/consumable
-ghost_town,Ghost Town,6,uncommon,"+10  mult for each dice below the collection's starting size
+ghost_town,Ghost Town,6,uncommon,"+30  miles for each dice below the collection's starting size
 Currently:  +80"
 savings_account,Savings Account,5,uncommon,"Earn an extra  $1  of interest for every  $5  you have at end of round.
 Henry Pritchard (Accountant): this bonus ignores the interest cap (base interest is still capped)."
-six_feet_under,Six Feet Under,5,common,Item gains  +66  miles for every dice that is destroyed
+six_feet_under,Six Feet Under,5,common,"+6  mult for each dice below the collection's starting size"
 eight_second_ride,Eight Second Ride,8,rare,"Each consecutive scored  8  gains  +0.5  xMult over the previous
 ( x1 ,  x1.5 ,  x2 ,  x2.5 ,  x3 ...)"
 stacked_deck,Stacked Deck,10,rare,"Loaded dice are considered all pip values for equipment effects
@@ -166,7 +166,7 @@ pioneer_spirit,Pioneer Spirit,8,rare,"+12  miles for each trail guide level abov
 Currently:  +0  miles"
 cursed_dice,Cursed Dice,7,uncommon,"Scored loaded dice have  1 in 7  to be destroyed and grant a frontier card
 Also makes Loaded supply cards 2 times more likely"
-old_calendar,Old Calendar,4,common,Gains miles equal to travel days left and mult equal to rerolls left after each round
+pocket_watch,Pocket Watch,4,common,Gains +10 miles per travel day left and +1 mult per reroll left after each round
 sandwich,Sandwich,8,uncommon,"At end of round, gain a random mega pack/grab-bag tag (lasts 5 rounds)"
 penny_pincher,Penny Pincher,6,common,Gain  $5  whenever a pack is skipped
 campfire_embers,Campfire Embers,6,uncommon,Gains  x0.2  at end of each non-boss round

@@ -58,6 +58,7 @@ export type ScoreAnimTarget =
   | { kind: 'die'; dieId: string }
   | { kind: 'equip'; equipIndex: number }
   | { kind: 'both'; dieId: string; equipIndex: number }
+  | { kind: 'consumable'; consumableIndex: number }
   | { kind: 'balance' };
 
 export type ScoreAnimPopupType =

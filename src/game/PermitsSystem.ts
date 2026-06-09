@@ -4,6 +4,9 @@
 // Each permit has 2 stages; stage 2 requires stage 1 to be purchased first.
 
 import permitsData, { getPermitById as findPermitById, type PermitDef, type PermitEffect } from '../data/permits';
+import type { ConsumableInstance } from './ConsumablesSystem';
+import { divideScore, multiplyScore } from './scoreMath';
+import type { HandType, ScoreResult } from './types';
 import { getRunState, runActions } from './store/runStore';
 import { rngPick } from './RunRng';
 
@@ -161,6 +164,37 @@ export function hasPermitTrailGuideTargeting(purchasedIds: string[]): boolean {
 export function getPermitTrailGuideMult(purchasedIds: string[]): number {
   if (purchasedIds.includes('surveyors_scope')) return 1.5;
   return 0;
+}
+
+/** Surveyor's Scope: x1.5 mult per matching trail guide in the consumable bar when that hand is scored. */
+export function applySurveyorsScopeScoring(
+  result: ScoreResult,
+  handType: HandType,
+  consumables: ConsumableInstance[],
+  purchasedPermits: string[],
+): ScoreResult {
+  const xMult = getPermitTrailGuideMult(purchasedPermits);
+  if (xMult <= 0) return result;
+
+  const animEvents = [...result.animEvents];
+  let mult = result.mult;
+  const oldMult = mult;
+
+  for (let i = 0; i < consumables.length; i++) {
+    const c = consumables[i]!;
+    if (c.def.category !== 'trail_guide' || c.def.handType !== handType) continue;
+    mult = multiplyScore(mult, xMult);
+    animEvents.push({
+      target: { kind: 'consumable', consumableIndex: i },
+      popupType: 'xmult',
+      value: xMult,
+    });
+  }
+
+  if (animEvents.length === result.animEvents.length) return result;
+
+  const miles = multiplyScore(result.miles, divideScore(mult, oldMult));
+  return { ...result, mult, miles, animEvents };
 }
 
 /** Whether enhanced dice can appear in shop */

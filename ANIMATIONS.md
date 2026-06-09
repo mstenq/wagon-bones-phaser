@@ -87,7 +87,7 @@ Defined in `src/game/playback/types.ts`. Enqueued from `roundActions`, `playback
 | `balance` | Accountant profession | `Balance!` between sidebar pills; miles & mult set to averaged value; both pills shake |
 | `again` | Retriggers (Silver Bullets, Seventh Trumpet, …) | Equip card **aggressive shake** + `Again!` (trimmed to wiggle when score is accelerated) |
 
-**Targets:** `die`, `equip`, `both`, or `balance` (sidebar center).
+**Targets:** `die`, `equip`, `both`, `consumable` (Surveyor's Scope xMult on consumable bar card), or `balance` (sidebar center).
 
 **Pacing:** `scoreAnimPacing.ts` compresses gaps when `animEvents.length` is large (`ANIM.SCORE_ACCEL_*`). Same session scale carries into `round-end-held` playback.
 

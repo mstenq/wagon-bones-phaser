@@ -205,6 +205,22 @@ function popupForEquip(
   }
 }
 
+function popupForConsumable(
+  scene: Scene,
+  consumableBar: ConsumableBar,
+  consumableIndex: number,
+  type: ScoreAnimPopupType,
+  value: number,
+): void {
+  const card = consumableBar.getCardAt(consumableIndex);
+  if (!card) return;
+  const wx = consumableBar.x + card.x;
+  const wy = consumableBar.y + card.y;
+  if (type === 'xmult') {
+    floatingText(scene, wx, wy, `x${value} mult`, POPUP_XMULT_COLOR, 'down');
+  }
+}
+
 export interface ScoreAnimationConfig {
   scene: Scene;
   diceSprites: DiceSprite[];
@@ -218,6 +234,24 @@ export interface ScoreAnimationConfig {
 /** Wiggle an equipment card */
 function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, equipIndex: number): void {
   const card = equipBar.getCardByEquipIndex(equipIndex);
+  if (!card) return;
+  const origX = card.x;
+  scene.tweens.add({
+    targets: card,
+    x: origX - 3,
+    duration: 40,
+    yoyo: true,
+    repeat: 2,
+    ease: 'Sine.easeInOut',
+    onComplete: () => {
+      card.x = origX;
+    },
+  });
+}
+
+/** Wiggle a consumable bar card */
+function wiggleConsumableCard(scene: Scene, consumableBar: ConsumableBar, consumableIndex: number): void {
+  const card = consumableBar.getCardAt(consumableIndex);
   if (!card) return;
   const origX = card.x;
   scene.tweens.add({
@@ -665,6 +699,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       if (target.kind === 'equip' || target.kind === 'both') {
         wiggleEquipCard(scene, equipBar, target.equipIndex);
         popupForEquip(scene, equipBar, target.equipIndex, popupType, value);
+      }
+
+      // Wiggle and popup on consumable bar card (Surveyor's Scope)
+      if (target.kind === 'consumable') {
+        wiggleConsumableCard(scene, consumableBar, target.consumableIndex);
+        popupForConsumable(scene, consumableBar, target.consumableIndex, popupType, value);
       }
 
       // Update sidebar running totals with shake feedback

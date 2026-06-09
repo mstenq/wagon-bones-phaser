@@ -93,12 +93,18 @@ effectRegistry.registerAdditive('MULT_PER_MISSING_DICE', (ctx, equip, index) => 
   }
 });
 
-effectRegistry.registerAdditive('DICE_DESTROYED_MILES_GAIN', (ctx, equip, index) => {
-  const val = equip.state.miles ?? 0;
-  if (val > 0) {
-    ctx.bonusMiles = addScore(ctx.bonusMiles, val);
-    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: val });
-    console.log(`  [equip] ${equip.def.name}: +${val} miles (destroyed dice) (bonusMiles: ${ctx.bonusMiles})`);
+effectRegistry.registerAdditive('MILES_PER_MISSING_DICE', (ctx, equip, index) => {
+  const run = getRunState();
+  const p = equip.def.effectParams as Record<string, unknown>;
+  const perDie = (p.value as number) ?? 30;
+  const missing = Math.max(0, run.startingDiceCount - ctx.allDice.length);
+  if (missing > 0) {
+    const total = missing * perDie;
+    ctx.bonusMiles = addScore(ctx.bonusMiles, total);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: total });
+    console.log(
+      `  [equip] ${equip.def.name}: +${total} miles (${missing} dice below start) (bonusMiles: ${ctx.bonusMiles})`,
+    );
   }
 });
 
