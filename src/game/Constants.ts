@@ -312,6 +312,8 @@ export const UI = {
   EQUIP_BAR_DEPTH: 220,
   /** Raised while a card is dragged or action tabs are open. */
   CARD_BAR_INTERACTION_DEPTH: 235,
+  /** Score flyouts and grant ghosts — above card bars during drag/tabs. */
+  SCORE_POPUP_DEPTH: 300,
   /** Top inset for cards inside the bar background */
   CARD_BAR_TOP_INSET: 8,
   /** Base card scale for both equipment and consumable bars at full content width */

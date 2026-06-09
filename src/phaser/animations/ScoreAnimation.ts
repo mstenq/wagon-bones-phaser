@@ -12,7 +12,7 @@ import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { ensureAuraTextures } from '../ui/AuraFX';
-import { ANIM } from '../../game/Constants';
+import { ANIM, UI } from '../../game/Constants';
 import { getRoundState } from '../../game/store/roundStore';
 import { resolveDieById } from '../../game/store/roundResolve';
 import { formatScore } from '../../game/formatScore';
@@ -61,7 +61,7 @@ function floatingText(
       align: 'center',
     })
     .setOrigin(0.5)
-    .setDepth(200)
+    .setDepth(UI.SCORE_POPUP_DEPTH)
     .setScale(0.3)
     .setAlpha(1);
 
@@ -144,7 +144,10 @@ function animateGrantToConsumableBar(
 
   const targetX = consumableBar.x + consumableBar.width / 2;
   const targetY = consumableBar.y + consumableBar.height / 2;
-  const ghost = scene.add.image(fromX, fromY, textureSource.key, textureSource.frame).setDepth(180).setScale(0.35);
+  const ghost = scene.add
+    .image(fromX, fromY, textureSource.key, textureSource.frame)
+    .setDepth(UI.SCORE_POPUP_DEPTH)
+    .setScale(0.35);
 
   scene.tweens.add({
     targets: ghost,
