@@ -434,6 +434,12 @@ function syncDieSpriteFromScore(sprite: DiceSprite, dieId: string, scoringDieByI
   if (die) sprite.setDieData(die);
 }
 
+function syncAllDieSpritesFromScore(diceSprites: DiceSprite[], scoringDieById: Map<string, Die>): void {
+  for (const sprite of diceSprites) {
+    syncDieSpriteFromScore(sprite, sprite.dieData.id, scoringDieById);
+  }
+}
+
 export function playScoreAnimation(config: ScoreAnimationConfig): void {
   const { scene, diceSprites, result, sidebar, equipBar, consumableBar, onComplete } = config;
 
@@ -686,6 +692,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     // ─── Finish ───
 
     function finishScoring() {
+      syncAllDieSpritesFromScore(diceSprites, scoringDieById);
       pacing.wait(scene, ANIM.SCORE_FINAL_FLASH_DELAY, () => {
         roundActions.setSidebarOverlay({ milesBaseSave: milesToSave(0), multSave: milesToSave(0) });
         sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));

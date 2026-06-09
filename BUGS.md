@@ -62,7 +62,7 @@ Card Synergy: funeral_pyre - Gains 4x the the sell value as mult of the destroye
 # Familiar Cards
 Ashfang - uncommon - $7 - Hellhound familiar destroys all trail guides in your consumable area at start of each round. For each one destroyed earn x0.25 mult.
 Moonquil - uncommon - $7 - Owl familiar gains +2 mult for every unique equipment item obtained this run
-Nightshard - uncommon - $7 - Raven familiar finds up to 3 diamond dice from your pouch at start of each day (Must not be spent). Also makes Pick Axe supply cards 2 times more likely
+Nightshard - uncommon - $7 - Raven familiar finds up to 3 dice of your most common enhancement from your pouch at start of each day (must not be spent). Also makes the matching enhancement supply card(s) 2 times more likely (ties weight all tied types)
 Shadowpaw - uncommon - $7 - Cat familiar ensures supply packs always contain your most used supply card.
 Skullwing - uncommon - $7 - Vulture familiar destroys all dice that are played on the first day that do not score and gains a $1 for each destroyed dice. [dev only note: this has anti synergy with open_palm since all dice count as scored]
 Dustshell - uncommon - $7 - Turtle familiar gains +10 miles at the end of each day played.

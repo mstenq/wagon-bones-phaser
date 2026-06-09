@@ -16,8 +16,8 @@ import {
   createConsumableInstance,
 } from '../ConsumablesSystem';
 import { initRunRng } from '../RunRng';
-import { setupGame, item, resetDieIds } from './testHelpers';
-import { equipmentActions } from '../store';
+import { setupGame, item, resetDieIds, die } from './testHelpers';
+import { equipmentActions, runActions } from '../store';
 
 const SUPPLY_POOL_SIZE = supplyCardsData.length;
 
@@ -153,6 +153,72 @@ describe('getSupplyCardWeightMultiplier', () => {
     equipmentActions.setEquipment([item('iron_furnace'), item('iron_spurs'), item('alchemy_kit')]);
     expect(getSupplyCardWeightMultiplier('coffee_tin')).toBe(8);
     expect(getSupplyCardWeightMultiplier('pan_for_gold')).toBe(2);
+  });
+
+  describe('nightshard weightSupplyByDominantEnhancement', () => {
+    test('bone-dominant collection weights buzzards', () => {
+      setupGame({
+        equipment: [item('nightshard')],
+        dice: [
+          die({ enhancement: 'bone', value: 1 }),
+          die({ enhancement: 'bone', value: 2 }),
+          die({ enhancement: 'diamond', value: 3 }),
+        ],
+      });
+      expect(getSupplyCardWeightMultiplier('buzzards')).toBe(2);
+      expect(getSupplyCardWeightMultiplier('pick_axe')).toBe(1);
+    });
+
+    test('diamond-dominant collection weights pick_axe', () => {
+      setupGame({
+        equipment: [item('nightshard')],
+        dice: [
+          die({ enhancement: 'diamond', value: 1 }),
+          die({ enhancement: 'diamond', value: 2 }),
+          die({ enhancement: 'bone', value: 3 }),
+        ],
+      });
+      expect(getSupplyCardWeightMultiplier('pick_axe')).toBe(2);
+      expect(getSupplyCardWeightMultiplier('buzzards')).toBe(1);
+    });
+
+    test('tie weights all matching supply cards', () => {
+      setupGame({
+        equipment: [item('nightshard')],
+        dice: [
+          die({ enhancement: 'bone', value: 1 }),
+          die({ enhancement: 'bone', value: 2 }),
+          die({ enhancement: 'diamond', value: 3 }),
+          die({ enhancement: 'diamond', value: 4 }),
+        ],
+      });
+      expect(getSupplyCardWeightMultiplier('buzzards')).toBe(2);
+      expect(getSupplyCardWeightMultiplier('pick_axe')).toBe(2);
+      expect(getSupplyCardWeightMultiplier('firewood')).toBe(1);
+    });
+
+    test('no enhanced dice applies no nightshard weight boost', () => {
+      setupGame({
+        equipment: [item('nightshard')],
+        dice: [die({ value: 1 }), die({ value: 2 })],
+      });
+      expect(getSupplyCardWeightMultiplier('buzzards')).toBe(1);
+      expect(getSupplyCardWeightMultiplier('pick_axe')).toBe(1);
+    });
+
+    test('spent dice still count toward dominance for weighting', () => {
+      const bones = [
+        die({ enhancement: 'bone', value: 1 }),
+        die({ enhancement: 'bone', value: 2 }),
+        die({ enhancement: 'bone', value: 3 }),
+      ];
+      setupGame({
+        equipment: [item('nightshard')],
+        dice: [...bones, die({ value: 4 })],
+      });
+      runActions.patch({ spentDiceIds: bones.map((d) => d.id) });
+      expect(getSupplyCardWeightMultiplier('buzzards')).toBe(2);
+    });
   });
 });
 

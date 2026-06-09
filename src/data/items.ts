@@ -61,6 +61,7 @@ import {
   type EquipmentUnlockCondition,
 } from '../game/equipmentUnlock';
 import { enhancementMatchesTarget, hasAlchemyKit } from '../game/alchemyKit';
+import { getDominantEnhancementDisplayNames, getDominantEnhancementSupplyNames } from '../game/dominantEnhancement';
 import { getMostUsedSupplyNames } from '../game/handStatsHelpers';
 
 /** Card-bar alert wiggle when an effect's ready-to-use condition is met */
@@ -1593,7 +1594,7 @@ const items: ItemDef[] = [
     effectType: 'PERMANENT_DIE_MILES_GAIN',
     effectParams: { value: 5 },
     display: (_round, _player) => ({
-      hint: [[miles('+5'), condition('per die (permanent)')]],
+      hint: [[miles('+5')], [condition('per die (permanent)', 'xs')]],
       tooltip: [[text('Every played die permanently gains '), miles('+5'), text(' miles when scored')]],
     }),
   },
@@ -3452,15 +3453,36 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     modifierImmunity: ['perishable'],
-    effectType: 'DAY_START_DIAMOND_HAND',
-    effectParams: { count: 3, weightSupply: [{ supplyId: 'pick_axe', multiplier: 2 }] },
-    display: (_round, _player) => ({
-      hint: [[active('3 diamonds', 'sm')], [condition('day start', 'xs')]],
-      tooltip: [
-        [text('At start of each day, find up to 3 diamond dice from your pouch (must not be spent)')],
-        [text('Also makes Pick Axe supply cards 2 times more likely')],
-      ],
-    }),
+    effectType: 'DAY_START_DOMINANT_ENHANCEMENT_HAND',
+    effectParams: { count: 3, weightSupplyByDominantEnhancement: 2 },
+    display: (_round, player) => {
+      const enhancementNames = getDominantEnhancementDisplayNames(player.dice);
+      const supplyNames = getDominantEnhancementSupplyNames(player.dice);
+      const enhancementLabel = enhancementNames.length > 0 ? enhancementNames.join(' / ') : 'your top enhancement';
+      const supplyLabel = supplyNames.length > 0 ? supplyNames.join(' / ') : 'matching supply cards';
+      let hint: HintSegment[][];
+      if (enhancementNames.length === 0) {
+        hint = [[inactive('No enhanced dice', 'sm')], [condition('day start', 'xs')]];
+      } else if (enhancementNames.length === 1) {
+        hint = [[active(`3 ${enhancementNames[0]!.toLowerCase()} die`, 'sm')], [condition('day start', 'xs')]];
+      } else {
+        hint = [[active(`3 enhanced die`, 'sm')], [condition('day start', 'xs')]];
+      }
+      const tooltip: HintSegment[][] = [
+        [
+          text(
+            'At the start of each day, finds up to 3 unspent dice of whichever enhancement type you have the most of in your pouch',
+          ),
+        ],
+        [text('Also makes supply cards 2 times more likely to appear that grant your most used enhancement')],
+      ];
+      if (enhancementNames.length > 0) {
+        tooltip.push([text('Currently targeting: '), active(enhancementLabel)]);
+      } else {
+        tooltip.push([text('Currently: '), inactive('no enhanced dice in pouch')]);
+      }
+      return { hint, tooltip };
+    },
   },
   {
     id: 'shadowpaw',

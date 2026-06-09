@@ -1,8 +1,10 @@
 // ─── Supply card weighting from equipment effectParams.weightSupply ───
 
 import type { EquipmentInstance } from './ItemsSystem';
+import { getDominantEnhancementSupplyIds } from './dominantEnhancement';
 import { parseWeightSupplyFromParams } from './effectParams';
 import { rngFloat, type RngStream } from './RunRng';
+import { getRunState } from './store/runStore';
 import { resolveEquipmentList } from './store/resolve';
 
 /**
@@ -33,10 +35,20 @@ export function getSupplyCardWeightMultiplier(
   equipment: EquipmentInstance[] = resolveEquipmentList(),
 ): number {
   let multiplier = 1;
+  let dominantSupplyIds: string[] | undefined;
   for (const equip of equipment) {
     for (const entry of parseWeightSupplyFromParams(equip.def.effectParams)) {
       if (entry.supplyId === supplyId) {
         multiplier *= entry.multiplier;
+      }
+    }
+    const dominantMult = equip.def.effectParams.weightSupplyByDominantEnhancement;
+    if (typeof dominantMult === 'number' && dominantMult > 0) {
+      if (!dominantSupplyIds) {
+        dominantSupplyIds = getDominantEnhancementSupplyIds(getRunState().dice);
+      }
+      if (dominantSupplyIds.includes(supplyId)) {
+        multiplier *= dominantMult;
       }
     }
   }

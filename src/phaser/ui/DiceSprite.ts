@@ -12,6 +12,7 @@ import { effectPhaseFromSeed } from '../effects/context';
 import { isRegistryAura } from '../effects/registry';
 import { getAuraPrimary } from './AuraFX';
 import { DICE_ATLAS_KEY, resolveDiceAtlasFrame } from './diceAssets';
+import { HINT_COLORS } from './itemCard/itemCardHintStyles';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
 import pipEnhancements from '../../data/pip_enhancements';
@@ -374,21 +375,39 @@ export class DiceSprite extends GameObjects.Container {
       })
       .setOrigin(0, 0);
 
-    const tooltipWidth = infoText.width + TOOLTIP_PAD * 2;
-    const tooltipHeight = infoText.height + TOOLTIP_PAD * 2;
+    const bonusMiles = this._dieData.bonusMiles ?? 0;
+    let bonusText: GameObjects.Text | null = null;
+    if (bonusMiles > 0) {
+      bonusText = this.scene.add
+        .text(0, 0, `+${bonusMiles} bonus miles`, {
+          fontFamily: 'Arial',
+          fontSize: '13px',
+          color: HINT_COLORS.miles.text,
+          lineSpacing: 4,
+        })
+        .setOrigin(0, 0);
+    }
+
+    const contentWidth = Math.max(infoText.width, bonusText?.width ?? 0);
+    infoText.setPosition(TOOLTIP_PAD, TOOLTIP_PAD);
+    let contentBottom = TOOLTIP_PAD + infoText.height;
+    if (bonusText) {
+      bonusText.setPosition(TOOLTIP_PAD, contentBottom + 4);
+      contentBottom = bonusText.y + bonusText.height;
+    }
+
+    const tooltipWidth = contentWidth + TOOLTIP_PAD * 2;
+    const tooltipHeight = contentBottom + TOOLTIP_PAD;
     this.tooltipLayout = { width: tooltipWidth, height: tooltipHeight };
 
-    // Background
     const bg = this.scene.add.graphics();
     bg.fillStyle(TOOLTIP_BG_COLOR, 0.95);
     bg.fillRoundedRect(0, 0, tooltipWidth, tooltipHeight, 8);
     bg.lineStyle(1, TOOLTIP_BORDER_COLOR, 0.8);
     bg.strokeRoundedRect(0, 0, tooltipWidth, tooltipHeight, 8);
     this.tooltip.add(bg);
-
-    // Position text
-    infoText.setPosition(TOOLTIP_PAD, TOOLTIP_PAD);
     this.tooltip.add(infoText);
+    if (bonusText) this.tooltip.add(bonusText);
 
     this.positionTooltipAtWorld(matrix.tx, matrix.ty);
   }

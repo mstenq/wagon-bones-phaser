@@ -516,10 +516,27 @@ describe('ROUND_START_DESTROY_RIGHT: Funeral Pyre (Witch)', () => {
   });
 });
 
-// ─── DAY_START_DIAMOND_HAND: Nightshard ───
+// ─── DAY_START_DOMINANT_ENHANCEMENT_HAND: Nightshard ───
 
-describe('DAY_START_DIAMOND_HAND: Nightshard', () => {
-  test('queues up to 3 unspent diamond dice as hand priority picks', () => {
+describe('DAY_START_DOMINANT_ENHANCEMENT_HAND: Nightshard', () => {
+  test('queues up to 3 unspent dice of the dominant enhancement', () => {
+    const bones = [
+      die({ enhancement: 'bone', value: 12 }),
+      die({ enhancement: 'bone', value: 11 }),
+      die({ enhancement: 'bone', value: 10 }),
+      die({ enhancement: 'bone', value: 9 }),
+    ];
+    setupGame({
+      equipment: [item('nightshard')],
+      dice: [...bones, die({ enhancement: 'diamond', value: 8 }), ...diceWithValue(1, 100)],
+    });
+    const nightshard = item('nightshard');
+    const result = processEquipmentOnDayStart([nightshard]);
+    expect(result.priorityHandDiceIds).toHaveLength(3);
+    expect(result.priorityHandDiceIds.every((id) => bones.some((d) => d.id === id))).toBe(true);
+  });
+
+  test('still surfaces diamond dice when diamond is dominant', () => {
     const diamonds = [
       die({ enhancement: 'diamond', value: 12 }),
       die({ enhancement: 'diamond', value: 11 }),
@@ -530,29 +547,77 @@ describe('DAY_START_DIAMOND_HAND: Nightshard', () => {
       equipment: [item('nightshard')],
       dice: [...diamonds, ...diceWithValue(1, 100)],
     });
-    const nightshard = item('nightshard');
-    const result = processEquipmentOnDayStart([nightshard]);
+    const result = processEquipmentOnDayStart([item('nightshard')]);
     expect(result.priorityHandDiceIds).toHaveLength(3);
     expect(result.priorityHandDiceIds.every((id) => diamonds.some((d) => d.id === id))).toBe(true);
   });
 
-  test('day 1 hand prefers diamonds without increasing hand size', () => {
+  test('tie surfaces dice from any tied dominant enhancement', () => {
+    const bones = [
+      die({ enhancement: 'bone', value: 12 }),
+      die({ enhancement: 'bone', value: 11 }),
+      die({ enhancement: 'bone', value: 10 }),
+      die({ enhancement: 'bone', value: 9 }),
+    ];
     const diamonds = [
-      die({ enhancement: 'diamond', value: 12 }),
-      die({ enhancement: 'diamond', value: 11 }),
-      die({ enhancement: 'diamond', value: 10 }),
+      die({ enhancement: 'diamond', value: 8 }),
+      die({ enhancement: 'diamond', value: 7 }),
+      die({ enhancement: 'diamond', value: 6 }),
+      die({ enhancement: 'diamond', value: 5 }),
+    ];
+    setupGame({
+      equipment: [item('nightshard')],
+      dice: [...bones, ...diamonds, ...diceWithValue(1, 10)],
+    });
+    const result = processEquipmentOnDayStart([item('nightshard')]);
+    expect(result.priorityHandDiceIds).toHaveLength(3);
+    const dominantIds = new Set([...bones, ...diamonds].map((d) => d.id));
+    expect(result.priorityHandDiceIds.every((id) => dominantIds.has(id))).toBe(true);
+  });
+
+  test('no enhanced dice yields no priority picks', () => {
+    setupGame({
+      equipment: [item('nightshard')],
+      dice: diceWithValue(1, 20),
+    });
+    const result = processEquipmentOnDayStart([item('nightshard')]);
+    expect(result.priorityHandDiceIds).toEqual([]);
+  });
+
+  test('spent dominant dice still count for dominance but are not surfaced', () => {
+    const bones = [
+      die({ enhancement: 'bone', value: 12 }),
+      die({ enhancement: 'bone', value: 11 }),
+      die({ enhancement: 'bone', value: 10 }),
+      die({ enhancement: 'bone', value: 9 }),
+      die({ enhancement: 'bone', value: 8 }),
+    ];
+    setupGame({
+      equipment: [item('nightshard')],
+      dice: [...bones, ...diceWithValue(1, 10)],
+    });
+    runActions.patch({ spentDiceIds: bones.map((d) => d.id) });
+    const result = processEquipmentOnDayStart([item('nightshard')]);
+    expect(result.priorityHandDiceIds).toEqual([]);
+  });
+
+  test('day 1 hand prefers dominant dice without increasing hand size', () => {
+    const bones = [
+      die({ enhancement: 'bone', value: 12 }),
+      die({ enhancement: 'bone', value: 11 }),
+      die({ enhancement: 'bone', value: 10 }),
     ];
     const { game } = setupGame({
       equipment: [item('nightshard')],
-      dice: [...diamonds, ...diceWithValue(1, 100)],
+      dice: [...bones, die({ enhancement: 'diamond', value: 8 }), ...diceWithValue(1, 100)],
     });
     game.startRound();
     expect(game.state.hand.length).toBe(game.config.rollSize);
-    const diamondsInHand = game.state.hand.filter((d) => d.enhancement === 'diamond');
-    expect(diamondsInHand).toHaveLength(3);
+    const bonesInHand = game.state.hand.filter((d) => d.enhancement === 'bone');
+    expect(bonesInHand).toHaveLength(3);
   });
 
-  test('day 2 refill prefers diamonds without increasing hand size', () => {
+  test('day 2 refill prefers dominant dice without increasing hand size', () => {
     const diamonds = [
       die({ enhancement: 'diamond', value: 12 }),
       die({ enhancement: 'diamond', value: 11 }),
