@@ -18,6 +18,13 @@ effectRegistry.registerLifecycle('on-day-end', (equip) => {
       equip.state.mult = (equip.state.mult ?? 0) + multPerDay;
       break;
     }
+    case 'STATEFUL_ADD_MILES': {
+      const milesPerDay = (equip.def.effectParams as Record<string, unknown>).milesPerDay;
+      if (typeof milesPerDay === 'number' && Number.isFinite(milesPerDay) && milesPerDay > 0) {
+        equip.state.miles = (equip.state.miles ?? 0) + milesPerDay;
+      }
+      break;
+    }
     case 'ROULETTE_WHEEL':
       rollRouletteWheelXMult(equip);
       break;

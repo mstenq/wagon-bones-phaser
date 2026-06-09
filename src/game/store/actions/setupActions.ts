@@ -5,9 +5,13 @@ import { createPouch, createRunStartingPouch } from '../../DiceSystem';
 import { getItemAuraById } from '../../ItemsSystem';
 import { getSupplyDefById } from '../../ConsumablesSystem';
 import { getProfessionById } from '../../../data/professions';
+import { getEquipmentDefById } from '../../equipmentCatalog';
+import { acquireEquipmentInstance } from '../../EquipmentModifiers';
+import { rngPick } from '../../RunRng';
 import { GAMEPLAY } from '../../Constants';
 import { getRunState, runActions, runStore } from '../runStore';
 import { consumableActions } from './consumableActions';
+import { replaceEquipmentList, resolveEquipmentList } from '../resolve';
 
 export const setupActions = {
   reset(): void {
@@ -76,5 +80,20 @@ export const setupActions = {
 
   finalizeRunSetup(): void {
     runStore.setState({ startingDiceCount: getRunState().dice.length });
+  },
+
+  /** Grant profession-specific starting equipment after run RNG is seeded (e.g. Witch familiar). */
+  grantProfessionStartingEquipment(): void {
+    const run = getRunState();
+    const prof = run.professionId ? getProfessionById(run.professionId) : undefined;
+    const familiarIds = prof?.modifiers.startingFamiliarIds;
+    if (!Array.isArray(familiarIds) || familiarIds.length === 0) return;
+
+    const chosenId = rngPick('equipment', familiarIds);
+    const def = getEquipmentDefById(chosenId);
+    if (!def) return;
+
+    const instance = acquireEquipmentInstance(def, run.purchasedPermits, ['cursed']);
+    replaceEquipmentList([...resolveEquipmentList(), instance]);
   },
 };

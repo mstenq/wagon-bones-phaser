@@ -52,6 +52,7 @@ export const equipmentActions = {
   destroyEquipment(index: number): boolean {
     const list = equipment();
     if (index < 0 || index >= list.length) return false;
+    if (isEquipmentCursed(list[index]!)) return false;
     remapDisabledEquipmentIndicesAfterRemove(index);
     writeEquipment(list.filter((_, i) => i !== index));
     return true;

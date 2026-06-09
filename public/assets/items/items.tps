@@ -50,7 +50,7 @@
         <key>dxtCompressionMode</key>
         <enum type="SettingsBase::DxtCompressionMode">DXT_PERCEPTUAL</enum>
         <key>ditherType</key>
-        <enum type="SettingsBase::DitherType">NearestNeighbour</enum>
+        <enum type="SettingsBase::DitherType">PngQuantLow</enum>
         <key>backgroundColor</key>
         <uint>0</uint>
         <key>libGdx</key>
@@ -74,15 +74,15 @@
         <key>textureSubPath</key>
         <string></string>
         <key>textureFormat</key>
-        <enum type="SettingsBase::TextureFormat">png</enum>
+        <enum type="SettingsBase::TextureFormat">png8</enum>
         <key>borderPadding</key>
         <uint>0</uint>
         <key>maxTextureSize</key>
         <QSize>
             <key>width</key>
-            <int>8192</int>
+            <int>4096</int>
             <key>height</key>
-            <int>8192</int>
+            <int>4096</int>
         </QSize>
         <key>fixedTextureSize</key>
         <QSize>
@@ -178,14 +178,15 @@
             <key type="filename">ace_in_the_hole.png</key>
             <key type="filename">alchemy_kit.png</key>
             <key type="filename">antique_revolver.png</key>
+            <key type="filename">ashfang.png</key>
             <key type="filename">bank_note.png</key>
             <key type="filename">bargain_bin.png</key>
+            <key type="filename">blackjack.png</key>
             <key type="filename">blessed_herd.png</key>
             <key type="filename">bloodline.png</key>
             <key type="filename">bone_charm.png</key>
             <key type="filename">bone_collector.png</key>
             <key type="filename">book_of_the_dead.png</key>
-            <key type="filename">blackjack.png</key>
             <key type="filename">bottom_dollar.png</key>
             <key type="filename">bounty_contract.png</key>
             <key type="filename">buffalo_stampede.png</key>
@@ -209,8 +210,9 @@
             <key type="filename">double_barrel.png</key>
             <key type="filename">double_deuces.png</key>
             <key type="filename">double_down.png</key>
-            <key type="filename">dynamite.png</key>
             <key type="filename">dust_trail.png</key>
+            <key type="filename">dustshell.png</key>
+            <key type="filename">dynamite.png</key>
             <key type="filename">echo_chamber.png</key>
             <key type="filename">eight_second_ride.png</key>
             <key type="filename">eleventh_crossing.png</key>
@@ -257,9 +259,11 @@
             <key type="filename">marked.png</key>
             <key type="filename">mirror_lake.png</key>
             <key type="filename">money_wagon.png</key>
+            <key type="filename">moonquil.png</key>
             <key type="filename">moonshine.png</key>
             <key type="filename">mystery_crate.png</key>
             <key type="filename">new_blood.png</key>
+            <key type="filename">nightshard.png</key>
             <key type="filename">nitro.png</key>
             <key type="filename">odd_fellow.png</key>
             <key type="filename">offering_bowl.png</key>
@@ -298,13 +302,15 @@
             <key type="filename">savings_account.png</key>
             <key type="filename">scouts_spyglass.png</key>
             <key type="filename">seventh_trumpet.png</key>
-            <key type="filename">sheriffs_badge.png</key>
+            <key type="filename">shadowpaw.png</key>
             <key type="filename">sharpening_stone.png</key>
+            <key type="filename">sheriffs_badge.png</key>
             <key type="filename">shortcut_trail.png</key>
             <key type="filename">silver_bullets.png</key>
             <key type="filename">silver_reserve.png</key>
             <key type="filename">six_feet_under.png</key>
             <key type="filename">six_shooter.png</key>
+            <key type="filename">skullwing.png</key>
             <key type="filename">snake_eyes.png</key>
             <key type="filename">snake_oil_ledger.png</key>
             <key type="filename">snake_river.png</key>
@@ -345,7 +351,7 @@
                 <key>pivotPoint</key>
                 <point_f>0.5,0.5</point_f>
                 <key>spriteScale</key>
-                <double>0.2</double>
+                <double>0.15</double>
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
@@ -361,7 +367,7 @@
                 <key>pivotPoint</key>
                 <point_f>0.5,0.5</point_f>
                 <key>spriteScale</key>
-                <double>0.2</double>
+                <double>0.15</double>
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
@@ -546,6 +552,12 @@
                     <filename>wood_axe.png</filename>
                     <filename>work_boots.png</filename>
                     <filename>worn_deck.png</filename>
+                    <filename>ashfang.png</filename>
+                    <filename>dustshell.png</filename>
+                    <filename>moonquil.png</filename>
+                    <filename>nightshard.png</filename>
+                    <filename>shadowpaw.png</filename>
+                    <filename>skullwing.png</filename>
                 </array>
             </struct>
         </map>

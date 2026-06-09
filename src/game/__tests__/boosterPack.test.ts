@@ -9,13 +9,15 @@ import {
   getConsumablePackExcludeIds,
   type PackDefinition,
 } from '../BoosterPackSystem';
-import { generateShopStock, getAllEquipment } from '../ItemsSystem';
+import { generateShopStock, getAllEquipment, getEquipmentDefById } from '../ItemsSystem';
 import { CHANCES } from '../Constants';
 import { resetPlayerState, getPlayerState } from './testRunPlayer';
 import { getRunState } from '../store/runStore';
+import { runActions } from '../store';
 import { item, setupGame } from './testHelpers';
 import { initRunRng } from '../RunRng';
 import { HandType } from '../types';
+import { getItemDisplayContext } from '../displayContext';
 import {
   createConsumableInstance,
   getFrontierDefById,
@@ -210,6 +212,38 @@ describe('consumable pack duplicate filtering', () => {
     const weighted = countLoadedInPacks(400);
 
     expect(weighted).toBeGreaterThan(baseline * 1.35);
+  });
+
+  test('shadowpaw guarantees most-used supply card in supply packs', () => {
+    initRunRng('shadowpaw-supply-pack');
+    setupGame({ equipment: [item('shadowpaw')] });
+    runActions.patch({
+      supplyCardUseCounts: { coffee_tin: 5, treasure_map: 2 },
+    });
+
+    for (let i = 0; i < 20; i++) {
+      const items = generatePackContents(supplyPack);
+      expect(items.some((packItem) => packItem.supplyCardId === 'coffee_tin')).toBe(true);
+    }
+  });
+
+  test('shadowpaw display shows most-used supply card name', () => {
+    const def = getEquipmentDefById('shadowpaw')!;
+    const coffee = getSupplyDefById('coffee_tin')!;
+    const treasure = getSupplyDefById('treasure_map')!;
+    const ctx = getItemDisplayContext();
+
+    const empty = def.display(null, { ...ctx, supplyCardUseCounts: {} });
+    expect(empty.hint[0]![0]!.text).toContain('No supply used');
+
+    const withTarget = def.display(null, { ...ctx, supplyCardUseCounts: { coffee_tin: 5, treasure_map: 2 } });
+    expect(withTarget.hint[0]![0]!.text).toBe(coffee.name);
+    expect(withTarget.tooltip.some((row) => row.some((seg) => seg.text === coffee.name))).toBe(true);
+
+    const tied = def.display(null, { ...ctx, supplyCardUseCounts: { coffee_tin: 5, treasure_map: 5 } });
+    expect(tied.hint[0]![0]!.text).toBe('Tied (2)');
+    expect(tied.tooltip.some((row) => row.some((seg) => seg.text.includes(coffee.name)))).toBe(true);
+    expect(tied.tooltip.some((row) => row.some((seg) => seg.text.includes(treasure.name)))).toBe(true);
   });
 
   test('frontier packs exclude encounters already in the consumable bar', () => {

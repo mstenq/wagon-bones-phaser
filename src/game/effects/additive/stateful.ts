@@ -2,6 +2,7 @@
 
 import { effectRegistry } from '../registry';
 import { addScore } from '../../scoreMath';
+import { getRunState } from '../../store/runStore';
 
 effectRegistry.registerAdditive('STATEFUL_ADD_MULT', (ctx, equip, index) => {
   const val = equip.state.mult ?? 0;
@@ -105,5 +106,18 @@ effectRegistry.registerAdditive('OFFERING_BOWL', (ctx, equip, index) => {
   if (val > 0) {
     ctx.bonusMult = addScore(ctx.bonusMult, val);
     ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: val });
+  }
+});
+
+effectRegistry.registerAdditive('UNIQUE_EQUIPMENT_MULT', (ctx, equip, index) => {
+  const perUnique = (equip.def.effectParams.value as number) ?? 2;
+  const uniqueCount = getRunState().equipmentObtainedIds.length;
+  const val = uniqueCount * perUnique;
+  if (val > 0) {
+    ctx.bonusMult = addScore(ctx.bonusMult, val);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: val });
+    console.log(
+      `  [equip] ${equip.def.name}: +${val} mult (${uniqueCount} unique equipment) (bonusMult: ${ctx.bonusMult})`,
+    );
   }
 });

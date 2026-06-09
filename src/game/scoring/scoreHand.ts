@@ -76,7 +76,13 @@ export function resolveScoreDestroyChance(
 export function scoreHand(
   handResult: HandResult,
   equipment: EquipmentInstance[],
-  scoreContext?: { currentDay: number; maxDays: number; rerollsRemaining?: number; allDice?: Die[] },
+  scoreContext?: {
+    currentDay: number;
+    maxDays: number;
+    rerollsRemaining?: number;
+    allDice?: Die[];
+    selectedForScoreDice?: Die[];
+  },
 ): ScoreResult {
   let totalValue = 0;
   let bonusMult = ZERO;
@@ -426,6 +432,27 @@ export function scoreHand(
       console.log(`  [postScore] ${equip.def.name}: destroyed ${scoredDie.id} (${scoredDie.enhancement})`);
     }
   });
+
+  // FIRST_DAY_NONSCORING_DESTROY: Skullwing — day 1 played dice that do not score
+  if (scoreContext?.currentDay === 1 && scoreContext.selectedForScoreDice) {
+    const scoringIds = new Set(handResult.scoringDice.map((die) => die.id));
+    walkEquipmentPerSlot(equipment, (slot) => {
+      if (slot.equip.def.effectType !== 'FIRST_DAY_NONSCORING_DESTROY') return;
+      const moneyPerDie = (slot.equip.def.effectParams.value as number) ?? 1;
+      for (const die of scoreContext.selectedForScoreDice!) {
+        if (scoringIds.has(die.id)) continue;
+        if (!removeRunDie(die.id)) continue;
+        pipelineCtx.mutations.moneyEarned += moneyPerDie;
+        animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'crack', value: 0 });
+        animEvents.push({
+          target: { kind: 'equip', equipIndex: slot.index },
+          popupType: 'money',
+          value: moneyPerDie,
+        });
+        console.log(`  [postScore] ${slot.equip.def.name}: destroyed non-scoring ${die.id}, earned $${moneyPerDie}`);
+      }
+    });
+  }
 
   // CURSED_DICE: loaded dice can shatter and grant a frontier encounter when scored
   console.log('  [postScore] Cursed dice (loaded shatter) pass');

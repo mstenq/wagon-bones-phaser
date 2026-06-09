@@ -33,6 +33,9 @@ export function deserializeRunState(data: SerializedRunState): RunState {
     statusTraitTokens: data.statusTraitTokens ?? [],
     shopFreeRerollPlan: data.shopFreeRerollPlan ?? [],
     supplyCardsUsed: data.supplyCardsUsed ?? 0,
+    supplyCardUseCounts: data.supplyCardUseCounts ?? {},
+    equipmentObtainedIds: data.equipmentObtainedIds ?? [],
+    priorityHandDiceIds: data.priorityHandDiceIds ?? [],
   };
 }
 

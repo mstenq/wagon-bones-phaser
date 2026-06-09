@@ -13,6 +13,33 @@ import {
 import { getRunState, runStore } from './runStore';
 import type { RunState, StoredConsumableInstance, StoredEquipmentInstance } from './types';
 
+function countEquipmentByDefId(list: StoredEquipmentInstance[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const item of list) {
+    counts.set(item.defId, (counts.get(item.defId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function trackNewEquipmentObtained(prev: StoredEquipmentInstance[], next: StoredEquipmentInstance[]): string[] {
+  const prevCounts = countEquipmentByDefId(prev);
+  const nextCounts = countEquipmentByDefId(next);
+  const newlySeen: string[] = [];
+  for (const [defId, count] of nextCounts) {
+    if (count > (prevCounts.get(defId) ?? 0)) {
+      newlySeen.push(defId);
+    }
+  }
+  return newlySeen;
+}
+
+function mergeEquipmentObtainedIds(existing: string[], newlySeen: string[]): string[] {
+  if (newlySeen.length === 0) return existing;
+  const merged = new Set(existing);
+  for (const id of newlySeen) merged.add(id);
+  return [...merged];
+}
+
 function resolveEquipmentDef(stored: StoredEquipmentInstance): EquipmentDef {
   const base = getEquipmentDefById(stored.defId);
   if (!base) throw new Error(`Unknown equipment id: ${stored.defId}`);
@@ -94,10 +121,16 @@ export function resolveLastUsedConsumableDef(state = getRunState()): ConsumableD
 /** Persist resolved equipment instances to the run store. */
 export function replaceEquipmentList(instances: EquipmentInstance[]): void {
   const state = getRunState();
-  const prevPackMules = state.equipment.filter((item) => item.defId === 'pack_mule').length;
+  const prevEquipment = state.equipment;
+  const nextEquipment = storedFromEquipmentInstances(instances);
+  const newlySeen = trackNewEquipmentObtained(prevEquipment, nextEquipment);
+  const prevPackMules = prevEquipment.filter((item) => item.defId === 'pack_mule').length;
   const nextPackMules = instances.filter((item) => item.def.id === 'pack_mule').length;
   const slotDelta = (nextPackMules - prevPackMules) * 2;
-  const nextPatch: Partial<RunState> = { equipment: storedFromEquipmentInstances(instances) };
+  const nextPatch: Partial<RunState> = { equipment: nextEquipment };
+  if (newlySeen.length > 0) {
+    nextPatch.equipmentObtainedIds = mergeEquipmentObtainedIds(state.equipmentObtainedIds, newlySeen);
+  }
   if (slotDelta !== 0) {
     nextPatch.maxConsumableSlots = Math.max(0, state.maxConsumableSlots + slotDelta);
   }

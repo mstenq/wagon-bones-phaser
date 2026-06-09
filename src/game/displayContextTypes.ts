@@ -34,6 +34,8 @@ export interface ItemDisplayContext {
   startingDiceCount: number;
   interestCap: number;
   supplyCardsUsed: number;
+  supplyCardUseCounts: Record<string, number>;
+  equipmentObtainedIds: string[];
   getHandStats(handType: HandType): HandStats;
 }
 

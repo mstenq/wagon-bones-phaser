@@ -1,6 +1,7 @@
 // ─── End-of-round lifecycle helpers ───
 
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { isEquipmentCursed } from '../../ItemsSystem';
 import { checkLoadedChance, walkEquipmentPerSlot } from '../../equipmentUtils';
 import { getRunState, runActions } from '../../store/runStore';
 import { getRoundState } from '../../store/roundStore';
@@ -14,6 +15,13 @@ import { selectIsBossRound } from '../../store/selectors/runSelectors';
 import { rngInt } from '../../RunRng';
 import { gte } from '../../scoreMath';
 import { getInspectorRollSizeForDay } from '../../BossEffectsSystem';
+
+function pushDestroyIndexIfAllowed(ctx: RoundEndContext): void {
+  if (ctx.isCopy) return;
+  const target = ctx.equipment[ctx.index];
+  if (target && isEquipmentCursed(target)) return;
+  ctx.destroyedIndices.push(ctx.index);
+}
 
 export interface RoundEndContext {
   equipment: EquipmentInstance[];
@@ -74,13 +82,13 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
     case 'ADD_MULT_RISKY':
       if (ctx.isCopy) break;
       if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
-        ctx.destroyedIndices.push(ctx.index);
+        pushDestroyIndexIfAllowed(ctx);
       }
       break;
     case 'XMULT_RISKY':
       if (ctx.isCopy) break;
       if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
-        ctx.destroyedIndices.push(ctx.index);
+        pushDestroyIndexIfAllowed(ctx);
       }
       break;
     case 'END_ROUND_SELL_VALUE_ALL': {
@@ -102,7 +110,7 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       equip.state.mult = (equip.state.mult ?? 0) - decay;
       equip.state.roundsPlayed = (equip.state.roundsPlayed ?? 0) + 1;
       if (equip.state.roundsPlayed >= (equip.def.effectParams.maxRounds as number)) {
-        if (!ctx.isCopy) ctx.destroyedIndices.push(ctx.index);
+        pushDestroyIndexIfAllowed(ctx);
       }
       break;
     }
@@ -125,7 +133,7 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
         if (tag) tagActions.addTag(tag);
         equip.state.roundsRemaining -= 1;
         if (equip.state.roundsRemaining <= 0) {
-          if (!ctx.isCopy) ctx.destroyedIndices.push(ctx.index);
+          pushDestroyIndexIfAllowed(ctx);
         }
       }
       break;
@@ -135,7 +143,7 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       if ((equip.state.roundsRemaining ?? 0) > 0) {
         equip.state.roundsRemaining -= 1;
         if (equip.state.roundsRemaining <= 0) {
-          if (!ctx.isCopy) ctx.destroyedIndices.push(ctx.index);
+          pushDestroyIndexIfAllowed(ctx);
         }
       }
       break;

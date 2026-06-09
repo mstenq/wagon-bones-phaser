@@ -18,7 +18,7 @@ import packsData, { type PackCategory, type PackDef, type PackTier } from '../da
 import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
 import trailGuidesData, { type TrailGuideDef } from '../data/trail_guides';
 import { hasPermitTrailGuideTargeting } from './PermitsSystem';
-import { getMostPlayedHandTypes } from './handStatsHelpers';
+import { getMostPlayedHandTypes, getMostUsedSupplyIds } from './handStatsHelpers';
 import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
 import diceEnhancements from '../data/dice_enhancements';
 import pipEnhancements from '../data/pip_enhancements';
@@ -326,20 +326,37 @@ function isExcludedId(id: string, excludeIds?: string[]): boolean {
   return !!excludeIds && excludeIds.includes(id);
 }
 
+function hasShadowpawSupplyPackTargeting(equipment: EquipmentInstance[]): boolean {
+  return equipment.some((e) => e.def.effectType === 'MOST_USED_SUPPLY_PACK');
+}
+
+function pickTargetSupplyForRun(state: RunState): SupplyCardDef | null {
+  const ids = getMostUsedSupplyIds(state.supplyCardUseCounts);
+  if (ids.length === 0) return null;
+  const targetId = ids.length === 1 ? ids[0]! : rngPick('supplyPack', ids);
+  return SUPPLY_CARDS.find((s) => s.id === targetId) ?? null;
+}
+
 function generateSupplyPackContents(count: number): PackItem[] {
   const run = getRunState();
   const excludeIds = getConsumablePackExcludeIds(run);
+  const equipment = resolveEquipmentList(run);
+  const pickedTarget = hasShadowpawSupplyPackTargeting(equipment) ? pickTargetSupplyForRun(run) : null;
+  const targetSupply = pickedTarget && !isExcludedId(pickedTarget.id, excludeIds) ? pickedTarget : null;
+  const packExcludeIds =
+    targetSupply && !playerAllowsDuplicateItems(run) ? [...(excludeIds ?? []), targetSupply.id] : excludeIds;
+
   const items: PackItem[] = [];
   const supplyPool = filterPoolByExcludeIds(
     SUPPLY_CARDS.filter((s) => !PACK_EXCLUDED_SUPPLY_IDS.includes(s.id)),
-    excludeIds,
+    packExcludeIds,
   );
-  const equipment = resolveEquipmentList(run);
   const normalCards = pickWeightedSupplyCardsWithoutReplacement(supplyPool, count, 'supplyPack', {
-    excludeIds,
+    excludeIds: packExcludeIds,
     equipment,
   });
   let normalIdx = 0;
+  let placedTarget = false;
 
   for (let i = 0; i < count; i++) {
     const rare = rollRarePackCard('supply');
@@ -347,8 +364,16 @@ function generateSupplyPackContents(count: number): PackItem[] {
       items.push(buildFrontierPackItem(rare));
       continue;
     }
-    items.push(buildSupplyPackItem(normalCards[normalIdx++]));
+    const card = targetSupply && !placedTarget ? targetSupply : normalCards[normalIdx++];
+    if (targetSupply && card.id === targetSupply.id) placedTarget = true;
+    items.push(buildSupplyPackItem(card));
   }
+
+  if (targetSupply && !items.some((item) => item.category === 'supply' && item.supplyCardId === targetSupply.id)) {
+    const swapIdx = items.findIndex((item) => item.category === 'supply');
+    if (swapIdx >= 0) items[swapIdx] = buildSupplyPackItem(targetSupply);
+  }
+
   return items;
 }
 

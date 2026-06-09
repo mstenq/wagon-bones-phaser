@@ -151,6 +151,7 @@ export class DifficultySelectScene extends Scene {
     gameFacade.meta.setDifficulty(this.selectedLevel);
     const finalSeed = seed.trim() || gameFacade.meta.generateRunSeed();
     gameFacade.meta.initRunRng(finalSeed);
+    gameFacade.meta.grantProfessionStartingEquipment();
     gameFacade.meta.assignBosses();
     startAutoSaveLoop();
     this.scene.start('RoundSelect', {});

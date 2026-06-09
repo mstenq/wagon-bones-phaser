@@ -48,6 +48,22 @@ describe('run store actions', () => {
     expect(state.balance).toBeGreaterThanOrEqual(initialBalance);
   });
 
+  test('witch grantProfessionStartingEquipment grants one cursed familiar after RNG seed', () => {
+    initRunRng('witch-familiar-seed');
+    setupActions.applyProfession('witch');
+    setupActions.finalizeRunSetup();
+    setupActions.grantProfessionStartingEquipment();
+
+    const state = runStore.getState();
+    expect(state.professionId).toBe('witch');
+    expect(state.equipment.length).toBe(1);
+    expect(state.equipment[0]!.modifiers).toContain('cursed');
+    expect(['ashfang', 'moonquil', 'nightshard', 'shadowpaw', 'skullwing', 'dustshell']).toContain(
+      state.equipment[0]!.defId,
+    );
+    expect(state.equipmentObtainedIds).toContain(state.equipment[0]!.defId);
+  });
+
   test('occult trader + junk dealer creates common/uncommon/rare at expected rates across round starts', () => {
     initRunRng('occult-junk-dealer-rates');
     setupActions.applyProfession('occult_trader');

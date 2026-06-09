@@ -95,10 +95,13 @@ export interface PlayerSaveData {
   skipNextShop: boolean;
   trailGuidesUsed: number;
   supplyCardsUsed?: number;
+  supplyCardUseCounts?: Record<string, number>;
+  equipmentObtainedIds?: string[];
   startingDiceCount: number;
   bossEffectDisabled: boolean;
   bossRoundState: import('./store/types').BossRoundState;
   pendingNewDiceIds: string[];
+  priorityHandDiceIds?: string[];
   pendingHandDiceIds: string[];
   pendingAnimatedDestructions: { sourceIdx: number; victimIdx: number }[];
   pendingJunkDealerCount: number;
@@ -285,6 +288,8 @@ function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
     skipNextShop: data.skipNextShop,
     trailGuidesUsed: data.trailGuidesUsed,
     supplyCardsUsed: data.supplyCardsUsed ?? 0,
+    supplyCardUseCounts: data.supplyCardUseCounts ?? {},
+    equipmentObtainedIds: data.equipmentObtainedIds ?? [],
     startingDiceCount: data.startingDiceCount,
     bossEffectDisabled: data.bossEffectDisabled,
     bossRoundState: {
@@ -297,6 +302,7 @@ function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
         : null,
     },
     pendingNewDiceIds: [...data.pendingNewDiceIds],
+    priorityHandDiceIds: [...(data.priorityHandDiceIds ?? [])],
     pendingHandDiceIds: [...data.pendingHandDiceIds],
     pendingAnimatedDestructions: data.pendingAnimatedDestructions.map((d) => ({ ...d })),
     pendingJunkDealerCount: data.pendingJunkDealerCount,

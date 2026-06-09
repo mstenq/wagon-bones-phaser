@@ -250,11 +250,11 @@ describe('Equipment Modifiers', () => {
       expect(inst.sellValue).toBeGreaterThan(0);
     });
 
-    test('still allows destruction (trail events / bosses)', () => {
+    test('cannot be destroyed (trail events / bosses / effects)', () => {
       const player = getPlayerState();
       player.equipment.push(equipWithModifiers('horseshoe', ['cursed']));
-      expect(player.destroyEquipment(0)).toBe(true);
-      expect(player.equipment).toHaveLength(0);
+      expect(player.destroyEquipment(0)).toBe(false);
+      expect(player.equipment).toHaveLength(1);
     });
   });
 
@@ -443,6 +443,14 @@ describe('Equipment Modifiers', () => {
       expect(player.destroyEquipment(0)).toBe(true);
       expect(player.equipment).toHaveLength(0);
       expect(player.economy.balance).toBe(balanceBefore);
+    });
+
+    test('destroyEquipment refuses cursed equipment', () => {
+      const player = getPlayerState();
+      player.equipment.push(equipWithModifiers('horseshoe', ['cursed']));
+
+      expect(player.destroyEquipment(0)).toBe(false);
+      expect(player.equipment).toHaveLength(1);
     });
   });
 

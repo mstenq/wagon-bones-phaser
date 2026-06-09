@@ -15,9 +15,10 @@ import {
   processEquipmentOnHandPlayed,
   processEquipmentAfterHandScored,
   processEquipmentOnPackSkipped,
-  processEquipmentOnSupplyUsed,
+  processEquipmentOnDayEnd,
 } from '../../EquipmentEffects';
 import { executeConsumableEffect, getRandomTrailGuideDef, getSupplyDefById } from '../../ConsumablesSystem';
+import { recordSupplyCardConsumed } from '../../supplyCardUsage';
 import { getRunState, runActions } from '../../store/runStore';
 import { HandType } from '../../types';
 
@@ -414,17 +415,21 @@ describe('SUPPLY_USED_MULT: Campfire Stories', () => {
     expect(getRunState().supplyCardsUsed).toBe(0);
   });
 
-  test('increments run supplyCardsUsed when processEquipmentOnSupplyUsed is called', () => {
-    processEquipmentOnSupplyUsed([]);
+  test('increments run supplyCardsUsed when recordSupplyCardConsumed is called', () => {
+    const def = getSupplyDefById('firewood')!;
+    recordSupplyCardConsumed(def);
     expect(getRunState().supplyCardsUsed).toBe(1);
+    expect(getRunState().supplyCardUseCounts.firewood).toBe(1);
   });
 
   test('accumulates supplyCardsUsed across multiple supply uses', () => {
-    runActions.patch({ supplyCardsUsed: 0 });
-    processEquipmentOnSupplyUsed([]);
-    processEquipmentOnSupplyUsed([]);
-    processEquipmentOnSupplyUsed([]);
+    const def = getSupplyDefById('firewood')!;
+    runActions.patch({ supplyCardsUsed: 0, supplyCardUseCounts: {} });
+    recordSupplyCardConsumed(def);
+    recordSupplyCardConsumed(def);
+    recordSupplyCardConsumed(def);
     expect(getRunState().supplyCardsUsed).toBe(3);
+    expect(getRunState().supplyCardUseCounts.firewood).toBe(3);
   });
 
   test('run supply count applies as mult during scoring', () => {
@@ -511,5 +516,39 @@ describe('Campfire Stories: supply card use integration', () => {
     game.state.rerollsRemaining = 6;
     game.selectForScore(scored.map((d) => d.id));
     expect(game.calculateScore()!.mult).toBeMult(2);
+  });
+});
+
+// ─── UNIQUE_EQUIPMENT_MULT: Moonquil ───
+
+describe('UNIQUE_EQUIPMENT_MULT: Moonquil', () => {
+  test('grants +2 mult per unique equipment obtained this run', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('moonquil')],
+      equipmentObtainedIds: ['horseshoe', 'dynamite', 'ashfang', 'moonquil'],
+    });
+    expect(result.mult).toBeMult(9);
+  });
+});
+
+// ─── STATEFUL_ADD_MILES: Dustshell ───
+
+describe('STATEFUL_ADD_MILES: Dustshell', () => {
+  test('gains +10 miles at each day end', () => {
+    const inst = item('dustshell');
+    processEquipmentOnDayEnd([inst]);
+    expect(inst.state.miles).toBe(10);
+    processEquipmentOnDayEnd([inst]);
+    expect(inst.state.miles).toBe(20);
+  });
+
+  test('accumulated miles apply during scoring', () => {
+    const inst = itemWithState('dustshell', { miles: 20 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [inst],
+    });
+    expect(result.miles).toBeMiles(40);
   });
 });

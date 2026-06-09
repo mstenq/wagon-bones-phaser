@@ -28,6 +28,10 @@ export const gameMeta = {
     setupActions.finalizeRunSetup();
   },
 
+  grantProfessionStartingEquipment(): void {
+    setupActions.grantProfessionStartingEquipment();
+  },
+
   setDifficulty(level: DifficultyLevel): void {
     setupActions.setDifficulty(level);
   },

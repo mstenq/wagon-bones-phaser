@@ -2,6 +2,7 @@
 
 import { getHandByType } from '../data/hands';
 import type { HandStats, HandType, HandUpgradeInfo } from './types';
+import { getSupplyDefById } from './ConsumablesSystem';
 import { getRunState } from './store/runStore';
 import { selectHandStats } from './store/selectors/runSelectors';
 import { progressionActions } from './store/actions/progressionActions';
@@ -55,4 +56,26 @@ export function getMostPlayedHandTypes(handStats: Map<HandType, HandStats> | Rec
     if (stats.timesPlayed === max) types.push(type);
   }
   return types;
+}
+
+/** Supply card ids tied for the highest use count. Empty when nothing has been used. */
+export function getMostUsedSupplyIds(counts: Record<string, number>): string[] {
+  let max = 0;
+  for (const count of Object.values(counts)) {
+    max = Math.max(max, count);
+  }
+  if (max === 0) return [];
+  const ids: string[] = [];
+  for (const [id, count] of Object.entries(counts)) {
+    if (count === max) ids.push(id);
+  }
+  return ids;
+}
+
+/** Display names for supply cards tied for the highest use count. */
+export function getMostUsedSupplyNames(counts: Record<string, number>): string[] {
+  return getMostUsedSupplyIds(counts)
+    .map((id) => getSupplyDefById(id)?.name)
+    .filter((name): name is string => typeof name === 'string' && name.length > 0)
+    .sort((a, b) => a.localeCompare(b));
 }

@@ -101,11 +101,11 @@ export type LifecyclePhase =
   | 'on-shop-end' // When the player leaves the shop
   | 'on-sell' // When player sells equipment
   | 'on-day-end' // At end of each day
+  | 'on-day-start' // At start of each day (after day advances)
   | 'on-round-start' // At start of each round
   | 'on-round-end' // At end of each round (payout / risky destroy)
   | 'on-dice-spent' // When dice are moved to spent pool
   | 'on-dice-added' // When a new die is added
-  | 'on-supply-used' // When a supply card is consumed
   | 'on-pack-skipped' // When a booster pack is skipped
   | 'on-pack-opened' // When a booster pack is opened
   | 'on-lucky-trigger' // When a lucky die triggers

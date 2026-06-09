@@ -11,8 +11,16 @@ import {
   persistPlayerEquipment,
   seedTestRoll,
 } from '../testHelpers';
-import { processEquipmentOnRoundStart, processEquipmentAfterHandScored } from '../../EquipmentEffects';
+import {
+  processEquipmentOnRoundStart,
+  processEquipmentAfterHandScored,
+  processEquipmentOnDayStart,
+} from '../../EquipmentEffects';
 import { HandType } from '../../types';
+import { D } from '../../scoreMath';
+import { createConsumableInstance, getSupplyDefById, getTrailGuideDefById } from '../../ConsumablesSystem';
+import { replaceConsumableList, resolveConsumableList } from '../../store/resolve';
+import { runActions } from '../../store';
 
 beforeEach(() => resetDieIds());
 
@@ -474,5 +482,112 @@ describe('ROUND_START_DESTROY_STANDARD_DICE: Burn Barrel', () => {
     expect(result.burnBarrelMoney).toBe(6);
     expect(player.dice.length).toBe(1);
     expect(player.economy.balance).toBe(16);
+  });
+});
+
+// ─── ROUND_START_DESTROY_TRAIL_GUIDES_XMULT: Ashfang ───
+
+describe('ROUND_START_DESTROY_TRAIL_GUIDES_XMULT: Ashfang', () => {
+  test('destroys all trail guides and gains x0.25 mult each', () => {
+    const ashfang = item('ashfang');
+    const tg = createConsumableInstance(getTrailGuideDefById('tg_high_value')!);
+    const supply = createConsumableInstance(getSupplyDefById('coffee_tin')!);
+    replaceConsumableList([tg, supply]);
+
+    processEquipmentOnRoundStart([ashfang]);
+
+    expect(resolveConsumableList()).toHaveLength(1);
+    expect(resolveConsumableList()[0]!.def.id).toBe('coffee_tin');
+    expect(ashfang.state.xMult).toBeCloseTo(1.25, 5);
+  });
+});
+
+// ─── Funeral Pyre Witch synergy ───
+
+describe('ROUND_START_DESTROY_RIGHT: Funeral Pyre (Witch)', () => {
+  test('witch gains 4x sell value instead of 2x', () => {
+    runActions.patch({ professionId: 'witch' });
+    const pyre = itemWithState('funeral_pyre', { mult: 0 });
+    const neighbor = item('horseshoe');
+    const neighborSellValue = neighbor.sellValue;
+
+    processEquipmentOnRoundStart([pyre, neighbor]);
+    expect(pyre.state.mult).toBe(neighborSellValue * 4);
+  });
+});
+
+// ─── DAY_START_DIAMOND_HAND: Nightshard ───
+
+describe('DAY_START_DIAMOND_HAND: Nightshard', () => {
+  test('queues up to 3 unspent diamond dice as hand priority picks', () => {
+    const diamonds = [
+      die({ enhancement: 'diamond', value: 12 }),
+      die({ enhancement: 'diamond', value: 11 }),
+      die({ enhancement: 'diamond', value: 10 }),
+      die({ enhancement: 'diamond', value: 9 }),
+    ];
+    setupGame({
+      equipment: [item('nightshard')],
+      dice: [...diamonds, ...diceWithValue(1, 100)],
+    });
+    const nightshard = item('nightshard');
+    const result = processEquipmentOnDayStart([nightshard]);
+    expect(result.priorityHandDiceIds).toHaveLength(3);
+    expect(result.priorityHandDiceIds.every((id) => diamonds.some((d) => d.id === id))).toBe(true);
+  });
+
+  test('day 1 hand prefers diamonds without increasing hand size', () => {
+    const diamonds = [
+      die({ enhancement: 'diamond', value: 12 }),
+      die({ enhancement: 'diamond', value: 11 }),
+      die({ enhancement: 'diamond', value: 10 }),
+    ];
+    const { game } = setupGame({
+      equipment: [item('nightshard')],
+      dice: [...diamonds, ...diceWithValue(1, 100)],
+    });
+    game.startRound();
+    expect(game.state.hand.length).toBe(game.config.rollSize);
+    const diamondsInHand = game.state.hand.filter((d) => d.enhancement === 'diamond');
+    expect(diamondsInHand).toHaveLength(3);
+  });
+
+  test('day 2 refill prefers diamonds without increasing hand size', () => {
+    const diamonds = [
+      die({ enhancement: 'diamond', value: 12 }),
+      die({ enhancement: 'diamond', value: 11 }),
+      die({ enhancement: 'diamond', value: 10 }),
+    ];
+    const { game } = setupGame({
+      equipment: [item('nightshard')],
+      dice: [...diamonds, ...diceWithValue(1, 10)],
+    });
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    const handIds = game.state.hand.map((d) => d.id);
+    expect(game.selectForRoll(handIds)).toBe(true);
+    const scoreTarget = game.state.hand.find((d) => d.enhancement !== 'diamond');
+    expect(scoreTarget).toBeDefined();
+    expect(game.selectForScore([scoreTarget!.id])).toBe(true);
+    expect(game.calculateScore()).not.toBeNull();
+
+    const result = game.endDay();
+    expect(result.outcome).toBe('next-day');
+    expect(game.state.hand.length).toBe(game.config.rollSize);
+    const diamondsInHand = game.state.hand.filter((d) => d.enhancement === 'diamond');
+    expect(diamondsInHand).toHaveLength(3);
+  });
+});
+
+// ─── Cursed equipment protection on round-start destruction ───
+
+describe('cursed equipment round-start destruction', () => {
+  test('haunted totem does not target cursed equipment', () => {
+    const totem = item('haunted_totem');
+    const cursed = item('horseshoe');
+    cursed.modifiers = ['cursed'];
+    const result = processEquipmentOnRoundStart([totem, cursed]);
+    expect(result.animatedDestructions).toEqual([]);
+    expect(totem.state.xMult).toBeCloseTo(1.5, 5);
   });
 });

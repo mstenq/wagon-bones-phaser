@@ -61,6 +61,7 @@ import {
   type EquipmentUnlockCondition,
 } from '../game/equipmentUnlock';
 import { enhancementMatchesTarget, hasAlchemyKit } from '../game/alchemyKit';
+import { getMostUsedSupplyNames } from '../game/handStatsHelpers';
 
 /** Card-bar alert wiggle when an effect's ready-to-use condition is met */
 export type EquipmentAlertType = 'firstDay' | 'lastDay' | 'readyToSell' | 'everyNthHand';
@@ -1141,7 +1142,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     modifierImmunity: ['perishable'],
     effectType: 'ROUND_START_DESTROY_RIGHT',
-    effectParams: {},
+    effectParams: { sellValueMult: 2, professionOverrides: { witch: { sellValueMult: 4 } } },
     initialState: { mult: 0 },
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'funeral_pyre');
@@ -1150,7 +1151,13 @@ const items: ItemDef[] = [
       return {
         hint,
         tooltip: [
-          [text('When starting round, destroy equipment to right and add double its sell value as '), mult('mult')],
+          [
+            text('When starting round, destroy equipment to right and add '),
+            mult('2×'),
+            text(' its sell value as mult. Eliza Blackwood (Witch) gets '),
+            mult('4×'),
+            text('.'),
+          ],
           [text('Currently: '), mult(`+${m}`)],
         ],
       };
@@ -3391,6 +3398,136 @@ const items: ItemDef[] = [
         [text('Also makes Coffee Tin and Pan for Gold supply cards 2 times more likely')],
       ],
     }),
+  },
+  {
+    id: 'ashfang',
+    name: 'Ashfang',
+    cardTemplate: 'hellfire',
+    cost: 7,
+    rarity: 'uncommon',
+    modifierImmunity: ['perishable'],
+    effectType: 'ROUND_START_DESTROY_TRAIL_GUIDES_XMULT',
+    effectParams: { value: 0.25 },
+    initialState: { xMult: 1 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'ashfang');
+      const xm = equip?.state.xMult ?? 1;
+      const hint = xm > 1 ? [[mult(`x${xm.toFixed(2)}`)]] : [[mult('+ x0.25')], [condition('per trail guide', 'xs')]];
+      return {
+        hint,
+        tooltip: [
+          [text('At round start, destroy all trail guides in your consumable area')],
+          [text('Gain '), mult('x0.25'), text(' mult for each one destroyed')],
+          [text('Currently: '), mult(`x${xm.toFixed(2)}`)],
+        ],
+      };
+    },
+  },
+  {
+    id: 'moonquil',
+    name: 'Moonquil',
+    cardTemplate: 'white-text',
+    cost: 7,
+    rarity: 'uncommon',
+    modifierImmunity: ['perishable'],
+    effectType: 'UNIQUE_EQUIPMENT_MULT',
+    effectParams: { value: 2 },
+    display: (_round, player) => {
+      const uniqueCount = player.equipmentObtainedIds?.length ?? 0;
+      const multVal = uniqueCount * 2;
+      const hint = multVal > 0 ? [[mult(`+${multVal}`)]] : [[mult('+2')], [condition('per unique equip', 'xs')]];
+      return {
+        hint,
+        tooltip: [
+          [mult('+2'), text(' mult for every unique equipment item obtained this run')],
+          [text('Currently: '), mult(`+${multVal}`)],
+        ],
+      };
+    },
+  },
+  {
+    id: 'nightshard',
+    name: 'Nightshard',
+    cardTemplate: 'white-text',
+    cost: 7,
+    rarity: 'uncommon',
+    modifierImmunity: ['perishable'],
+    effectType: 'DAY_START_DIAMOND_HAND',
+    effectParams: { count: 3, weightSupply: [{ supplyId: 'pick_axe', multiplier: 2 }] },
+    display: (_round, _player) => ({
+      hint: [[active('3 diamonds', 'sm')], [condition('day start', 'xs')]],
+      tooltip: [
+        [text('At start of each day, find up to 3 diamond dice from your pouch (must not be spent)')],
+        [text('Also makes Pick Axe supply cards 2 times more likely')],
+      ],
+    }),
+  },
+  {
+    id: 'shadowpaw',
+    name: 'Shadowpaw',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    modifierImmunity: ['perishable'],
+    effectType: 'MOST_USED_SUPPLY_PACK',
+    effectParams: {},
+    display: (_round, player) => {
+      const targetNames = getMostUsedSupplyNames(player.supplyCardUseCounts);
+      const targetLabel = targetNames.length > 0 ? targetNames.join(' / ') : null;
+      let hint: HintSegment[][];
+      if (targetNames.length === 0) {
+        hint = [[inactive('No supply used yet', 'sm')]];
+      } else if (targetNames.length === 1) {
+        hint = [[active(targetNames[0]!, 'sm')], [condition('in supply packs', 'xs')]];
+      } else {
+        hint = [[active(`Tied (${targetNames.length})`, 'sm')], [condition('in supply packs', 'xs')]];
+      }
+      const tooltip: HintSegment[][] = [[text('Supply packs always contain your most used supply card')]];
+      if (targetLabel) {
+        tooltip.push([text('Currently: '), active(targetLabel)]);
+      } else {
+        tooltip.push([text('Use a supply card to choose your target')]);
+      }
+      return { hint, tooltip };
+    },
+  },
+  {
+    id: 'skullwing',
+    name: 'Skullwing',
+    cardTemplate: 'marked',
+    cost: 7,
+    rarity: 'uncommon',
+    modifierImmunity: ['perishable'],
+    alertType: 'firstDay',
+    effectType: 'FIRST_DAY_NONSCORING_DESTROY',
+    effectParams: { value: 1 },
+    display: (_round, _player) => ({
+      hint: [[money('$1')], [condition('non-scoring die, day 1', 'xs')]],
+      tooltip: [[text('On day 1, destroy played dice that do not score and earn '), money('$1'), text(' for each')]],
+    }),
+  },
+  {
+    id: 'dustshell',
+    name: 'Dustshell',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    modifierImmunity: ['perishable'],
+    effectType: 'STATEFUL_ADD_MILES',
+    effectParams: { milesPerDay: 10 },
+    initialState: { miles: 0 },
+    display: (_round, player) => {
+      const equip = findOwnedEquip(player, 'dustshell');
+      const milesVal = equip?.state.miles ?? 0;
+      const hint = milesVal > 0 ? [[miles(`+${milesVal}`)]] : [[miles('+10')], [condition('per day end', 'xs')]];
+      return {
+        hint,
+        tooltip: [
+          [text('Gain '), miles('+10'), text(' miles at the end of each day played')],
+          [text('Currently: '), miles(`+${milesVal}`)],
+        ],
+      };
+    },
   },
 ];
 

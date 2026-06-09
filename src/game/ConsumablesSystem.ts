@@ -321,21 +321,20 @@ import { diceActions } from './store/actions/diceActions';
 import { progressionActions } from './store/actions/progressionActions';
 import { selectHandStats, selectProfession } from './store/selectors/runSelectors';
 import { processEquipmentOnDiceDestroyed } from './EquipmentEffects';
+import { buildSupplyConsumedPatch, recordSupplyCardConsumed } from './supplyCardUsage';
 
 function writeEquipment(list: EquipmentInstance[]): void {
   replaceEquipmentList(list);
 }
 
-/** Record last-used consumable history (and supply counter) without executing card effects. */
+/** Record last-used consumable history (and supply counters) without executing card effects. */
 export function trackConsumableUse(def: ConsumableDef): void {
   const run = getRunState();
-  const patch: { lastUsedConsumableId: string | null; supplyCardsUsed?: number } = {
+  const supplyPatch = buildSupplyConsumedPatch(def, run);
+  runActions.patch({
     lastUsedConsumableId: nextLastUsedConsumableIdAfterUse(def, run.lastUsedConsumableId),
-  };
-  if (def.category === 'supply') {
-    patch.supplyCardsUsed = run.supplyCardsUsed + 1;
-  }
-  runActions.patch(patch);
+    ...(supplyPatch ?? {}),
+  });
 }
 
 /** Add a medicine supply card with ghost aura (Doctor profession, trail events, etc.). */
@@ -405,6 +404,8 @@ export function finalizeConsumableEquipmentEvents(events: ConsumableAnimEvent[] 
     const list = resolveEquipmentList();
     const sorted = [...event.destructions].sort((a, b) => b.victimIdx - a.victimIdx);
     for (const { victimIdx } of sorted) {
+      const target = list[victimIdx];
+      if (target && isEquipmentCursed(target)) continue;
       list.splice(victimIdx, 1);
     }
     if (event.equipmentToAdd?.length) {
@@ -427,7 +428,7 @@ export function executeConsumableEffect(
   const professionId = selectProfession(run)?.id;
 
   if (def.category === 'supply') {
-    runActions.patch({ supplyCardsUsed: run.supplyCardsUsed + 1 });
+    recordSupplyCardConsumed(def);
   }
 
   // ─── Trail guide → upgrade hand level ───

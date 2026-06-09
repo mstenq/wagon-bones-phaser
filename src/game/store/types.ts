@@ -134,10 +134,17 @@ export interface RunState {
   trailGuidesUsed: number;
   /** Supply cards consumed this run (for Campfire Stories and similar). */
   supplyCardsUsed: number;
+  /** Per-supply-id use counts this run (Shadowpaw and similar). */
+  supplyCardUseCounts: Record<string, number>;
+  /** Unique equipment def ids obtained this run (Moonquil and similar). */
+  equipmentObtainedIds: string[];
   startingDiceCount: number;
   bossEffectDisabled: boolean;
   bossRoundState: BossRoundState;
   pendingNewDiceIds: string[];
+  /** Day-start dice to prefer within roll size (consumed on next hand draw). */
+  priorityHandDiceIds: string[];
+  /** Extra dice appended beyond roll size (Mystery Crate). */
   pendingHandDiceIds: string[];
   pendingAnimatedDestructions: { sourceIdx: number; victimIdx: number }[];
   pendingJunkDealerCount: number;

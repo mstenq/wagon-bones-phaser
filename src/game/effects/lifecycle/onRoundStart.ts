@@ -2,6 +2,7 @@
 
 import { HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
+import { isEquipmentCursed } from '../../ItemsSystem';
 import { resolveEffectParam } from '../../effectParams';
 import { walkEquipmentPerSlot } from '../../equipmentUtils';
 import { effectRegistry } from '../registry';
@@ -78,7 +79,13 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
         equip.state.xMult = (equip.state.xMult ?? 1) + (equip.def.effectParams.value as number);
         const otherIndices = equipment
           .map((_, idx) => idx)
-          .filter((idx) => idx !== i && !destroyedIndices.includes(idx) && !pendingAnimatedDestroy.has(idx));
+          .filter(
+            (idx) =>
+              idx !== i &&
+              !destroyedIndices.includes(idx) &&
+              !pendingAnimatedDestroy.has(idx) &&
+              !isEquipmentCursed(equipment[idx]!),
+          );
         if (otherIndices.length > 0) {
           const victimIdx = rngPick('equipment', otherIndices);
           pendingAnimatedDestroy.add(victimIdx);
@@ -124,7 +131,15 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
           !pendingAnimatedDestroy.has(rightIdx)
         ) {
           const rightEquip = equipment[rightIdx];
-          equip.state.mult = (equip.state.mult ?? 0) + rightEquip.sellValue * 2;
+          if (isEquipmentCursed(rightEquip)) break;
+          const professionId = getRunState().professionId ?? undefined;
+          const sellValueMult =
+            resolveEffectParam<number>(
+              equip.def.effectParams as Record<string, unknown>,
+              'sellValueMult',
+              professionId,
+            ) ?? 2;
+          equip.state.mult = (equip.state.mult ?? 0) + rightEquip.sellValue * sellValueMult;
           pendingAnimatedDestroy.add(rightIdx);
           ctx.animatedDestructions.push({ sourceIdx: i, victimIdx: rightIdx });
         }
@@ -179,6 +194,16 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
       replaceConsumableList(consumables);
       const gain = (equip.def.effectParams.value as number) ?? 4;
       equip.state.mult = (equip.state.mult ?? 0) + gain;
+      break;
+    }
+    case 'ROUND_START_DESTROY_TRAIL_GUIDES_XMULT': {
+      if (isCopy) break;
+      const consumables = resolveConsumableList();
+      const trailGuideCount = consumables.filter((c) => c.def.category === 'trail_guide').length;
+      if (trailGuideCount === 0) break;
+      replaceConsumableList(consumables.filter((c) => c.def.category !== 'trail_guide'));
+      const gain = (equip.def.effectParams.value as number) ?? 0.25;
+      equip.state.xMult = (equip.state.xMult ?? 1) + trailGuideCount * gain;
       break;
     }
     case 'ROULETTE_WHEEL':

@@ -278,6 +278,8 @@ export interface GameSetupOptions {
   bossId?: string;
   /** Supply cards consumed this run (Campfire Stories, etc.) */
   supplyCardsUsed?: number;
+  /** Unique equipment def ids obtained this run (Moonquil, etc.) */
+  equipmentObtainedIds?: string[];
 }
 
 export interface GameSetupResult {
@@ -310,6 +312,9 @@ export function setupGame(options: GameSetupOptions = {}): GameSetupResult {
   if (options.handSize !== undefined) runActions.patch({ handSize: options.handSize });
   if (options.maxEquipmentSlots !== undefined) runActions.patch({ maxEquipmentSlots: options.maxEquipmentSlots });
   if (options.supplyCardsUsed !== undefined) runActions.patch({ supplyCardsUsed: options.supplyCardsUsed });
+  if (options.equipmentObtainedIds !== undefined) {
+    runActions.patch({ equipmentObtainedIds: [...options.equipmentObtainedIds] });
+  }
 
   if (options.handLevels) {
     for (const [handType, level] of Object.entries(options.handLevels)) {
@@ -370,11 +375,9 @@ export interface ScoreTestOptions {
   runSeed?: string;
   /** Supply cards consumed this run (Campfire Stories, etc.) */
   supplyCardsUsed?: number;
+  /** Unique equipment def ids obtained this run (Moonquil, etc.) */
+  equipmentObtainedIds?: string[];
 }
-
-/**
- * Run the full score calculation pipeline and return the result.
- */
 export function calculateTestScore(options: ScoreTestOptions) {
   const allDice = [...options.scoredDice, ...(options.heldDice ?? [])];
   const scoredIds = options.scoredDice.map((d) => d.id);
@@ -387,6 +390,7 @@ export function calculateTestScore(options: ScoreTestOptions) {
     handLevels: options.handLevels,
     bossId: options.bossId,
     supplyCardsUsed: options.supplyCardsUsed,
+    equipmentObtainedIds: options.equipmentObtainedIds,
   });
 
   if (options.echoOfTheDamnedStacks !== undefined) {

@@ -1916,3 +1916,29 @@ describe('SANDWICH: rounds remaining', () => {
     expect(instEnd.state.roundsRemaining).toBe(4);
   });
 });
+
+// ─── FIRST_DAY_NONSCORING_DESTROY: Skullwing ───
+
+describe('FIRST_DAY_NONSCORING_DESTROY: Skullwing', () => {
+  test('destroys played non-scoring dice on day 1 and earns $1 each', () => {
+    const hand = [die({ value: 5 }), die({ value: 5 }), die({ value: 3 }), die({ value: 7 })];
+    const { result, player } = calculateTestScore({
+      scoredDice: hand,
+      equipment: [item('skullwing')],
+    });
+    expect(result.mutations.moneyEarned).toBe(2);
+    expect(player.dice.length).toBe(52);
+    expect(result.animEvents.some((evt) => evt.popupType === 'crack' && evt.target.kind === 'die')).toBe(true);
+  });
+
+  test('open palm anti-synergy: all played dice count as scoring so none are destroyed', () => {
+    const hand = [die({ value: 5 }), die({ value: 5 }), die({ value: 3 }), die({ value: 7 })];
+    const { result, player } = calculateTestScore({
+      scoredDice: hand,
+      equipment: [item('skullwing'), item('open_palm')],
+    });
+    expect(result.mutations.moneyEarned).toBe(0);
+    expect(player.dice.length).toBe(54);
+    expect(result.animEvents.some((evt) => evt.popupType === 'crack' && evt.target.kind === 'die')).toBe(false);
+  });
+});

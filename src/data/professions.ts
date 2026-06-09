@@ -34,6 +34,8 @@ export interface ProfessionModifiers {
   balanceMilesAndMult?: boolean;
   blindSizeMultiplier?: number;
   ghostMedicineOnBoss?: boolean;
+  /** Witch: one of these familiar ids is granted cursed at run start (after RNG seed). */
+  startingFamiliarIds?: string[];
 }
 
 export interface ProfessionDef {
@@ -261,6 +263,21 @@ const professions: ProfessionDef[] = [
       id: 'junk_dealer',
       name: 'Junk Dealer',
       effect: 'When round starts, create 2 pieces of equipment up to rare rarity (Normally common)',
+    },
+  },
+  {
+    id: 'witch',
+    title: 'Witch',
+    name: 'Eliza Blackwood',
+    description: 'Starts with a random Cursed Familiar (cannot be sold or destroyed)',
+    modifiers: {
+      startingFamiliarIds: ['ashfang', 'moonquil', 'nightshard', 'shadowpaw', 'skullwing', 'dustshell'],
+    },
+    startingDice: ['bone', 'bone', 'lucky', 'diamond', 'stone'],
+    specialEquipment: {
+      id: 'funeral_pyre',
+      name: 'Funeral Pyre',
+      effect: 'Gains 4x the sell value as mult of the destroyed equipment (normally 2x)',
     },
   },
   {

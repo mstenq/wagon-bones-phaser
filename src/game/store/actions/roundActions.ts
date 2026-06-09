@@ -9,7 +9,8 @@ import {
   type RoundState,
   type ScoreResult,
 } from '../../types';
-import { rollDice, rollDie, detectBestHand, createDie, drawFromPouch } from '../../DiceSystem';
+import { rollDice, rollDie, detectBestHand, createDie } from '../../DiceSystem';
+import { buildHandDiceIds } from '../../handBuilding';
 import { scoreHand } from '../../scoring/scoreHand';
 import { multiplyScore, addScore, D, ZERO, floorScore, ceilScore, gte } from '../../scoreMath';
 import {
@@ -25,6 +26,7 @@ import {
   processEquipmentOnDiceSpent,
   processEquipmentOnRoundStart,
   processEquipmentOnDayEnd,
+  processEquipmentOnDayStart,
   findDeathPrevention,
   processGoldHeldAtRoundEnd,
   processBlueMoonHeldAtRoundEnd,
@@ -50,13 +52,14 @@ import {
   initInspectorRollSize,
   getInspectorRollSizeForDay,
 } from '../../BossEffectsSystem';
-import { generateRandomEquipment } from '../../ItemsSystem';
+import { generateRandomEquipment, isEquipmentCursed } from '../../ItemsSystem';
 import { getPermitAuraMultiplier } from '../../PermitsSystem';
 import { acquireRewardEquipmentInstance } from '../../EquipmentModifiers';
 import { pickGameRoundBackgroundIndex } from '../../roundBackgrounds';
 import { getRunState, runActions } from '../runStore';
 import { getRoundState, roundStore, createInitialRoundState, patchRoundStore } from '../roundStore';
 import type { RoundRuntimeState, RoundSidebarOverlay } from '../types';
+import type { Die } from '../../types';
 import {
   legacyRoundStateToRuntime,
   resolveDiceByIds,
@@ -93,27 +96,18 @@ function patchRound(partial: Partial<RoundRuntimeState>): void {
 }
 
 function drawRandomHandIds(run = getRunState(), rollSize: number): string[] {
-  const available = selectAvailableDice(run);
-  const pendingHandSet = new Set(run.pendingHandDiceIds);
-  const basePool = available.filter((d) => !pendingHandSet.has(d.id));
-  const drawCount = Math.min(rollSize, basePool.length);
-  const drawn = drawFromPouch(basePool, drawCount).drawn;
-  const handIds = new Set(drawn.map((d) => d.id));
+  const handIds = buildHandDiceIds({
+    run,
+    rollSize,
+    priorityIds: run.priorityHandDiceIds,
+    extraHandIds: run.pendingHandDiceIds,
+  });
 
-  for (const id of run.pendingHandDiceIds) {
-    if (handIds.has(id)) continue;
-    const die = available.find((d) => d.id === id);
-    if (die) {
-      drawn.push(die);
-      handIds.add(id);
-    }
+  if (run.priorityHandDiceIds.length > 0 || run.pendingHandDiceIds.length > 0) {
+    runActions.patch({ priorityHandDiceIds: [], pendingHandDiceIds: [] });
   }
 
-  if (run.pendingHandDiceIds.length > 0) {
-    runActions.patch({ pendingHandDiceIds: [] });
-  }
-
-  return drawn.map((d) => d.id);
+  return handIds;
 }
 
 function createInitialRound(config: GameConfig, run = getRunState()): RoundRuntimeState {
@@ -148,6 +142,8 @@ function removeEquipmentAtIndices(indices: number[]): void {
   const sorted = [...indices].sort((a, b) => b - a);
   const equipment = resolveEquipmentList();
   for (const idx of sorted) {
+    if (idx < 0 || idx >= equipment.length) continue;
+    if (isEquipmentCursed(equipment[idx]!)) continue;
     equipment.splice(idx, 1);
   }
   replaceEquipmentList(equipment);
@@ -264,6 +260,10 @@ export const roundActions = {
 
     applyBossOnDayStart(1);
 
+    const dayStartEquipment = resolveEquipmentList();
+    const dayOneStart = processEquipmentOnDayStart(dayStartEquipment);
+    let priorityHandDiceIds = [...getRunState().priorityHandDiceIds, ...dayOneStart.priorityHandDiceIds];
+
     const roundStartEquipment = resolveEquipmentList();
     const roundStartEffects = processEquipmentOnRoundStart(roundStartEquipment, selectIsBossRound(getRunState()));
     removeEquipmentAtIndices([...roundStartEffects.destroyedIndices].sort((a, b) => b - a));
@@ -311,20 +311,20 @@ export const roundActions = {
       config.maxRerolls = 0;
     }
 
-    const pendingHandDiceIds = [...getRunState().pendingHandDiceIds];
+    const pendingHandDiceIdsRound = [...getRunState().pendingHandDiceIds];
     const mysteryStickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
     for (let i = 0; i < roundStartEffects.stickerDiceToAdd; i++) {
       const sticker = rngPick('sticker', [...mysteryStickers]);
       const added = diceActions.addDie(createDie({ sticker }));
       pendingNewDiceIds.push(added.id);
-      pendingHandDiceIds.push(added.id);
+      pendingHandDiceIdsRound.push(added.id);
     }
 
     for (let i = 0; i < roundStartEffects.supplyCardsToAdd; i++) {
       consumableActions.addConsumable(getRandomSupplyDef());
     }
 
-    runActions.patch({ pendingNewDiceIds, pendingHandDiceIds });
+    runActions.patch({ pendingNewDiceIds, pendingHandDiceIds: pendingHandDiceIdsRound, priorityHandDiceIds });
     if (pendingNewDiceIds.length > 0) {
       runActions.enqueuePlayback({ kind: 'dice-added', dieIds: [...pendingNewDiceIds] });
     }
@@ -505,6 +505,7 @@ export const roundActions = {
       currentDay: round.day,
       maxDays: round.config.maxDays,
       allDice: run.dice,
+      selectedForScoreDice: selectedDice,
     });
 
     const scoredIds = new Set(round.selectedForScoreIds);
@@ -646,6 +647,7 @@ export const roundActions = {
         if (equipment[idx]?.def.id === 'dynamite') {
           runActions.patch({ dynamiteSelfDestructed: true });
         }
+        if (equipment[idx] && isEquipmentCursed(equipment[idx]!)) continue;
         equipment.splice(idx, 1);
       }
       replaceEquipmentList(equipment);
@@ -699,18 +701,29 @@ export const roundActions = {
       economyActions.trySpend(perDayLoss);
     }
 
+    applyBossOnDayStart(nextDay);
+
+    const dayStartEquipment = resolveEquipmentList();
+    const dayStartEffects = processEquipmentOnDayStart(dayStartEquipment);
+
     const scoredSet = new Set(scoredIds);
     const carryoverRefs = round.rolledDice.filter((r) => !scoredSet.has(r.id));
     const carryoverIds = carryoverRefs.map((r) => r.id);
-    const needed = Math.max(0, nextConfig.rollSize - carryoverIds.length);
-    const refillPool = selectAvailableDice(run).filter((d) => !carryoverIds.includes(d.id));
-    const refill = needed > 0 ? drawFromPouch(refillPool, Math.min(needed, refillPool.length)).drawn : [];
-    const handDiceIds = [...carryoverIds, ...refill.map((d) => d.id)];
+    const handDiceIds = buildHandDiceIds({
+      run,
+      rollSize: nextConfig.rollSize,
+      carryoverIds,
+      priorityIds: dayStartEffects.priorityHandDiceIds,
+    });
+
+    const carryoverSet = new Set(carryoverIds);
+    const refillDice = handDiceIds
+      .filter((id) => !carryoverSet.has(id))
+      .map((id) => selectAvailableDice(run).find((d) => d.id === id))
+      .filter((d): d is Die => d != null);
 
     let dieValuesByDieId = syncDieValuesFromRefs(round.dieValuesByDieId, carryoverRefs);
-    dieValuesByDieId = syncDieValuesFromDice(dieValuesByDieId, refill);
-
-    applyBossOnDayStart(nextDay);
+    dieValuesByDieId = syncDieValuesFromDice(dieValuesByDieId, refillDice);
 
     patchRound({
       day: nextDay,

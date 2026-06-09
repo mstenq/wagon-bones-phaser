@@ -61,6 +61,15 @@ effectRegistry.registerXMult('ROUND_START_XMULT_DESTROY', (ctx, equip, index) =>
   }
 });
 
+effectRegistry.registerXMult('ROUND_START_DESTROY_TRAIL_GUIDES_XMULT', (ctx, equip, index) => {
+  const xm = equip.state.xMult ?? 1;
+  if (xm > 1) {
+    multiplyCtxXMult(ctx, xm);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xm });
+    console.log(`  [xmult] ${equip.def.name}: x${xm} (xMult: ${ctx.xMult})`);
+  }
+});
+
 effectRegistry.registerXMult('DIAMOND_DESTROYED_XMULT', (ctx, equip, index) => {
   const xm = equip.state.xMult ?? 1;
   if (xm > 1) {

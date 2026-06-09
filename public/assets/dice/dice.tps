@@ -124,7 +124,7 @@
             <key>data</key>
             <struct type="DataFile">
                 <key>name</key>
-                <filename></filename>
+                <filename>dice.json</filename>
             </struct>
         </map>
         <key>multiPackMode</key>
@@ -176,6 +176,20 @@
         <key>individualSpriteSettings</key>
         <map type="IndividualSpriteSettingsMap">
             <key type="filename">bone/bone-01.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>spriteScale</key>
+                <double>0.2</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>256,256,512,512</rect>
+                <key>scale9Paddings</key>
+                <rect>256,256,512,512</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
             <key type="filename">bone/bone-02.png</key>
             <key type="filename">bone/bone-03.png</key>
             <key type="filename">bone/bone-04.png</key>

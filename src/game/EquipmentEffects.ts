@@ -337,14 +337,13 @@ export {
 export { processEquipmentOnDiceDestroyed } from './effects/lifecycle/onDiceDestroyed';
 export { processEquipmentPreScoring } from './effects/lifecycle/onPreScoring';
 
-export { processEquipmentOnDayEnd } from './effects/lifecycle/misc';
+export { processEquipmentOnDayEnd, processEquipmentOnDayStart } from './effects/lifecycle/misc';
 
 export { getConfigModifiers, findDeathPrevention } from './effects/helpers';
 export { getGlobalScoredRetriggerCount as getScoredRetriggerCount } from './effects/scoredRetrigger';
 
 export {
   processEquipmentOnDiceAdded,
-  processEquipmentOnSupplyUsed,
   processEquipmentOnPackSkipped,
   processEquipmentOnPackOpened,
 } from './effects/lifecycle/misc';
