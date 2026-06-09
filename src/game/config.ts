@@ -24,9 +24,17 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   height: GAME.HEIGHT,
   parent: 'game-container',
   backgroundColor: GAME.BACKGROUND_COLOR,
+  render: {
+    antialias: true,
+    pixelArt: false,
+    autoMobileTextures: true,
+    roundPixels: true,
+    powerPreference: 'high-performance',
+  },
   scale: {
     mode: Scale.RESIZE,
     autoCenter: Scale.CENTER_BOTH,
+    autoRound: true,
   },
   input: {
     touch: { capture: true },
