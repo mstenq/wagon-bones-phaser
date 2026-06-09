@@ -73,7 +73,8 @@ Instead of decks, we instead choose a character, and the character affects how t
 - Accountant Henry Pritchard - Balance miles and mult before calculating total miles when scoring (x2 base blind size)
 - Doctor Dr. Eleanor Sykes - Start the game with 2 medicine cards in hand
 - Con Artist Victor Hale - +2 rerolls per day, -1 hand size
-
+- Witch - Eliza Blackwood - Starts with a random Cursed Familiar (Cannot be sold/destroyed).
+Card Synergy: funeral_pyre - Gains 4x the the sell value as mult of the destroyed equipment (normally 2x)
 
 ## Hand Sequence / Scoring
 

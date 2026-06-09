@@ -169,6 +169,15 @@ Six Feet Under - $5 - common - item gains 66 miles for every dice that is destro
 Eight Second Ride - $8 - rare - Each consecutive scored 8 gains +0.5 xMult over the previous (x1,x1.5,x2,x2.5, x3...)
 Stacked Deck - $10 - rare - Loaded dice are considered all pip values for equipment effects
 
+## Familiars
+Ashfang - uncommon - $7 - Hellhound familiar destroys all trail guides in your consumable area at start of each round. For each one destroyed earn x0.25 mult.
+Moonquil - uncommon - $7 - Owl familiar gains +2 mult for every unique equipment item obtained this run
+Nightshard - uncommon - $7 - Raven familiar finds up to 3 dice of your most common enhancement from your pouch at start of each day (must not be spent). Also makes the matching enhancement supply card(s) 2 times more likely (ties weight all tied types)
+Shadowpaw - uncommon - $7 - Cat familiar ensures supply packs always contain your most used supply card.
+Skullwing - uncommon - $7 - Vulture familiar destroys all dice that are played on the first day that do not score and gains a $1 for each destroyed dice. [dev only note: this has anti synergy with open_palm since all dice count as scored]
+Dustshell - uncommon - $7 - Turtle familiar gains +10 miles at the end of each day played.
+
+
 ## Legendaries
 the following legendary items must be obtained from pandora's box frontier encounter cards
 Book of the Dead - $20 - Gains x1 mult for each destroyed enhanced dice
@@ -177,6 +186,7 @@ The 23rd Psalm - $20 - Item gains x1 mult for every 23 dice rerolled
 Saint Elmo’s Shield - $20 - Disables all boss round effects and all negative effects from trail events are prevented. Divine favor intervenes.
 Ghost Lantern - $20 - Creates a ghost copy of a random consumable card in your possession at the end of the shop phase
 The Seventh Trumpet - $20 - Retriggers all played dice, and all held in hand effects
+
 
  ## Requires features before implementing
  Bounty Contract - $6 - sell this item to gain a free tag_twin_wagon tag 

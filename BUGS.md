@@ -6,7 +6,8 @@
 - bad water event only gives "drink it" as an option which is lame.
 - blood_moon - should realy be negative 1 hand size instead of rerolls.
 - cursed equipment should never be removable; any sell/destroy/destruction path that removes cursed items is a bug.
-
+- six_feet_under - is way to overpowered. A single 'raid' card boosts the value to +330 miles. Lets switch its power with ghost_town, and it will get +6 mult for each die below starting size. (This change also means you don't have to destroy the dice while you have the card, you can destroy a ton and pick up this card and it will be good immediately and match how ghost_town works).
+- ghost_town - now this will instead gain +30 for each die below starting size.
 
 ## New Feature Ideas
 - new permits for luck:
@@ -52,17 +53,3 @@ snake_oil_ledger
 # Sticker Idea
 contagion - played dice with a green contagion sticker have a 1 in 2 chance of spreading enhancement to dice next to it.
 rust/silver - prevent boss debuffs
-
-
-
-# Witch Profession
-Witch - Eliza Blackwood - Starts with a random Cursed Familiar (Cannot be sold/destroyed).
-Card Synergy: funeral_pyre - Gains 4x the the sell value as mult of the destroyed equipment (normally 2x)
-
-# Familiar Cards
-Ashfang - uncommon - $7 - Hellhound familiar destroys all trail guides in your consumable area at start of each round. For each one destroyed earn x0.25 mult.
-Moonquil - uncommon - $7 - Owl familiar gains +2 mult for every unique equipment item obtained this run
-Nightshard - uncommon - $7 - Raven familiar finds up to 3 dice of your most common enhancement from your pouch at start of each day (must not be spent). Also makes the matching enhancement supply card(s) 2 times more likely (ties weight all tied types)
-Shadowpaw - uncommon - $7 - Cat familiar ensures supply packs always contain your most used supply card.
-Skullwing - uncommon - $7 - Vulture familiar destroys all dice that are played on the first day that do not score and gains a $1 for each destroyed dice. [dev only note: this has anti synergy with open_palm since all dice count as scored]
-Dustshell - uncommon - $7 - Turtle familiar gains +10 miles at the end of each day played.

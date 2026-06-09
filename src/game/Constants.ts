@@ -494,7 +494,10 @@ export const DICE = {
   /** Orbit radius for sticker “moon” around the die (px from center) */
   STICKER_ORBIT_RADIUS: 45,
   /** Full orbit period in ms */
-  STICKER_ORBIT_DURATION_MS: 9800,
+  STICKER_ORBIT_DURATION_MS: 12800,
+  /** Blue circle badge for permanent bonus miles orbiting with stickers */
+  BONUS_MILES_BADGE_SIZE: 16,
+  BONUS_MILES_BADGE_FONT_SIZE: 10,
   SELECTED_STROKE: 0xffcc00,
   FORCED_STROKE: 0xff4444,
   /** Roll phase: 🔒 label below die when pinned against rerolls (not scored) */

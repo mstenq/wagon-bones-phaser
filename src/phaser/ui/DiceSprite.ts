@@ -29,9 +29,9 @@ const TOOLTIP_PAD = 10;
 const TOOLTIP_BG_COLOR = COLORS.TOOLTIP_BG;
 const TOOLTIP_BORDER_COLOR = COLORS.TOOLTIP_BORDER;
 
-function setStickerOrbitPosition(image: GameObjects.Image, angleRad: number): void {
+function setOrbitPosition(obj: GameObjects.Components.Transform, angleRad: number): void {
   const r = DICE.STICKER_ORBIT_RADIUS;
-  image.setPosition(Math.cos(angleRad) * r, Math.sin(angleRad) * r);
+  obj.setPosition(Math.cos(angleRad) * r, Math.sin(angleRad) * r);
 }
 
 function setStickerOrbitOrientation(image: GameObjects.Image, stickerId: Die['sticker'], angleRad: number): void {
@@ -41,6 +41,34 @@ function setStickerOrbitOrientation(image: GameObjects.Image, stickerId: Die['st
     return;
   }
   image.setRotation(0);
+}
+
+const BONUS_MILES_BADGE_FILL = 0x55aaff;
+
+function createBonusMilesBadge(scene: Scene, amount: number): GameObjects.Container {
+  const badge = scene.add.container(0, 0);
+  const radius = DICE.BONUS_MILES_BADGE_SIZE / 2;
+  const circle = scene.add.graphics();
+  circle.fillStyle(BONUS_MILES_BADGE_FILL, 1);
+  circle.lineStyle(1, 0x000000, 0.55);
+  circle.fillCircle(0, 0, radius);
+  circle.strokeCircle(0, 0, radius);
+
+  const digits = `${amount}`;
+  const fontSize =
+    digits.length >= 3 ? DICE.BONUS_MILES_BADGE_FONT_SIZE - 3 : DICE.BONUS_MILES_BADGE_FONT_SIZE;
+  const label = scene.add
+    .text(0, 0, digits, {
+      fontFamily: 'Arial',
+      fontSize: `${fontSize}px`,
+      color: '#ffffff',
+      fontStyle: 'bold',
+    })
+    .setOrigin(0.5, 0.5);
+
+  badge.add([circle, label]);
+  badge.setDepth(9);
+  return badge;
 }
 
 export type DiceScorePresentation = 'none' | 'filler';
@@ -58,11 +86,12 @@ export class DiceSprite extends GameObjects.Container {
   private dieImage: GameObjects.Image;
   private selectionGfx: GameObjects.Graphics;
   private stickerImage: GameObjects.Image | null = null;
-  private stickerOrbitAngle = { rad: 0 };
-  private stickerOrbitTween: Phaser.Tweens.Tween | null = null;
+  private bonusMilesBadge: GameObjects.Container | null = null;
+  private orbitAngle = { rad: 0 };
+  private orbitTween: Phaser.Tweens.Tween | null = null;
   /** Per-sprite orbit params so redraw does not re-sync every die */
-  private stickerOrbitPhaseRad: number | null = null;
-  private stickerOrbitDurationMs: number | null = null;
+  private orbitPhaseRad: number | null = null;
+  private orbitDurationMs: number | null = null;
   private auraLabel: GameObjects.Text | null = null;
   private tooltip: GameObjects.Container | null = null;
   private tooltipLayout: { width: number; height: number } | null = null;
@@ -185,65 +214,115 @@ export class DiceSprite extends GameObjects.Container {
 
     this.drawSelectionStroke();
     this.drawRerollLockLabel();
-    this.drawSticker();
+    this.drawOrbitDecorations();
   }
 
-  private drawSticker(): void {
-    this.clearStickerOrbit();
-    if (!this._dieData.sticker) return;
+  private hasOrbitSticker(): boolean {
+    if (!this._dieData.sticker) return false;
+    return this.scene.textures.exists(`sticker_${this._dieData.sticker}`);
+  }
 
-    const textureKey = `sticker_${this._dieData.sticker}`;
-    if (!this.scene.textures.exists(textureKey)) return;
+  private bonusMilesAmount(): number {
+    return this._dieData.bonusMiles ?? 0;
+  }
 
-    this.stickerImage = this.scene.add.image(0, 0, textureKey).setOrigin(0.5, 0.5);
-    const maxDim = Math.max(this.stickerImage.width, this.stickerImage.height);
-    this.stickerImage.setScale(DICE.STICKER_SIZE / maxDim);
-    this.stickerImage.setDepth(8);
-    this.add(this.stickerImage);
-    this.bringToTop(this.stickerImage);
+  private hasOrbitDecorations(): boolean {
+    return this.hasOrbitSticker() || this.bonusMilesAmount() > 0;
+  }
+
+  private drawOrbitDecorations(): void {
+    this.clearOrbitDecorations();
+    if (!this.hasOrbitDecorations()) return;
+
+    const hasSticker = this.hasOrbitSticker();
+    const bonusMiles = this.bonusMilesAmount();
+    const hasBonus = bonusMiles > 0;
+
+    if (hasSticker) {
+      const textureKey = `sticker_${this._dieData.sticker}`;
+      this.stickerImage = this.scene.add.image(0, 0, textureKey).setOrigin(0.5, 0.5);
+      const maxDim = Math.max(this.stickerImage.width, this.stickerImage.height);
+      this.stickerImage.setScale(DICE.STICKER_SIZE / maxDim);
+      this.stickerImage.setDepth(8);
+      this.add(this.stickerImage);
+    }
+
+    if (hasBonus) {
+      this.bonusMilesBadge = createBonusMilesBadge(this.scene, bonusMiles);
+      this.add(this.bonusMilesBadge);
+    }
+
+    if (this.stickerImage) this.bringToTop(this.stickerImage);
+    if (this.bonusMilesBadge) this.bringToTop(this.bonusMilesBadge);
 
     if (getGameplayPreferences().stationaryStickers) {
-      this.stickerImage.setPosition(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET);
+      this.applyStationaryOrbitDecorations(hasSticker, hasBonus);
       return;
     }
 
-    if (this.stickerOrbitPhaseRad === null) {
-      this.stickerOrbitPhaseRad = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      this.stickerOrbitDurationMs = DICE.STICKER_ORBIT_DURATION_MS * Phaser.Math.FloatBetween(0.88, 1.14);
+    if (this.orbitPhaseRad === null) {
+      this.orbitPhaseRad = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      this.orbitDurationMs = DICE.STICKER_ORBIT_DURATION_MS * Phaser.Math.FloatBetween(0.88, 1.14);
     }
-    const phase = this.stickerOrbitPhaseRad;
-    this.stickerOrbitAngle.rad = phase;
-    setStickerOrbitPosition(this.stickerImage, phase);
-    setStickerOrbitOrientation(this.stickerImage, this._dieData.sticker, phase);
+    const phase = this.orbitPhaseRad;
+    this.orbitAngle.rad = phase;
+    this.applyOrbitingDecorations(phase, hasSticker, hasBonus);
 
     const endRad = phase + Math.PI * 2;
-    this.stickerOrbitTween = this.scene.tweens.add({
-      targets: this.stickerOrbitAngle,
+    this.orbitTween = this.scene.tweens.add({
+      targets: this.orbitAngle,
       rad: endRad,
-      duration: this.stickerOrbitDurationMs!,
+      duration: this.orbitDurationMs!,
       repeat: -1,
       ease: 'Linear',
       onUpdate: () => {
-        if (this.stickerImage) {
-          setStickerOrbitPosition(this.stickerImage, this.stickerOrbitAngle.rad);
-          setStickerOrbitOrientation(this.stickerImage, this._dieData.sticker, this.stickerOrbitAngle.rad);
-        }
+        this.applyOrbitingDecorations(this.orbitAngle.rad, hasSticker, hasBonus);
       },
     });
   }
 
-  private clearStickerOrbit(): void {
-    if (this.stickerOrbitTween) {
-      this.stickerOrbitTween.destroy();
-      this.stickerOrbitTween = null;
+  private applyStationaryOrbitDecorations(hasSticker: boolean, hasBonus: boolean): void {
+    if (hasSticker && this.stickerImage) {
+      this.stickerImage.setPosition(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET);
+    }
+    if (hasBonus && this.bonusMilesBadge) {
+      if (hasSticker) {
+        this.bonusMilesBadge.setPosition(-DICE.STICKER_OFFSET, -DICE.STICKER_OFFSET);
+      } else {
+        this.bonusMilesBadge.setPosition(DICE.STICKER_OFFSET, DICE.STICKER_OFFSET);
+      }
+      this.bonusMilesBadge.setRotation(0);
+    }
+  }
+
+  private applyOrbitingDecorations(angleRad: number, hasSticker: boolean, hasBonus: boolean): void {
+    if (hasSticker && this.stickerImage) {
+      setOrbitPosition(this.stickerImage, angleRad);
+      setStickerOrbitOrientation(this.stickerImage, this._dieData.sticker, angleRad);
+    }
+    if (hasBonus && this.bonusMilesBadge) {
+      const bonusAngle = angleRad + (hasSticker ? Math.PI : 0);
+      setOrbitPosition(this.bonusMilesBadge, bonusAngle);
+      this.bonusMilesBadge.setRotation(0);
+    }
+  }
+
+  private clearOrbitDecorations(): void {
+    if (this.orbitTween) {
+      this.orbitTween.destroy();
+      this.orbitTween = null;
     }
     if (this.stickerImage) {
       this.stickerImage.destroy();
       this.stickerImage = null;
     }
-    if (!this._dieData.sticker) {
-      this.stickerOrbitPhaseRad = null;
-      this.stickerOrbitDurationMs = null;
+    if (this.bonusMilesBadge) {
+      this.bonusMilesBadge.destroy();
+      this.bonusMilesBadge = null;
+    }
+    if (!this.hasOrbitDecorations()) {
+      this.orbitPhaseRad = null;
+      this.orbitDurationMs = null;
     }
   }
 
@@ -446,7 +525,7 @@ export class DiceSprite extends GameObjects.Container {
       this.rerollLockLabel.destroy();
       this.rerollLockLabel = null;
     }
-    this.clearStickerOrbit();
+    this.clearOrbitDecorations();
     this.clearAuraFX();
     super.destroy(fromScene);
   }
