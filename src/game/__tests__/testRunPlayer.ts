@@ -108,7 +108,7 @@ function patchRun(partial: Parameters<typeof runActions.patch>[0]): void {
 
 /** Set backed by run store; mutating methods persist to the store. */
 class StoreBackedStringSet {
-  constructor(private field: 'spentDiceIds' | 'seenTrailEventIds') {}
+  constructor(private field: 'spentDiceIds' | 'seenTrailEventIds' | 'seenTrailTagIds') {}
 
   private ids(): string[] {
     return getRunState()[this.field];
@@ -156,6 +156,7 @@ class StoreBackedStringSet {
 
 const spentDiceIdsSet = new StoreBackedStringSet('spentDiceIds');
 const seenTrailEventIdsSet = new StoreBackedStringSet('seenTrailEventIds');
+const seenTrailTagIdsSet = new StoreBackedStringSet('seenTrailTagIds');
 
 /**
  * Legacy player API. Reads/writes runStore via actions and selectors.
@@ -441,6 +442,13 @@ export class PlayerState {
   }
   set seenTrailEventIds(v: Set<string>) {
     patchRun({ seenTrailEventIds: [...v] });
+  }
+
+  get seenTrailTagIds(): StoreBackedStringSet {
+    return seenTrailTagIdsSet;
+  }
+  set seenTrailTagIds(v: Set<string>) {
+    patchRun({ seenTrailTagIds: [...v] });
   }
 
   get skipNextShop(): boolean {

@@ -46,6 +46,7 @@ export function createInitialRunState(): RunState {
     trailRoundEffects: createEmptyTrailRoundEffects(),
     pendingTrailEventId: null,
     seenTrailEventIds: [],
+    seenTrailTagIds: [],
     skipNextShop: false,
     trailGuidesUsed: 0,
     supplyCardsUsed: 0,

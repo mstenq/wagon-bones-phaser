@@ -8,6 +8,7 @@ import {
   itemWithState,
   calculateTestScore,
   setupGame,
+  seedTestRoll,
   resetDieIds,
   pushEquipmentState,
   syncEquipmentInstances,
@@ -817,32 +818,51 @@ describe('EMPTY_SLOT_XMULT: One-Man Posse', () => {
 // ─── ROUNDS_SKIPPED_XMULT: Shortcut Trail ───
 
 describe('ROUNDS_SKIPPED_XMULT: Shortcut Trail', () => {
-  test('no bonus when no rounds skipped (initial state)', () => {
+  test('no bonus when no rounds skipped', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [item('shortcut_trail')],
     });
-    // No rounds skipped → no bonus
     expect(result.mult).toBeMult(1);
   });
 
-  test('activates based on roundsSkipped state', () => {
-    const inst = itemWithState('shortcut_trail', { roundsSkipped: 2 });
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
-      equipment: [inst],
+  test('gains xMult when rounds are skipped via advanceRound', () => {
+    const scored = diceWithValue(5, 2);
+    const { game, player } = setupGame({
+      equipment: [item('shortcut_trail')],
+      dice: [...scored, ...diceWithValue(1, 50)],
     });
+
+    player.advanceRound(true);
+    player.advanceRound(true);
+    expect(player.roundsSkipped).toBe(2);
+
+    game.startRound();
+    seedTestRoll(scored);
+    game.selectForScore(scored.map((d) => d.id));
+    const result = game.calculateScore();
+    expect(result).not.toBeNull();
     // PAIR: baseMult=1, x(1+2*0.25)=x1.5
-    expect(result.mult).toBeMultCloseTo(1.5, 5);
+    expect(result!.mult).toBeMultCloseTo(1.5, 5);
   });
 
-  test('Mirror Lake doubles xMult from rounds skipped', () => {
-    const inst = itemWithState('shortcut_trail', { roundsSkipped: 2 });
-    const { result } = calculateTestScore({
-      scoredDice: diceWithValue(5, 2),
-      equipment: [item('mirror_lake'), inst],
+  test('Mirror Lake doubles xMult from rounds skipped via advanceRound', () => {
+    const scored = diceWithValue(5, 2);
+    const { game, player } = setupGame({
+      equipment: [item('mirror_lake'), item('shortcut_trail')],
+      dice: [...scored, ...diceWithValue(1, 50)],
     });
-    expect(result.mult).toBeMultCloseTo(2.25, 5);
+
+    player.advanceRound(true);
+    player.advanceRound(true);
+    expect(player.roundsSkipped).toBe(2);
+
+    game.startRound();
+    seedTestRoll(scored);
+    game.selectForScore(scored.map((d) => d.id));
+    const result = game.calculateScore();
+    expect(result).not.toBeNull();
+    expect(result!.mult).toBeMultCloseTo(2.25, 5);
   });
 });
 

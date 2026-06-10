@@ -21,6 +21,7 @@ export interface DisplayEquipmentRef {
 
 export interface ItemDisplayContext {
   balance: number;
+  roundsSkipped: number;
   equipment: DisplayEquipmentRef[];
   dice: Die[];
   lastUsedConsumableId: string | null;
@@ -37,6 +38,20 @@ export interface ItemDisplayContext {
   supplyCardUseCounts: Record<string, number>;
   equipmentObtainedIds: string[];
   getHandStats(handType: HandType): HandStats;
+}
+
+/** Run slice for trail tag tooltip descriptions. */
+export interface TagDisplayContext {
+  daysScored: number;
+  unusedRerollsTotal: number;
+  roundsSkipped: number;
+  balance: number;
+  surveyorHand?: HandType;
+  copies: number;
+  /** Round column for skip preview / skipped badge tooltips. Omitted in TagStack. */
+  round?: number;
+  currentRound: number;
+  skippedRoundsThisLeg: number[];
 }
 
 /** Round slice passed to equipment display() — mirrors selectEquipmentHintRoundContext. */

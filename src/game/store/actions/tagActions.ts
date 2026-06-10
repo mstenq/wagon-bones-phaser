@@ -67,12 +67,17 @@ export const tagActions = {
     const roundSkipPreviewMeta = { ...state.roundSkipPreviewMeta };
     delete roundSkipPreviewTags[round];
     delete roundSkipPreviewMeta[round];
+    const seenTrailTagIds = state.seenTrailTagIds.includes(tag.id)
+      ? state.seenTrailTagIds
+      : [...state.seenTrailTagIds, tag.id];
+
     runStore.setState({
       skippedRoundsThisLeg: [...state.skippedRoundsThisLeg, round],
       skippedRoundTags,
       skippedRoundTagMeta,
       roundSkipPreviewTags,
       roundSkipPreviewMeta,
+      seenTrailTagIds,
     });
   },
 };

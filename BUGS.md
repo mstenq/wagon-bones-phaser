@@ -40,9 +40,3 @@ trail_rations
 wedding_ring
 last_stand
 snake_oil_ledger
-
-# Sticker Idea
-green contagion - played dice with a green contagion sticker have a 1 in 2 chance of spreading enhancement and green sticker contagion to dice next to it. This will need a new frontier_encounter card for applying this sticker type. Lets go with "Swamp Fever" - Add green contagion sticker to one die.
-
-# Sticker Changes
-purple flower is too strong because you can trigger it over and over. Instead of giving supplies on trigger, i want to change it so that you only get a supply card when you play a dice with purple flower sticker but it doesn't score. 

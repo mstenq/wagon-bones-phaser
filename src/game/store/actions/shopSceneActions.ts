@@ -3,7 +3,7 @@
 
 import { generateShopPermit } from '../../PermitsSystem';
 import { progressionActions } from './progressionActions';
-import { generateNewShopState, generateRerolledShopStock } from '../shopStock';
+import { generateNewShopState, generateRerolledShopStock, normalizeShopSceneState } from '../shopStock';
 import { getRunState, runActions } from '../runStore';
 import { buildShopFreeRerollPlan } from '../selectors/runSelectors';
 import { getSceneState, sceneActions, sceneStore } from '../sceneStore';
@@ -17,13 +17,23 @@ export const shopSceneActions = {
     if (tagMods.freeFirstReroll) {
       runActions.patch({ tagFreeReroll: true });
     }
+    const bonusPermitIds: string[] = [];
     if (tagMods.extraPermits > 0) {
-      const bonusPermit = generateShopPermit(getRunState().purchasedPermits);
-      if (bonusPermit) runActions.patch({ bonusShopPermitId: bonusPermit.id });
+      const excludeIds = [...getRunState().purchasedPermits];
+      for (let i = 0; i < tagMods.extraPermits; i++) {
+        const bonusPermit = generateShopPermit(excludeIds);
+        if (!bonusPermit) break;
+        bonusPermitIds.push(bonusPermit.id);
+        excludeIds.push(bonusPermit.id);
+      }
+      if (bonusPermitIds.length > 0) {
+        runActions.patch({ bonusShopPermitId: bonusPermitIds[0]! });
+      }
     }
     runActions.patch({ shopFreeRerollPlan: buildShopFreeRerollPlan(getRunState()) });
-    sceneActions.enterShop(shop);
-    return shop;
+    const visitShop = normalizeShopSceneState({ ...shop, bonusPermitIds });
+    sceneActions.enterShop(visitShop);
+    return visitShop;
   },
 
   /** Paid reroll — replaces stock in the active shop slice. */
@@ -47,6 +57,6 @@ export const shopSceneActions = {
   },
 
   restoreShop(shop: ShopSceneState): void {
-    sceneActions.enterShop(shop);
+    sceneActions.enterShop(normalizeShopSceneState(shop));
   },
 };

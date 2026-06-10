@@ -143,6 +143,7 @@ function writeCsv(filename: string, rows: CsvRow[]): void {
 
 const itemDisplayContext: ItemDisplayContext = {
   balance: 0,
+  roundsSkipped: 0,
   equipment: [],
   dice: [],
   handStats: createDefaultHandStats(),

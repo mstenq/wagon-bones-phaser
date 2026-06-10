@@ -17,23 +17,12 @@ import type { DifficultyLevel } from '../../game/types';
 import { formatScore } from '../../game/formatScore';
 import type { DecimalSource } from '../../game/decimal';
 import { Button } from './Button';
-import type { TrailTagDef, TagCategory } from '../../game/types';
+import type { TrailTagDef } from '../../game/types';
+import { addTrailTagBadgeIcon, drawTrailTagBadgeBackground } from './TrailTagBadge';
 
 export const ROUND_NAMES = ['Mile Marker', 'River Ford', 'Showdown'] as const;
 
 export type RoundColumnState = 'skipped' | 'complete' | 'select' | 'upcoming';
-
-const TAG_CATEGORY_COLORS: Record<TagCategory, number> = {
-  shop: 0x4488ff,
-  shop_aura: 0xaa44ff,
-  boss: 0xff4444,
-  immediate_pack: 0x44aa44,
-  immediate_money: 0xffd700,
-  immediate_equipment: 0x8b7355,
-  immediate_upgrade: 0xff8800,
-  next_round: 0x44cccc,
-  meta: 0xff66cc,
-};
 
 const BTN_H = 44;
 const BTN_GAP = 10;
@@ -698,7 +687,7 @@ export class RoundInfoPanel extends GameObjects.Container {
 
         if (config.onTagHover) {
           const ax = x + tagX + TAG_SIZE / 2;
-          const ay = y + tagY;
+          const ay = y + tagY + TAG_SIZE / 2;
           skipBtn.on('pointerover', () => config.onTagHover!(tag, config.round, ax, ay));
           skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
         }
@@ -768,7 +757,7 @@ export class RoundInfoPanel extends GameObjects.Container {
 
       if (config.onTagHover) {
         const ax = x + tagX + ROW_TAG_SIZE / 2;
-        const ay = y + tagY;
+        const ay = y + tagY + ROW_TAG_SIZE / 2;
         skipBtn.on('pointerover', () => config.onTagHover!(tag, config.round, ax, ay));
         skipBtn.on('pointerout', () => config.onTagHoverEnd?.());
       }
@@ -950,21 +939,16 @@ export class RoundInfoPanel extends GameObjects.Container {
   }
 
   private addTagBadge(x: number, y: number, tag: TrailTagDef, size: number, config: RoundInfoConfig): void {
-    const color = TAG_CATEGORY_COLORS[tag.category] ?? 0x888888;
     const g = this.scene.add.graphics();
-    g.fillStyle(color, 1);
-    g.fillRoundedRect(x, y, size, size, 4);
-    g.lineStyle(2, 0xffffff, 0.5);
-    g.strokeRoundedRect(x, y, size, size, 4);
-    g.fillStyle(0xffffff, 0.35);
-    g.fillRect(x, y, size / 2, size);
+    drawTrailTagBadgeBackground(g, x, y, size, tag.category);
     this.add(g);
+    addTrailTagBadgeIcon(this.scene, this, x, y, size, tag.id);
 
     if (config.onTagHover) {
       const zone = this.scene.add.zone(x + size / 2, y + size / 2, size, size).setInteractive({ useHandCursor: true });
       zone.on('pointerover', () => {
         const matrix = this.getWorldTransformMatrix();
-        config.onTagHover!(tag, config.round, matrix.tx + x + size / 2, matrix.ty + y);
+        config.onTagHover!(tag, config.round, matrix.tx + x + size / 2, matrix.ty + y + size / 2);
       });
       zone.on('pointerout', () => config.onTagHoverEnd?.());
       this.add(zone);

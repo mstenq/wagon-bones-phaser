@@ -36,6 +36,7 @@ export function deserializeRunState(data: SerializedRunState): RunState {
     supplyCardUseCounts: data.supplyCardUseCounts ?? {},
     equipmentObtainedIds: data.equipmentObtainedIds ?? [],
     priorityHandDiceIds: data.priorityHandDiceIds ?? [],
+    seenTrailTagIds: data.seenTrailTagIds ?? [],
   };
 }
 

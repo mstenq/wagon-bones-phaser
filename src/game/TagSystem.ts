@@ -22,6 +22,8 @@ import { generateRandomEquipment, EquipmentDef, getItemAuraById } from './ItemsS
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { getTrailTagById } from '../data/trail_tags';
 import trailTags, { TrailTagDef, TrailTagInstance, TagCategory, type RoundSkipPreviewMeta } from '../data/trail_tags';
+import { getTagDisplayContext } from './displayContext';
+import { computeImmediateMoneyPayout } from './tagPayout';
 import { rngFloat, rngPick } from './RunRng';
 
 const ALL_TAGS: TrailTagDef[] = trailTags;
@@ -37,9 +39,16 @@ export function getTagPool(leg: number): TrailTagDef[] {
   return ALL_TAGS.filter((t) => t.minLeg <= leg);
 }
 
-/** Select a random tag from the pool using weights */
-export function selectRandomTag(leg: number): TrailTagDef {
-  const pool = getTagPool(leg);
+/** Exclude tags the player has already earned via skip this run. */
+export function filterUnseenTags(pool: TrailTagDef[], seenIds?: readonly string[]): TrailTagDef[] {
+  const resolvedSeen = seenIds ?? getRunState().seenTrailTagIds;
+  if (resolvedSeen.length === 0) return pool;
+  const seen = new Set(resolvedSeen);
+  const unseen = pool.filter((t) => !seen.has(t.id));
+  return unseen.length > 0 ? unseen : pool;
+}
+
+function pickWeightedTag(pool: TrailTagDef[]): TrailTagDef {
   const totalWeight = pool.reduce((sum, t) => sum + t.weight, 0);
   let roll = rngFloat('tags') * totalWeight;
 
@@ -48,12 +57,25 @@ export function selectRandomTag(leg: number): TrailTagDef {
     if (roll <= 0) return tag;
   }
 
-  return pool[pool.length - 1];
+  return pool[pool.length - 1]!;
+}
+
+/** Select a random tag from the pool using weights */
+export function selectRandomTag(leg: number, excludeIds: ReadonlySet<string> = new Set()): TrailTagDef {
+  let pool = filterUnseenTags(getTagPool(leg));
+  if (excludeIds.size > 0) {
+    const withoutBatch = pool.filter((t) => !excludeIds.has(t.id));
+    if (withoutBatch.length > 0) pool = withoutBatch;
+  }
+  return pickWeightedTag(pool);
 }
 
 /** Roll skip-preview tag id + metadata (e.g. Surveyor's Mark hand target). */
-export function rollSkipPreviewForLeg(leg: number): { tagId: string; meta: RoundSkipPreviewMeta } {
-  const tag = selectRandomTag(leg);
+export function rollSkipPreviewForLeg(
+  leg: number,
+  excludeIds: ReadonlySet<string> = new Set(),
+): { tagId: string; meta: RoundSkipPreviewMeta } {
+  const tag = selectRandomTag(leg, excludeIds);
   const meta: RoundSkipPreviewMeta = {};
   if (tag.id === 'tag_surveyor') {
     meta.surveyorHand = rngPick('tags', Object.values(HandType));
@@ -66,10 +88,12 @@ export function refreshRoundSkipPreviewTags(_legacy?: unknown): void {
   const run = currentRun(_legacy);
   const roundSkipPreviewTags: Partial<Record<number, string>> = {};
   const roundSkipPreviewMeta: Partial<Record<number, RoundSkipPreviewMeta>> = {};
+  const batchExclude = new Set<string>();
   for (let r = run.round; r <= 2; r++) {
     if (!run.skippedRoundsThisLeg.includes(r)) {
-      const preview = rollSkipPreviewForLeg(run.leg);
+      const preview = rollSkipPreviewForLeg(run.leg, batchExclude);
       roundSkipPreviewTags[r] = preview.tagId;
+      batchExclude.add(preview.tagId);
       if (preview.meta.surveyorHand) {
         roundSkipPreviewMeta[r] = preview.meta;
       }
@@ -83,10 +107,12 @@ export function ensureRoundSkipPreviewTags(_legacy?: unknown): void {
   const run = currentRun(_legacy);
   const roundSkipPreviewTags = { ...run.roundSkipPreviewTags };
   const roundSkipPreviewMeta = { ...run.roundSkipPreviewMeta };
+  const batchExclude = new Set<string>(Object.values(roundSkipPreviewTags).filter((id): id is string => id != null));
   for (let r = run.round; r <= 2; r++) {
     if (!run.skippedRoundsThisLeg.includes(r) && !roundSkipPreviewTags[r]) {
-      const preview = rollSkipPreviewForLeg(run.leg);
+      const preview = rollSkipPreviewForLeg(run.leg, batchExclude);
       roundSkipPreviewTags[r] = preview.tagId;
+      batchExclude.add(preview.tagId);
       if (preview.meta.surveyorHand) {
         roundSkipPreviewMeta[r] = preview.meta;
       }
@@ -148,28 +174,12 @@ export function processImmediateTags(_legacy?: unknown): ImmediateTagResult[] {
 }
 
 function processImmediateMoneyTag(tag: TrailTagInstance, run: RunState): ImmediateTagResult | null {
-  let amount = 0;
+  const payoutCtx = getTagDisplayContext(run, { copies: tag.copies });
+  let amount = computeImmediateMoneyPayout(tag.def.id, payoutCtx);
 
-  for (let c = 0; c < tag.copies; c++) {
-    switch (tag.def.id) {
-      case 'tag_well_traveled':
-        amount += run.daysScored;
-        break;
-      case 'tag_pack_rat':
-        amount += run.unusedRerollsTotal;
-        break;
-      case 'tag_shortcut':
-        amount += Math.max(5, run.roundsSkipped * 5);
-        break;
-      case 'tag_bank_deposit': {
-        if (run.balance < 0) {
-          economyActions.setBalance(0);
-        } else {
-          amount += Math.min(run.balance, 40);
-        }
-        break;
-      }
-    }
+  if (tag.def.id === 'tag_bank_deposit' && run.balance < 0) {
+    economyActions.setBalance(0);
+    amount = 0;
   }
 
   if (amount > 0) {
@@ -271,10 +281,11 @@ export function consumeShopTagCopies(tagId: string, copies: number, _legacy?: un
   return copies - remaining;
 }
 
-/** Shop stock row used when applying aura tags */
+/** Shop stock row used when applying inject / aura tags */
 export interface ShopStockRow {
   type: string;
-  def: EquipmentDef;
+  def?: EquipmentDef;
+  preview?: { def?: EquipmentDef };
 }
 
 /** Remove up to `copies` from stored aura tags and/or pending shop_aura tags. */
@@ -319,7 +330,7 @@ export function getQueuedAuraTags(_legacy?: unknown): TrailTagInstance[] {
   return [...grouped.values()];
 }
 
-/** Replace shop stock slots with free uncommon/rare equipment, up to shopSlots per visit. */
+/** Replace shop slots with free uncommon/rare equipment, up to shopSlots per visit. */
 export function applyInjectTagsToShopStock(stockItems: ShopStockRow[], _legacy?: unknown): number {
   let run = currentRun(_legacy);
   const maxSlots = Math.max(1, Math.min(run.shopSlots, stockItems.length));
@@ -350,6 +361,19 @@ const AURA_TAG_IDS: Record<string, string> = {
   tag_holy: 'holy',
 };
 
+function countAuraTagCopiesInRun(tagId: string, run: RunState): number {
+  let total = 0;
+  for (const stored of run.storedAuraTags) {
+    if (stored.tagId === tagId) total += stored.copies;
+  }
+  for (const pending of run.pendingTags) {
+    if (pending.tagId !== tagId) continue;
+    const def = getTrailTagById(pending.tagId);
+    if (def?.category === 'shop_aura') total += pending.copies;
+  }
+  return total;
+}
+
 /** Apply aura tags to base shop equipment, consuming only copies actually used. */
 export function applyAuraTagsToShopStock(stockItems: ShopStockRow[], _legacy?: unknown): number {
   let run = currentRun(_legacy);
@@ -368,7 +392,7 @@ export function applyAuraTagsToShopStock(stockItems: ShopStockRow[], _legacy?: u
     let applied = 0;
     for (const stockItem of stockItems) {
       if (applied >= tag.copies) break;
-      if (stockItem.type === 'equipment' && !stockItem.def.aura) {
+      if (stockItem.type === 'equipment' && stockItem.def && !stockItem.def.aura) {
         stockItem.def = { ...stockItem.def, aura, cost: 0 };
         applied++;
       }
@@ -382,10 +406,30 @@ export function applyAuraTagsToShopStock(stockItems: ShopStockRow[], _legacy?: u
 
     const leftover = tag.copies - applied;
     if (leftover > 0 && applied === 0) {
-      runStore.setState((s) => ({
-        storedAuraTags: [...s.storedAuraTags, { tagId: tag.def.id, copies: leftover }],
-      }));
-      consumeShopAuraTagCopies(tag.def.id, leftover, getRunState());
+      runStore.setState((s) => {
+        let remaining = leftover;
+        const pendingTags = s.pendingTags.flatMap((t) => {
+          if (remaining <= 0 || t.tagId !== tag.def.id) return [t];
+          const def = getTrailTagById(t.tagId);
+          if (!def || def.category !== 'shop_aura') return [t];
+          const take = Math.min(remaining, t.copies);
+          remaining -= take;
+          const left = t.copies - take;
+          return left > 0 ? [{ tagId: t.tagId, copies: left }] : [];
+        });
+        return {
+          pendingTags,
+          storedAuraTags: [...s.storedAuraTags, { tagId: tag.def.id, copies: leftover }],
+        };
+      });
+    } else if (leftover > 0 && applied > 0) {
+      const inStore = countAuraTagCopiesInRun(tag.def.id, getRunState());
+      const toBank = leftover - inStore;
+      if (toBank > 0) {
+        runStore.setState((s) => ({
+          storedAuraTags: [...s.storedAuraTags, { tagId: tag.def.id, copies: toBank }],
+        }));
+      }
     }
   }
 

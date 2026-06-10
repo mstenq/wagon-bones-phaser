@@ -1,34 +1,23 @@
 // ─── Tag earned fly-in (Round Select) ───
 
 import type { Scene } from 'phaser';
+import type { TagCategory } from '../../game/types';
 import { TAG_STACK } from '../../game/Constants';
-
-const TAG_FLY_COLORS: Record<string, number> = {
-  shop: 0x44aa44,
-  shop_aura: 0x9966cc,
-  boss: 0xcc4444,
-  next_round: 0xcc8844,
-  meta: 0xcccccc,
-};
+import { createTrailTagBadgeContainer } from '../ui/TrailTagBadge';
 
 const TOOLTIP_DEPTH = 200;
 
 export function playTagEarnedFlyIn(
   scene: Scene,
-  category: string,
+  tagId: string,
+  category: TagCategory,
   fromX: number,
   fromY: number,
   toX: number,
   toY: number,
   onComplete: () => void,
 ): void {
-  const color = TAG_FLY_COLORS[category] ?? 0x888888;
-  const half = TAG_STACK.BADGE_SIZE / 2;
-
-  const tempBadge = scene.add.graphics();
-  tempBadge.fillStyle(color, 1);
-  tempBadge.fillRoundedRect(-half, -half, TAG_STACK.BADGE_SIZE, TAG_STACK.BADGE_SIZE, TAG_STACK.BADGE_RADIUS);
-  tempBadge.setPosition(fromX, fromY);
+  const tempBadge = createTrailTagBadgeContainer(scene, fromX, fromY, TAG_STACK.BADGE_SIZE, tagId, category);
   tempBadge.setDepth(TOOLTIP_DEPTH);
 
   scene.tweens.add({

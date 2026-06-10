@@ -128,6 +128,8 @@ Use `wireShopCardPointerUp` (requires pointerdown on the card) so scene transiti
 
 **Handler vs integration:** stateful equipment needs both — direct handler test + integration via `calculateTestScore`, `playScoredDayAndEnd`, or `game.startRound()` as appropriate.
 
+**Player-faithful tests:** exercise the same store flags and actions the game uses (`player.advanceRound(true)`, `playScoredDayAndEnd`, lifecycle hooks like `processEquipmentOnSell`). Do **not** manually patch run/equipment state (`itemWithState`, `player.roundsSkipped = N`, `patchRun`) to simulate gameplay the player never triggers — that hides wiring bugs (e.g. Shortcut Trail reading `equip.state.roundsSkipped` while skips only increment run `roundsSkipped`). Use `itemWithState` / direct handler calls only for isolated handler math or edge cases that cannot be reached through normal play.
+
 **Helpers:** `calculateTestScore`, `playScoredDayAndEnd` (use `avoidWin: true`, `endDay: { deferEquipmentDestructionAnimation: true }` when needed), `seedTestRoll`, `syncEquipmentInstances` / `pushEquipmentState`.
 
 **Payout money:** use `computePayoutBreakdown` for `END_ROUND_MONEY` — not `processEndOfRound().moneyEarned` alone.

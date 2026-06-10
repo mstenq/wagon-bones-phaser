@@ -3,6 +3,8 @@
 // Each tag defines its pool weight, unlock leg, and category for dispatch.
 
 import type { HandType } from '../game/types';
+import type { TagDisplayContext } from '../game/displayContextTypes';
+import { computeImmediateMoneyPayout } from '../game/tagPayout';
 import { getHandByType } from './hands';
 
 // ─── Types ───
@@ -18,13 +20,7 @@ export type TagCategory =
   | 'next_round' // applies to the next round played
   | 'meta'; // modifies the next tag (Twin Wagon)
 
-/** Context for dynamic tag descriptions (skip preview, pending tags, tooltips). */
-export interface TagDescriptionContext {
-  /** Pre-rolled hand for Surveyor's Mark (skip preview or pending tag). */
-  surveyorHand?: HandType;
-}
-
-export type TagDescription = string | ((ctx: TagDescriptionContext) => string);
+export type TagDescription = string | ((ctx: TagDisplayContext) => string);
 
 export interface TrailTagDef {
   id: string;
@@ -48,7 +44,7 @@ export interface RoundSkipPreviewMeta {
   surveyorHand?: HandType;
 }
 
-export function resolveTagDescription(def: TrailTagDef, ctx: TagDescriptionContext = {}): string {
+export function resolveTagDescription(def: TrailTagDef, ctx: TagDisplayContext): string {
   if (typeof def.description === 'function') {
     return def.description(ctx);
   }
@@ -86,7 +82,7 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_company_store',
     name: 'On the House',
-    description: 'Next shop: initial equipment, consumables, and booster packs cost $0.',
+    description: 'Next shop: initial equipment, consumables, and booster packs cost $0.', // does not apply to permits.
     category: 'shop',
     minLeg: 1,
     weight: 1.5,
@@ -94,7 +90,7 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_free_reroll',
     name: 'Coupon Book',
-    description: 'Next shop: first camp reroll costs $0.',
+    description: 'Next shop: first shop reroll costs $0.',
     category: 'shop',
     minLeg: 1,
     weight: 3,
@@ -198,7 +194,10 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_well_traveled',
     name: 'Well-Traveled',
-    description: 'Gain $1 for each day scored this run.',
+    description: (ctx) => {
+      const payout = computeImmediateMoneyPayout('tag_well_traveled', ctx);
+      return `Gain $${payout} ($1 for each day scored this run).`;
+    },
     category: 'immediate_money',
     minLeg: 2,
     weight: 2,
@@ -206,7 +205,10 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_pack_rat',
     name: 'Pack Rat',
-    description: 'Gain $1 for each unused reroll remaining across the whole run.',
+    description: (ctx) => {
+      const payout = computeImmediateMoneyPayout('tag_pack_rat', ctx);
+      return `Gain $${payout} ($1 for each unused reroll remaining across the whole run).`;
+    },
     category: 'immediate_money',
     minLeg: 2,
     weight: 2,
@@ -214,7 +216,10 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_shortcut',
     name: 'Shortcut',
-    description: 'Gain $5 for each round skipped this run.',
+    description: (ctx) => {
+      const payout = computeImmediateMoneyPayout('tag_shortcut', ctx);
+      return `Gain $${payout} ($5 for each round skipped this run, $5 minimum).`;
+    },
     category: 'immediate_money',
     minLeg: 1,
     weight: 3,
@@ -222,7 +227,13 @@ const trailTags: TrailTagDef[] = [
   {
     id: 'tag_bank_deposit',
     name: 'Bank Deposit',
-    description: 'Double your money (adds at most $40).',
+    description: (ctx) => {
+      if (ctx.balance < 0) {
+        return 'Double your money (adds at most $40). Sets balance to $0 when in debt.';
+      }
+      const payout = computeImmediateMoneyPayout('tag_bank_deposit', ctx);
+      return `Gain $${payout} (double your money, up to $40).`;
+    },
     category: 'immediate_money',
     minLeg: 1,
     weight: 2,

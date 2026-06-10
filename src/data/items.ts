@@ -2150,10 +2150,8 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'ROUNDS_SKIPPED_XMULT',
     effectParams: { value: 0.25 },
-    initialState: { roundsSkipped: 0 },
     display: (_round, player) => {
-      const equip = player.equipment.find((e) => e.def.id === 'shortcut_trail');
-      const skipped = equip?.state.roundsSkipped ?? 0;
+      const skipped = player.roundsSkipped;
       const xm = 1 + skipped * 0.25;
       const hint = [[mult(`x${xm.toFixed(2)}`)], [condition(`${skipped} skipped`, 'sm')]];
       return {

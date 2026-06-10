@@ -4,8 +4,7 @@ import type { Scene } from 'phaser';
 import type { ModifierFeedbackPayload, PlaybackCommand } from '../../game/playback/types';
 import type { Decimal } from '../../game/decimal';
 import { COLORS } from '../../game/Constants';
-import type { HandType, ScoreResult } from '../../game/types';
-import type { ScoreAnimEvent } from '../../game/types';
+import type { HandType, ScoreResult, ScoreAnimEvent, TagCategory } from '../../game/types';
 import { applyEquipmentModifierDestructions } from '../../game/EquipmentModifiers';
 import { getRoundHintContext } from '../../game/displayContext';
 import { roundActions } from '../../game/store/actions/roundActions';
@@ -79,7 +78,7 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
     case 'day-end-destructions':
       return playDayEndDestructionsPlayback(ctx, command.indices, command.destroyedNames, command.holdMs);
     case 'tag-earned':
-      return playTagEarnedPlayback(ctx, command.category, command.round);
+      return playTagEarnedPlayback(ctx, command.tagId, command.category, command.round);
     case 'modifier-feedback':
       return playModifierFeedbackPlayback(ctx, command.payload, command.applyDestruction);
     case 'toast':
@@ -212,13 +211,18 @@ function playDayEndDestructionsPlayback(
   });
 }
 
-function playTagEarnedPlayback(ctx: PlaybackHandlerContext, category: string, round: number): Promise<void> {
+function playTagEarnedPlayback(
+  ctx: PlaybackHandlerContext,
+  tagId: string,
+  category: string,
+  round: number,
+): Promise<void> {
   const origin = ctx.getTagEarnedOrigin?.(round);
   const anchor = ctx.getTagStackAnchor?.();
   if (!origin || !anchor) return Promise.resolve();
 
   return new Promise((resolve) => {
-    playTagEarnedFlyIn(ctx.scene, category, origin.x, origin.y, anchor.x, anchor.y, resolve);
+    playTagEarnedFlyIn(ctx.scene, tagId, category as TagCategory, origin.x, origin.y, anchor.x, anchor.y, resolve);
   });
 }
 

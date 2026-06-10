@@ -20,6 +20,10 @@ import { getRoundState } from '../store/roundStore';
 import { createInitialRunState } from '../store/runStore';
 import { createInitialSceneState, getSceneState } from '../store/sceneStore';
 import { D } from '../scoreMath';
+import trailTags from '../../data/trail_tags';
+import { shopSceneActions } from '../store/actions/shopSceneActions';
+import { resolveShopPackPurchaseCost, resolveShopStockPurchaseCost } from '../store/shopStock';
+import { getPackById } from '../../data/packs';
 
 function emptyScene(activeScene: GameSaveSnapshot['activeScene'] = 'RoundSelect') {
   return { ...createInitialSceneState(), activeScene };
@@ -153,6 +157,52 @@ describe('SaveLoad', () => {
     const restored = getPlayerState();
     expect(restored.seenTrailEventIds.has('wildflowers')).toBe(true);
     expect(restored.seenTrailEventIds.has('bad_mosquitos')).toBe(true);
+  });
+
+  test('round-trips mid-shop visitMods, shopCost, and bonusPermitIds', () => {
+    const player = resetPlayerState();
+    player.applyProfession('outlaw');
+    player.addTag(trailTags.find((t) => t.id === 'tag_company_store')!);
+    player.addTag(trailTags.find((t) => t.id === 'tag_permit')!);
+    player.addTag(trailTags.find((t) => t.id === 'tag_permit')!);
+    shopSceneActions.openShop();
+
+    const snapshot = buildSaveSnapshot({ activeScene: 'Shop' });
+    expect(snapshot.scene.shop?.visitMods?.freeShop).toBe(true);
+    expect(snapshot.scene.shop?.bonusPermitIds?.length).toBe(2);
+    expect(snapshot.scene.shop?.stock.some((s) => s.shopCost === 0)).toBe(true);
+
+    applySaveSnapshot(snapshot);
+    const restored = getSceneState().shop;
+    expect(restored?.visitMods?.freeShop).toBe(true);
+    expect(restored?.bonusPermitIds?.length).toBe(2);
+    for (const item of restored!.stock) {
+      if (item.shopCost === 0) {
+        expect(resolveShopStockPurchaseCost(item)).toBe(0);
+      }
+    }
+    for (const pack of restored!.packs) {
+      const def = getPackById(pack.defId);
+      if (def && restored!.visitMods) {
+        expect(resolveShopPackPurchaseCost(def, restored!.visitMods)).toBe(0);
+      }
+    }
+  });
+
+  test('round-trips seenTrailTagIds through save/restore', () => {
+    const player = resetPlayerState();
+    player.applyProfession('outlaw');
+    player.seenTrailTagIds.add('tag_shortcut');
+    player.seenTrailTagIds.add('tag_equipment_mega');
+
+    const snapshot = buildSaveSnapshot({ activeScene: 'RoundSelect' });
+    expect(snapshot.run.seenTrailTagIds).toContain('tag_shortcut');
+    expect(snapshot.run.seenTrailTagIds).toContain('tag_equipment_mega');
+
+    applySaveSnapshot(snapshot);
+    const restored = getPlayerState();
+    expect(restored.seenTrailTagIds.has('tag_shortcut')).toBe(true);
+    expect(restored.seenTrailTagIds.has('tag_equipment_mega')).toBe(true);
   });
 
   test('spyglass preview snapshot preserves pendingTrailEventId for reload', () => {

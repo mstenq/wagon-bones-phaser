@@ -81,6 +81,9 @@ export class Preloader extends Scene {
     // Load boss portraits from TexturePacker single-atlas JSON
     this.load.atlas('bosses', 'assets/bosses/bosses.png', 'assets/bosses/bosses.json');
 
+    // Load trail tag icons from TexturePacker single-atlas JSON
+    this.load.atlas('trail_tags', 'assets/trail-tags/trail-tags.png', 'assets/trail-tags/trail-tags.json');
+
     this.load.image('icon_sort', 'assets/icons/sort.svg');
     this.load.image('icon_chevron_left', 'assets/icons/chevron-left.svg');
     this.load.image('icon_chevron_right', 'assets/icons/chevron-right.svg');

@@ -130,6 +130,7 @@ export interface RunState {
   trailRoundEffects: TrailRoundEffects;
   pendingTrailEventId: string | null;
   seenTrailEventIds: string[];
+  seenTrailTagIds: string[];
   skipNextShop: boolean;
   trailGuidesUsed: number;
   /** Supply cards consumed this run (for Campfire Stories and similar). */
@@ -220,14 +221,24 @@ export interface RoundRuntimeState {
 // ─── Scene runtime state ───
 
 export type StoredShopItem =
-  | { type: 'equipment'; defId: string; preview: StoredEquipmentInstance; sold?: boolean }
-  | { type: 'consumable'; defId: string; sold?: boolean }
-  | { type: 'dice'; die: Die; sold?: boolean };
+  | { type: 'equipment'; defId: string; preview: StoredEquipmentInstance; sold?: boolean; shopCost?: number }
+  | { type: 'consumable'; defId: string; sold?: boolean; shopCost?: number }
+  | { type: 'dice'; die: Die; sold?: boolean; shopCost?: number };
+
+/** Per-visit shop modifiers from trail tags (persisted on the shop slice). */
+export interface ShopVisitMods {
+  freeShop: boolean;
+}
+
+export const DEFAULT_SHOP_VISIT_MODS: ShopVisitMods = { freeShop: false };
 
 export interface ShopSceneState {
   stock: StoredShopItem[];
   packs: { defId: string; instanceId: string; opened?: boolean }[];
   shopRerollCount: number;
+  visitMods?: ShopVisitMods;
+  /** Extra permits from Permit Stamp tag(s) this visit. */
+  bonusPermitIds?: string[];
 }
 
 export interface StoredPackItem {

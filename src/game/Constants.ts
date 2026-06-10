@@ -620,6 +620,8 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'EXTRA_PACK_PICK', // Rustler
   'POTLUCK', // Potluck - no need to copy, would have no effect
   'PACK_MULE',
+  'MOST_USED_SUPPLY_PACK', // Shadowpaw
+  'FIRST_DAY_NONSCORING_DESTROY', // Skullwing
 ]);
 
 /**
@@ -630,4 +632,5 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
  */
 export const LIFECYCLE_MIRROR_DOUBLES = new Set([
   'LOW_MONEY_SUPPLY', // Emergency Supplies — afterHandScored grants a supply card
+  'DAY_START_DOMINANT_ENHANCEMENT_HAND', // Nightshard — copy doubles dominant-hand dice picks
 ]);

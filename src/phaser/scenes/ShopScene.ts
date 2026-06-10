@@ -10,8 +10,8 @@ import type { ConsumableDef, UseConsumableResult } from '../../game/facade/consu
 import { canBuyAndUseConsumableInShop, getConsumableAtlasKey } from '../../game/facade/consumable';
 import type { EquipmentDef, EquipmentInstance, PackInstance } from '../../game/facade/shop';
 import { getConsumableDefById } from '../../game/facade/consumable';
-import { getEquipmentDefById, getPackDefById } from '../../game/facade/shop';
-import { resolveEquipmentList } from '../../game/store/resolve';
+import { getPackDefById } from '../../game/facade/shop';
+import { resolveEquipmentInstance, resolveEquipmentList, storedFromEquipmentInstance } from '../../game/store/resolve';
 import {
   selectProfession,
   selectShopRerollCost,
@@ -38,21 +38,23 @@ import {
   wireShopCardPointerUp,
   type ShopActiveTabHandle,
 } from './shop/shopCardInteractions';
-import { PermitDef, generateShopPermit, getPermitShopDiscount, getDiscountedShopPrice } from '../../game/PermitsSystem';
+import { PermitDef, generateShopPermit, getPermitShopDiscount } from '../../game/PermitsSystem';
 import { computePriceTagMetrics } from '../ui/itemCard/priceTagLayout';
 import { Die } from '../../game/types';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
-import { type SerializedShopItem, serializeEquipmentInstance, deserializeEquipmentInstance } from '../../game/SaveLoad';
+import type { SerializedShopItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import { getRunState, runActions, runStore } from '../../game/store/runStore';
 import { sceneStore } from '../../game/store/sceneStore';
 import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../game/store/selectors/sceneSelectors';
 import { bindStore } from '../store/subscribe';
-import type { ShopSceneState } from '../../game/store/types';
+import { DEFAULT_SHOP_VISIT_MODS, type ShopSceneState } from '../../game/store/types';
 import {
   appendShopStockForSlots,
   buildShopDieDisplayDef,
   buildShopPackDisplayDef,
+  resolveShopPackPurchaseCost,
+  resolveShopStockPurchaseCost,
   buildShopPermitDisplayDef,
 } from '../../game/store/shopStock';
 import { clearSceneCardTooltips } from '../ui/itemCard/cardTooltipRegistry';
@@ -93,15 +95,22 @@ export class ShopScene extends Scene {
     this.packs = null!;
   }
 
+  private getShopVisitMods() {
+    return getSceneState().shop?.visitMods ?? DEFAULT_SHOP_VISIT_MODS;
+  }
+
   private buildShopSceneState(): ShopSceneState {
+    const existing = getSceneState().shop;
     return {
-      stock: this.stockItems.map((item) => this.serializeShopItem(item)),
+      stock: this.stockItems.map((item, i) => this.serializeShopItem(item, i)),
       packs: this.packs.map((p) => ({
         defId: p.def.id,
         instanceId: p.id,
         opened: this.isPackOpened(p),
       })),
       shopRerollCount: getRunState().shopRerollCount,
+      visitMods: existing?.visitMods ?? DEFAULT_SHOP_VISIT_MODS,
+      bonusPermitIds: existing?.bonusPermitIds,
     };
   }
 
@@ -121,29 +130,50 @@ export class ShopScene extends Scene {
     return entry?.opened ?? false;
   }
 
-  private serializeShopItem(item: ShopItem): SerializedShopItem {
+  private serializeShopItem(item: ShopItem, stockIndex?: number): SerializedShopItem {
+    const existing = stockIndex != null ? getSceneState().shop?.stock[stockIndex] : undefined;
+    const shopCost = existing?.shopCost;
+
     if (item.type === 'equipment') {
       return {
         type: 'equipment',
         defId: item.def.id,
-        preview: serializeEquipmentInstance(item.preview),
+        preview: storedFromEquipmentInstance(item.preview),
         sold: item.sold,
+        ...(shopCost === 0 ? { shopCost: 0 } : {}),
       };
     }
     if (item.type === 'consumable') {
-      return { type: 'consumable', defId: item.def.id, sold: item.sold };
+      return {
+        type: 'consumable',
+        defId: item.def.id,
+        sold: item.sold,
+        ...(shopCost === 0 ? { shopCost: 0 } : {}),
+      };
     }
-    return { type: 'dice', die: { ...item.die }, sold: item.sold };
+    return {
+      type: 'dice',
+      die: { ...item.die },
+      sold: item.sold,
+      ...(shopCost === 0 ? { shopCost: 0 } : {}),
+    };
+  }
+
+  private resolveStockItemCost(stockIndex: number): number {
+    const stored = getSceneState().shop?.stock[stockIndex];
+    const shopItem = this.stockItems[stockIndex];
+    if (!shopItem) return 0;
+    const serialized = stored ?? this.serializeShopItem(shopItem, stockIndex);
+    return resolveShopStockPurchaseCost(serialized, getRunState());
   }
 
   private deserializeShopItem(item: SerializedShopItem): ShopItem {
     if (item.type === 'equipment') {
-      const def = getEquipmentDefById(item.defId);
-      if (!def) throw new Error(`Unknown equipment: ${item.defId}`);
+      const preview = resolveEquipmentInstance(item.preview, getRunState().purchasedPermits);
       return {
         type: 'equipment',
-        def,
-        preview: deserializeEquipmentInstance(item.preview),
+        def: preview.def,
+        preview,
         sold: item.sold,
       };
     }
@@ -193,7 +223,7 @@ export class ShopScene extends Scene {
     const consumables = resolveConsumableList(run);
     selectProfession(run);
     const trailGuidesFree = selectTrailGuidesFree(run);
-    const bonusPermit = run.bonusShopPermitId ? getPermitById(run.bonusShopPermitId) : null;
+    const bonusPermitIds = getSceneState().shop?.bonusPermitIds ?? [];
 
     this.runShell?.destroy();
     this.runShell = createRunSceneShell(this, {
@@ -238,14 +268,33 @@ export class ShopScene extends Scene {
     const voucherX = contentL + BOX_PAD + voucherW / 2 + 50;
     const voucherY = cardCY2;
 
-    this.permitCard = null;
-    const permit = this.getOrGeneratePermit();
-    this.renderPermitCard(permit, voucherX, voucherY, voucherW, voucherH, cardScale, 'FRONTIER PERMIT', true);
-    if (bonusPermit && bonusPermit.id !== permit?.id) {
-      const permitSpacing = computeFittedRowSpacing(2, voucherW * 2 + 48, CARD_W, PREFERRED_SPACING);
-      const bonusX = voucherX + CARD_W / 2 + permitSpacing + CARD_W / 2;
-      this.renderPermitCard(bonusPermit, bonusX, voucherY, voucherW, voucherH, cardScale, 'BONUS PERMIT', false);
+    const permitAreaCenterX = voucherX;
+    const primaryPermit = this.getOrGeneratePermit();
+    const permitEntries: { permit: PermitDef; isPrimary: boolean }[] = [];
+    const seenPermitIds = new Set<string>();
+    if (primaryPermit) {
+      permitEntries.push({ permit: primaryPermit, isPrimary: true });
+      seenPermitIds.add(primaryPermit.id);
     }
+    for (const id of bonusPermitIds) {
+      if (seenPermitIds.has(id)) continue;
+      const bonus = getPermitById(id);
+      if (bonus) {
+        permitEntries.push({ permit: bonus, isPrimary: false });
+        seenPermitIds.add(bonus.id);
+      }
+    }
+    this.renderPermitArea(
+      permitEntries,
+      permitAreaCenterX,
+      voucherW,
+      voucherW,
+      voucherY,
+      voucherH,
+      cardScale,
+      CARD_W,
+      PREFERRED_SPACING,
+    );
 
     // Booster packs (right side of box 2)
     this.packCards = [];
@@ -257,9 +306,8 @@ export class ShopScene extends Scene {
 
     for (let i = 0; i < this.packs.length; i++) {
       const packInst = this.packs[i];
-      const isTrailGuidePack = packInst.def.category === 'trail_guide' && trailGuidesFree;
-      const discountedPackCost = isTrailGuidePack ? 0 : this.getDiscountedCost(packInst.def.cost);
-      const packDisplayDef = buildShopPackDisplayDef(packInst.def, discountedPackCost);
+      const packCost = resolveShopPackPurchaseCost(packInst.def, this.getShopVisitMods(), run);
+      const packDisplayDef = buildShopPackDisplayDef(packInst.def, packCost);
 
       const packCard = new ItemCard(this, packX0 + i * packSpacing, cardCY2, packDisplayDef, {
         mode: 'shop',
@@ -275,7 +323,7 @@ export class ShopScene extends Scene {
       if (this.isPackOpened(packInst)) {
         packCard.markSold();
       } else {
-        packCard.setAffordable(canAfford(run, discountedPackCost));
+        packCard.setAffordable(canAfford(run, packCost));
         this.setupPackCardClick(packCard, i);
       }
 
@@ -310,8 +358,7 @@ export class ShopScene extends Scene {
     if (card.sold) return;
     const pack = this.packs[packIndex];
     if (!pack) return;
-    const isTrailGuidePack = pack.def.category === 'trail_guide' && selectTrailGuidesFree(getRunState());
-    const cost = isTrailGuidePack ? 0 : this.getDiscountedCost(pack.def.cost);
+    const cost = resolveShopPackPurchaseCost(pack.def, this.getShopVisitMods());
     if (!gameFacade.shop.buyPack(cost).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
@@ -341,13 +388,19 @@ export class ShopScene extends Scene {
     if (card.sold) return;
     const shopItem = this.stockItems[stockIndex];
     if (!shopItem || shopItem.type !== 'equipment') return;
-    const def = shopItem.def;
+    const def = shopItem.preview.def;
     const run = getRunState();
     if (def.aura?.id !== 'ghost' && selectUsedEquipmentSlots(run) >= run.maxEquipmentSlots) {
       this.showCardPopup(card, 'No space!');
       return;
     }
-    const result = gameFacade.shop.buyEquipment(def, shopItem.preview, gameFacade.shop.getEquipmentListPrice(def));
+    const purchaseCost = this.resolveStockItemCost(stockIndex);
+    const purchaseDef = purchaseCost === 0 ? { ...def, cost: 0 } : def;
+    const result = gameFacade.shop.buyEquipment(
+      purchaseDef,
+      shopItem.preview,
+      gameFacade.shop.getEquipmentListPrice(purchaseDef),
+    );
     if (!result.ok) {
       this.showCardPopup(card, result.reason === 'no_space' ? 'No space!' : "Can't afford!");
       return;
@@ -374,7 +427,8 @@ export class ShopScene extends Scene {
 
   private onBuyDie(card: ItemCard, shopItem: { type: 'dice'; die: Die; displayDef: EquipmentDef }): void {
     if (card.sold) return;
-    const cost = this.getDiscountedCost(shopItem.displayDef.cost);
+    const stockIndex = this.cards.indexOf(card);
+    const cost = this.resolveStockItemCost(stockIndex);
     if (!gameFacade.shop.buyDie(shopItem.die, cost).ok) {
       this.showCardPopup(card, "Can't afford!");
       return;
@@ -400,7 +454,8 @@ export class ShopScene extends Scene {
 
   private onBuyConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
-    const cost = gameFacade.shop.consumableCost(def, this.getDiscountedCost(def.cost));
+    const stockIndex = this.cards.indexOf(card);
+    const cost = this.resolveStockItemCost(stockIndex);
     const result = gameFacade.shop.buyConsumable(def, cost);
     if (!result.ok) {
       this.showCardPopup(card, result.reason === 'no_space' ? 'No space!' : "Can't afford!");
@@ -432,7 +487,8 @@ export class ShopScene extends Scene {
   /** Buy a consumable and immediately use it (bypasses consumable slot limit) */
   private onBuyAndUseConsumable(card: ItemCard, def: ConsumableDef): void {
     if (card.sold) return;
-    const cost = gameFacade.shop.consumableCost(def, this.getDiscountedCost(def.cost));
+    const stockIndex = this.cards.indexOf(card);
+    const cost = this.resolveStockItemCost(stockIndex);
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_tarot1', { volume: 0.5 });
@@ -679,7 +735,7 @@ export class ShopScene extends Scene {
     run: ReturnType<typeof getRunState>,
     equipment: EquipmentInstance[],
     consumables: ReturnType<typeof resolveConsumableList>,
-    trailGuidesFree: boolean,
+    _trailGuidesFree: boolean,
     metrics: ReturnType<typeof this.getShopLayoutMetrics>,
   ): void {
     const {
@@ -738,30 +794,13 @@ export class ShopScene extends Scene {
     const stockSpacing = computeFittedRowSpacing(this.stockItems.length, cardAreaW, CARD_W, PREFERRED_SPACING);
     const stockTotalW = this.stockItems.length > 1 ? (this.stockItems.length - 1) * stockSpacing : 0;
     const cardStartX = cardAreaLeft + cardAreaW / 2 - stockTotalW / 2;
-    const shopDiscount = getPermitShopDiscount(run.purchasedPermits);
-
     for (let i = 0; i < this.stockItems.length; i++) {
       const shopItem = this.stockItems[i];
       const consumableTextureKey =
         shopItem.type === 'consumable' ? getConsumableAtlasKey(shopItem.def.category) : undefined;
       const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
-      const isTrailGuideFree =
-        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && trailGuidesFree;
-      let displayDef = isTrailGuideFree
-        ? { ...itemDef, cost: 0 }
-        : shopDiscount > 0 && shopItem.type !== 'equipment'
-          ? { ...itemDef, cost: Math.max(1, Math.floor(itemDef.cost * (1 - shopDiscount))) }
-          : itemDef;
-      if (shopItem.type === 'equipment') {
-        const listPrice = gameFacade.shop.getEquipmentListPrice(shopItem.def);
-        const purchaseCost = gameFacade.shop.getEquipmentPurchasePrice(
-          shopItem.def,
-          shopItem.preview.modifiers,
-          listPrice,
-          run.purchasedPermits,
-        );
-        displayDef = { ...shopItem.def, cost: purchaseCost };
-      }
+      const purchaseCost = this.resolveStockItemCost(i);
+      const displayDef = { ...itemDef, cost: purchaseCost };
       const card = new ItemCard(this, cardStartX + i * stockSpacing, cardCY1, displayDef as CardData, {
         mode: 'shop',
         showCost: true,
@@ -790,14 +829,13 @@ export class ShopScene extends Scene {
         continue;
       }
 
-      const discountedCost = displayDef.cost ?? 0;
       if (shopItem.type === 'equipment') {
         const alreadyOwned = equipment.some((e) => e.def.id === shopItem.def.id);
         if (alreadyOwned) {
           card.markSold();
         } else {
           const canAffordEquip =
-            canAfford(run, discountedCost) &&
+            canAfford(run, purchaseCost) &&
             (shopItem.def.aura?.id === 'ghost' || selectUsedEquipmentSlots(run) < run.maxEquipmentSlots);
           card.setAffordable(canAffordEquip);
           this.setupShopCardClick(card, i);
@@ -807,11 +845,11 @@ export class ShopScene extends Scene {
         if (alreadyOwned) {
           card.markSold();
         } else {
-          card.setAffordable(canAfford(run, discountedCost));
+          card.setAffordable(canAfford(run, purchaseCost));
           this.setupShopCardClick(card, i);
         }
       } else {
-        card.setAffordable(canAfford(run, discountedCost));
+        card.setAffordable(canAfford(run, purchaseCost));
         this.setupShopCardClick(card, i);
       }
 
@@ -883,18 +921,8 @@ export class ShopScene extends Scene {
       const card = this.cards[i];
       if (card.sold) continue;
       const shopItem = this.stockItems[i];
-      const itemDef = shopItem.type === 'dice' ? shopItem.displayDef : shopItem.def;
-      const isTrailGuideFree =
-        shopItem.type === 'consumable' && shopItem.def.category === 'trail_guide' && shopInputs.trailGuidesFree;
-      let cost = isTrailGuideFree ? 0 : this.getDiscountedCost(itemDef.cost);
+      const cost = this.resolveStockItemCost(i);
       if (shopItem.type === 'equipment') {
-        const listPrice = gameFacade.shop.getEquipmentListPrice(shopItem.def);
-        cost = gameFacade.shop.getEquipmentPurchasePrice(
-          shopItem.def,
-          shopItem.preview.modifiers,
-          listPrice,
-          run.purchasedPermits,
-        );
         const canAffordEquip =
           canAfford(run, cost) &&
           (shopItem.def.aura?.id === 'ghost' || shopInputs.usedEquipmentSlots < shopInputs.maxEquipmentSlots);
@@ -910,8 +938,7 @@ export class ShopScene extends Scene {
       if (packCard.sold) continue;
       const pack = this.packs[i];
       if (!pack) continue;
-      const isTrailGuidePack = pack.def.category === 'trail_guide' && shopInputs.trailGuidesFree;
-      const packCost = isTrailGuidePack ? 0 : this.getDiscountedCost(pack.def.cost);
+      const packCost = resolveShopPackPurchaseCost(pack.def, this.getShopVisitMods(), run);
       packCard.setAffordable(canAfford(run, packCost));
     }
 
@@ -973,6 +1000,55 @@ export class ShopScene extends Scene {
 
   // ─── Permit Helpers ───
 
+  private renderPermitArea(
+    entries: { permit: PermitDef; isPrimary: boolean }[],
+    areaCenterX: number,
+    areaWidth: number,
+    voucherW: number,
+    voucherY: number,
+    voucherH: number,
+    cardScale: number,
+    cardW: number,
+    preferredSpacing: number,
+  ): void {
+    this.permitCard = null;
+
+    if (entries.length === 0) {
+      this.renderPermitAreaLabel(areaCenterX - cardW / 2 - 14, voucherY, cardScale);
+      this.renderPermitCard(null, areaCenterX, voucherY, voucherW, voucherH, cardScale, true);
+      return;
+    }
+
+    const count = entries.length;
+    const spacing = computeFittedRowSpacing(count, areaWidth, cardW, preferredSpacing);
+    const rowTotalW = count > 1 ? (count - 1) * spacing : 0;
+    const startX = areaCenterX - rowTotalW / 2;
+
+    this.renderPermitAreaLabel(startX - cardW / 2 - 14, voucherY, cardScale);
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i]!;
+      const cardX = startX + i * spacing;
+      this.renderPermitCard(entry.permit, cardX, voucherY, voucherW, voucherH, cardScale, entry.isPrimary);
+    }
+  }
+
+  private renderPermitAreaLabel(labelX: number, voucherY: number, cardScale: number): void {
+    const labelFontSize = Math.max(10, Math.round(13 * (cardScale / UI.CARD_BAR_BASE_SCALE)));
+    const permitLabel = this.add.text(labelX, voucherY, 'PERMITS', {
+      fontFamily: 'Arial',
+      fontSize: `${labelFontSize}px`,
+      color: '#ccccdd',
+      fontStyle: 'bold',
+      align: 'center',
+      letterSpacing: 0.5,
+    });
+    permitLabel.setOrigin(0.5);
+    permitLabel.setRotation(-Math.PI / 2);
+    permitLabel.setAlpha(0.85);
+    permitLabel.setDepth(5);
+  }
+
   private renderPermitCard(
     permit: PermitDef | null,
     voucherX: number,
@@ -980,7 +1056,6 @@ export class ShopScene extends Scene {
     voucherW: number,
     voucherH: number,
     cardScale: number,
-    label: string,
     isPrimary: boolean,
   ): void {
     if (permit) {
@@ -1004,21 +1079,6 @@ export class ShopScene extends Scene {
       if (isDevMode() && isPrimary) {
         this.addDevIcon(voucherX + voucherW * 0.35, voucherY - voucherH / 2 - 12, () => this.devSwapPermit());
       }
-
-      const labelX = voucherX - voucherW / 2 - 14;
-      const labelFontSize = Math.max(10, Math.round(13 * (cardScale / UI.CARD_BAR_BASE_SCALE)));
-      const permitLabel = this.add.text(labelX, voucherY, label, {
-        fontFamily: 'Arial',
-        fontSize: `${labelFontSize}px`,
-        color: '#ccccdd',
-        fontStyle: 'bold',
-        align: 'center',
-        letterSpacing: 0.5,
-      });
-      permitLabel.setOrigin(0.5);
-      permitLabel.setRotation(-Math.PI / 2);
-      permitLabel.setAlpha(0.85);
-      permitLabel.setDepth(5);
     } else if (isPrimary) {
       const voucherSlot = this.add.graphics();
       voucherSlot.fillStyle(0x1a1a2e, 0.6);
@@ -1056,11 +1116,6 @@ export class ShopScene extends Scene {
   ): number {
     const discount = getPermitShopDiscount(purchasedPermits);
     return Math.max(1, Math.floor(permit.cost * (1 - discount)));
-  }
-
-  /** Get the discounted cost for any shop item */
-  private getDiscountedCost(baseCost: number): number {
-    return getDiscountedShopPrice(baseCost, getRunState().purchasedPermits);
   }
 
   /** Set up click-to-buy on a booster pack card */

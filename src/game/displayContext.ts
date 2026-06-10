@@ -9,13 +9,21 @@ import { resolveEquipmentList } from './store/resolve';
 import { selectEquipmentHintRoundContext } from './store/selectors/roundSelectors';
 import { selectHandStats, selectUsedEquipmentSlots } from './store/selectors/runSelectors';
 import { selectDebtLimit } from './store/economy';
-import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
+import type { ItemDisplayContext, RoundHintContext, TagDisplayContext } from './displayContextTypes';
+import type { RunState } from './store/types';
 
-export type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
+export type { ItemDisplayContext, RoundHintContext, TagDisplayContext } from './displayContextTypes';
+
+export interface TagDisplayContextOptions {
+  surveyorHand?: HandType;
+  copies?: number;
+  round?: number;
+}
 
 export function getItemDisplayContext(state = getRunState()): ItemDisplayContext {
   return {
     balance: state.balance,
+    roundsSkipped: state.roundsSkipped,
     equipment: resolveEquipmentList(state) as ItemDisplayContext['equipment'],
     dice: state.dice,
     lastUsedConsumableId: state.lastUsedConsumableId,
@@ -42,4 +50,21 @@ export function getRoundHintContext(): RoundHintContext | null {
 /** Resolved equipment instances for systems that need full EquipmentInstance objects. */
 export function getResolvedEquipment(state = getRunState()): EquipmentInstance[] {
   return resolveEquipmentList(state);
+}
+
+export function getTagDisplayContext(
+  state: RunState = getRunState(),
+  options: TagDisplayContextOptions = {},
+): TagDisplayContext {
+  return {
+    daysScored: state.daysScored,
+    unusedRerollsTotal: state.unusedRerollsTotal,
+    roundsSkipped: state.roundsSkipped,
+    balance: state.balance,
+    surveyorHand: options.surveyorHand,
+    copies: options.copies ?? 1,
+    round: options.round,
+    currentRound: state.round,
+    skippedRoundsThisLeg: state.skippedRoundsThisLeg,
+  };
 }

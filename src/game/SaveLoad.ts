@@ -38,6 +38,7 @@ import type {
   TrailEventSceneState,
 } from './store/types';
 import { createEmptyTrailRoundEffects } from './TrailEventsSystem';
+import { normalizeShopSceneState } from './store/shopStock';
 import { getTrailTagById } from '../data/trail_tags';
 import bosses from '../data/bosses';
 
@@ -92,6 +93,7 @@ export interface PlayerSaveData {
   trailRoundEffects: import('./TrailEventsSystem').TrailRoundEffects;
   pendingTrailEventId: string | null;
   seenTrailEventIds: string[];
+  seenTrailTagIds?: string[];
   skipNextShop: boolean;
   trailGuidesUsed: number;
   supplyCardsUsed?: number;
@@ -156,6 +158,8 @@ export interface ShopSaveData {
   stock: SerializedShopItem[];
   packs: { defId: string; instanceId: string; opened?: boolean }[];
   shopRerollCount: number;
+  visitMods?: { freeShop: boolean };
+  bonusPermitIds?: string[];
 }
 
 export type SerializedShopItem = StoredShopItem;
@@ -287,6 +291,7 @@ function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
     trailRoundEffects: data.trailRoundEffects ? { ...data.trailRoundEffects } : createEmptyTrailRoundEffects(),
     pendingTrailEventId: data.pendingTrailEventId,
     seenTrailEventIds: [...data.seenTrailEventIds],
+    seenTrailTagIds: [...(data.seenTrailTagIds ?? [])],
     skipNextShop: data.skipNextShop,
     trailGuidesUsed: data.trailGuidesUsed,
     supplyCardsUsed: data.supplyCardsUsed ?? 0,
@@ -350,7 +355,7 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
       const data = scene as ShopSaveData;
       return {
         activeScene: 'Shop',
-        shop: {
+        shop: normalizeShopSceneState({
           stock: data.stock,
           packs: data.packs.map((p) => ({
             defId: p.defId,
@@ -358,7 +363,9 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
             opened: p.opened,
           })),
           shopRerollCount: data.shopRerollCount,
-        },
+          visitMods: data.visitMods,
+          bonusPermitIds: data.bonusPermitIds,
+        }),
         boosterPack: null,
         trailEvent: null,
         payout: null,
@@ -599,6 +606,8 @@ export function shopSceneStateToSaveData(shop: ShopSceneState): ShopSaveData {
       ...(p.opened ? { opened: true } : {}),
     })),
     shopRerollCount: shop.shopRerollCount,
+    visitMods: shop.visitMods,
+    bonusPermitIds: shop.bonusPermitIds,
   };
 }
 

@@ -1,25 +1,40 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
+import trailTags from '../../../data/trail_tags';
 import { getRunState, runActions } from '../../store/runStore';
 import { getSceneState, sceneActions } from '../../store/sceneStore';
 import { setupActions } from '../../store/actions/setupActions';
 import { economyActions } from '../../store/actions/economyActions';
 import {
   appendShopStockForSlots,
+  applyShopTagModsToRows,
   generateNewShopState,
+  generateRerolledShopStock,
   generateShopStockRows,
+  resolveShopEquipmentFromStored,
+  resolveShopPackPurchaseCost,
+  resolveShopStockPurchaseCost,
   shopRowsToStored,
   buildShopDieDisplayDef,
   buildShopPermitDisplayDef,
   buildShopPackDisplayDef,
   DICE_SHOP_COST,
+  type ShopStockGenRow,
 } from '../../store/shopStock';
 import { createDie } from '../../DiceSystem';
 import { getItemDisplayContext } from '../../displayContext';
-import { getPermitById } from '../../PermitsSystem';
+import { generateShopPermit, getPermitById } from '../../PermitsSystem';
 import { getPackById } from '../../../data/packs';
 import { shopSceneActions } from '../../store/actions/shopSceneActions';
 import { selectShopStockRevision } from '../../store/selectors/sceneSelectors';
+import { selectShopRerollCost } from '../../store/selectors/runSelectors';
 import { initRunRng } from '../../RunRng';
+import { applyAuraTagsToShopStock, applyInjectTagsToShopStock, processShopTags } from '../../TagSystem';
+import { getEquipmentDefById, type EquipmentDef } from '../../ItemsSystem';
+import { getRandomTrailGuideDef } from '../../ConsumablesSystem';
+import { deserializeEquipmentInstance } from '../../SaveLoad';
+import { resolveEquipmentInstance } from '../../store/resolve';
+import { rollShopEquipmentPreview } from '../../EquipmentModifiers';
+import { getPlayerState, resetPlayerState } from '../testRunPlayer';
 
 describe('shopStock', () => {
   beforeEach(() => {
@@ -284,6 +299,245 @@ describe('buildShopPermitDisplayDef', () => {
     expect(displayDef.rarity).toBe('permit');
     const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
     expect(tooltip).toBe(permit!.description);
+  });
+});
+
+describe('shop tag integration', () => {
+  const ALL_TAGS = trailTags;
+
+  beforeEach(() => {
+    resetPlayerState();
+    sceneActions.reset();
+    initRunRng('tag-shop-integration');
+    setupActions.applyProfession('outlaw');
+  });
+
+  test('On the House: stored stock and packs resolve to $0 after round-trip', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_company_store')!);
+    const { shop, tagMods } = generateNewShopState();
+    expect(tagMods.freeShop).toBe(true);
+    expect(shop.visitMods?.freeShop).toBe(true);
+    const visitMods = shop.visitMods ?? { freeShop: true };
+
+    for (const item of shop.stock) {
+      expect(resolveShopStockPurchaseCost(item)).toBe(0);
+    }
+    for (const pack of shop.packs) {
+      const def = getPackById(pack.defId);
+      expect(def).toBeDefined();
+      expect(resolveShopPackPurchaseCost(def!, visitMods)).toBe(0);
+    }
+  });
+
+  test('On the House: rerolled stock is not free', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_company_store')!);
+    generateNewShopState();
+    const rerolled = generateRerolledShopStock();
+    expect(rerolled.length).toBeGreaterThan(0);
+    const hasPaidItem = rerolled.some((item) => resolveShopStockPurchaseCost(item) > 0);
+    expect(hasPaidItem).toBe(true);
+  });
+
+  test('visitMods.freeShop alone does not free unstamped stock rows', () => {
+    const rows = generateShopStockRows();
+    const stored = shopRowsToStored(rows);
+    const consumable = stored.find((s) => s.type === 'consumable' && s.shopCost == null);
+    expect(consumable).toBeDefined();
+    if (!consumable) return;
+    expect(resolveShopStockPurchaseCost(consumable)).toBeGreaterThan(0);
+  });
+
+  test("Outfitter's Pick: injected equipment is free after store round-trip", () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_uncommon')!);
+    processShopTags(player);
+    const stock: ShopStockGenRow[] = [
+      { type: 'equipment', def: { id: 'b', cost: 5 } as EquipmentDef },
+      { type: 'equipment', def: { id: 'c', cost: 5 } as EquipmentDef },
+    ];
+    applyInjectTagsToShopStock(stock, player);
+    for (const row of stock) {
+      if (row.type === 'equipment' && row.def) {
+        row.preview = rollShopEquipmentPreview(row.def, getRunState().purchasedPermits);
+      }
+    }
+    const stored = shopRowsToStored(stock);
+    expect(stored[0]?.shopCost).toBe(0);
+    expect(resolveShopStockPurchaseCost(stored[0]!)).toBe(0);
+  });
+
+  test('Saloon Find: injected rare equipment is free after store round-trip', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_rare')!);
+    processShopTags(player);
+    const stock: ShopStockGenRow[] = [{ type: 'equipment', def: { id: 'b', cost: 5 } as EquipmentDef }];
+    applyInjectTagsToShopStock(stock, player);
+    for (const row of stock) {
+      if (row.type === 'equipment' && row.def) {
+        row.preview = rollShopEquipmentPreview(row.def, getRunState().purchasedPermits);
+      }
+    }
+    const stored = shopRowsToStored(stock);
+    expect(stored[0]?.shopCost).toBe(0);
+    expect(resolveShopStockPurchaseCost(stored[0]!)).toBe(0);
+  });
+
+  const AURA_SHOP_TAG_CASES: [string, string][] = [
+    ['tag_ghost', 'ghost'],
+    ['tag_fire', 'fire'],
+    ['tag_arcane', 'arcane'],
+    ['tag_holy', 'holy'],
+  ];
+
+  for (const [tagId, auraId] of AURA_SHOP_TAG_CASES) {
+    test(`shop stored preview hydrates ${auraId} aura (${tagId})`, () => {
+      const player = getPlayerState();
+      player.addTag(ALL_TAGS.find((t) => t.id === tagId)!);
+      const horseshoe = getEquipmentDefById('horseshoe')!;
+      const rows: ShopStockGenRow[] = [
+        { type: 'equipment', def: { ...horseshoe }, preview: rollShopEquipmentPreview(horseshoe, []) },
+      ];
+      applyAuraTagsToShopStock(rows);
+      for (const row of rows) {
+        if (row.type === 'equipment' && row.def && row.preview) {
+          row.preview.def = row.def;
+        }
+      }
+      const stored = shopRowsToStored(rows)[0]!;
+      expect(stored.type).toBe('equipment');
+      if (stored.type !== 'equipment') return;
+      expect(stored.preview.auraId).toBe(auraId);
+
+      const hydrated = resolveEquipmentInstance(stored.preview);
+      expect(hydrated.def.aura?.id).toBe(auraId);
+      expect(deserializeEquipmentInstance(stored.preview).def.aura).toBeUndefined();
+    });
+  }
+
+  test('Haunted Relic: aura applied and free on base equipment slot', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_ghost')!);
+    const { shop } = generateNewShopState();
+    const ghostRow = shop.stock.find((s) => s.type === 'equipment' && s.preview.auraId === 'ghost');
+    expect(ghostRow).toBeDefined();
+    expect(resolveShopStockPurchaseCost(ghostRow!)).toBe(0);
+  });
+
+  test('Haunted Relic: banks when shop has no base equipment', () => {
+    const player = getPlayerState();
+    const tag = ALL_TAGS.find((t) => t.id === 'tag_ghost')!;
+    player.pendingTags = [{ def: tag, copies: 1 }];
+    applyAuraTagsToShopStock([], player);
+    expect(getRunState().storedAuraTags).toEqual([{ tagId: 'tag_ghost', copies: 1 }]);
+  });
+
+  test('Haunted Relic: partial apply re-banks leftover stored copies', () => {
+    runActions.patch({ storedAuraTags: [{ tagId: 'tag_ghost', copies: 2 }] });
+    const horseshoe = getEquipmentDefById('horseshoe')!;
+    const rows: ShopStockGenRow[] = [
+      { type: 'equipment', def: { ...horseshoe }, preview: rollShopEquipmentPreview(horseshoe, []) },
+    ];
+    applyAuraTagsToShopStock(rows);
+    const row = rows[0];
+    expect(row?.type).toBe('equipment');
+    if (row?.type !== 'equipment' || !row.def) return;
+    expect(row.def.aura?.id).toBe('ghost');
+    expect(getRunState().storedAuraTags).toEqual([{ tagId: 'tag_ghost', copies: 1 }]);
+  });
+
+  test('Haunted Relic: after trail-guide-only shop and reroll, ghost aura and $0 price match on same card', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_ghost')!);
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_free_reroll')!);
+
+    const initialRows: ShopStockGenRow[] = [
+      { type: 'consumable', consumableDef: getRandomTrailGuideDef() },
+      { type: 'consumable', consumableDef: getRandomTrailGuideDef() },
+    ];
+    const tagMods = processShopTags(player);
+    expect(tagMods.freeFirstReroll).toBe(true);
+    applyShopTagModsToRows(initialRows, tagMods);
+    expect(getRunState().storedAuraTags).toEqual([{ tagId: 'tag_ghost', copies: 1 }]);
+
+    const horseshoe = getEquipmentDefById('horseshoe')!;
+    const dynamite = getEquipmentDefById('dynamite')!;
+    const rerollRows: ShopStockGenRow[] = [
+      { type: 'equipment', def: { ...horseshoe }, preview: rollShopEquipmentPreview(horseshoe, []) },
+      { type: 'equipment', def: { ...dynamite }, preview: rollShopEquipmentPreview(dynamite, []) },
+    ];
+    applyInjectTagsToShopStock(rerollRows);
+    applyAuraTagsToShopStock(rerollRows);
+    for (const row of rerollRows) {
+      if (row.type === 'equipment' && row.def && !row.preview) {
+        row.preview = rollShopEquipmentPreview(row.def, getRunState().purchasedPermits);
+      } else if (row.type === 'equipment' && row.def && row.preview) {
+        row.preview.def = row.def;
+      }
+    }
+    const stored = shopRowsToStored(rerollRows);
+
+    const ghostRow = stored.find((s) => s.type === 'equipment' && s.preview.auraId === 'ghost');
+    expect(ghostRow).toBeDefined();
+    const resolved = resolveShopEquipmentFromStored(ghostRow as Extract<typeof ghostRow, { type: 'equipment' }>);
+    expect(resolved.def.aura?.id).toBe('ghost');
+    expect(resolved.purchaseCost).toBe(0);
+    expect(getRunState().storedAuraTags).toEqual([]);
+
+    const paidRow = stored.find((s) => s.type === 'equipment' && s.preview.auraId !== 'ghost');
+    expect(paidRow).toBeDefined();
+    expect(
+      resolveShopEquipmentFromStored(paidRow as Extract<typeof paidRow, { type: 'equipment' }>).purchaseCost,
+    ).toBeGreaterThan(0);
+  });
+
+  test('Haunted Relic: generateRerolledShopStock applies banked ghost after consumable-only visit', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_ghost')!);
+    const initialRows: ShopStockGenRow[] = [
+      { type: 'consumable', consumableDef: getRandomTrailGuideDef() },
+      { type: 'consumable', consumableDef: getRandomTrailGuideDef() },
+    ];
+    applyShopTagModsToRows(initialRows, { freeShop: false, freeFirstReroll: false, extraPermits: 0 });
+    expect(getRunState().storedAuraTags).toEqual([{ tagId: 'tag_ghost', copies: 1 }]);
+
+    initRunRng('ghost-reroll-stock-gen');
+    const rerolled = generateRerolledShopStock();
+    const equipment = rerolled.filter((s) => s.type === 'equipment');
+    expect(equipment.length).toBeGreaterThan(0);
+    const ghostRow = equipment.find((s) => s.preview.auraId === 'ghost');
+    expect(ghostRow).toBeDefined();
+    const resolved = resolveShopEquipmentFromStored(ghostRow as Extract<typeof ghostRow, { type: 'equipment' }>);
+    expect(resolved.def.aura?.id).toBe('ghost');
+    expect(resolved.purchaseCost).toBe(0);
+  });
+
+  test('Permit Stamp: adds bonus permits to shop visit', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_permit')!);
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_permit')!);
+    const shop = shopSceneActions.openShop();
+    expect(shop.bonusPermitIds?.length).toBe(2);
+    expect(getSceneState().shop?.bonusPermitIds?.length).toBe(2);
+  });
+
+  test('Coupon Book: first shop reroll is free', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_free_reroll')!);
+    shopSceneActions.openShop();
+    expect(getRunState().tagFreeReroll).toBe(true);
+    expect(selectShopRerollCost(getRunState())).toBe(0);
+  });
+
+  test('On the House: permits are not included in free shop pricing', () => {
+    const player = getPlayerState();
+    player.addTag(ALL_TAGS.find((t) => t.id === 'tag_company_store')!);
+    const { shop } = generateNewShopState();
+    expect(shop.visitMods?.freeShop).toBe(true);
+    const permit = generateShopPermit([]);
+    expect(permit).not.toBeNull();
+    expect(permit!.cost).toBeGreaterThan(0);
   });
 });
 

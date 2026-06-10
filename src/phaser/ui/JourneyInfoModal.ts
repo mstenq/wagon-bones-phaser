@@ -8,6 +8,7 @@ import { COLORS, TEXT_COLORS, FONTS, UI } from '../../game/Constants';
 import { getRunState } from '../../game/store/runStore';
 import { selectHandStats, selectTagDescriptionContextForRound } from '../../game/store/selectors/runSelectors';
 import { resolveTagDescription } from '../../data/trail_tags';
+import { getTagDisplayContext } from '../../game/displayContext';
 import { HandType } from '../../game/types';
 import { Button } from './Button';
 import { getPermitById } from '../../game/PermitsSystem';
@@ -221,7 +222,11 @@ export class JourneyInfoModal extends GameObjects.Container {
         depth: 510,
         onTagHover: (tag, round, ax, ay) => {
           const run = getRunState();
-          const desc = resolveTagDescription(tag, selectTagDescriptionContextForRound(run, round));
+          const meta = selectTagDescriptionContextForRound(run, round);
+          const desc = resolveTagDescription(
+            tag,
+            getTagDisplayContext(run, { round, surveyorHand: meta.surveyorHand }),
+          );
           this.tagTooltip.show(
             this.scene,
             tag,

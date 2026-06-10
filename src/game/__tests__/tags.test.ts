@@ -2,8 +2,12 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import trailTags, { getTrailTagById, resolveTagDescription } from '../../data/trail_tags';
 import type { TrailTagDef } from '../../data/trail_tags';
 import {
+  filterUnseenTags,
   getTagPool,
+  ensureRoundSkipPreviewTags,
+  getPackDefIdForTag,
   processImmediateTags,
+  selectRandomTag,
   processShopTags,
   applyInjectTagsToShopStock,
   applyAuraTagsToShopStock,
@@ -11,7 +15,10 @@ import {
   processBossPayoutTags,
   processChangeOfGuardTags,
   expandImmediatePackTagsToPackDefIds,
+  consumeNextRoundTags,
 } from '../TagSystem';
+import { getRunState } from '../store/runStore';
+import { initRunRng } from '../RunRng';
 import {
   createEquipmentInstance,
   getEquipmentListPrice,
@@ -23,6 +30,12 @@ import { getEquipmentPurchasePrice } from '../EquipmentModifiers';
 import { EQUIPMENT_MODIFIER } from '../Constants';
 import { HandType } from '../types';
 import { getPlayerState, resetPlayerState } from '../__tests__/testRunPlayer';
+import { gameFacade } from '../facade';
+import { tagActions } from '../store/actions/tagActions';
+import { runActions } from '../store/runStore';
+import { getTagDisplayContext } from '../displayContext';
+import type { TagDisplayContext } from '../displayContextTypes';
+import { computeImmediateMoneyPayout } from '../tagPayout';
 
 const ALL_TAGS = trailTags;
 
@@ -37,7 +50,7 @@ describe('Trail Tags Data', () => {
     for (const tag of trailTags) {
       expect(tag.id).toBeTruthy();
       expect(tag.name).toBeTruthy();
-      expect(resolveTagDescription(tag)).toBeTruthy();
+      expect(resolveTagDescription(tag, getTagDisplayContext())).toBeTruthy();
       expect(tag.category).toBeTruthy();
       expect(typeof tag.minLeg).toBe('number');
       expect(typeof tag.weight).toBe('number');
@@ -72,6 +85,61 @@ describe('TagSystem', () => {
       const pool2 = getTagPool(2);
       expect(pool2.length).toBeGreaterThan(pool1.length);
       expect(pool1.every((t) => t.minLeg <= 1)).toBe(true);
+    });
+
+    it('filterUnseenTags excludes seen ids and falls back when all seen', () => {
+      const pool = getTagPool(1);
+      const oneSeen = filterUnseenTags(pool, [pool[0]!.id]);
+      expect(oneSeen.every((t) => t.id !== pool[0]!.id)).toBe(true);
+      expect(oneSeen.length).toBe(pool.length - 1);
+
+      const allSeen = filterUnseenTags(
+        pool,
+        pool.map((t) => t.id),
+      );
+      expect(allSeen).toEqual(pool);
+    });
+
+    it('selectRandomTag avoids seen tags while unseen remain', () => {
+      initRunRng('tag-unseen-pool');
+      const pool = getTagPool(2);
+      const seen = pool.slice(0, pool.length - 1).map((t) => t.id);
+      const remaining = pool[pool.length - 1]!;
+      runActions.patch({ seenTrailTagIds: seen, leg: 2 });
+      for (let i = 0; i < 20; i++) {
+        expect(selectRandomTag(2).id).toBe(remaining.id);
+      }
+    });
+
+    it('ensureRoundSkipPreviewTags assigns distinct previews per round', () => {
+      initRunRng('preview-batch-dedup');
+      runActions.patch({ leg: 2, round: 1 });
+      ensureRoundSkipPreviewTags();
+      const previews = [1, 2].map((r) => getRunState().roundSkipPreviewTags[r]).filter((id): id is string => !!id);
+      expect(previews.length).toBe(2);
+      expect(new Set(previews).size).toBe(2);
+    });
+
+    it('recordRoundSkipped marks tag as seen', () => {
+      const tag = getTrailTagById('tag_equipment_mega')!;
+      tagActions.recordRoundSkipped(tag);
+      expect(getRunState().seenTrailTagIds).toContain('tag_equipment_mega');
+    });
+
+    it('skipping a round keeps upcoming skip preview tags unchanged', () => {
+      const onTheHouse = getTrailTagById('tag_company_store')!;
+      const couponBook = getTrailTagById('tag_free_reroll')!;
+      runActions.patch({
+        leg: 1,
+        round: 1,
+        roundSkipPreviewTags: { 1: onTheHouse.id, 2: couponBook.id },
+      });
+
+      gameFacade.meta.recordRoundSkipped(onTheHouse, undefined);
+      gameFacade.meta.advanceRound(true);
+      ensureRoundSkipPreviewTags();
+
+      expect(getRunState().roundSkipPreviewTags[2]).toBe(couponBook.id);
     });
   });
 
@@ -183,9 +251,53 @@ describe('TagSystem', () => {
 
     it('description names the pre-rolled hand on skip preview', () => {
       const tag = ALL_TAGS.find((t) => t.id === 'tag_surveyor')!;
-      const desc = resolveTagDescription(tag, { surveyorHand: HandType.PAIR });
+      const desc = resolveTagDescription(tag, getTagDisplayContext(getRunState(), { surveyorHand: HandType.PAIR }));
       expect(desc).toContain('Pair');
       expect(desc).not.toContain('random');
+    });
+  });
+
+  describe('money tag tooltips', () => {
+    function moneyCtx(overrides: Partial<TagDisplayContext> = {}): TagDisplayContext {
+      return {
+        daysScored: 0,
+        unusedRerollsTotal: 0,
+        roundsSkipped: 0,
+        balance: 0,
+        copies: 1,
+        currentRound: 1,
+        skippedRoundsThisLeg: [],
+        ...overrides,
+      };
+    }
+
+    it('well-traveled payout matches days scored', () => {
+      const ctx = moneyCtx({ daysScored: 12, copies: 2 });
+      expect(computeImmediateMoneyPayout('tag_well_traveled', ctx)).toBe(24);
+      expect(resolveTagDescription(getTrailTagById('tag_well_traveled')!, ctx)).toContain('$24');
+    });
+
+    it('pack rat payout matches unused rerolls', () => {
+      const ctx = moneyCtx({ unusedRerollsTotal: 7 });
+      expect(computeImmediateMoneyPayout('tag_pack_rat', ctx)).toBe(7);
+      expect(resolveTagDescription(getTrailTagById('tag_pack_rat')!, ctx)).toContain('$7');
+    });
+
+    it('shortcut live skip offer includes the pending skip', () => {
+      const ctx = moneyCtx({ round: 1, currentRound: 1 });
+      expect(computeImmediateMoneyPayout('tag_shortcut', ctx)).toBe(5);
+      expect(resolveTagDescription(getTrailTagById('tag_shortcut')!, ctx)).toContain('$5');
+    });
+
+    it('shortcut pending tag uses post-skip roundsSkipped', () => {
+      const ctx = moneyCtx({ roundsSkipped: 3 });
+      expect(computeImmediateMoneyPayout('tag_shortcut', ctx)).toBe(15);
+    });
+
+    it('bank deposit caps payout at $40', () => {
+      const ctx = moneyCtx({ balance: 100 });
+      expect(computeImmediateMoneyPayout('tag_bank_deposit', ctx)).toBe(40);
+      expect(resolveTagDescription(getTrailTagById('tag_bank_deposit')!, ctx)).toContain('$40');
     });
   });
 
@@ -432,5 +544,68 @@ describe('TagSystem', () => {
       expect(created.length).toBeGreaterThan(0);
       expect(created.every((c) => c.rarity === 'common')).toBe(true);
     });
+  });
+
+  describe('Pack Rat', () => {
+    it('pays $1 per unused reroll across the run', () => {
+      const player = getPlayerState();
+      player.unusedRerollsTotal = 7;
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_pack_rat')!;
+      player.addTag(tag);
+      const before = player.economy.balance;
+      processImmediateTags(player);
+      expect(player.economy.balance).toBe(before + 7);
+    });
+  });
+
+  describe('Bank Deposit edge cases', () => {
+    it('sets balance to $0 when negative (no payout)', () => {
+      const player = getPlayerState();
+      player.economy.setBalance(-5);
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_bank_deposit')!;
+      player.addTag(tag);
+      const results = processImmediateTags(player);
+      expect(player.economy.balance).toBe(0);
+      expect(results[0]?.amount).toBe(0);
+    });
+  });
+
+  describe('Shortcut skip timing', () => {
+    it('includes the round just skipped in payout', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_shortcut')!;
+      player.addTag(tag);
+      const before = player.economy.balance;
+      player.advanceRound(true);
+      processImmediateTags(player);
+      expect(player.roundsSkipped).toBe(1);
+      expect(player.economy.balance).toBe(before + 5);
+    });
+  });
+
+  describe('Wide Saddle', () => {
+    it('adds +3 hand size bonus per copy for the next round', () => {
+      const player = getPlayerState();
+      const tag = ALL_TAGS.find((t) => t.id === 'tag_wide_saddle')!;
+      player.addTag(tag);
+      consumeNextRoundTags();
+      expect(getRunState().wideSaddleBonus).toBe(3);
+    });
+  });
+
+  describe('Immediate pack tag mapping', () => {
+    const packCases: [string, string][] = [
+      ['tag_dice_mega', 'dice_mega'],
+      ['tag_supply_mega', 'supply_mega'],
+      ['tag_trail_guide_mega', 'trail_guide_mega'],
+      ['tag_equipment_mega', 'equipment_mega'],
+      ['tag_frontier', 'frontier_standard'],
+    ];
+
+    for (const [tagId, packId] of packCases) {
+      it(`${tagId} maps to ${packId}`, () => {
+        expect(getPackDefIdForTag(tagId)).toBe(packId);
+      });
+    }
   });
 });

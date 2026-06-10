@@ -13,6 +13,7 @@ import type {
   ShopSceneState,
   TrailEventSceneState,
 } from './types';
+import { normalizeShopSceneState } from './shopStock';
 
 export function createInitialSceneState(): SceneRuntimeState {
   return {
@@ -71,7 +72,7 @@ export const sceneActions = {
   },
 
   enterShop(shop: ShopSceneState): void {
-    sceneStore.setState((state) => ({ ...state, activeScene: 'Shop', shop }));
+    sceneStore.setState((state) => ({ ...state, activeScene: 'Shop', shop: normalizeShopSceneState(shop) }));
   },
 
   patchShop(partial: Partial<ShopSceneState>): void {

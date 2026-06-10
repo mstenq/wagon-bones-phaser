@@ -8,12 +8,16 @@ import {
   processEquipmentOnReroll,
   getScoredRetriggerCount,
   processEquipmentOnRoundStart,
+  processEquipmentOnDayStart,
+  processEquipmentOnDayEnd,
   processEquipmentOnPackSkipped,
   getConfigModifiers,
   processPreScoreHandUpgrades,
 } from '../../EquipmentEffects';
 import { HandType } from '../../types';
-import { GAMEPLAY } from '../../Constants';
+import { COPY_INCOMPATIBLE_EFFECTS, GAMEPLAY } from '../../Constants';
+import { createConsumableInstance, getSupplyDefById, getTrailGuideDefById } from '../../ConsumablesSystem';
+import { replaceConsumableList, resolveConsumableList } from '../../store/resolve';
 
 beforeEach(() => resetDieIds());
 
@@ -591,5 +595,136 @@ describe('Copy item per-die scoring effects', () => {
     });
 
     expect(player.economy.balance).toBe(18);
+  });
+});
+
+// ─── Familiar copy behavior ───
+
+describe('Copy item familiar: Ashfang', () => {
+  test('mirror lake copies xMult but does not store xMult on the copy card', () => {
+    const mirrorLake = item('mirror_lake');
+    const ashfang = itemWithState('ashfang', { xMult: 1.25 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [mirrorLake, ashfang],
+    });
+    expect(mirrorLake.state.xMult).toBeUndefined();
+    // PAIR base 1; ashfang x1.25 from mirror copy + ashfang x1.25 = x1.5625
+    expect(result.mult).toBeMult(1.56);
+  });
+
+  test('mirror lake copying ashfang does not destroy trail guides at round start', () => {
+    const mirrorLake = item('mirror_lake');
+    const ashfang = item('ashfang');
+    const tg = createConsumableInstance(getTrailGuideDefById('tg_high_value')!);
+    const supply = createConsumableInstance(getSupplyDefById('coffee_tin')!);
+    replaceConsumableList([tg, supply]);
+
+    processEquipmentOnRoundStart([mirrorLake, ashfang]);
+
+    expect(resolveConsumableList()).toHaveLength(1);
+    expect(resolveConsumableList()[0]!.def.id).toBe('coffee_tin');
+    expect(mirrorLake.state.xMult).toBeUndefined();
+    expect(ashfang.state.xMult).toBeCloseTo(1.25, 5);
+  });
+
+  test('two ashfangs left to right: only the first gains xMult when trail guides are present', () => {
+    const ashfangLeft = item('ashfang');
+    const ashfangRight = item('ashfang');
+    const tg = createConsumableInstance(getTrailGuideDefById('tg_high_value')!);
+    replaceConsumableList([tg]);
+
+    processEquipmentOnRoundStart([ashfangLeft, ashfangRight]);
+
+    expect(ashfangLeft.state.xMult).toBeCloseTo(1.25, 5);
+    expect(ashfangRight.state.xMult).toBe(1);
+    expect(resolveConsumableList()).toHaveLength(0);
+  });
+});
+
+describe('Copy item familiar: Moonquil', () => {
+  test('mirror lake copies +mult from unique equipment count without storing state', () => {
+    const mirrorLake = item('mirror_lake');
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [mirrorLake, item('moonquil')],
+      equipmentObtainedIds: ['horseshoe', 'dynamite', 'ashfang', 'moonquil'],
+    });
+    expect(mirrorLake.state.mult).toBeUndefined();
+    // PAIR base 1 + mirror(+8) + moonquil(+8) = 17
+    expect(result.mult).toBeMult(17);
+  });
+});
+
+describe('Copy item familiar: Nightshard', () => {
+  test('mirror lake copying nightshard doubles dominant-hand dice picks at day start', () => {
+    const bones = [
+      die({ enhancement: 'bone', value: 12 }),
+      die({ enhancement: 'bone', value: 11 }),
+      die({ enhancement: 'bone', value: 10 }),
+      die({ enhancement: 'bone', value: 9 }),
+      die({ enhancement: 'bone', value: 8 }),
+      die({ enhancement: 'bone', value: 7 }),
+    ];
+    setupGame({
+      equipment: [item('mirror_lake'), item('nightshard')],
+      dice: [...bones, ...diceWithValue(1, 100)],
+    });
+    const result = processEquipmentOnDayStart([item('mirror_lake'), item('nightshard')]);
+    expect(result.priorityHandDiceIds).toHaveLength(6);
+    expect(result.priorityHandDiceIds.every((id) => bones.some((d) => d.id === id))).toBe(true);
+  });
+});
+
+describe('Copy item familiar: Shadowpaw', () => {
+  test('is copy-incompatible', () => {
+    expect(COPY_INCOMPATIBLE_EFFECTS.has('MOST_USED_SUPPLY_PACK')).toBe(true);
+  });
+
+  test('mirror lake cannot copy shadowpaw', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('shadowpaw'), item('horseshoe')],
+    });
+    // PAIR base 1 + horseshoe +4 = 5; mirror lake has nothing valid to copy
+    expect(result.mult).toBeMult(5);
+  });
+});
+
+describe('Copy item familiar: Skullwing', () => {
+  test('is copy-incompatible', () => {
+    expect(COPY_INCOMPATIBLE_EFFECTS.has('FIRST_DAY_NONSCORING_DESTROY')).toBe(true);
+  });
+
+  test('mirror lake cannot copy skullwing', () => {
+    const hand = [die({ value: 5 }), die({ value: 5 }), die({ value: 3 }), die({ value: 7 })];
+    const { result } = calculateTestScore({
+      scoredDice: hand,
+      equipment: [item('mirror_lake'), item('skullwing')],
+    });
+    // Only skullwing destroys non-scoring dice; mirror lake does not copy the effect
+    expect(result.mutations.moneyEarned).toBe(2);
+  });
+});
+
+describe('Copy item familiar: Dustshell', () => {
+  test('mirror lake copies accumulated miles but does not store miles on the copy card', () => {
+    const mirrorLake = item('mirror_lake');
+    const dustshell = itemWithState('dustshell', { miles: 20 });
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [mirrorLake, dustshell],
+    });
+    expect(mirrorLake.state.miles).toBeUndefined();
+    // PAIR base 20 miles + mirror(+20) + dustshell(+20) = 60
+    expect(result.miles).toBeMiles(60);
+  });
+
+  test('mirror lake copying dustshell does not double day-end mile accumulation', () => {
+    const mirrorLake = item('mirror_lake');
+    const dustshell = item('dustshell');
+    processEquipmentOnDayEnd([mirrorLake, dustshell]);
+    expect(mirrorLake.state.miles).toBeUndefined();
+    expect(dustshell.state.miles).toBe(10);
   });
 });

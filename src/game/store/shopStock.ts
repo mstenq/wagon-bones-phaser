@@ -16,8 +16,10 @@ import {
 } from '../ConsumablesSystem';
 import { applyRandomSticker, generateShopPacks } from '../BoosterPackSystem';
 import type { PackDef } from '../../data/packs';
-import { getPermitAuraMultiplier, hasPermitDiceInShop, type PermitDef } from '../PermitsSystem';
-import { rollShopEquipmentPreview } from '../EquipmentModifiers';
+import { getDiscountedShopPrice, getPermitAuraMultiplier, hasPermitDiceInShop, type PermitDef } from '../PermitsSystem';
+import { getEquipmentPurchasePrice, rollShopEquipmentPreview } from '../EquipmentModifiers';
+import { getEquipmentListPrice } from '../ItemsSystem';
+import { getConsumableDefById } from '../ConsumablesSystem';
 import { getProfessionById } from '../../data/professions';
 import {
   applyAuraTagsToShopStock,
@@ -27,9 +29,15 @@ import {
 } from '../TagSystem';
 import { rngFloat, rngPick } from '../RunRng';
 import { getRunState } from './runStore';
-import { storedFromEquipmentInstance } from './resolve';
-import type { RunState, ShopSceneState, StoredShopItem } from './types';
-import { selectIsFirstShopVisit } from './selectors/runSelectors';
+import { resolveEquipmentInstance, storedFromEquipmentInstance } from './resolve';
+import {
+  DEFAULT_SHOP_VISIT_MODS,
+  type RunState,
+  type ShopSceneState,
+  type ShopVisitMods,
+  type StoredShopItem,
+} from './types';
+import { selectIsFirstShopVisit, selectTrailGuidesFree } from './selectors/runSelectors';
 
 const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'steel', 'gold', 'loaded'];
 
@@ -275,8 +283,81 @@ function applyFreeShopCosts(rows: ShopStockGenRow[]): void {
       row.def = { ...row.def, cost: 0 };
     } else if (row.type === 'consumable' && row.consumableDef) {
       row.consumableDef = { ...row.consumableDef, cost: 0 };
+    } else if (row.type === 'dice') {
+      // Dice use DICE_SHOP_COST at display time; shopCost: 0 is stamped when storing.
     }
   }
+}
+
+function shopCostOverrideForRow(row: ShopStockGenRow, freeShop: boolean): number | undefined {
+  if (freeShop) return 0;
+  if (row.type === 'equipment' && row.def?.cost === 0) return 0;
+  if (row.type === 'consumable' && row.consumableDef?.cost === 0) return 0;
+  return undefined;
+}
+
+export function normalizeShopVisitMods(mods?: Partial<ShopVisitMods> | null): ShopVisitMods {
+  return { freeShop: mods?.freeShop ?? false };
+}
+
+export function normalizeShopSceneState(shop: ShopSceneState): ShopSceneState {
+  let bonusPermitIds = shop.bonusPermitIds ?? [];
+  if (bonusPermitIds.length === 0) {
+    const legacyId = getRunState().bonusShopPermitId;
+    if (legacyId) bonusPermitIds = [legacyId];
+  }
+  return {
+    ...shop,
+    visitMods: normalizeShopVisitMods(shop.visitMods),
+    bonusPermitIds,
+  };
+}
+
+/**
+ * Resolve purchase cost for a stored shop stock row (logic-only; used by tests and shop UI).
+ * Stock freeness is stamped per row via `shopCost: 0` (initial On the House / inject / aura stock).
+ * Visit-level `visitMods.freeShop` applies to packs only — rerolled stock stays paid.
+ */
+export function resolveShopStockPurchaseCost(item: StoredShopItem, run: RunState = getRunState()): number {
+  if (item.shopCost === 0) {
+    if (item.type === 'equipment') {
+      const preview = resolveEquipmentInstance(item.preview, run.purchasedPermits);
+      const def = { ...preview.def, cost: 0 };
+      const listPrice = getEquipmentListPrice(def);
+      return getEquipmentPurchasePrice(def, preview.modifiers, listPrice, run.purchasedPermits);
+    }
+    return 0;
+  }
+
+  if (item.type === 'equipment') {
+    const preview = resolveEquipmentInstance(item.preview, run.purchasedPermits);
+    const listPrice = getEquipmentListPrice(preview.def);
+    return getEquipmentPurchasePrice(preview.def, preview.modifiers, listPrice, run.purchasedPermits);
+  }
+
+  if (item.type === 'consumable') {
+    const def = getConsumableDefById(item.defId);
+    if (!def) return 0;
+    if (def.category === 'trail_guide' && selectTrailGuidesFree(run)) return 0;
+    return getDiscountedShopPrice(def.cost, run.purchasedPermits);
+  }
+
+  if (item.type === 'dice') {
+    return DICE_SHOP_COST;
+  }
+
+  return 0;
+}
+
+/** Resolve purchase cost for a booster pack this shop visit. */
+export function resolveShopPackPurchaseCost(
+  packDef: PackDef,
+  visitMods: ShopVisitMods = DEFAULT_SHOP_VISIT_MODS,
+  run: RunState = getRunState(),
+): number {
+  if (packDef.category === 'trail_guide' && selectTrailGuidesFree(run)) return 0;
+  if (visitMods.freeShop) return 0;
+  return getDiscountedShopPrice(packDef.cost, run.purchasedPermits);
 }
 
 function syncEquipmentPreviews(rows: ShopStockGenRow[], run: RunState): void {
@@ -295,32 +376,34 @@ export function applyShopTagModsToRows(
   tagMods: ShopTagModifications,
   run: RunState = getRunState(),
 ): void {
-  const equipRows = rows.filter(
-    (r): r is ShopStockGenRow & { type: 'equipment'; def: EquipmentDef } => r.type === 'equipment' && !!r.def,
-  );
-  applyInjectTagsToShopStock(equipRows, run);
+  applyInjectTagsToShopStock(rows, run);
   if (tagMods.freeShop) {
     applyFreeShopCosts(rows);
   }
-  applyAuraTagsToShopStock(equipRows, run);
+  applyAuraTagsToShopStock(rows, run);
   syncEquipmentPreviews(rows, getRunState());
 }
 
-export function shopRowsToStored(rows: ShopStockGenRow[]): StoredShopItem[] {
+export function shopRowsToStored(rows: ShopStockGenRow[], options?: { freeShop?: boolean }): StoredShopItem[] {
+  const freeShop = options?.freeShop ?? false;
   return rows.map((row) => {
+    const shopCost = shopCostOverrideForRow(row, freeShop);
+    const costField = shopCost === 0 ? { shopCost: 0 as const } : {};
+
     if (row.type === 'equipment' && row.def && row.preview) {
       return {
         type: 'equipment',
         defId: row.def.id,
         preview: storedFromEquipmentInstance(row.preview),
         sold: row.sold,
+        ...costField,
       };
     }
     if (row.type === 'consumable' && row.consumableDef) {
-      return { type: 'consumable', defId: row.consumableDef.id, sold: row.sold };
+      return { type: 'consumable', defId: row.consumableDef.id, sold: row.sold, ...costField };
     }
     if (row.type === 'dice' && row.die) {
-      return { type: 'dice', die: { ...row.die }, sold: row.sold };
+      return { type: 'dice', die: { ...row.die }, sold: row.sold, ...costField };
     }
     throw new Error('Invalid shop stock row');
   });
@@ -342,12 +425,14 @@ export function generateNewShopState(run: RunState = getRunState()): {
   const rows = generateShopStockRows(run);
   const tagMods = processShopTags(run);
   applyShopTagModsToRows(rows, tagMods, run);
+  const visitMods: ShopVisitMods = { freeShop: tagMods.freeShop };
   return {
     tagMods,
     shop: {
-      stock: shopRowsToStored(rows),
+      stock: shopRowsToStored(rows, { freeShop: tagMods.freeShop }),
       packs: buildShopPacksForRun(run),
       shopRerollCount: getRunState().shopRerollCount,
+      visitMods,
     },
   };
 }
@@ -355,18 +440,21 @@ export function generateNewShopState(run: RunState = getRunState()): {
 /** Regenerate stock after a paid reroll (packs unchanged). */
 export function generateRerolledShopStock(run: RunState = getRunState()): StoredShopItem[] {
   const rows = generateShopStockRows(run);
-  applyInjectTagsToShopStock(
-    rows.filter(
-      (r): r is ShopStockGenRow & { type: 'equipment'; def: EquipmentDef } => r.type === 'equipment' && !!r.def,
-    ),
-    run,
-  );
-  applyAuraTagsToShopStock(
-    rows.filter(
-      (r): r is ShopStockGenRow & { type: 'equipment'; def: EquipmentDef } => r.type === 'equipment' && !!r.def,
-    ),
-    run,
-  );
+  applyInjectTagsToShopStock(rows, run);
+  applyAuraTagsToShopStock(rows, run);
   syncEquipmentPreviews(rows, getRunState());
   return shopRowsToStored(rows);
+}
+
+/** Resolve shop equipment def + preview from stored stock (includes tag auras). */
+export function resolveShopEquipmentFromStored(
+  item: StoredShopItem & { type: 'equipment' },
+  run: RunState = getRunState(),
+): { def: EquipmentDef; preview: ReturnType<typeof resolveEquipmentInstance>; purchaseCost: number } {
+  const preview = resolveEquipmentInstance(item.preview, run.purchasedPermits);
+  return {
+    def: preview.def,
+    preview,
+    purchaseCost: resolveShopStockPurchaseCost(item, run),
+  };
 }

@@ -13,6 +13,7 @@ import { createRunSceneShell } from './runSceneShell';
 import { gameFacade } from '../../game/facade';
 import type { ImmediateTagResult } from '../../game/facade/meta';
 import { resolveTagDescription } from '../../data/trail_tags';
+import { getTagDisplayContext } from '../../game/displayContext';
 import { buildVictoryGameOverData } from './GameOver';
 import { consumeAndStartImmediatePackOpens } from './immediatePackFlow';
 import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
@@ -139,7 +140,8 @@ export class RoundSelectScene extends Scene {
       },
       onTagHover: (tag, round, ax, ay) => {
         const run = getRunState();
-        const desc = resolveTagDescription(tag, selectTagDescriptionContextForRound(run, round));
+        const meta = selectTagDescriptionContextForRound(run, round);
+        const desc = resolveTagDescription(tag, getTagDisplayContext(run, { round, surveyorHand: meta.surveyorHand }));
         this.tagTooltip.show(
           this,
           tag,

@@ -5,25 +5,15 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { TEXT_COLORS, FONTS, UI, TAG_STACK } from '../../game/Constants';
-import { runStore } from '../../game/store/runStore';
+import { getTagDisplayContext } from '../../game/displayContext';
+import { getRunState, runStore } from '../../game/store/runStore';
 import { selectTagStackModel } from '../../game/store/selectors/uiSelectors';
 import { resolveTagDescription } from '../../data/trail_tags';
 import { TrailTagInstance } from '../../game/types';
 import { bindGameObject } from '../store/subscribe';
+import { addTrailTagBadgeIcon, drawTrailTagBadgeBackground } from './TrailTagBadge';
 
-const TAG_COLORS: Record<string, number> = {
-  shop: 0x44aa44,
-  shop_aura: 0x9966cc,
-  boss: 0xcc4444,
-  immediate_pack: 0x4488cc,
-  immediate_money: 0xccaa44,
-  immediate_equipment: 0x88aa44,
-  immediate_upgrade: 0x5b9bd5,
-  next_round: 0xcc8844,
-  meta: 0xcccccc,
-};
-
-const { BADGE_SIZE, BADGE_GAP, BADGE_RADIUS, TOOLTIP_WIDTH, POUCH_CLEARANCE } = TAG_STACK;
+const { BADGE_SIZE, BADGE_GAP, TOOLTIP_WIDTH, POUCH_CLEARANCE } = TAG_STACK;
 
 function tagStackEquality(
   a: ReturnType<typeof selectTagStackModel>,
@@ -97,28 +87,25 @@ export class TagStack extends GameObjects.Container {
   }
 
   private createBadge(tag: TrailTagInstance, x: number, y: number): GameObjects.Container {
-    const container = this.scene.add.container(x, y);
-    const color = TAG_COLORS[tag.def.category] ?? 0x888888;
+    const half = BADGE_SIZE / 2;
+    const cx = x + half;
+    const cy = y + half;
+    const container = this.scene.add.container(cx, cy);
 
     const bg = this.scene.add.graphics();
-    this.drawBadgeBg(bg, color, false);
+    drawTrailTagBadgeBackground(bg, -half, -half, BADGE_SIZE, tag.def.category);
     container.add(bg);
 
-    const icon = this.scene.add
-      .text(BADGE_SIZE / 2, BADGE_SIZE / 2 - 2, this.getTagIcon(tag.def.id), {
-        fontSize: '16px',
-      })
-      .setOrigin(0.5);
-    container.add(icon);
+    addTrailTagBadgeIcon(this.scene, container, -half, -half, BADGE_SIZE, tag.def.id);
 
     if (tag.copies > 1) {
       const copyBg = this.scene.add.graphics();
       copyBg.fillStyle(0xff4444, 1);
-      copyBg.fillCircle(BADGE_SIZE - 4, 4, 8);
+      copyBg.fillCircle(half - 4, -half + 4, 8);
       container.add(copyBg);
 
       const copyText = this.scene.add
-        .text(BADGE_SIZE - 4, 4, `×${tag.copies}`, {
+        .text(half - 4, -half + 4, `×${tag.copies}`, {
           fontFamily: FONTS.PRIMARY,
           fontSize: '9px',
           color: '#ffffff',
@@ -131,11 +118,11 @@ export class TagStack extends GameObjects.Container {
     container.setInteractive(new Phaser.Geom.Rectangle(0, 0, BADGE_SIZE, BADGE_SIZE), Phaser.Geom.Rectangle.Contains);
 
     container.on('pointerover', () => {
-      this.drawBadgeBg(bg, color, true);
-      this.showTooltip(tag, x, y);
+      drawTrailTagBadgeBackground(bg, -half, -half, BADGE_SIZE, tag.def.category, { hover: true });
+      this.showTooltip(tag, cx, cy);
     });
     container.on('pointerout', () => {
-      this.drawBadgeBg(bg, color, false);
+      drawTrailTagBadgeBackground(bg, -half, -half, BADGE_SIZE, tag.def.category);
       this.hideTooltip();
     });
 
@@ -145,17 +132,19 @@ export class TagStack extends GameObjects.Container {
   }
 
   private createTwinWagonBadge(count: number, x: number, y: number): GameObjects.Container {
-    const container = this.scene.add.container(x, y);
+    const half = BADGE_SIZE / 2;
+    const cx = x + half;
+    const cy = y + half;
+    const container = this.scene.add.container(cx, cy);
 
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0xcccccc, 0.9);
-    bg.fillRoundedRect(0, 0, BADGE_SIZE, BADGE_SIZE, BADGE_RADIUS);
-    bg.lineStyle(2, 0xffdd44, 0.8);
-    bg.strokeRoundedRect(0, 0, BADGE_SIZE, BADGE_SIZE, BADGE_RADIUS);
+    drawTrailTagBadgeBackground(bg, -half, -half, BADGE_SIZE, 'meta');
     container.add(bg);
 
+    addTrailTagBadgeIcon(this.scene, container, -half, -half, BADGE_SIZE, 'tag_twin_wagon');
+
     const text = this.scene.add
-      .text(BADGE_SIZE / 2, BADGE_SIZE / 2, `×${count + 1}`, {
+      .text(0, 0, `×${count + 1}`, {
         fontFamily: FONTS.HEADING,
         fontSize: '16px',
         color: '#ffdd44',
@@ -166,7 +155,7 @@ export class TagStack extends GameObjects.Container {
     container.setSize(BADGE_SIZE, BADGE_SIZE);
     container.setInteractive(new Phaser.Geom.Rectangle(0, 0, BADGE_SIZE, BADGE_SIZE), Phaser.Geom.Rectangle.Contains);
 
-    container.on('pointerover', () => this.showTwinWagonTooltip(count, x, y));
+    container.on('pointerover', () => this.showTwinWagonTooltip(count, cx, cy));
     container.on('pointerout', () => this.hideTooltip());
 
     container.setDepth(150);
@@ -174,20 +163,13 @@ export class TagStack extends GameObjects.Container {
     return container;
   }
 
-  private drawBadgeBg(bg: GameObjects.Graphics, color: number, hover: boolean): void {
-    bg.clear();
-    bg.fillStyle(color, hover ? 1 : 0.9);
-    bg.fillRoundedRect(0, 0, BADGE_SIZE, BADGE_SIZE, BADGE_RADIUS);
-    bg.lineStyle(hover ? 2 : 1, 0xffffff, hover ? 0.6 : 0.3);
-    bg.strokeRoundedRect(0, 0, BADGE_SIZE, BADGE_SIZE, BADGE_RADIUS);
-  }
-
-  private showTooltip(tag: TrailTagInstance, badgeX: number, badgeY: number): void {
+  private showTooltip(tag: TrailTagInstance, badgeCx: number, badgeCy: number): void {
     this.hideTooltip();
 
+    const half = BADGE_SIZE / 2;
     const tooltipH = 60;
-    const tx = badgeX - TOOLTIP_WIDTH - 8;
-    const ty = badgeY;
+    const tx = badgeCx - TOOLTIP_WIDTH - 8;
+    const ty = badgeCy - half;
 
     this.tooltip = this.scene.add.container(tx, ty);
 
@@ -205,7 +187,10 @@ export class TagStack extends GameObjects.Container {
     });
     this.tooltip.add(name);
 
-    const descText = resolveTagDescription(tag.def, { surveyorHand: tag.surveyorHand });
+    const descText = resolveTagDescription(
+      tag.def,
+      getTagDisplayContext(getRunState(), { surveyorHand: tag.surveyorHand, copies: tag.copies }),
+    );
     const desc = this.scene.add.text(8, 24, descText, {
       fontFamily: FONTS.PRIMARY,
       fontSize: '10px',
@@ -225,13 +210,14 @@ export class TagStack extends GameObjects.Container {
     this.add(this.tooltip);
   }
 
-  private showTwinWagonTooltip(count: number, badgeX: number, badgeY: number): void {
+  private showTwinWagonTooltip(count: number, badgeCx: number, badgeCy: number): void {
     this.hideTooltip();
 
+    const half = BADGE_SIZE / 2;
     const tooltipW = 180;
     const tooltipH = 50;
-    const tx = badgeX - tooltipW - 8;
-    const ty = badgeY;
+    const tx = badgeCx - tooltipW - 8;
+    const ty = badgeCy - half;
 
     this.tooltip = this.scene.add.container(tx, ty);
 
@@ -266,35 +252,5 @@ export class TagStack extends GameObjects.Container {
       this.tooltip.destroy();
       this.tooltip = null;
     }
-  }
-
-  private getTagIcon(tagId: string): string {
-    const icons: Record<string, string> = {
-      tag_uncommon: '🏷️',
-      tag_rare: '🍺',
-      tag_ghost: '👻',
-      tag_arcane: '⚡',
-      tag_fire: '🔥',
-      tag_holy: '✝️',
-      tag_investment: '💰',
-      tag_permit: '📜',
-      tag_boss: '🔄',
-      tag_dice_mega: '🎲',
-      tag_supply_mega: '📦',
-      tag_trail_guide_mega: '🗺️',
-      tag_equipment_mega: '🔧',
-      tag_frontier: '👁️',
-      tag_well_traveled: '🥾',
-      tag_pack_rat: '🐀',
-      tag_company_store: '🏪',
-      tag_twin_wagon: '🔁',
-      tag_wide_saddle: '🐎',
-      tag_free_reroll: '🎫',
-      tag_top_up: '🗑️',
-      tag_shortcut: '⚡',
-      tag_surveyor: '📐',
-      tag_bank_deposit: '🏦',
-    };
-    return icons[tagId] ?? '🏷️';
   }
 }

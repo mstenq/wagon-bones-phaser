@@ -4,6 +4,7 @@ import { effectRegistry } from '../registry';
 import { checkLoadedChance } from '../../equipmentUtils';
 import { handTypeMatches, multiplyCtxXMult } from '../helpers';
 import { HandType } from '../../types';
+import { getRunState } from '../../store/runStore';
 
 effectRegistry.registerXMult('FINAL_DAY_XMULT', (ctx, equip, index) => {
   const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
@@ -64,7 +65,7 @@ effectRegistry.registerXMult('TRAILBLAZER_XMULT', (ctx, equip, index) => {
 });
 
 effectRegistry.registerXMult('ROUNDS_SKIPPED_XMULT', (ctx, equip, index) => {
-  const skipped = equip.state.roundsSkipped ?? 0;
+  const skipped = getRunState().roundsSkipped;
   if (skipped > 0) {
     const xVal = 1 + skipped * ((equip.def.effectParams as Record<string, unknown>).value as number);
     multiplyCtxXMult(ctx, xVal);
