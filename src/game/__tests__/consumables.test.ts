@@ -1,6 +1,15 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import './setup';
-import { resetDieIds, setupGame, setBoss, die, item, equipWithModifiers, calculateTestScore } from './testHelpers';
+import {
+  resetDieIds,
+  setupGame,
+  setBoss,
+  die,
+  diceWithValue,
+  item,
+  equipWithModifiers,
+  calculateTestScore,
+} from './testHelpers';
 import { resetPlayerState } from './testRunPlayer';
 import {
   createFrontierConsumableDef,
@@ -965,10 +974,10 @@ describe('frontier encounter wiring and raid rules', () => {
     expect(result.failReason).toBe('No equipment!');
   });
 
-  test('blood moon applies ghost aura and reroll penalty', () => {
+  test('blood moon applies ghost aura and hand size penalty', () => {
     const player = resetPlayerState();
     player.equipment = [item('horseshoe'), item('war_drums')];
-    player.trailEventModifiers.rerollPenalty = 0;
+    player.trailEventModifiers.handSizePenalty = 0;
     const def = getFrontierDefById('blood_moon')!;
     const originalRandom = Math.random;
     Math.random = () => 0;
@@ -976,10 +985,19 @@ describe('frontier encounter wiring and raid rules', () => {
       const result = executeConsumableEffect(createConsumableInstance(def));
       expect(result.success).toBe(true);
       expect(player.equipment[0].def.aura?.id).toBe('ghost');
-      expect(player.trailEventModifiers.rerollPenalty).toBe(1);
+      expect(player.trailEventModifiers.handSizePenalty).toBe(1);
     } finally {
       Math.random = originalRandom;
     }
+  });
+
+  test('blood moon hand size penalty applies on next round start', () => {
+    const { game, player } = setupGame({ equipment: [item('horseshoe')], dice: diceWithValue(6, 20) });
+    player.trailEventModifiers.handSizePenalty = 1;
+    const baseRollSize = game.config.rollSize;
+    game.startRound();
+    expect(game.config.rollSize).toBe(baseRollSize - 1);
+    expect(player.trailEventModifiers.handSizePenalty).toBe(0);
   });
 
   test('spiritual journey upgrades all hands via consumable execution path', () => {
@@ -1277,7 +1295,7 @@ describe('shop consumable buy-and-use integration', () => {
     expect(getRunState().statusTraitTokens.find((t) => t.id === 'all_in')?.copies).toBe(1);
     expect(getRunState().statusTraitTokens.find((t) => t.id === 'echo_of_the_damned')?.copies).toBe(1);
     expect(player.equipment.some((e) => e.def.aura?.id === 'ghost')).toBe(true);
-    expect(getRunState().trailEventModifiers.rerollPenalty).toBe(1);
+    expect(getRunState().trailEventModifiers.handSizePenalty).toBe(1);
 
     // Trading Post still executes via buy-and-use path.
     expect(player.equipment[0]!.sellValue).toBe(eqBefore + 1);

@@ -21,7 +21,7 @@ import {
   resolveConsumableList,
   resolveEquipmentList,
 } from './store/resolve';
-import { selectBossForLeg, selectProfession } from './store/selectors/runSelectors';
+import { selectBossForLeg, selectEquipmentSlotsFree, selectProfession } from './store/selectors/runSelectors';
 import { economyActions } from './store/actions/economyActions';
 import { diceActions } from './store/actions/diceActions';
 import type { DiceEnhancement, DiceAura, DiceSticker } from './types';
@@ -38,7 +38,8 @@ import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { TRAIL_EVENT } from './Constants';
 import { resolveEffectParam } from './effectParams';
 import type { EquipmentInstance } from './ItemsSystem';
-import { rngFloat, rngShuffle } from './RunRng';
+import { rngFloat, rngPick, rngShuffle } from './RunRng';
+import diceEnhancements from '../data/dice_enhancements';
 
 export type {
   TrailEventCategory,
@@ -699,6 +700,22 @@ export function applyEffect(
     }
 
     case 'GAIN_RANDOM_EQUIPMENT': {
+      const isGhostReward = effect.aura === 'ghost';
+      if (!isGhostReward && selectEquipmentSlotsFree(getRunState()) <= 0) {
+        const enhancement = rngPick(
+          'trail',
+          diceEnhancements.map((e) => e.id),
+        ) as DiceEnhancement;
+        diceActions.addDie({
+          id: '',
+          value: enhancement === 'stone' ? 0 : Math.floor(rng() * 12) + 1,
+          enhancement,
+          sticker: null,
+          aura: null,
+          bonusMiles: 0,
+        });
+        break;
+      }
       const stock = generateShopStock(20);
       const rarityFilter = effect.rarity ? stock.filter((e) => e.rarity === effect.rarity) : stock;
       const pick = rarityFilter.length > 0 ? rarityFilter[0] : stock[0];

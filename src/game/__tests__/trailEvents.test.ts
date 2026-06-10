@@ -686,6 +686,29 @@ describe('Effect application', () => {
     expect(player.equipment[0].modifiers).toEqual([]);
   });
 
+  test('GAIN_RANDOM_EQUIPMENT grants enhanced die when inventory is full', () => {
+    const player = resetPlayerState();
+    player.maxEquipmentSlots = 2;
+    player.equipment = [item('horseshoe'), item('war_drums')];
+    const diceBefore = player.dice.length;
+    const mods = createEmptyModifiers();
+    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, mods, () => 0);
+    expect(player.equipment.length).toBe(2);
+    expect(player.dice.length).toBe(diceBefore + 1);
+    expect(player.dice[player.dice.length - 1]?.enhancement).not.toBeNull();
+  });
+
+  test('GAIN_RANDOM_EQUIPMENT still grants ghost equipment when inventory is full', () => {
+    const player = resetPlayerState();
+    player.maxEquipmentSlots = 2;
+    player.equipment = [item('horseshoe'), item('war_drums')];
+    const diceBefore = player.dice.length;
+    const mods = createEmptyModifiers();
+    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: 'ghost' }, mods);
+    expect(player.equipment.length).toBe(3);
+    expect(player.dice.length).toBe(diceBefore);
+  });
+
   test('GAIN_TRAIL_GUIDES adds trail guide consumables', () => {
     const player = resetPlayerState();
     const mods = createEmptyModifiers();

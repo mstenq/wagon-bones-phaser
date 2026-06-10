@@ -96,7 +96,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
   {
     id: 'blood_moon',
     name: 'Blood Moon',
-    description: 'Add ghost aura to random item, -1 reroll',
+    description: 'Add ghost aura to random item, -1 hand size',
     useMode: 'any_time',
     shopBuyAndUse: true,
   },

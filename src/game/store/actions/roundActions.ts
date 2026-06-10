@@ -620,6 +620,7 @@ export const roundActions = {
       if (equipment[idx]?.def.id === 'dynamite') {
         runActions.patch({ dynamiteSelfDestructed: true });
       }
+      if (equipment[idx] && isEquipmentCursed(equipment[idx]!)) continue;
       equipment.splice(idx, 1);
     }
     replaceEquipmentList(equipment);

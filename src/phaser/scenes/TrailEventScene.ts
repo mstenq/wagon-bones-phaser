@@ -703,9 +703,13 @@ export class TrailEventScene extends Scene {
       case 'ADD_AURA_TO_RANDOM_DICE':
         text = `Added ${effect.aura} aura to a die`;
         break;
-      case 'GAIN_RANDOM_EQUIPMENT':
-        text = 'Gained a random equipment!';
+      case 'GAIN_RANDOM_EQUIPMENT': {
+        const isGhostReward = effect.aura === 'ghost';
+        const equipNow = resolveEquipmentList().length;
+        const substitutedDie = !isGhostReward && equipmentBeforeCount !== undefined && equipNow <= equipmentBeforeCount;
+        text = substitutedDie ? 'Inventory full — gained a random enhanced die instead!' : 'Gained a random equipment!';
         break;
+      }
       case 'GAIN_TRAIL_GUIDES':
         text = `Gained ${effect.count} trail guide${(effect.count ?? 1) > 1 ? 's' : ''}`;
         break;

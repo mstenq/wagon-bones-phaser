@@ -1,12 +1,4 @@
 # Bugs noticed while playing
--Golden Spike shouldn't work on disabled dice (the_undertaker and other bosses)
--follow_traveler trail event, you shouldn't be able to trade back the same item you got from the trade, thats weird.
--binoculars permit - while it now guarantees my most played hand it also is allowing for duplicates. Dupes should only be allowed if you have counterfeit_goods.
-- disabled dice should not count when held in hand (steel dice that are disabled by boss should not trigger)
-- bad water event only gives "drink it" as an option which is lame.
-- blood_moon - should realy be negative 1 hand size instead of rerolls.
-- cursed equipment should never be removable; any sell/destroy/destruction path that removes cursed items is a bug.
-- you should not be able to gain equipment in trail events if you have no room (Substitute with random enhanced die instead)
 
 ## New Feature Ideas
 - new permits for luck:

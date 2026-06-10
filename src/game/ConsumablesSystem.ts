@@ -579,7 +579,7 @@ export function executeConsumableEffect(
       equipment[chosenIdx]!.def = { ...equipment[chosenIdx]!.def, aura: ghostAura };
       writeEquipment(equipment);
       const mods = getRunState().trailEventModifiers;
-      runActions.patch({ trailEventModifiers: { ...mods, rerollPenalty: mods.rerollPenalty + 1 } });
+      runActions.patch({ trailEventModifiers: { ...mods, handSizePenalty: mods.handSizePenalty + 1 } });
       return { success: true };
     }
     case 'raid': {

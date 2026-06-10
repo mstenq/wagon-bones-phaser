@@ -3,6 +3,7 @@ import '../setup';
 import {
   diceWithValue,
   item,
+  equipWithModifiers,
   calculateTestScore,
   setupGame,
   resetDieIds,
@@ -118,6 +119,13 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
     } finally {
       Math.random = original;
     }
+  });
+
+  test('applyEndOfRoundDestructions refuses cursed equipment', () => {
+    const player = setupGame({ equipment: [equipWithModifiers('horseshoe', ['cursed']), item('dynamite')] }).player;
+    roundActions.applyEndOfRoundDestructions([0, 1]);
+    player.syncFromStore();
+    expect(player.equipment.map((e) => e.def.id)).toEqual(['horseshoe']);
   });
 
   test('destroyed equipment is removed from player after endDay', () => {
