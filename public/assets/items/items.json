@@ -1,1404 +1,3670 @@
-{"frames": [
-
 {
-	"filename": "ace_in_the_hole.png",
-	"frame": {"x":0,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "alchemy_kit.png",
-	"frame": {"x":151,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "antique_revolver.png",
-	"frame": {"x":302,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "ashfang.png",
-	"frame": {"x":453,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "bank_note.png",
-	"frame": {"x":604,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "bargain_bin.png",
-	"frame": {"x":755,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "blackjack.png",
-	"frame": {"x":906,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "blessed_herd.png",
-	"frame": {"x":1057,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "bloodline.png",
-	"frame": {"x":1208,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "bone_charm.png",
-	"frame": {"x":1359,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "bone_collector.png",
-	"frame": {"x":1510,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "book_of_the_dead.png",
-	"frame": {"x":1661,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "bottom_dollar.png",
-	"frame": {"x":1812,"y":0,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "bounty_contract.png",
-	"frame": {"x":0,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "buffalo_stampede.png",
-	"frame": {"x":151,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "burn_barrel.png",
-	"frame": {"x":302,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "campfire_embers.png",
-	"frame": {"x":453,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "campfire_stories.png",
-	"frame": {"x":604,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "card_counter.png",
-	"frame": {"x":755,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "coffee.png",
-	"frame": {"x":906,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "collectors_case.png",
-	"frame": {"x":1057,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "counterfeit_goods.png",
-	"frame": {"x":1208,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "coupon_book.png",
-	"frame": {"x":1359,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "covered_wagon.png",
-	"frame": {"x":1510,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "cowboy_boots.png",
-	"frame": {"x":1661,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "cursed_dice.png",
-	"frame": {"x":1812,"y":226,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "deadeye.png",
-	"frame": {"x":0,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "deputy_brothers.png",
-	"frame": {"x":151,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "desperado.png",
-	"frame": {"x":302,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "devils_dice.png",
-	"frame": {"x":453,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "devils_hand.png",
-	"frame": {"x":604,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "diamond_coffin.png",
-	"frame": {"x":755,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "double_barrel.png",
-	"frame": {"x":906,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "double_deuces.png",
-	"frame": {"x":1057,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "double_down.png",
-	"frame": {"x":1208,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "dust_trail.png",
-	"frame": {"x":1359,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "dustshell.png",
-	"frame": {"x":1510,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "dynamite.png",
-	"frame": {"x":1661,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "echo_chamber.png",
-	"frame": {"x":1812,"y":452,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "eight_second_ride.png",
-	"frame": {"x":0,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "eleventh_crossing.png",
-	"frame": {"x":151,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "emergency_supplies.png",
-	"frame": {"x":302,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "even_odds.png",
-	"frame": {"x":453,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "explorers_guild.png",
-	"frame": {"x":604,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "express_train.png",
-	"frame": {"x":755,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "extra_saddlebag.png",
-	"frame": {"x":906,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "fading_memory.png",
-	"frame": {"x":1057,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "five_finger_fillet.png",
-	"frame": {"x":1208,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "five_mile_marker.png",
-	"frame": {"x":1359,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "flour_sack.png",
-	"frame": {"x":1510,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "four_aces_brand.png",
-	"frame": {"x":1661,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "fresh_trail.png",
-	"frame": {"x":1812,"y":678,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "funeral_pyre.png",
-	"frame": {"x":0,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "gamblers_dice_cup.png",
-	"frame": {"x":151,"y":904,"w":125,"h":187},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":125,"h":187},
-	"sourceSize": {"w":125,"h":187}
-},
-{
-	"filename": "ghost_lantern.png",
-	"frame": {"x":276,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "ghost_town.png",
-	"frame": {"x":427,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "gold_pan.png",
-	"frame": {"x":578,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "gold_tooth.png",
-	"frame": {"x":729,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "golden_spike.png",
-	"frame": {"x":880,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "graverobber.png",
-	"frame": {"x":1031,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "guardian_totem.png",
-	"frame": {"x":1182,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "guide_lantern.png",
-	"frame": {"x":1333,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "hardtack.png",
-	"frame": {"x":1484,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "hat_trick.png",
-	"frame": {"x":1635,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "haunted_totem.png",
-	"frame": {"x":1786,"y":904,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "hellfire_round.png",
-	"frame": {"x":0,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "high_five.png",
-	"frame": {"x":151,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "high_noon.png",
-	"frame": {"x":302,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "hitched_pair.png",
-	"frame": {"x":453,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "horseshoe.png",
-	"frame": {"x":604,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "iron_furnace.png",
-	"frame": {"x":755,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "iron_spurs.png",
-	"frame": {"x":906,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "junk_dealer.png",
-	"frame": {"x":1057,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "last_laugh.png",
-	"frame": {"x":1208,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "last_stand.png",
-	"frame": {"x":1359,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "leftovers.png",
-	"frame": {"x":1510,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "loaded_chamber.png",
-	"frame": {"x":1661,"y":1130,"w":125,"h":187},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":125,"h":187},
-	"sourceSize": {"w":125,"h":187}
-},
-{
-	"filename": "loaded_dice.png",
-	"frame": {"x":1786,"y":1130,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "long_haul.png",
-	"frame": {"x":0,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "lucky_find.png",
-	"frame": {"x":151,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "lucky_number.png",
-	"frame": {"x":302,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "lucky_penny.png",
-	"frame": {"x":453,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "manifest_destiny.png",
-	"frame": {"x":604,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "marked.png",
-	"frame": {"x":755,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "mirror_lake.png",
-	"frame": {"x":906,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "money_wagon.png",
-	"frame": {"x":1057,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "moonquil.png",
-	"frame": {"x":1208,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "moonshine.png",
-	"frame": {"x":1359,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "mystery_crate.png",
-	"frame": {"x":1510,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "new_blood.png",
-	"frame": {"x":1661,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "nightshard.png",
-	"frame": {"x":1812,"y":1356,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "nitro.png",
-	"frame": {"x":0,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "odd_fellow.png",
-	"frame": {"x":151,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "offering_bowl.png",
-	"frame": {"x":302,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "oil_baron.png",
-	"frame": {"x":453,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "old_calendar.png",
-	"frame": {"x":604,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "one_armed_bandit.png",
-	"frame": {"x":755,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "one_eyed_jack.png",
-	"frame": {"x":906,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "one_man_posse.png",
-	"frame": {"x":1057,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "open_palm.png",
-	"frame": {"x":1208,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "open_range.png",
-	"frame": {"x":1359,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "pack_mule.png",
-	"frame": {"x":1510,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "pack_saddle.png",
-	"frame": {"x":1661,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "pawn_broker.png",
-	"frame": {"x":1812,"y":1582,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "payday.png",
-	"frame": {"x":0,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "penny_pincher.png",
-	"frame": {"x":151,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "phantom_wagon.png",
-	"frame": {"x":302,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "pioneer_spirit.png",
-	"frame": {"x":453,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "posse_wagon.png",
-	"frame": {"x":604,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "potluck.png",
-	"frame": {"x":755,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "prospectors_pouch.png",
-	"frame": {"x":906,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "quarry_mine.png",
-	"frame": {"x":1057,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "quarry_stone.png",
-	"frame": {"x":1208,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "quick_draw.png",
-	"frame": {"x":1359,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "rabbits_foot.png",
-	"frame": {"x":1510,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "raffle_ticket.png",
-	"frame": {"x":1661,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "rail_line.png",
-	"frame": {"x":1812,"y":1808,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "rail_splitter.png",
-	"frame": {"x":0,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "railroad_bonds.png",
-	"frame": {"x":151,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "rainbow_trail.png",
-	"frame": {"x":302,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "rainy_day_fund.png",
-	"frame": {"x":453,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "repeat_offender.png",
-	"frame": {"x":604,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "roulette_wheel.png",
-	"frame": {"x":755,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "rustler.png",
-	"frame": {"x":906,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "saint_elmos_shield.png",
-	"frame": {"x":1057,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "sandwich.png",
-	"frame": {"x":1208,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "savings_account.png",
-	"frame": {"x":1359,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "scouts_spyglass.png",
-	"frame": {"x":1510,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "seventh_trumpet.png",
-	"frame": {"x":1661,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "shadowpaw.png",
-	"frame": {"x":1812,"y":2034,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "sharpening_stone.png",
-	"frame": {"x":0,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "sheriffs_badge.png",
-	"frame": {"x":151,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "shortcut_trail.png",
-	"frame": {"x":302,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "silver_bullets.png",
-	"frame": {"x":453,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "silver_reserve.png",
-	"frame": {"x":604,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "six_feet_under.png",
-	"frame": {"x":755,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "six_shooter.png",
-	"frame": {"x":906,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "skullwing.png",
-	"frame": {"x":1057,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "snake_eyes.png",
-	"frame": {"x":1208,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "snake_oil_ledger.png",
-	"frame": {"x":1359,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "snake_river.png",
-	"frame": {"x":1510,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "spare_holster.png",
-	"frame": {"x":1661,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "spare_wagon_parts.png",
-	"frame": {"x":1812,"y":2260,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "split_trail.png",
-	"frame": {"x":0,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "square_dance.png",
-	"frame": {"x":151,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "stacked_deck.png",
-	"frame": {"x":302,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "steam_engine.png",
-	"frame": {"x":453,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "stew.png",
-	"frame": {"x":604,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "stubborn_mule.png",
-	"frame": {"x":755,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "supply_caravan.png",
-	"frame": {"x":906,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "supply_drop.png",
-	"frame": {"x":1057,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "surveyors_transit.png",
-	"frame": {"x":1208,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "tight_fist.png",
-	"frame": {"x":1359,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "toolbelt.png",
-	"frame": {"x":1510,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "town_choir.png",
-	"frame": {"x":1661,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_almanac.png",
-	"frame": {"x":1812,"y":2486,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_backpack.png",
-	"frame": {"x":0,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_boss.png",
-	"frame": {"x":151,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_journal.png",
-	"frame": {"x":302,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_markers.png",
-	"frame": {"x":453,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_rations.png",
-	"frame": {"x":604,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_repair_kit.png",
-	"frame": {"x":755,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trail_tax.png",
-	"frame": {"x":906,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "trailblazer.png",
-	"frame": {"x":1057,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "triad_totem.png",
-	"frame": {"x":1208,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "twenty_third_psalm.png",
-	"frame": {"x":1359,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "twin_colts.png",
-	"frame": {"x":1510,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "wanted_poster.png",
-	"frame": {"x":1661,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "war_drums.png",
-	"frame": {"x":1812,"y":2712,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "wedding_ring.png",
-	"frame": {"x":0,"y":2938,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "wild_card.png",
-	"frame": {"x":151,"y":2938,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "wood_axe.png",
-	"frame": {"x":302,"y":2938,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "work_boots.png",
-	"frame": {"x":453,"y":2938,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-},
-{
-	"filename": "worn_deck.png",
-	"frame": {"x":604,"y":2938,"w":151,"h":226},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
-	"sourceSize": {"w":151,"h":226}
-}],
-"meta": {
-	"app": "https://www.codeandweb.com/texturepacker",
-	"version": "1.0",
-	"image": "items.png",
-	"format": "RGBA8888",
-	"size": {"w":1963,"h":3164},
-	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:e9622ce38d882c8fedd0c3acc2d78f49:099048400635f4e51dde009d4c8f6d47:110e074689c9edd2c54833ce2e4d9270$"
-}
+	"frames": [
+		{
+			"filename": "ace_in_the_hole.png",
+			"frame": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "alchemy_kit.png",
+			"frame": {
+				"x": 151,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "antique_revolver.png",
+			"frame": {
+				"x": 302,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "ashfang.png",
+			"frame": {
+				"x": 453,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "bank_note.png",
+			"frame": {
+				"x": 604,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "bargain_bin.png",
+			"frame": {
+				"x": 755,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "blackjack.png",
+			"frame": {
+				"x": 906,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "blessed_herd.png",
+			"frame": {
+				"x": 1057,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "bloodline.png",
+			"frame": {
+				"x": 1208,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "bone_charm.png",
+			"frame": {
+				"x": 1359,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "bone_collector.png",
+			"frame": {
+				"x": 1510,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "book_of_the_dead.png",
+			"frame": {
+				"x": 1661,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "bottom_dollar.png",
+			"frame": {
+				"x": 1812,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "bounty_contract.png",
+			"frame": {
+				"x": 0,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "buffalo_stampede.png",
+			"frame": {
+				"x": 151,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "burn_barrel.png",
+			"frame": {
+				"x": 302,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "campfire_embers.png",
+			"frame": {
+				"x": 453,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "campfire_stories.png",
+			"frame": {
+				"x": 604,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "card_counter.png",
+			"frame": {
+				"x": 755,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "coffee.png",
+			"frame": {
+				"x": 906,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "collectors_case.png",
+			"frame": {
+				"x": 1057,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "counterfeit_goods.png",
+			"frame": {
+				"x": 1208,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "coupon_book.png",
+			"frame": {
+				"x": 1359,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "covered_wagon.png",
+			"frame": {
+				"x": 1510,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "cowboy_boots.png",
+			"frame": {
+				"x": 1661,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "cursed_dice.png",
+			"frame": {
+				"x": 1812,
+				"y": 226,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "deadeye.png",
+			"frame": {
+				"x": 0,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "deputy_brothers.png",
+			"frame": {
+				"x": 151,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "desperado.png",
+			"frame": {
+				"x": 302,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "devils_dice.png",
+			"frame": {
+				"x": 453,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "devils_hand.png",
+			"frame": {
+				"x": 604,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "diamond_coffin.png",
+			"frame": {
+				"x": 755,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "double_barrel.png",
+			"frame": {
+				"x": 906,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "double_deuces.png",
+			"frame": {
+				"x": 1057,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "double_down.png",
+			"frame": {
+				"x": 1208,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "dust_trail.png",
+			"frame": {
+				"x": 1359,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "dustshell.png",
+			"frame": {
+				"x": 1510,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "dynamite.png",
+			"frame": {
+				"x": 1661,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "echo_chamber.png",
+			"frame": {
+				"x": 1812,
+				"y": 452,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "eight_second_ride.png",
+			"frame": {
+				"x": 0,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "eleventh_crossing.png",
+			"frame": {
+				"x": 151,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "emergency_supplies.png",
+			"frame": {
+				"x": 302,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "even_odds.png",
+			"frame": {
+				"x": 453,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "explorers_guild.png",
+			"frame": {
+				"x": 604,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "express_train.png",
+			"frame": {
+				"x": 755,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "extra_saddlebag.png",
+			"frame": {
+				"x": 906,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "fading_memory.png",
+			"frame": {
+				"x": 1057,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "five_finger_fillet.png",
+			"frame": {
+				"x": 1208,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "five_mile_marker.png",
+			"frame": {
+				"x": 1359,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "flour_sack.png",
+			"frame": {
+				"x": 1510,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "four_aces_brand.png",
+			"frame": {
+				"x": 1661,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "fresh_trail.png",
+			"frame": {
+				"x": 1812,
+				"y": 678,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "funeral_pyre.png",
+			"frame": {
+				"x": 0,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "gamblers_dice_cup.png",
+			"frame": {
+				"x": 151,
+				"y": 904,
+				"w": 125,
+				"h": 187
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 125,
+				"h": 187
+			},
+			"sourceSize": {
+				"w": 125,
+				"h": 187
+			}
+		},
+		{
+			"filename": "ghost_lantern.png",
+			"frame": {
+				"x": 276,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "ghost_town.png",
+			"frame": {
+				"x": 427,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "gold_pan.png",
+			"frame": {
+				"x": 578,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "gold_tooth.png",
+			"frame": {
+				"x": 729,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "golden_spike.png",
+			"frame": {
+				"x": 880,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "graverobber.png",
+			"frame": {
+				"x": 1031,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "guardian_totem.png",
+			"frame": {
+				"x": 1182,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "guide_lantern.png",
+			"frame": {
+				"x": 1333,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "hardtack.png",
+			"frame": {
+				"x": 1484,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "hat_trick.png",
+			"frame": {
+				"x": 1635,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "haunted_totem.png",
+			"frame": {
+				"x": 1786,
+				"y": 904,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "hellfire_round.png",
+			"frame": {
+				"x": 0,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "high_five.png",
+			"frame": {
+				"x": 151,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "high_noon.png",
+			"frame": {
+				"x": 302,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "hitched_pair.png",
+			"frame": {
+				"x": 453,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "horseshoe.png",
+			"frame": {
+				"x": 604,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "iron_furnace.png",
+			"frame": {
+				"x": 755,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "iron_spurs.png",
+			"frame": {
+				"x": 906,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "junk_dealer.png",
+			"frame": {
+				"x": 1057,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "last_laugh.png",
+			"frame": {
+				"x": 1208,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "last_stand.png",
+			"frame": {
+				"x": 1359,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "leftovers.png",
+			"frame": {
+				"x": 1510,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "loaded_chamber.png",
+			"frame": {
+				"x": 1661,
+				"y": 1130,
+				"w": 125,
+				"h": 187
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 125,
+				"h": 187
+			},
+			"sourceSize": {
+				"w": 125,
+				"h": 187
+			}
+		},
+		{
+			"filename": "loaded_dice.png",
+			"frame": {
+				"x": 1786,
+				"y": 1130,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "long_haul.png",
+			"frame": {
+				"x": 0,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "lucky_find.png",
+			"frame": {
+				"x": 151,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "lucky_number.png",
+			"frame": {
+				"x": 302,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "lucky_penny.png",
+			"frame": {
+				"x": 453,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "manifest_destiny.png",
+			"frame": {
+				"x": 604,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "marked.png",
+			"frame": {
+				"x": 755,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "mirror_lake.png",
+			"frame": {
+				"x": 906,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "money_wagon.png",
+			"frame": {
+				"x": 1057,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "moonquil.png",
+			"frame": {
+				"x": 1208,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "moonshine.png",
+			"frame": {
+				"x": 1359,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "mystery_crate.png",
+			"frame": {
+				"x": 1510,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "new_blood.png",
+			"frame": {
+				"x": 1661,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "nightshard.png",
+			"frame": {
+				"x": 1812,
+				"y": 1356,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "nitro.png",
+			"frame": {
+				"x": 0,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "odd_fellow.png",
+			"frame": {
+				"x": 151,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "offering_bowl.png",
+			"frame": {
+				"x": 302,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "oil_baron.png",
+			"frame": {
+				"x": 453,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "pocket_watch.png",
+			"frame": {
+				"x": 604,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "one_armed_bandit.png",
+			"frame": {
+				"x": 755,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "one_eyed_jack.png",
+			"frame": {
+				"x": 906,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "one_man_posse.png",
+			"frame": {
+				"x": 1057,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "open_palm.png",
+			"frame": {
+				"x": 1208,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "open_range.png",
+			"frame": {
+				"x": 1359,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "pack_mule.png",
+			"frame": {
+				"x": 1510,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "pack_saddle.png",
+			"frame": {
+				"x": 1661,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "pawn_broker.png",
+			"frame": {
+				"x": 1812,
+				"y": 1582,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "payday.png",
+			"frame": {
+				"x": 0,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "penny_pincher.png",
+			"frame": {
+				"x": 151,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "phantom_wagon.png",
+			"frame": {
+				"x": 302,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "pioneer_spirit.png",
+			"frame": {
+				"x": 453,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "posse_wagon.png",
+			"frame": {
+				"x": 604,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "potluck.png",
+			"frame": {
+				"x": 755,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "prospectors_pouch.png",
+			"frame": {
+				"x": 906,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "quarry_mine.png",
+			"frame": {
+				"x": 1057,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "quarry_stone.png",
+			"frame": {
+				"x": 1208,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "quick_draw.png",
+			"frame": {
+				"x": 1359,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "rabbits_foot.png",
+			"frame": {
+				"x": 1510,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "raffle_ticket.png",
+			"frame": {
+				"x": 1661,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "rail_line.png",
+			"frame": {
+				"x": 1812,
+				"y": 1808,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "rail_splitter.png",
+			"frame": {
+				"x": 0,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "railroad_bonds.png",
+			"frame": {
+				"x": 151,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "rainbow_trail.png",
+			"frame": {
+				"x": 302,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "rainy_day_fund.png",
+			"frame": {
+				"x": 453,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "repeat_offender.png",
+			"frame": {
+				"x": 604,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "roulette_wheel.png",
+			"frame": {
+				"x": 755,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "rustler.png",
+			"frame": {
+				"x": 906,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "saint_elmos_shield.png",
+			"frame": {
+				"x": 1057,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "sandwich.png",
+			"frame": {
+				"x": 1208,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "savings_account.png",
+			"frame": {
+				"x": 1359,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "scouts_spyglass.png",
+			"frame": {
+				"x": 1510,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "seventh_trumpet.png",
+			"frame": {
+				"x": 1661,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "shadowpaw.png",
+			"frame": {
+				"x": 1812,
+				"y": 2034,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "sharpening_stone.png",
+			"frame": {
+				"x": 0,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "sheriffs_badge.png",
+			"frame": {
+				"x": 151,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "shortcut_trail.png",
+			"frame": {
+				"x": 302,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "silver_bullets.png",
+			"frame": {
+				"x": 453,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "silver_reserve.png",
+			"frame": {
+				"x": 604,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "six_feet_under.png",
+			"frame": {
+				"x": 755,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "six_shooter.png",
+			"frame": {
+				"x": 906,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "skullwing.png",
+			"frame": {
+				"x": 1057,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "snake_eyes.png",
+			"frame": {
+				"x": 1208,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "snake_oil_ledger.png",
+			"frame": {
+				"x": 1359,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "snake_river.png",
+			"frame": {
+				"x": 1510,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "spare_holster.png",
+			"frame": {
+				"x": 1661,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "spare_wagon_parts.png",
+			"frame": {
+				"x": 1812,
+				"y": 2260,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "split_trail.png",
+			"frame": {
+				"x": 0,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "square_dance.png",
+			"frame": {
+				"x": 151,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "stacked_deck.png",
+			"frame": {
+				"x": 302,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "steam_engine.png",
+			"frame": {
+				"x": 453,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "stew.png",
+			"frame": {
+				"x": 604,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "stubborn_mule.png",
+			"frame": {
+				"x": 755,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "supply_caravan.png",
+			"frame": {
+				"x": 906,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "supply_drop.png",
+			"frame": {
+				"x": 1057,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "surveyors_transit.png",
+			"frame": {
+				"x": 1208,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "tight_fist.png",
+			"frame": {
+				"x": 1359,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "toolbelt.png",
+			"frame": {
+				"x": 1510,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "town_choir.png",
+			"frame": {
+				"x": 1661,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_almanac.png",
+			"frame": {
+				"x": 1812,
+				"y": 2486,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_backpack.png",
+			"frame": {
+				"x": 0,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_boss.png",
+			"frame": {
+				"x": 151,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_journal.png",
+			"frame": {
+				"x": 302,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_markers.png",
+			"frame": {
+				"x": 453,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_rations.png",
+			"frame": {
+				"x": 604,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_repair_kit.png",
+			"frame": {
+				"x": 755,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trail_tax.png",
+			"frame": {
+				"x": 906,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "trailblazer.png",
+			"frame": {
+				"x": 1057,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "triad_totem.png",
+			"frame": {
+				"x": 1208,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "twenty_third_psalm.png",
+			"frame": {
+				"x": 1359,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "twin_colts.png",
+			"frame": {
+				"x": 1510,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "wanted_poster.png",
+			"frame": {
+				"x": 1661,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "war_drums.png",
+			"frame": {
+				"x": 1812,
+				"y": 2712,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "wedding_ring.png",
+			"frame": {
+				"x": 0,
+				"y": 2938,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "wild_card.png",
+			"frame": {
+				"x": 151,
+				"y": 2938,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "wood_axe.png",
+			"frame": {
+				"x": 302,
+				"y": 2938,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "work_boots.png",
+			"frame": {
+				"x": 453,
+				"y": 2938,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		},
+		{
+			"filename": "worn_deck.png",
+			"frame": {
+				"x": 604,
+				"y": 2938,
+				"w": 151,
+				"h": 226
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 151,
+				"h": 226
+			},
+			"sourceSize": {
+				"w": 151,
+				"h": 226
+			}
+		}
+	],
+	"meta": {
+		"app": "https://www.codeandweb.com/texturepacker",
+		"version": "1.0",
+		"image": "items.png",
+		"format": "RGBA8888",
+		"size": {
+			"w": 1963,
+			"h": 3164
+		},
+		"scale": "1",
+		"smartupdate": "$TexturePacker:SmartUpdate:e9622ce38d882c8fedd0c3acc2d78f49:099048400635f4e51dde009d4c8f6d47:110e074689c9edd2c54833ce2e4d9270$"
+	}
 }

@@ -1,4 +1,5 @@
 # Bugs noticed while playing
+- standard dice on day 1 trail punishment, doesn't work.
 
 ## New Feature Ideas
 - new permits for luck:
