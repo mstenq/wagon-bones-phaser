@@ -21,6 +21,7 @@ import { addScore, multiplyScore, D } from '../../game/scoreMath';
 import { milesToSave } from '../../game/scoreMath';
 import { roundActions } from '../../game/store/actions/roundActions';
 import { consumableActions } from '../../game/store/actions/consumableActions';
+import { setDieEnhancement } from '../../game/DiceSystem';
 
 // ─── Floating Score Popup ───
 
@@ -462,10 +463,44 @@ function animateDieCrack(scene: Scene, sprite: DiceSprite, onComplete: () => voi
   });
 }
 
-function syncDieSpriteFromScore(sprite: DiceSprite, dieId: string, scoringDieById: Map<string, Die>): void {
+function resolveDieForScoreSprite(dieId: string, scoringDieById: Map<string, Die>): Die | undefined {
   const round = getRoundState();
-  const die = scoringDieById.get(dieId) ?? (round ? resolveDieById(dieId, round) : undefined);
-  if (die) sprite.setDieData(die);
+  // Prefer run collection (post-score mutations like green contagion) over handResult snapshot.
+  const fromRun = round ? resolveDieById(dieId, round) : undefined;
+  return fromRun ?? scoringDieById.get(dieId);
+}
+
+function applyEnhanceAnimToDie(base: Die, evt: ScoreAnimEvent): Die {
+  const next = { ...base };
+  if (evt.enhancement !== undefined) {
+    setDieEnhancement(next, evt.enhancement);
+  }
+  if (evt.sticker !== undefined) {
+    next.sticker = evt.sticker;
+  }
+  if (evt.aura !== undefined) {
+    next.aura = evt.aura;
+  }
+  return next;
+}
+
+function syncDieSpriteFromScore(sprite: DiceSprite, dieId: string, scoringDieById: Map<string, Die>): void {
+  const die = resolveDieForScoreSprite(dieId, scoringDieById);
+  if (!die) return;
+  scoringDieById.set(dieId, die);
+  sprite.setDieData(die);
+}
+
+function syncDieSpriteFromEnhanceEvent(
+  sprite: DiceSprite,
+  dieId: string,
+  evt: ScoreAnimEvent,
+  scoringDieById: Map<string, Die>,
+): void {
+  const base = resolveDieForScoreSprite(dieId, scoringDieById) ?? sprite.dieData;
+  const die = applyEnhanceAnimToDie(base, evt);
+  scoringDieById.set(dieId, die);
+  sprite.setDieData(die);
 }
 
 function syncAllDieSpritesFromScore(diceSprites: DiceSprite[], scoringDieById: Map<string, Die>): void {
@@ -572,7 +607,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             const enhancement = evt.enhancement ?? null;
             const label = enhancement ? (ENHANCEMENT_NAMES.get(enhancement) ?? enhancement) : 'Enhanced';
             floatingText(scene, sprite.x, sprite.y, `+${label}`, POPUP_ENHANCE_COLOR, 'up');
-            pacing.wait(scene, 120, () => syncDieSpriteFromScore(sprite, target.dieId, scoringDieById));
+            pacing.wait(scene, 120, () => syncDieSpriteFromEnhanceEvent(sprite, target.dieId, evt, scoringDieById));
           }
         }
         if (target.kind === 'equip' || target.kind === 'both') {

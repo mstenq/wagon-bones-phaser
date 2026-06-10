@@ -1110,6 +1110,7 @@ const EXPECTED_USE_MODES: Record<string, ConsumableUseMode> = {
   snake_oil_salesman: 'visible_dice',
   spirit_guide: 'visible_dice',
   deputize: 'visible_dice',
+  swamp_fever: 'visible_dice',
   spirit_shaman: 'visible_dice',
   raid: 'visible_dice',
   seeing_double: 'visible_dice',
@@ -1157,12 +1158,12 @@ describe('consumable use mode manifest', () => {
       ...trailGuidesData.map((tg) => createTrailGuideConsumableDef(tg)),
       ...frontierEncountersData.map((fe) => createFrontierConsumableDef(fe)),
     ];
-    expect(allDefs).toHaveLength(47);
+    expect(allDefs).toHaveLength(48);
     for (const def of allDefs) {
       expect(def.useMode).toBeDefined();
       expect(EXPECTED_USE_MODES[def.id]).toBe(def.useMode);
     }
-    expect(Object.keys(EXPECTED_USE_MODES)).toHaveLength(47);
+    expect(Object.keys(EXPECTED_USE_MODES)).toHaveLength(48);
   });
 
   test('shallow_grave and mirage metadata fixes', () => {

@@ -15,12 +15,12 @@ import { DICE_ATLAS_KEY, resolveDiceAtlasFrame } from './diceAssets';
 import { HINT_COLORS } from './itemCard/itemCardHintStyles';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
-import pipEnhancements from '../../data/pip_enhancements';
+import diceStickers from '../../data/dice_stickers';
 
 // Lookup maps for descriptions
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
 const AURA_INFO = new Map(diceAuras.map((a) => [a.id, a]));
-const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
+const STICKER_INFO = new Map(diceStickers.map((s) => [s.id, s]));
 
 const DICE_SIZE = DICE.SIZE;
 const SELECTED_STROKE = DICE.SELECTED_STROKE;

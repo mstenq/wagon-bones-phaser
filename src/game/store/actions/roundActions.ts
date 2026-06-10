@@ -31,6 +31,7 @@ import {
   processGoldHeldAtRoundEnd,
   processBlueMoonHeldAtRoundEnd,
 } from '../../EquipmentEffects';
+import { DICE_STICKER_IDS } from '../../../data/dice_stickers';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { createEmptyScoringMutations, mergeMutations, applyScoringMutations } from '../../effects/applyMutations';
 import { rngPick } from '../../RunRng';
@@ -312,9 +313,8 @@ export const roundActions = {
     }
 
     const pendingHandDiceIdsRound = [...getRunState().pendingHandDiceIds];
-    const mysteryStickers = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'] as const;
     for (let i = 0; i < roundStartEffects.stickerDiceToAdd; i++) {
-      const sticker = rngPick('sticker', [...mysteryStickers]);
+      const sticker = rngPick('sticker', [...DICE_STICKER_IDS]);
       const added = diceActions.addDie(createDie({ sticker }));
       pendingNewDiceIds.push(added.id);
       pendingHandDiceIdsRound.push(added.id);

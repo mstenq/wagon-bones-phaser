@@ -14,7 +14,7 @@ import itemAuras from '../src/data/item_auras';
 import items, { type HintSegment } from '../src/data/items';
 import packs from '../src/data/packs';
 import permits from '../src/data/permits';
-import pipEnhancements from '../src/data/pip_enhancements';
+import diceStickers from '../src/data/dice_stickers';
 import professions from '../src/data/professions';
 import supplyCards from '../src/data/supply_cards';
 import trailEvents from '../src/data/trail_events';
@@ -263,8 +263,8 @@ writeCsv(
 );
 
 writeCsv(
-  'pip_enhancements.csv',
-  pipEnhancements.map((e) => ({
+  'dice_stickers.csv',
+  diceStickers.map((e) => ({
     id: e.id,
     name: e.name,
     description: e.description,

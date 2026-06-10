@@ -21,20 +21,16 @@ import { hasPermitTrailGuideTargeting } from './PermitsSystem';
 import { getMostPlayedHandTypes, getMostUsedSupplyIds } from './handStatsHelpers';
 import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
 import diceEnhancements from '../data/dice_enhancements';
-import pipEnhancements from '../data/pip_enhancements';
+import diceStickers, { DICE_STICKER_IDS } from '../data/dice_stickers';
 import { nextRunId, rngFloat, rngPick, rngShuffle, type RngStream } from './RunRng';
 import { pickWeightedSupplyCardsWithoutReplacement } from './supplyCardWeights';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
-const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
-
-// ─── Sticker Definitions ───
-
-const ALL_STICKERS: DiceSticker[] = ['purple_flower', 'red_bullet', 'golden_dollar', 'blue_moon'];
+const STICKER_INFO = new Map(diceStickers.map((s) => [s.id, s]));
 
 /** Uniform random sticker (always applies). */
 export function pickRandomSticker(stream: RngStream = 'sticker'): DiceSticker {
-  return rngPick(stream, ALL_STICKERS);
+  return rngPick(stream, DICE_STICKER_IDS);
 }
 
 /** Randomly apply a sticker to a die (small chance) */

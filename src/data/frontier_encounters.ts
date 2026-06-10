@@ -94,6 +94,18 @@ const frontierEncounters: FrontierEncounterDef[] = [
     },
   },
   {
+    id: 'swamp_fever',
+    name: 'Swamp Fever',
+    description: 'Add green contagion sticker to one die',
+    useMode: 'visible_dice',
+    diceSelection: {
+      drawCount: 5,
+      pickCount: 1,
+      effectType: 'ADD_STICKER',
+      effectParams: { sticker: 'green_contagion' },
+    },
+  },
+  {
     id: 'blood_moon',
     name: 'Blood Moon',
     description: 'Add ghost aura to random item, -1 hand size',

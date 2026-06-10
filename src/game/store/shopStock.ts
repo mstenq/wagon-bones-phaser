@@ -7,7 +7,7 @@ import { createDie } from '../DiceSystem';
 import type { Die } from '../types';
 import { generateShopStock, type EquipmentDef } from '../ItemsSystem';
 import diceEnhancements from '../../data/dice_enhancements';
-import pipEnhancements from '../../data/pip_enhancements';
+import diceStickers from '../../data/dice_stickers';
 import {
   getRandomSupplyDef,
   getRandomTrailGuideDef,
@@ -37,7 +37,7 @@ const SHOP_ENHANCEMENTS: Die['enhancement'][] = ['bone', 'lucky', 'wooden', 'ste
 export const DICE_SHOP_COST = 5;
 
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
-const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
+const STICKER_INFO = new Map(diceStickers.map((s) => [s.id, s]));
 
 /** Equipment-shaped display metadata for shop dice cards (name, cost, tooltip). */
 export function buildShopDieDisplayDef(die: Die): EquipmentDef {

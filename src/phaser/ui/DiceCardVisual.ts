@@ -3,11 +3,11 @@ import { FONTS, UI } from '../../game/Constants';
 import type { Die } from '../../game/types';
 import type { CardTemplate } from '../../data/items';
 import diceEnhancements from '../../data/dice_enhancements';
-import pipEnhancements from '../../data/pip_enhancements';
+import diceStickers from '../../data/dice_stickers';
 import { DiceSprite } from './DiceSprite';
 
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
-const STICKER_INFO = new Map(pipEnhancements.map((s) => [s.id, s]));
+const STICKER_INFO = new Map(diceStickers.map((s) => [s.id, s]));
 
 export interface DiceCardVisualOptions {
   cardWidth: number;

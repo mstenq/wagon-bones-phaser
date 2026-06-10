@@ -13,7 +13,7 @@ import type { EquipmentInstance } from '../ItemsSystem';
 import { effectRegistry, type ScoringPipelineContext } from '../effects';
 import { processEquipmentOnDiceDestroyed, processEquipmentPreScoring } from '../EquipmentEffects';
 import { dispatchLifecycle } from '../effects/lifecycle/dispatch';
-import { getRandomSupplyDef, getRandomFrontierDef } from '../ConsumablesSystem';
+import { getRandomFrontierDef } from '../ConsumablesSystem';
 import {
   walkEquipmentLifecycle,
   walkEquipmentPerSlot,
@@ -30,6 +30,7 @@ import { createEmptyScoringMutations } from '../effects/applyMutations';
 import type { TrailRoundEffects } from '../TrailEventsSystem';
 import { rngFloat } from '../RunRng';
 import { createDie } from '../DiceSystem';
+import { applyGreenContagionSpread, applyPurpleFlowerNonScoring } from './stickerScoring';
 
 /**
  * Effective score-time destroy chance for a die (enhancement crack).
@@ -288,19 +289,6 @@ export function scoreHand(
       }
 
       // Sticker effects (scored dice)
-      if (die.sticker === 'purple_flower') {
-        const supplyDef = getRandomSupplyDef();
-        pipelineCtx.mutations.consumablesGranted.push(supplyDef.id);
-        animEvents.push({
-          target: { kind: 'die', dieId: die.id },
-          popupType: 'supply',
-          value: 0,
-          dieId: die.id,
-          consumableId: supplyDef.id,
-        });
-        console.log(`  [perDie] ${die.id}${triggerLabel}: sticker purple_flower → supply '${supplyDef.name}'`);
-      }
-
       if (die.sticker === 'golden_dollar') {
         pipelineCtx.mutations.moneyEarned += 3;
         animEvents.push({ target: { kind: 'die', dieId: die.id }, popupType: 'money', value: 3, dieId: die.id });
@@ -330,6 +318,12 @@ export function scoreHand(
   xMult = pipelineCtx.xMult;
 
   console.log('[SCORE] Step 3 — Post-score hooks (copy, destroy, trail/moonshine/cursed)');
+
+  if (scoreContext?.selectedForScoreDice) {
+    const scoringIds = new Set(handResult.scoringDice.map((d) => d.id));
+    applyPurpleFlowerNonScoring(scoreContext.selectedForScoreDice, scoringIds, pipelineCtx.mutations, animEvents);
+    applyGreenContagionSpread(scoreContext.selectedForScoreDice, pipelineCtx.mutations, animEvents);
+  }
 
   // FIRST_DAY_SOLO_COPY: Bloodline — copy the solo die if scored alone on day 1
   if (scoreContext && scoreContext.currentDay === 1 && handResult.scoringDice.length === 1) {

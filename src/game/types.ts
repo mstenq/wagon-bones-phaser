@@ -1,3 +1,4 @@
+import type { DiceStickerId } from '../data/dice_stickers';
 import { GAMEPLAY } from './Constants';
 import type { ScoringMutations } from './effects/types';
 import type { Decimal, DecimalSource } from './decimal';
@@ -26,7 +27,7 @@ export interface HandStats {
 
 export type DiceEnhancement = 'bone' | 'lucky' | 'wooden' | 'steel' | 'gold' | 'loaded' | 'diamond' | 'stone' | null;
 
-export type DiceSticker = 'purple_flower' | 'red_bullet' | 'golden_dollar' | 'blue_moon' | null;
+export type DiceSticker = DiceStickerId | null;
 
 export type DiceAura = 'holy' | 'fire' | 'arcane' | null;
 
@@ -190,4 +191,4 @@ export type { HandDef } from '../data/hands';
 export type { ItemAura } from '../data/item_auras';
 export type { DiceAuraDef } from '../data/dice_auras';
 export type { DiceEnhancementDef } from '../data/dice_enhancements';
-export type { PipEnhancementDef } from '../data/pip_enhancements';
+export type { DiceStickerDef } from '../data/dice_stickers';

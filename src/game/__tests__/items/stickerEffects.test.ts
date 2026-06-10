@@ -4,31 +4,32 @@ import { die, diceWithValue, calculateTestScore, resetDieIds } from '../testHelp
 
 beforeEach(() => resetDieIds());
 
-// ─── purple_flower: Grant supply card on score ───
+// ─── purple_flower: Grant supply card when played but not scoring ───
 
 describe('purple_flower sticker', () => {
-  test('grants a supply card when die scores', () => {
+  test('grants a supply card when played die does not score', () => {
     const { player } = calculateTestScore({
-      scoredDice: [die({ value: 5, sticker: 'purple_flower' }), die({ value: 5 })],
+      scoredDice: [die({ value: 5 }), die({ value: 5 }), die({ value: 3, sticker: 'purple_flower' })],
     });
-    // Should have gained 1 supply card
     expect(player.consumables.length).toBeGreaterThanOrEqual(1);
     expect(player.consumables[0].def.category).toBe('supply');
   });
 
-  test('grants multiple supply cards for multiple purple_flower dice', () => {
+  test('does not grant supply when purple_flower die scores', () => {
     const { player } = calculateTestScore({
-      scoredDice: [die({ value: 5, sticker: 'purple_flower' }), die({ value: 5, sticker: 'purple_flower' })],
+      scoredDice: [die({ value: 5, sticker: 'purple_flower' }), die({ value: 5 })],
     });
-    expect(player.consumables.length).toBeGreaterThanOrEqual(2);
+    expect(player.consumables.length).toBe(0);
   });
 
-  test('third purple_flower retrigger does not exceed slot limit', () => {
+  test('multiple non-scoring purple_flower kickers respect consumable slot cap', () => {
     const { player } = calculateTestScore({
       scoredDice: [
+        die({ value: 5 }),
+        die({ value: 5 }),
         die({ value: 3, sticker: 'purple_flower' }),
-        die({ value: 3, sticker: 'purple_flower' }),
-        die({ value: 3, sticker: 'purple_flower' }),
+        die({ value: 7, sticker: 'purple_flower' }),
+        die({ value: 9, sticker: 'purple_flower' }),
       ],
     });
     expect(player.consumables.length).toBe(2);
@@ -103,5 +104,62 @@ describe('blue_moon sticker', () => {
     });
     expect(player.consumables.filter((c) => c.def.category === 'trail_guide').length).toBe(0);
     expect(result.animEvents.some((e) => e.popupType === 'trail_guide')).toBe(false);
+  });
+});
+
+// ─── green_contagion: Spread enhancement + sticker to played neighbors ───
+
+describe('green_contagion sticker', () => {
+  test('spreads enhancement and sticker to left play-order neighbor', () => {
+    const neighbor = die({ value: 4 });
+    const source = die({ value: 6, enhancement: 'bone', sticker: 'green_contagion' });
+    const { result, player } = calculateTestScore({
+      scoredDice: [neighbor, source],
+      runSeed: 'gc-4',
+    });
+    const patched = player.dice.find((d) => d.id === neighbor.id);
+    expect(patched?.sticker).toBe('green_contagion');
+    expect(patched?.enhancement).toBe('bone');
+    expect(result.mutations.diceEnhanced.some((p) => p.id === neighbor.id && p.sticker === 'green_contagion')).toBe(
+      true,
+    );
+  });
+
+  test('does not spread to unplayed rolled dice', () => {
+    const playedNeighbor = die({ value: 4 });
+    const source = die({ value: 6, enhancement: 'bone', sticker: 'green_contagion' });
+    const unplayed = die({ value: 8 });
+    const { player } = calculateTestScore({
+      scoredDice: [playedNeighbor, source],
+      heldDice: [unplayed],
+      runSeed: 'gc-4',
+    });
+    const untouched = player.dice.find((d) => d.id === unplayed.id);
+    expect(untouched?.sticker).toBeNull();
+    expect(untouched?.enhancement).toBeNull();
+  });
+
+  test('50% fail seed does not spread', () => {
+    const neighbor = die({ value: 4 });
+    const source = die({ value: 6, enhancement: 'bone', sticker: 'green_contagion' });
+    const { player } = calculateTestScore({
+      scoredDice: [neighbor, source],
+      runSeed: 'gc-fail-1',
+    });
+    const patched = player.dice.find((d) => d.id === neighbor.id);
+    expect(patched?.sticker).toBeNull();
+    expect(patched?.enhancement).toBeNull();
+  });
+
+  test('both neighbors can spread independently', () => {
+    const left = die({ value: 2 });
+    const source = die({ value: 6, enhancement: 'lucky', sticker: 'green_contagion' });
+    const right = die({ value: 8 });
+    const { player } = calculateTestScore({
+      scoredDice: [left, source, right],
+      runSeed: 'gc-both-7',
+    });
+    expect(player.dice.find((d) => d.id === left.id)?.sticker).toBe('green_contagion');
+    expect(player.dice.find((d) => d.id === right.id)?.sticker).toBe('green_contagion');
   });
 });

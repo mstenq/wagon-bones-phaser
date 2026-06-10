@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
 import allItems from '../../data/items';
-import pipEnhancements from '../../data/pip_enhancements';
+import diceStickers from '../../data/dice_stickers';
 import * as Phaser from 'phaser';
 import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
 import { initAudioPreferences } from '../../game/AudioPreferences';
@@ -39,7 +39,7 @@ export class Preloader extends Scene {
     }
 
     // Load sticker images
-    for (const sticker of pipEnhancements) {
+    for (const sticker of diceStickers) {
       const filename = STICKER_FILE_MAP[sticker.id] ?? sticker.id;
       this.load.image(`sticker_${sticker.id}`, `assets/stickers/${filename}.png`);
     }

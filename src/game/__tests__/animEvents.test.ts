@@ -342,6 +342,24 @@ describe('animEvents: enhance popup', () => {
     }
   });
 
+  test('green_contagion emits enhance event with enhancement and sticker on neighbor', () => {
+    const neighbor = die({ value: 4 });
+    const source = die({ value: 6, enhancement: 'bone', sticker: 'green_contagion' });
+    const { result } = calculateTestScore({
+      scoredDice: [neighbor, source],
+      runSeed: 'gc-4',
+    });
+    const enhanceEvt = result.animEvents.find((e) => e.popupType === 'enhance' && e.dieId === neighbor.id);
+    expect(enhanceEvt).toEqual(
+      expect.objectContaining({
+        popupType: 'enhance',
+        dieId: neighbor.id,
+        enhancement: 'bone',
+        sticker: 'green_contagion',
+      }),
+    );
+  });
+
   test('golden_spike emits enhance event when gold proc hits', () => {
     const original = Math.random;
     Math.random = () => 0;

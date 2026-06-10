@@ -119,6 +119,14 @@
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
 	"sourceSize": {"w":202,"h":301}
+},
+{
+	"filename": "swamp_fever.png",
+	"frame": {"x":202,"y":602,"w":202,"h":301},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":202,"h":301},
+	"sourceSize": {"w":202,"h":301}
 }],
 "meta": {
 	"app": "https://www.codeandweb.com/texturepacker",

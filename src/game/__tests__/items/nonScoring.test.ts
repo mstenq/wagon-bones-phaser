@@ -981,12 +981,12 @@ describe('FIRST_DICE_RETRIGGER: Quick Draw', () => {
     expect(result.handResult.scoringDice[0].enhancement).toBe('stone');
   });
 
-  test('purple_flower on quick_draw retrigger respects consumable slot cap', () => {
+  test('purple_flower on scoring die with quick_draw retrigger grants no supplies', () => {
     const { player } = calculateTestScore({
       scoredDice: [die({ value: 5, sticker: 'purple_flower' }), die({ value: 5 })],
       equipment: [item('quick_draw')],
     });
-    expect(player.consumables.length).toBe(2);
+    expect(player.consumables.length).toBe(0);
   });
 });
 

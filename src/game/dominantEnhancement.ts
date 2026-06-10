@@ -84,4 +84,3 @@ export function getDominantEnhancementSupplyNames(dice: Die[]): string[] {
     .filter((name): name is string => typeof name === 'string' && name.length > 0)
     .sort((a, b) => a.localeCompare(b));
 }
-

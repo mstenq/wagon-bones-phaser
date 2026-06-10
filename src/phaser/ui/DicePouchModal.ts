@@ -15,7 +15,7 @@ import { getDiceGroupDisplayLabel, getDiceGroupKey } from './diceGrouping';
 import { isDevMode } from '../../game/DevMode';
 import diceAuras from '../../data/dice_auras';
 import diceEnhancements from '../../data/dice_enhancements';
-import pipEnhancements from '../../data/pip_enhancements';
+import diceStickers from '../../data/dice_stickers';
 import {
   CATALOG_CHROME_DEPTH,
   createCatalogModalShell,
@@ -242,7 +242,7 @@ export class DicePouchModal extends GameObjects.Container {
 
     const auraIds = diceAuras.map((a) => a.id);
     const enhancementIds = diceEnhancements.map((e) => e.id);
-    const stickerIds = pipEnhancements.map((s) => s.id);
+    const stickerIds: Die['sticker'][] = diceStickers.map((s) => s.id);
     const current = `aura=${targetDie.aura ?? 'none'}, enhancement=${targetDie.enhancement ?? 'none'}, sticker=${targetDie.sticker ?? 'none'}`;
     const choice = window.prompt(
       [
@@ -287,7 +287,7 @@ export class DicePouchModal extends GameObjects.Container {
         return { ...die, enhancement: isNone ? null : (value as Die['enhancement']) };
       }
       if (field === 'sticker') {
-        if (!isNone && !stickerIds.includes(value)) {
+        if (!isNone && !(stickerIds as readonly string[]).includes(value)) {
           window.alert(`Unknown sticker: ${value}`);
           return die;
         }
