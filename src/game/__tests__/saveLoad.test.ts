@@ -18,7 +18,7 @@ import { HandType } from '../types';
 import { getRunSeed, initRunRng, rngFloat, type RunRngState } from '../RunRng';
 import { getRoundState } from '../store/roundStore';
 import { createInitialRunState } from '../store/runStore';
-import { createInitialSceneState } from '../store/sceneStore';
+import { createInitialSceneState, getSceneState } from '../store/sceneStore';
 import { D } from '../scoreMath';
 
 function emptyScene(activeScene: GameSaveSnapshot['activeScene'] = 'RoundSelect') {
@@ -174,6 +174,37 @@ describe('SaveLoad', () => {
     applySaveSnapshot(snapshot);
     const restored = getPlayerState();
     expect(restored.pendingTrailEvent?.id).toBe('wildflowers');
+  });
+
+  test('resolved trail event snapshot preserves result panel rebuild data', () => {
+    resetPlayerState();
+    const resolvedDisplay = {
+      choiceId: 'endure',
+      outcomeIndex: 0,
+      gainedDiceIds: ['die-1'],
+      enhancedDiceBeforeCount: 2,
+      equipmentCountBeforeResolve: 1,
+      negatedNegativeEffects: false,
+      message: 'You press on.',
+    };
+
+    const snapshot = buildSaveSnapshot({
+      activeScene: 'TrailEvent',
+      scene: {
+        trailEvent: {
+          eventId: 'bad_mosquitos',
+          resolved: true,
+          spyglassRevealed: true,
+          selectedChoiceId: 'endure',
+          resolvedDisplay,
+        },
+      },
+    });
+
+    applySaveSnapshot(snapshot);
+    const trail = getSceneState().trailEvent;
+    expect(trail?.resolved).toBe(true);
+    expect(trail?.resolvedDisplay).toEqual(resolvedDisplay);
   });
 
   test('restored TrailEvent snapshot keeps event excluded from future selection', () => {

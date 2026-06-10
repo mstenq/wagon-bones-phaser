@@ -54,6 +54,7 @@ export type {
 export { getTrailEventMinimumLeg } from '../data/trail_events';
 
 import { createEmptyModifiers, type TrailEventModifiers, type TrailRoundEffects } from './trailEventDefaults';
+import type { TrailEventResolvedDisplay } from './store/types';
 export type { TrailEventModifiers, TrailRoundEffects } from './trailEventDefaults';
 export { createEmptyModifiers, createEmptyTrailRoundEffects } from './trailEventDefaults';
 
@@ -66,6 +67,34 @@ export interface TrailEventResult {
   message?: string;
   negatedNegativeEffects?: boolean;
   negationSource?: 'omen_stone' | 'saint_elmos_shield' | 'trail_repair_kit';
+}
+
+export type { TrailEventResolvedDisplay } from './store/types';
+
+/** Rebuild a display-only result after reload; does not mutate run state. */
+export function buildTrailEventResultFromResolvedDisplay(
+  event: TrailEventDef,
+  display: TrailEventResolvedDisplay,
+): TrailEventResult {
+  const choice = event.choices.find((c) => c.id === display.choiceId);
+  if (!choice) {
+    throw new Error(`Invalid choice "${display.choiceId}" for event "${event.id}"`);
+  }
+  const outcome = choice.outcomes[display.outcomeIndex];
+  if (!outcome) {
+    throw new Error(`Invalid outcome index ${display.outcomeIndex} for choice "${display.choiceId}"`);
+  }
+
+  return {
+    event,
+    choiceId: display.choiceId,
+    outcomeIndex: display.outcomeIndex,
+    effects: outcome.effects,
+    modifiers: getRunState().trailEventModifiers,
+    message: display.message ?? outcome.message,
+    negatedNegativeEffects: display.negatedNegativeEffects,
+    negationSource: display.negationSource,
+  };
 }
 
 /** Equipment owned before a trail choice resolved (excludes instances gained from that choice). */

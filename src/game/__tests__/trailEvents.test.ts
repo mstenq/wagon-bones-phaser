@@ -26,6 +26,7 @@ import {
   getTrailEventMinimumLeg,
   getAvailableChoices,
   resolveChoice,
+  buildTrailEventResultFromResolvedDisplay,
   filterEquipmentEligibleForTrailSacrifice,
   checkCondition,
   isNegativeEffect,
@@ -797,6 +798,29 @@ describe('Outcome resolution', () => {
     resetPlayerState();
     const event = getTrailEventById('bad_mosquitos')!;
     expect(() => resolveChoice(event, 'nonexistent')).toThrow();
+  });
+
+  test('buildTrailEventResultFromResolvedDisplay rebuilds outcome without mutating state', () => {
+    resetPlayerState();
+    const event = getTrailEventById('bad_mosquitos')!;
+    const live = resolveChoice(event, 'endure');
+    const balanceAfter = getRunState().balance;
+
+    const rebuilt = buildTrailEventResultFromResolvedDisplay(event, {
+      choiceId: live.choiceId,
+      outcomeIndex: live.outcomeIndex,
+      gainedDiceIds: [],
+      enhancedDiceBeforeCount: 0,
+      equipmentCountBeforeResolve: 0,
+      negatedNegativeEffects: live.negatedNegativeEffects,
+      negationSource: live.negationSource,
+      message: live.message,
+    });
+
+    expect(rebuilt.effects).toEqual(live.effects);
+    expect(rebuilt.choiceId).toBe(live.choiceId);
+    expect(rebuilt.outcomeIndex).toBe(live.outcomeIndex);
+    expect(getRunState().balance).toBe(balanceAfter);
   });
 
   test('resolveChoice applies immediate money effects', () => {

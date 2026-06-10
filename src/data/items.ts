@@ -106,6 +106,23 @@ const oddsDisplay = (chance: [number, number], player: ItemDisplayContext, size:
 
 const findOwnedEquip = (player: ItemDisplayContext, id: string) => player.equipment.find((e) => e.def.id === id);
 
+function missingDiceDisplay(player: ItemDisplayContext, perDie: number, reward: 'miles' | 'mult'): ItemDisplayResult {
+  const missing = Math.max(0, player.startingDiceCount - player.dice.length);
+  const rewardSeg = reward === 'miles' ? miles : mult;
+  const rewardWord = reward === 'miles' ? 'miles' : 'mult';
+  const hint =
+    missing > 0
+      ? [[rewardSeg(`+${missing * perDie}`), condition(`${missing} dice lost`)]]
+      : [[rewardSeg(`+${perDie}`), condition('per missing die')], [inactive('Full herd')]];
+  return {
+    hint,
+    tooltip: [
+      [rewardSeg(`+${perDie}`), text(` ${rewardWord} for each dice below the collection's starting size`)],
+      [text('Currently: '), rewardSeg(`+${missing * perDie}`)],
+    ],
+  };
+}
+
 // ─── Hand type display names ───
 const HAND_NAMES: Record<HandType, string> = {
   [HandType.PAIR]: 'Pair',
@@ -2884,21 +2901,7 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     effectType: 'MILES_PER_MISSING_DICE',
     effectParams: { value: 30 },
-    display: (_round, player) => {
-      const perDie = 30;
-      const missing = Math.max(0, player.startingDiceCount - player.dice.length);
-      const hint =
-        missing > 0
-          ? [[miles(`+${missing * perDie}`), condition(`${missing} dice lost`)]]
-          : [[miles('+30'), condition('per missing die')], [inactive('Full herd')]];
-      return {
-        hint,
-        tooltip: [
-          [miles('+30'), text(" miles for each dice below the collection's starting size")],
-          [text('Currently: '), miles(`+${missing * perDie}`)],
-        ],
-      };
-    },
+    display: (_round, player) => missingDiceDisplay(player, 30, 'miles'),
   },
   {
     id: 'savings_account',
@@ -2942,21 +2945,7 @@ const items: ItemDef[] = [
     modifierImmunity: ['perishable'],
     effectType: 'MULT_PER_MISSING_DICE',
     effectParams: { value: 6 },
-    display: (_round, player) => {
-      const perDie = 6;
-      const missing = Math.max(0, player.startingDiceCount - player.dice.length);
-      const hint =
-        missing > 0
-          ? [[mult(`+${missing * perDie}`), condition(`${missing} dice lost`)]]
-          : [[mult('+6'), condition('per missing die')], [inactive('Full herd')]];
-      return {
-        hint,
-        tooltip: [
-          [mult('+6'), text(" mult for each dice below the collection's starting size")],
-          [text('Currently: '), mult(`+${missing * perDie}`)],
-        ],
-      };
-    },
+    display: (_round, player) => missingDiceDisplay(player, 6, 'mult'),
   },
   {
     id: 'eight_second_ride',

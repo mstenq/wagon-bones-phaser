@@ -191,6 +191,8 @@ export interface TrailEventSaveData {
   eventId: string;
   resolved: boolean;
   spyglassRevealed: boolean;
+  selectedChoiceId?: string | null;
+  resolvedDisplay?: TrailEventSceneState['resolvedDisplay'];
 }
 
 export interface GameSaveSnapshot {
@@ -396,6 +398,8 @@ function legacySceneToRuntime(activeScene: ActiveScene, scene: unknown): Seriali
           eventId: data.eventId,
           resolved: data.resolved,
           spyglassRevealed: data.spyglassRevealed,
+          ...(data.selectedChoiceId != null ? { selectedChoiceId: data.selectedChoiceId } : {}),
+          ...(data.resolvedDisplay ? { resolvedDisplay: data.resolvedDisplay } : {}),
         },
         payout: null,
         roundSelect: null,
@@ -619,5 +623,7 @@ export function trailEventSceneStateToSaveData(trail: TrailEventSceneState): Tra
     eventId: trail.eventId,
     resolved: trail.resolved,
     spyglassRevealed: trail.spyglassRevealed,
+    ...(trail.selectedChoiceId != null ? { selectedChoiceId: trail.selectedChoiceId } : {}),
+    ...(trail.resolvedDisplay ? { resolvedDisplay: trail.resolvedDisplay } : {}),
   };
 }

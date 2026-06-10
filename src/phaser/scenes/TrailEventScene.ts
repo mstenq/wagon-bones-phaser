@@ -9,9 +9,10 @@ import { gameFacade } from '../../game/facade';
 import type { TrailEventChoice, TrailEventDef, TrailEventEffect, TrailEventResult } from '../../game/facade/trail';
 import { filterEquipmentEligibleForTrailSacrifice } from '../../game/TrailEventsSystem';
 import type { EquipmentInstance } from '../../game/ItemsSystem';
+import type { Die } from '../../game/types';
 import { resolveEquipmentList } from '../../game/store/resolve';
 import { selectEffectiveDays, selectEffectiveRerolls } from '../../game/store/selectors/runSelectors';
-import { COLORS, TEXT_COLORS, FONTS, UI, TRAIL_EVENT } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, TRAIL_EVENT } from '../../game/Constants';
 import { trailEventImageKey, trailEventImagePath } from '../../game/trailEventAssets';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
@@ -25,6 +26,7 @@ import { flushAutoSave } from '../AutoSaveManager';
 import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
 import type { Sidebar } from '../ui/Sidebar';
 import { createRunSceneShell } from './runSceneShell';
+import { TrailEventResultPanel } from './trailEvent/TrailEventResultPanel';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -42,12 +44,16 @@ const CATEGORY_COLORS: Record<string, number> = {
 
 export class TrailEventScene extends Scene {
   private sidebar!: Sidebar;
+  private shellLayout: LayoutResult | null = null;
 
   private currentEvent: TrailEventDef;
   private resolved: boolean = false;
   private spyglassRevealed: boolean = false;
   private choiceButtons: Button[] = [];
-  private resultContainer: Phaser.GameObjects.Container | null = null;
+  private eventContainer: Phaser.GameObjects.Container | null = null;
+  private resultPanel: TrailEventResultPanel | null = null;
+  private resolvedContinueBtn: Button | null = null;
+
   constructor() {
     super('TrailEvent');
   }
@@ -117,7 +123,11 @@ export class TrailEventScene extends Scene {
     }
 
     this.scale.on('resize', this.onResize, this);
-    this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
+    this.events.on('shutdown', () => {
+      this.scale.off('resize', this.onResize, this);
+      this.resultPanel?.destroy();
+      this.resultPanel = null;
+    });
 
     // Standard layout with sidebar, equip bar, consumable bar, pouch
     const shell = createRunSceneShell(this, {
@@ -126,6 +136,7 @@ export class TrailEventScene extends Scene {
       consumableFailureSound: () => this.safePlaySound('sfx_cancel', { volume: 0.5 }),
     });
     const layout = shell.layout;
+    this.shellLayout = layout;
     this.sidebar = layout.sidebar;
 
     // Select / preview trail event (persist across resize restarts)
@@ -169,10 +180,11 @@ export class TrailEventScene extends Scene {
     this.syncTrailToStore();
 
     const onDisplayReady = () => {
-      this.buildEventDisplay(layout);
       if (this.resolved) {
-        this.showResolvedContinue(layout);
+        this.rebuildResolvedResult(layout);
+        return;
       }
+      this.buildEventDisplay(layout);
     };
 
     // Load event image dynamically if not already cached
@@ -229,6 +241,9 @@ export class TrailEventScene extends Scene {
   ): void {
     const { contentW, contentCX, contentTop } = layout;
     const event = this.currentEvent;
+
+    this.eventContainer = this.add.container(0, 0);
+
     // ─── Event card panel ───
     const panelW = Math.min(560, contentW - 40);
     const panelX = contentCX - panelW / 2;
@@ -238,8 +253,7 @@ export class TrailEventScene extends Scene {
 
     // Panel background
     const panel = this.add.graphics();
-    panel.fillStyle(COLORS.BG_PANEL, 0.95);
-    panel.fillRoundedRect(panelX, panelTop, panelW, 0, 12); // height set later
+    this.eventContainer.add(panel);
 
     // Event image (load dynamically if available)
     const imageKey = trailEventImageKey(event.id);
@@ -254,11 +268,12 @@ export class TrailEventScene extends Scene {
       img.setScale(imgScale);
       img.setOrigin(0.5, 0.5);
       imageHeight = img.displayHeight + 16;
+      this.eventContainer.add(img);
     }
 
     // Event name
     const nameY = imageY + imageHeight + 8;
-    this.add
+    const nameText = this.add
       .text(contentCX, nameY, event.name, {
         fontFamily: FONTS.HEADING,
         fontSize: '28px',
@@ -268,10 +283,11 @@ export class TrailEventScene extends Scene {
         align: 'center',
       })
       .setOrigin(0.5, 0);
+    this.eventContainer.add(nameText);
 
     // Category tag
     const tagY = nameY + 36;
-    this.add
+    const tagText = this.add
       .text(contentCX, tagY, event.category.replace(/_/g, ' ').toUpperCase(), {
         fontFamily: FONTS.PRIMARY,
         fontSize: '11px',
@@ -279,6 +295,7 @@ export class TrailEventScene extends Scene {
         align: 'center',
       })
       .setOrigin(0.5, 0);
+    this.eventContainer.add(tagText);
 
     // Description
     const descY = tagY + 22;
@@ -292,6 +309,7 @@ export class TrailEventScene extends Scene {
         lineSpacing: 4,
       })
       .setOrigin(0.5, 0);
+    this.eventContainer.add(descText);
 
     // ─── Choice buttons ───
     const choicesY = descY + descText.height + 28;
@@ -305,6 +323,7 @@ export class TrailEventScene extends Scene {
       const btn = new Button(this, contentCX, btnY, choice.label, btnW, 44);
       btn.onClick(() => this.onChoiceSelected(choice));
       this.choiceButtons.push(btn);
+      this.eventContainer.add(btn);
     }
 
     // Finalize panel height
@@ -319,196 +338,124 @@ export class TrailEventScene extends Scene {
 
   private onChoiceSelected(choice: TrailEventChoice): void {
     const run = getRunState();
+    const diceIdsBefore = new Set(run.dice.map((d) => d.id));
+
     this.resolved = true;
-    sceneActions.patchTrailEvent({ resolved: true, selectedChoiceId: choice.id });
 
     const enhancedDiceBeforeCount = run.dice.filter(
       (d) => d.enhancement !== null || d.sticker !== null || d.aura !== null,
     ).length;
     const equipmentBeforeResolve = [...resolveEquipmentList(run)];
 
-    // Disable all choice buttons
     for (const btn of this.choiceButtons) {
       btn.setEnabled(false);
     }
 
-    // Resolve the choice
     const result = gameFacade.trail.resolveChoice(this.currentEvent, choice.id, () => rngFloat('trail'));
+    const gainedDice = getRunState().dice.filter((d) => !diceIdsBefore.has(d.id));
+
+    sceneActions.patchTrailEvent({
+      resolved: true,
+      selectedChoiceId: choice.id,
+      resolvedDisplay: {
+        choiceId: choice.id,
+        outcomeIndex: result.outcomeIndex,
+        gainedDiceIds: gainedDice.map((d) => d.id),
+        enhancedDiceBeforeCount,
+        equipmentCountBeforeResolve: equipmentBeforeResolve.length,
+        negatedNegativeEffects: result.negatedNegativeEffects,
+        negationSource: result.negationSource,
+        message: result.message,
+      },
+    });
 
     runActions.patch({
       trailEventModifiers: result.modifiers,
       ...(result.modifiers.skipNextShop ? { skipNextShop: true } : {}),
     });
 
-    // Persist the resolved state immediately. Without this flush, a refresh
-    // between gameFacade.trail.resolveChoice and the next 10s autosave tick would restore the
-    // pre-resolution snapshot and the same event could appear again.
     flushAutoSave();
 
-    // Show result with animations
-    this.showResult(result, enhancedDiceBeforeCount, equipmentBeforeResolve);
+    this.fadeOutEventCard(() => {
+      this.showResult(result, enhancedDiceBeforeCount, equipmentBeforeResolve, gainedDice);
+    });
+  }
+
+  private fadeOutEventCard(onComplete: () => void): void {
+    if (!this.eventContainer) {
+      onComplete();
+      return;
+    }
+
+    this.tweens.add({
+      targets: this.eventContainer,
+      alpha: 0,
+      duration: 250,
+      ease: 'Power2',
+      onComplete: () => {
+        for (const btn of this.choiceButtons) {
+          btn.destroy();
+        }
+        this.choiceButtons = [];
+        this.eventContainer?.destroy();
+        this.eventContainer = null;
+        onComplete();
+      },
+    });
+  }
+
+  private rebuildResolvedResult(layout: LayoutResult): void {
+    const trail = getSceneState().trailEvent;
+    if (!trail?.resolvedDisplay) {
+      this.showResolvedContinueFallback(layout);
+      return;
+    }
+
+    const display = trail.resolvedDisplay;
+    const result = gameFacade.trail.buildTrailEventResultFromResolvedDisplay(this.currentEvent, display);
+    const gainedDiceIds = new Set(display.gainedDiceIds);
+    const gainedDice = getRunState().dice.filter((d) => gainedDiceIds.has(d.id));
+    const equipment = resolveEquipmentList();
+    const equipmentBeforeResolve = equipment.slice(0, display.equipmentCountBeforeResolve);
+
+    this.showResult(result, display.enhancedDiceBeforeCount, equipmentBeforeResolve, gainedDice, { restored: true });
   }
 
   private showResult(
     result: TrailEventResult,
     enhancedDiceBeforeCount: number,
     equipmentBeforeResolve: EquipmentInstance[],
+    gainedDice: Die[],
+    options?: { restored?: boolean },
   ): void {
-    const equipmentBeforeCount = equipmentBeforeResolve.length;
-    const layout = this.getContentLayout();
-    const { contentCX, contentTop, contentBottom } = layout;
+    const layout = this.shellLayout ?? this.getContentLayout();
+    const categoryColor = CATEGORY_COLORS[this.currentEvent.category] ?? 0x555588;
 
-    // Position results in the lower content band (below event card, above pouch)
-    const resultY = contentTop + (contentBottom - contentTop) * 0.62;
-
-    this.resultContainer = this.add.container(0, 0);
-    this.resultContainer.setAlpha(0);
-
-    const equipment = resolveEquipmentList();
-    const shieldEquip = equipment.find((e) => e.def.id === 'saint_elmos_shield');
-    const repairKitEquip = gameFacade.trail.findTrailRepairKit();
-    const negatesNegatives = result.negatedNegativeEffects ?? false;
-
-    // Build effect summary lines
-    const effectLines: { text: string; color: string; negative: boolean }[] = [];
-    for (const effect of result.effects) {
-      const negated = gameFacade.trail.isNegativeEffect(effect) && negatesNegatives;
-      const line = this.formatEffect(effect, negated, enhancedDiceBeforeCount, equipmentBeforeCount);
-      if (line) effectLines.push(line);
-    }
-
-    // If no effects visible
-    if (effectLines.length === 0) {
-      effectLines.push({ text: 'Nothing happens.', color: TEXT_COLORS.MUTED, negative: false });
-    }
-
-    // Render outcome message (if any)
-    let yOffset = 0;
-    if (result.message) {
-      const msgText = this.add
-        .text(contentCX, resultY + yOffset, `"${result.message}"`, {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '16px',
-          fontStyle: 'italic',
-          color: TEXT_COLORS.SECONDARY,
-          align: 'center',
-          stroke: '#000000',
-          strokeThickness: 2,
-        })
-        .setOrigin(0.5, 0);
-      this.resultContainer.add(msgText);
-      yOffset += 30;
-    }
-
-    // Render effect lines
-    for (let i = 0; i < effectLines.length; i++) {
-      const line = effectLines[i];
-      const txt = this.add
-        .text(contentCX, resultY + yOffset, line.text, {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '15px',
-          color: line.color,
-          align: 'center',
-          stroke: '#000000',
-          strokeThickness: 2,
-        })
-        .setOrigin(0.5, 0);
-
-      if (line.negative && !negatesNegatives) {
-        // Shake animation for negative effects
-        this.tweens.add({
-          targets: txt,
-          x: txt.x + 3,
-          duration: 50,
-          yoyo: true,
-          repeat: 3,
-          delay: 300 + i * 150,
-        });
-      }
-
-      this.resultContainer.add(txt);
-      yOffset += 24;
-    }
-
-    // Animate dice loss/gain
-    this.animateDiceEffects(result.effects, contentCX, resultY + yOffset + 20, enhancedDiceBeforeCount);
-
-    // Fade in results
-    this.tweens.add({
-      targets: this.resultContainer,
-      alpha: 1,
-      duration: 400,
-      ease: 'Power2',
+    this.resultPanel?.destroy();
+    this.resultPanel = new TrailEventResultPanel({
+      scene: this,
+      shellLayout: this.shellLayout,
+      formatEffect: (effect, negated, enhancedCount, equipCount) =>
+        this.formatEffect(effect, negated, enhancedCount, equipCount),
+      showEquipmentPicker: (count, cx, y, ownedBefore, onComplete) =>
+        this.showEquipmentPicker(count, cx, y, ownedBefore, onComplete),
+      animateDiceLossEffects: (effects, cx, baseY, enhancedCount) =>
+        this.animateDiceLossEffects(effects, cx, baseY, enhancedCount),
+      playSound: (key) => this.safePlaySound(key),
+      onProceed: () => this.proceedToNextScene(),
     });
 
-    // Play appropriate sound
-    const hasNegative = result.effects.some((e) => gameFacade.trail.isNegativeEffect(e));
-    const hasPositive = result.effects.some((e) => !gameFacade.trail.isNegativeEffect(e));
-    if (hasNegative && !negatesNegatives) {
-      this.safePlaySound('sfx_negative');
-    } else if (hasPositive) {
-      this.safePlaySound('sfx_coin');
-    }
-
-    const hadNegatedNegative = result.effects.some((e) => gameFacade.trail.isNegativeEffect(e) && negatesNegatives);
-    let protectionText: string | null = null;
-    if (hadNegatedNegative) {
-      if (result.negationSource === 'omen_stone') {
-        protectionText = '✨ Good Omen prevents the bad outcome! ✨';
-      } else if (result.negationSource === 'saint_elmos_shield' && shieldEquip) {
-        protectionText = `✨ ${shieldEquip.def.name} protects you! ✨`;
-      } else if (result.negationSource === 'trail_repair_kit' && repairKitEquip) {
-        const xm = repairKitEquip.state.xMult ?? 1;
-        protectionText = `🔧 ${repairKitEquip.def.name} patches the trail (x${xm.toFixed(2)})`;
-      }
-    }
-    if (protectionText) {
-      const provText = this.add
-        .text(contentCX, resultY - 28, protectionText, {
-          fontFamily: FONTS.HEADING,
-          fontSize: '16px',
-          color: TEXT_COLORS.GOLD,
-          align: 'center',
-        })
-        .setOrigin(0.5, 0);
-      this.resultContainer.add(provText);
-    }
-
-    // Check if player must choose equipment to lose
-    const loseEquipEffect = result.effects.find(
-      (e) => e.type === 'LOSE_EQUIPMENT_CHOICE' && !(gameFacade.trail.isNegativeEffect(e) && negatesNegatives),
-    );
-    const eligibleForSacrifice = filterEquipmentEligibleForTrailSacrifice(equipmentBeforeResolve, equipment);
-    const sacrificableCount = eligibleForSacrifice.filter((e) => !gameFacade.trail.isEquipmentCursed(e)).length;
-    const needsEquipChoice = loseEquipEffect && sacrificableCount > 0;
-
-    // Continue button (after a short delay)
-    this.time.delayedCall(800, () => {
-      if (needsEquipChoice) {
-        this.showEquipmentPicker(
-          loseEquipEffect.count ?? 1,
-          contentCX,
-          Math.min(resultY + yOffset + 20, contentBottom - 180),
-          equipmentBeforeResolve,
-          () => {
-            // After equipment chosen, show continue
-            const continueY2 = Math.min(resultY + yOffset + 80, contentBottom - 28);
-            new Button(this, contentCX, continueY2, 'Continue', 200, 44).onClick(() => {
-              this.proceedToNextScene();
-            });
-          },
-        );
-      } else {
-        const continueY = Math.min(resultY + yOffset + 80, contentBottom - 28);
-        new Button(this, contentCX, continueY, 'Continue', 200, 44).onClick(() => {
-          this.proceedToNextScene();
-        });
-      }
+    this.resultPanel.show({
+      event: this.currentEvent,
+      result,
+      layout,
+      gainedDice,
+      enhancedDiceBeforeCount,
+      equipmentBeforeResolve,
+      categoryColor,
+      restored: options?.restored,
     });
 
-    // Refresh UI elements
-
-    // Update sidebar to reflect pending modifiers (days/rerolls penalties)
     const run = getRunState();
     this.sidebar.updateData({
       daysRemaining: selectEffectiveDays(run),
@@ -534,7 +481,6 @@ export class TrailEventScene extends Scene {
       return;
     }
 
-    // Prompt text
     const promptText = this.add
       .text(cx, y, `Choose ${remaining} equipment to sacrifice:`, {
         fontFamily: FONTS.HEADING,
@@ -544,7 +490,6 @@ export class TrailEventScene extends Scene {
       })
       .setOrigin(0.5, 0);
 
-    // Show equipment cards
     const cardContainer = this.add.container(0, 0);
     const cardScale = 0.7;
     const spacing = 130;
@@ -581,7 +526,6 @@ export class TrailEventScene extends Scene {
         card.setTooltipContext(null, null);
         card.setDepth(200);
 
-        // Highlight on hover
         card.on('pointerover', () => {
           card.setScale(cardScale * 1.1);
         });
@@ -595,7 +539,6 @@ export class TrailEventScene extends Scene {
           }
           remaining--;
 
-          // Animate the card disappearing
           this.tweens.add({
             targets: card,
             alpha: 0,
@@ -624,38 +567,26 @@ export class TrailEventScene extends Scene {
     buildCards();
   }
 
-  private animateDiceEffects(
+  private animateDiceLossEffects(
     effects: TrailEventEffect[],
     cx: number,
     baseY: number,
     enhancedDiceBeforeCount: number,
   ): void {
     for (const effect of effects) {
-      if (effect.type === 'LOSE_RANDOM_DICE') {
-        // Only animate if there were enhanced dice to lose
-        const actualLost = Math.min(effect.count ?? 1, enhancedDiceBeforeCount);
-        if (actualLost === 0) continue;
-        for (let i = 0; i < Math.min(actualLost, 5); i++) {
-          const dieX = cx + (i - Math.min(actualLost, 5) / 2) * 50;
-          this.time.delayedCall(200 + i * 150, () => {
-            this.animateDiceLoss(dieX, baseY);
-          });
-        }
-      } else if (effect.type === 'GAIN_DICE') {
-        // Show dice zooming toward pouch
-        const count = effect.count ?? 1;
-        for (let i = 0; i < Math.min(count, 5); i++) {
-          const dieX = cx + (i - Math.min(count, 5) / 2) * 50;
-          this.time.delayedCall(200 + i * 150, () => {
-            this.animateDiceGain(dieX, baseY);
-          });
-        }
+      if (effect.type !== 'LOSE_RANDOM_DICE') continue;
+      const actualLost = Math.min(effect.count ?? 1, enhancedDiceBeforeCount);
+      if (actualLost === 0) continue;
+      for (let i = 0; i < Math.min(actualLost, 5); i++) {
+        const dieX = cx + (i - Math.min(actualLost, 5) / 2) * 50;
+        this.time.delayedCall(200 + i * 150, () => {
+          this.animateDiceLoss(dieX, baseY);
+        });
       }
     }
   }
 
   private animateDiceLoss(x: number, y: number): void {
-    // Create a simple die representation
     const dieGfx = this.add.graphics();
     dieGfx.fillStyle(0xcc4444, 1);
     dieGfx.fillRoundedRect(x - 18, y - 18, 36, 36, 6);
@@ -664,7 +595,6 @@ export class TrailEventScene extends Scene {
 
     const dieText = this.add.text(x, y, '💀', { fontSize: '18px' }).setOrigin(0.5);
 
-    // Fade out + scale down + slight red flash
     this.tweens.add({
       targets: [dieGfx, dieText],
       alpha: 0,
@@ -679,7 +609,6 @@ export class TrailEventScene extends Scene {
       },
     });
 
-    // Particle-like burst (simple approach: small text particles)
     for (let p = 0; p < 4; p++) {
       const particle = this.add.text(x, y, '•', { fontSize: '12px', color: '#ff4444' }).setOrigin(0.5);
       this.tweens.add({
@@ -694,51 +623,6 @@ export class TrailEventScene extends Scene {
     }
 
     this.safePlaySound('sfx_explosion');
-  }
-
-  private animateDiceGain(x: number, y: number): void {
-    const { width, height } = this.scale;
-    // Target: dice pouch position (bottom-right)
-    const pouchX = width - UI.POUCH_MARGIN - UI.POUCH_SIZE / 2;
-    const pouchY = height - UI.POUCH_MARGIN - UI.POUCH_SIZE / 2;
-
-    // Create a simple die representation
-    const dieGfx = this.add.graphics();
-    dieGfx.fillStyle(0x44aa44, 1);
-    dieGfx.fillRoundedRect(x - 18, y - 18, 36, 36, 6);
-    dieGfx.lineStyle(2, 0x66ff66, 1);
-    dieGfx.strokeRoundedRect(x - 18, y - 18, 36, 36, 6);
-
-    const dieText = this.add.text(x, y, '🎲', { fontSize: '18px' }).setOrigin(0.5);
-
-    // Pop in
-    dieGfx.setScale(0);
-    dieText.setScale(0);
-    this.tweens.add({
-      targets: [dieGfx, dieText],
-      scaleX: 1,
-      scaleY: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
-    });
-
-    // Then fly to pouch
-    this.tweens.add({
-      targets: [dieGfx, dieText],
-      x: pouchX - x,
-      y: pouchY - y,
-      scaleX: 0.3,
-      scaleY: 0.3,
-      alpha: 0.5,
-      duration: 500,
-      ease: 'Power2',
-      delay: 400,
-      onComplete: () => {
-        dieGfx.destroy();
-        dieText.destroy();
-        this.safePlaySound('sfx_coin');
-      },
-    });
   }
 
   private formatEffect(
@@ -777,7 +661,7 @@ export class TrailEventScene extends Scene {
       case 'LOSE_RANDOM_DICE': {
         const available = enhancedDiceBeforeCount ?? 0;
         if (available === 0 && !negated) {
-          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE; // $3 per missing die as penalty
+          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_DIE;
           text = `No enhanced dice to sacrifice. Lost $${lostAmount} instead.`;
           color = TEXT_COLORS.ERROR_RED;
         } else {
@@ -842,7 +726,7 @@ export class TrailEventScene extends Scene {
         break;
       case 'LOSE_EQUIPMENT_CHOICE':
         if ((equipmentBeforeCount ?? 0) === 0 && !negated) {
-          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
+          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP;
           text = `No equipment to sacrifice. Lost $${lostAmount} instead.`;
           color = TEXT_COLORS.ERROR_RED;
         } else {
@@ -851,7 +735,7 @@ export class TrailEventScene extends Scene {
         break;
       case 'LOSE_RANDOM_EQUIPMENT':
         if ((equipmentBeforeCount ?? 0) === 0 && !negated) {
-          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP; // $4 per missing equipment as penalty
+          const lostAmount = (effect.count ?? 1) * TRAIL_EVENT.AMOUNT_PER_MISSING_EQUIP;
           text = `No equipment to sacrifice. Lost $${lostAmount} instead.`;
           color = TEXT_COLORS.ERROR_RED;
         } else {
@@ -890,16 +774,18 @@ export class TrailEventScene extends Scene {
     return { text, color, negative };
   }
 
-  private showResolvedContinue(layout: Pick<LayoutResult, 'contentCX' | 'contentBottom'>): void {
-    for (const btn of this.choiceButtons) {
-      btn.setEnabled(false);
-    }
-    const continueBtn = new Button(this, layout.contentCX, layout.contentBottom - 28, 'Continue', 200, 44);
-    continueBtn.onClick(() => this.proceedToNextScene());
+  /** Old saves resolved before `resolvedDisplay` existed — bare Continue only. */
+  private showResolvedContinueFallback(layout: Pick<LayoutResult, 'contentCX' | 'contentBottom'>): void {
+    this.resolvedContinueBtn = new Button(this, layout.contentCX, layout.contentBottom - 28, 'Continue', 200, 44);
+    this.resolvedContinueBtn.onClick(() => this.proceedToNextScene());
   }
 
   private proceedToNextScene(): void {
     const skipShop = getRunState().skipNextShop;
+    this.resultPanel?.destroy();
+    this.resultPanel = null;
+    this.resolvedContinueBtn?.destroy();
+    this.resolvedContinueBtn = null;
     this.currentEvent = null!;
     this.resolved = false;
     this.spyglassRevealed = false;
@@ -932,9 +818,7 @@ export class TrailEventScene extends Scene {
   }
 
   private onResize(): void {
-    if (!this.resolved) {
-      this.syncTrailToStore();
-      this.scene.restart({});
-    }
+    this.syncTrailToStore();
+    this.scene.restart({});
   }
 }

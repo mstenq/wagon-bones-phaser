@@ -5,6 +5,7 @@ import { equipmentActions } from '../store';
 import {
   applySpyglassAvoid,
   applySpyglassInvestigate,
+  buildTrailEventResultFromResolvedDisplay,
   findTrailRepairKit,
   getAvailableChoices,
   getTrailEventById,
@@ -17,10 +18,11 @@ import {
   type TrailEventChoice,
   type TrailEventDef,
   type TrailEventEffect,
+  type TrailEventResolvedDisplay,
   type TrailEventResult,
 } from '../TrailEventsSystem';
 
-export type { TrailEventChoice, TrailEventDef, TrailEventEffect, TrailEventResult };
+export type { TrailEventChoice, TrailEventDef, TrailEventEffect, TrailEventResolvedDisplay, TrailEventResult };
 
 export const gameTrail = {
   selectEvent(): TrailEventDef {
@@ -36,6 +38,7 @@ export const gameTrail = {
   },
 
   getAvailableChoices,
+  buildTrailEventResultFromResolvedDisplay,
   resolveChoice,
   isNegativeEffect,
   hasScoutsSpyglass,

@@ -6,8 +6,7 @@
 - bad water event only gives "drink it" as an option which is lame.
 - blood_moon - should realy be negative 1 hand size instead of rerolls.
 - cursed equipment should never be removable; any sell/destroy/destruction path that removes cursed items is a bug.
-- six_feet_under - is way to overpowered. A single 'raid' card boosts the value to +330 miles. Lets switch its power with ghost_town, and it will get +6 mult for each die below starting size. (This change also means you don't have to destroy the dice while you have the card, you can destroy a ton and pick up this card and it will be good immediately and match how ghost_town works).
-- ghost_town - now this will instead gain +30 for each die below starting size.
+- you should not be able to gain equipment in trail events if you have no room (Substitute with random enhanced die instead)
 
 ## New Feature Ideas
 - new permits for luck:

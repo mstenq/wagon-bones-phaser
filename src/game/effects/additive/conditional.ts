@@ -1,10 +1,41 @@
 // ─── CONDITIONAL_MULT, MULT_PER_EQUIPMENT, MILES_PER_DOLLAR, etc. ───
 
 import { effectRegistry } from '../registry';
+import type { ScoringPipelineContext } from '../types';
+import type { EquipmentInstance } from '../../ItemsSystem';
 import { getRunState } from '../../store/runStore';
 import { addScore } from '../../scoreMath';
 import { HandType } from '../../types';
 import { selectHandStats } from '../../store/selectors/runSelectors';
+
+type MissingDiceRewardKind = 'mult' | 'miles';
+
+function applyPerMissingDiceReward(
+  ctx: ScoringPipelineContext,
+  equip: EquipmentInstance,
+  index: number,
+  kind: MissingDiceRewardKind,
+  defaultPerDie: number,
+): void {
+  const run = getRunState();
+  const p = equip.def.effectParams as Record<string, unknown>;
+  const perDie = (p.value as number) ?? defaultPerDie;
+  const missing = Math.max(0, run.startingDiceCount - ctx.allDice.length);
+  if (missing <= 0) return;
+
+  const total = missing * perDie;
+  const rewardLabel = kind === 'mult' ? 'mult' : 'miles';
+  if (kind === 'mult') {
+    ctx.bonusMult = addScore(ctx.bonusMult, total);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: total });
+  } else {
+    ctx.bonusMiles = addScore(ctx.bonusMiles, total);
+    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: total });
+  }
+  console.log(
+    `  [equip] ${equip.def.name}: +${total} ${rewardLabel} (${missing} dice below start) (bonus${kind === 'mult' ? 'Mult' : 'Miles'}: ${kind === 'mult' ? ctx.bonusMult : ctx.bonusMiles})`,
+  );
+}
 
 effectRegistry.registerAdditive('CONDITIONAL_MULT', (ctx, equip, index) => {
   const p = equip.def.effectParams as Record<string, unknown>;
@@ -79,33 +110,11 @@ effectRegistry.registerAdditive('MULT_PER_MONEY_CHUNK', (ctx, equip, index) => {
 });
 
 effectRegistry.registerAdditive('MULT_PER_MISSING_DICE', (ctx, equip, index) => {
-  const run = getRunState();
-  const p = equip.def.effectParams as Record<string, unknown>;
-  const perDie = (p.value as number) ?? 10;
-  const missing = Math.max(0, run.startingDiceCount - ctx.allDice.length);
-  if (missing > 0) {
-    const total = missing * perDie;
-    ctx.bonusMult = addScore(ctx.bonusMult, total);
-    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'mult', value: total });
-    console.log(
-      `  [equip] ${equip.def.name}: +${total} mult (${missing} dice below start) (bonusMult: ${ctx.bonusMult})`,
-    );
-  }
+  applyPerMissingDiceReward(ctx, equip, index, 'mult', 10);
 });
 
 effectRegistry.registerAdditive('MILES_PER_MISSING_DICE', (ctx, equip, index) => {
-  const run = getRunState();
-  const p = equip.def.effectParams as Record<string, unknown>;
-  const perDie = (p.value as number) ?? 30;
-  const missing = Math.max(0, run.startingDiceCount - ctx.allDice.length);
-  if (missing > 0) {
-    const total = missing * perDie;
-    ctx.bonusMiles = addScore(ctx.bonusMiles, total);
-    ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'miles', value: total });
-    console.log(
-      `  [equip] ${equip.def.name}: +${total} miles (${missing} dice below start) (bonusMiles: ${ctx.bonusMiles})`,
-    );
-  }
+  applyPerMissingDiceReward(ctx, equip, index, 'miles', 30);
 });
 
 effectRegistry.registerAdditive('PIONEER_SPIRIT', (ctx, equip, index) => {

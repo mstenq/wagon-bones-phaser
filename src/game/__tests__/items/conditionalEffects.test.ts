@@ -12,7 +12,11 @@ import {
 } from '../testHelpers';
 import { GameState } from '../testGameState';
 import { HandType, type Die, type ScoreResult } from '../../types';
-import { processEquipmentOnHandPlayed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
+import {
+  processEquipmentOnDiceDestroyed,
+  processEquipmentOnHandPlayed,
+  processEquipmentOnRoundStart,
+} from '../../EquipmentEffects';
 import { D } from '../../scoreMath';
 import { getRoundState } from '../../store/roundStore';
 import { roundActions } from '../../store';
@@ -792,5 +796,13 @@ describe('MULT_PER_MISSING_DICE: Six Feet Under', () => {
     const withMirror = runSixFeetMirror();
     const aloneBonus = Number(alone.mult) - 1;
     expect(Number(withMirror.mult)).toBe(1 + aloneBonus * 2);
+  });
+
+  test('does not accumulate state when dice are destroyed', () => {
+    const { player } = setupGame({ equipment: [item('six_feet_under')] });
+    const inst = player.equipment.find((e) => e.def.id === 'six_feet_under')!;
+    processEquipmentOnDiceDestroyed([inst], 3, 2);
+    expect(inst.state.miles ?? 0).toBe(0);
+    expect(inst.state.mult ?? 0).toBe(0);
   });
 });

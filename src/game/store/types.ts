@@ -261,12 +261,26 @@ export interface BoosterPackSceneState {
   lineupSelectedDieIds?: string[];
 }
 
+/** Enough state to rebuild the result panel after refresh without re-applying effects. */
+export interface TrailEventResolvedDisplay {
+  choiceId: string;
+  outcomeIndex: number;
+  gainedDiceIds: string[];
+  enhancedDiceBeforeCount: number;
+  equipmentCountBeforeResolve: number;
+  negatedNegativeEffects?: boolean;
+  negationSource?: 'omen_stone' | 'saint_elmos_shield' | 'trail_repair_kit';
+  message?: string;
+}
+
 export interface TrailEventSceneState {
   eventId: string;
   resolved: boolean;
   spyglassRevealed: boolean;
   /** Choice picked before result animation completes (autosave during resolve). */
   selectedChoiceId?: string | null;
+  /** Present while resolved and waiting for Continue — restored on reload. */
+  resolvedDisplay?: TrailEventResolvedDisplay | null;
 }
 
 export interface PayoutPresentationState {
