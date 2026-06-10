@@ -28,22 +28,22 @@ SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; gameplay lives in Phase
 1. **`bun run typecheck`**
 2. **`bun run check`**
 3. **`bun run build`** — when you changed Phaser scenes, Vite config, or the production bundle
-4. **`GRAPHIFY_NO_BACKUP=1 GRAPHIFY_VIZ_NODE_LIMIT=0 graphify update .`** — **last step only**, after everything above passes. Kick it off in the background and **do not wait** for it to finish. Skips dated backups and `graph.html` (only `graph.json` matters for `query`/`path`/`explain`). ~12s when topology is unchanged; longer when exports/imports/symbols change (re-cluster).
 
 Fix failures in code you touched. Pre-existing `tsc` errors elsewhere: clear only when you edit those files.
 
-## Codebase navigation (graphify)
+## Codebase navigation (Gortex)
 
-`graphify-out/` holds a living knowledge graph. **Use it for architecture and “where does X live?”** — not for input bugs or line-level debugging.
+This repo indexes via the **Gortex** MCP server (`.cursor/mcp.json`). **Use Gortex graph tools for architecture and “where does X live?”** — not for input bugs or line-level debugging. See `.cursor/rules/gortex-workflow.mdc`.
 
-| Need | Command |
-|------|---------|
-| Broad context | `graphify query "<question>"` |
-| Trace a path | `graphify path "<A>" "<B>"` |
-| Explain a symbol | `graphify explain "<concept>"` |
-| Community overview | `graphify-out/GRAPH_REPORT.md` or `graphify-out/wiki/index.md` if present |
-
-After modifying code in a session: run **`GRAPHIFY_NO_BACKUP=1 GRAPHIFY_VIZ_NODE_LIMIT=0 graphify update .`** as the **final** step (AST-only, no API cost). Fire-and-forget — start it in the background and move on; do not poll or block on completion. See `.cursor/rules/graphify.mdc`.
+| Need | Tool |
+|------|------|
+| Orient / index health | `graph_stats` or `index_health` |
+| Task-scoped context | `smart_context` with a natural-language `task` |
+| Find symbols | `search_symbols` |
+| Read one symbol | `get_symbol_source` |
+| Callers / callees | `get_call_chain`, `find_usages` |
+| Literal search | `search_text` |
+| Community overview | `.cursor/rules/gortex-communities.mdc` |
 
 ## Architecture (constitution only)
 
@@ -58,7 +58,7 @@ public/assets/  # Art
 
 **Orchestration:** Phaser scenes call **`gameFacade`**, not `*System.ts` directly. Gameplay animations go through **`enqueuePlayback`** / `PlaybackRunner` — scenes must not drive outcome animations themselves. State: `getRunState()` / `getRoundState()` / `getSceneState()` and matching `*Actions`.
 
-**Equipment:** defs in `src/data/items.ts` (`effectType`, `effectParams`, `display`); handlers in `src/game/effects/` via `effectRegistry`. Scoring pipeline, store layout, scene flow, data modules — **`graphify query`** or **`graphify explain`** on the relevant symbol.
+**Equipment:** defs in `src/data/items.ts` (`effectType`, `effectParams`, `display`); handlers in `src/game/effects/` via `effectRegistry`. Scoring pipeline, store layout, scene flow, data modules — **`smart_context`** or **`search_symbols`** on the relevant symbol.
 
 **Constants:** colors, fonts, sizing, gameplay defaults — **`Constants.ts` only** (`GAMEPLAY`: 8 rolled, 5 scored, 4 days, 4 rerolls by default).
 
