@@ -58,6 +58,16 @@ export function isDiceSelectionReady(config: DiceSelectionConfig, selectedCount:
   return selectedCount >= getDiceSelectionMinPicks(config) && selectedCount <= getDiceSelectionMaxPicks(config);
 }
 
+/** CLONE (mirage): spatial left→right in the visible row, not pick/toggle order. */
+export function orderSelectedDieIdsByRow(selectedDieIds: string[], rowOrderIds: string[]): string[] {
+  const selected = new Set(selectedDieIds);
+  const ordered = rowOrderIds.filter((id) => selected.has(id));
+  for (const id of selectedDieIds) {
+    if (!ordered.includes(id)) ordered.push(id);
+  }
+  return ordered;
+}
+
 export interface DiceSelectionState {
   config: DiceSelectionConfig;
   drawnDice: Die[]; // the dice shown to the player

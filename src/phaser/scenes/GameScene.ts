@@ -1271,7 +1271,7 @@ export class GameScene extends Scene {
       return this.getVisibleDieIds().filter((id) => selected.has(id));
     }
     if (phase === 'ROLL') {
-      return [...this.selectedDiceIds].filter((id) => visible.has(id));
+      return this.getVisibleDieIds().filter((id) => this.selectedDiceIds.has(id));
     }
     return [];
   }

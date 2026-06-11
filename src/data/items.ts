@@ -613,7 +613,7 @@ const items: ItemDef[] = [
       const equip = player.equipment.find((e) => e.def.id === 'fading_memory');
       const m = equip?.state.mult ?? 20;
       const rounds = equip?.state.roundsPlayed ?? 0;
-      const hint = [[mult(`+${m}`), condition(`${5 - rounds} rounds left`)]];
+      const hint = [[mult(`+${m}`)], [condition(`${5 - rounds} rounds left`, 'xs')]];
       return {
         hint,
         tooltip: [
@@ -1828,8 +1828,8 @@ const items: ItemDef[] = [
       const threshold = resolveEffectParam<number>(p, 'threshold', player.professionId);
       const hint =
         player.balance <= threshold
-          ? [[text('Supply card!'), active('Active')]]
-          : [[text('Supply card'), condition(`≤$${threshold}`)]];
+          ? [[text('Supply card!')], [active('Active', 'sm')]]
+          : [[text('Supply card')], [condition(`≤$${threshold}`, 'sm')]];
       return {
         hint,
         tooltip: [
@@ -2618,7 +2618,10 @@ const items: ItemDef[] = [
       }
       return {
         hint: [[money(`+$${discoveredCount}`), condition('trail guides')]],
-        tooltip: [[money('$1'), text(' at end of round for every type of trail guide discovered')]],
+        tooltip: [
+          [money('$1'), text(' at end of round for every type of trail guide discovered')],
+          [text('Currently: '), money(`$${discoveredCount}`)],
+        ],
       };
     },
   },
@@ -3335,7 +3338,7 @@ const items: ItemDef[] = [
     display: (_round, player) => {
       const total = player.equipment.length * 16;
       return {
-        hint: [[miles(`+${total}`)], [condition('per equipment', 'sm')]],
+        hint: [[miles(`+${total}`)]],
         tooltip: [
           [miles('+16'), text(' miles for each equipment card owned')],
           [text('Currently: '), miles(`+${total}`)],

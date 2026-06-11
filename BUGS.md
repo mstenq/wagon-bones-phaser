@@ -1,5 +1,7 @@
 # Bugs noticed while playing
-- standard dice on day 1 trail punishment, doesn't work.
+- standard dice on day 1 trail punishment, doesn't work I don't think.
+- trail event gave me medicine supply card even though i didn't have room for it.
+
 
 ## New Feature Ideas
 - new permits for luck:

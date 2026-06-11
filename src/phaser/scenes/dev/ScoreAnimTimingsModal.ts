@@ -8,7 +8,7 @@ import {
   type ScoreAnimSpeedPreset,
 } from '../../../game/ScoreAnimTimings';
 import { Button } from '../../ui/Button';
-import { createModalShell, finalizeModal } from '../../ui/modalShell';
+import { createModalBackButton, createModalShell, finalizeModal } from '../../ui/modalShell';
 import { ScoreAnimTimingsPanel } from './scoreAnimTimingsPanel';
 
 export interface ScoreAnimTimingsModalOptions {
@@ -17,7 +17,11 @@ export interface ScoreAnimTimingsModalOptions {
 
 const PRESET_BTN_H = 34;
 const PRESET_ROW_GAP = 8;
-const FOOTER_H = 44;
+/** Space reserved below the timings panel for gap + Back button. */
+const FOOTER_H = 68;
+const TITLE_Y = 28;
+const TITLE_FONT_HALF = 12;
+const TITLE_BOTTOM_GAP = 16;
 
 export class ScoreAnimTimingsModal extends GameObjects.Container {
   private timingsPanel: ScoreAnimTimingsPanel | null = null;
@@ -47,7 +51,7 @@ export class ScoreAnimTimingsModal extends GameObjects.Container {
 
     this.add([dim, panel, title]);
 
-    const presetY = panelY + 54;
+    const presetY = panelY + TITLE_Y + TITLE_FONT_HALF + TITLE_BOTTOM_GAP + PRESET_BTN_H / 2;
     const presetGap = 6;
     const presetW = (panelW - pad * 2 - presetGap * (SCORE_ANIM_SPEED_PRESETS.length - 1)) / SCORE_ANIM_SPEED_PRESETS.length;
 
@@ -68,8 +72,7 @@ export class ScoreAnimTimingsModal extends GameObjects.Container {
     };
     this.timingsPanel = new ScoreAnimTimingsPanel(scene, panelBounds);
 
-    const backBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 26, 'Back', 120, 34);
-    backBtn.onClick(() => {
+    const backBtn = createModalBackButton(scene, layout, () => {
       this.destroy();
       options.onBack();
     });

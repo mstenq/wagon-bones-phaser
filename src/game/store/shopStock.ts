@@ -235,21 +235,23 @@ export function generateOneShopStockRow(excludeIds: string[], run: RunState = ge
   return { type: 'consumable', consumableDef };
 }
 
-/** Append rows until `targetSlotCount` is reached; preserves existing stored stock. */
+/** Append rows until `targetSlotCount` is reached; preserves unsold stock, drops sold rows. */
 export function appendShopStockForSlots(
   existingStored: StoredShopItem[],
   targetSlotCount: number,
   run: RunState = getRunState(),
 ): StoredShopItem[] {
   const slotCount = Math.max(1, targetSlotCount);
-  if (existingStored.length >= slotCount) {
-    return existingStored.map((item) => ({ ...item }));
+  const activeStock = existingStored.filter((item) => !item.sold);
+
+  if (activeStock.length >= slotCount) {
+    return activeStock.map((item) => ({ ...item }));
   }
 
-  const excludeIds = [...ownedDefIds(run), ...defIdsFromStoredStock(existingStored)];
+  const excludeIds = [...ownedDefIds(run), ...defIdsFromStoredStock(activeStock)];
   const newRows: ShopStockGenRow[] = [];
 
-  while (existingStored.length + newRows.length < slotCount) {
+  while (activeStock.length + newRows.length < slotCount) {
     const row = generateOneShopStockRow(excludeIds, run);
     if (!row) continue;
     newRows.push(row);
@@ -257,7 +259,7 @@ export function appendShopStockForSlots(
     if (id) excludeIds.push(id);
   }
 
-  return [...existingStored, ...shopRowsToStored(newRows)];
+  return [...activeStock, ...shopRowsToStored(newRows)];
 }
 
 /** Roll weighted shop stock rows (before tag injection / auras). */

@@ -108,6 +108,15 @@ export class ItemCardTooltip {
     this.destroyTooltip();
   }
 
+  /** Rebuild visible tooltip after display context changes (e.g. second_helpings clone target). */
+  refreshIfVisible(resolveDisplay: DisplayResolver): void {
+    if (!this.tooltip) return;
+    const placement: TooltipPlacement = this.pinned ? 'above' : 'side';
+    const pinned = this.pinned;
+    this.destroyTooltip();
+    this.showInternal(placement, pinned, resolveDisplay);
+  }
+
   destroy(): void {
     this.untrack?.();
     this.untrack = null;

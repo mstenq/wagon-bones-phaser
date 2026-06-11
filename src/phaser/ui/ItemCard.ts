@@ -250,6 +250,10 @@ export class ItemCard extends GameObjects.Container {
     this.tooltip.hide();
   }
 
+  refreshTooltipIfVisible(): void {
+    this.tooltip.refreshIfVisible((r, p) => this.resolveDisplay(r, p));
+  }
+
   getActionTabContainers(): GameObjects.Container[] {
     return this.actionTabs.getContainers();
   }

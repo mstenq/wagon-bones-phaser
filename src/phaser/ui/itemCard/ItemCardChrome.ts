@@ -144,7 +144,13 @@ export class ItemCardChrome {
   }
 
   private getCardTextureFrame(source: CardTextureSource): Phaser.Textures.Frame | null {
-    return this.scene.textures.getFrame(source.key, source.frame);
+    if (!this.scene.textures.exists(source.key)) return null;
+    if (source.frame) {
+      const texture = this.scene.textures.get(source.key);
+      if (!texture.has(source.frame)) return null;
+      return texture.get(source.frame);
+    }
+    return this.scene.textures.getFrame(source.key);
   }
 
   private addContent(): ItemCardContentResult {

@@ -54,6 +54,8 @@ export class ScoreAnimTimingsPanel {
     this.container.style.border = `1px solid ${BORDER}`;
     this.container.style.borderRadius = '8px';
     this.container.style.padding = '10px 10px 8px';
+    this.container.style.display = 'flex';
+    this.container.style.flexDirection = 'column';
     this.container.style.zIndex = '20';
     this.container.style.pointerEvents = 'auto';
 
@@ -76,6 +78,8 @@ export class ScoreAnimTimingsPanel {
     this.container.appendChild(subtitle);
 
     this.scroll = document.createElement('div');
+    this.scroll.style.flex = '1';
+    this.scroll.style.minHeight = '0';
     this.scroll.style.overflowY = 'auto';
     this.scroll.style.paddingRight = '6px';
     this.container.appendChild(this.scroll);
@@ -282,6 +286,5 @@ export class ScoreAnimTimingsPanel {
     this.container.style.top = `${canvasRect.top - containerRect.top + this.bounds.y}px`;
     this.container.style.width = `${this.bounds.width}px`;
     this.container.style.height = `${this.bounds.height}px`;
-    this.scroll.style.height = `${Math.max(0, this.bounds.height - 58)}px`;
   }
 }

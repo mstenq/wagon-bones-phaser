@@ -8,7 +8,12 @@ import {
   type ConsumableInstance,
   type UseConsumableResult,
 } from '../ConsumablesSystem';
-import { applyDiceSelectionEffect, type DiceSelectionConfig, type DiceSelectionResult } from '../DiceSelectionSystem';
+import {
+  applyDiceSelectionEffect,
+  orderSelectedDieIdsByRow,
+  type DiceSelectionConfig,
+  type DiceSelectionResult,
+} from '../DiceSelectionSystem';
 import { selectHandDice, selectRolledDice } from '../store/selectors/roundSelectors';
 import { consumableActions } from '../store/actions/consumableActions';
 import { applyCopyAfterSelection, selectPackLineupDice, syncPackLineupAfterSelection } from '../visibleDiceRow';
@@ -52,15 +57,25 @@ function diceInCommitOrder(pool: Die[], selectedDieIds: string[]): Die[] {
   return selectedDieIds.map((id) => byId.get(id)).filter((die): die is Die => die !== undefined);
 }
 
+function selectedIdsForCommit(commit: ConsumableTargetingCommit, rowOrderIds: string[]): string[] {
+  if (commit.diceSelection.effectType !== 'CLONE') {
+    return commit.selectedDieIds;
+  }
+  return orderSelectedDieIdsByRow(commit.selectedDieIds, rowOrderIds);
+}
+
 function selectGameDice(commit: ConsumableTargetingCommit): Die[] {
   const context = commit.useContext;
   if (context.scene !== 'game') return [];
   const pool = context.phase === 'ROLL' ? selectRolledDice() : selectHandDice();
-  return diceInCommitOrder(pool, commit.selectedDieIds);
+  const rowIds = pool.map((die) => die.id);
+  return diceInCommitOrder(pool, selectedIdsForCommit(commit, rowIds));
 }
 
 function selectPackDice(commit: ConsumableTargetingCommit): Die[] {
-  return diceInCommitOrder(selectPackLineupDice(), commit.selectedDieIds);
+  const pool = selectPackLineupDice();
+  const rowIds = pool.map((die) => die.id);
+  return diceInCommitOrder(pool, selectedIdsForCommit(commit, rowIds));
 }
 
 function applyToSurface(

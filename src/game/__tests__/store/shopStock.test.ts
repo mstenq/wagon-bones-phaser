@@ -175,6 +175,30 @@ describe('shopStock', () => {
     expect(same).toEqual(existing);
   });
 
+  test('appendShopStockForSlots drops sold rows and fills new slots (supply_wagon tactic)', () => {
+    const existing = shopRowsToStored(generateShopStockRows().slice(0, 2));
+    const soldOut = existing.map((item) => ({ ...item, sold: true as const }));
+
+    const refreshed = appendShopStockForSlots(soldOut, 3);
+
+    expect(refreshed.length).toBe(3);
+    expect(refreshed.every((item) => !item.sold)).toBe(true);
+  });
+
+  test('appendShopStockForSlots keeps unsold rows and only replaces sold slots', () => {
+    const existing = shopRowsToStored(generateShopStockRows().slice(0, 2));
+    const mixed = [
+      { ...existing[0]!, sold: true as const },
+      { ...existing[1]! },
+    ];
+
+    const refreshed = appendShopStockForSlots(mixed, 3);
+
+    expect(refreshed.length).toBe(3);
+    expect(refreshed[0]).toEqual(mixed[1]);
+    expect(refreshed.every((item) => !item.sold)).toBe(true);
+  });
+
   test('appendShopStockForSlots excludes owned and existing stock ids from new rows', () => {
     const existing = shopRowsToStored(generateShopStockRows());
     const existingIds = existing

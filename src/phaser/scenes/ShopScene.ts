@@ -1188,7 +1188,7 @@ export class ShopScene extends Scene {
       ease: 'Power2',
       onComplete: () => {
         card.destroy();
-        // If permit increased shop slots, append new items (keep existing stock)
+        // If permit increased shop slots, drop sold rows and fill to the new slot count
         const newSlotCount = Math.max(1, getRunState().shopSlots);
         const currentStored = this.stockItems.map((item) => this.serializeShopItem(item));
         const appendedStored = appendShopStockForSlots(currentStored, newSlotCount);

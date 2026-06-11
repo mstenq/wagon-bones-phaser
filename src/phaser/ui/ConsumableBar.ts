@@ -75,6 +75,20 @@ export class ConsumableBar extends CardBar {
   protected syncCardsFromStore(): void {
     if (!this.tryRefreshCardsInPlace()) {
       this.rebuildCardsNow();
+      return;
+    }
+    this.syncConsumablesInPlace();
+  }
+
+  /** Update tooltips and action tabs without destroying cards (preserves drag settle tweens). */
+  private syncConsumablesInPlace(): void {
+    const player = getItemDisplayContext();
+    for (let i = 0; i < this.cards.length; i++) {
+      const card = this.cards[i];
+      if (!card?.scene) continue;
+      card.setTooltipContext(null, player);
+      card.refreshTooltipIfVisible();
+      this.refreshOpenActionTabs(card, i);
     }
   }
 

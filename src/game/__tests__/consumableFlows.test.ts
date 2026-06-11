@@ -7,6 +7,7 @@ import { roundActions } from '../store';
 import { resolveConsumableList } from '../store/resolve';
 import { sceneActions } from '../store/sceneStore';
 import { selectHandDice, selectRolledDice } from '../store/selectors/roundSelectors';
+import { syncRolledDiceFromFaces } from '../store/roundWrites';
 import { initPackLineup, selectPackLineupDice } from '../visibleDiceRow';
 import {
   armBarConsumableTargeting,
@@ -236,6 +237,36 @@ describe('consumableFlowHarness — game bar flows', () => {
     expect(player.dice.find((d) => d.id === right.id)?.enhancement).toBe('lucky');
   });
 
+  test('mirage clone uses rolled row order when dice were reordered and toggled out of order', () => {
+    resetPlayerState();
+    const gold = die({ value: 10, enhancement: 'gold', sticker: 'red_bullet' });
+    const standard = die({ value: 5 });
+    const { player } = setupGame({ dice: [gold, standard], handSize: 2 });
+    seedTestRoll([gold, standard]);
+    syncRolledDiceFromFaces([standard, gold]);
+
+    const rolledIds = selectRolledDice().map((d) => d.id);
+    expect(rolledIds).toEqual([standard.id, gold.id]);
+    player.addConsumable(getSupplyDefById('mirage')!);
+
+    const ctx = gameRollContext(rolledIds, rolledIds, true);
+    const result = runConsumableFlow(
+      [
+        { action: 'arm_bar', consumableIndex: 0 },
+        { action: 'toggle', dieId: gold.id },
+        { action: 'toggle', dieId: standard.id },
+        { action: 'commit' },
+      ],
+      { eligibilityContext: ctx, surface: 'game' },
+    );
+
+    expect(result.ok).toBe(true);
+    const updatedStandard = player.dice.find((d) => d.id === standard.id)!;
+    expect(updatedStandard.enhancement).toBe('gold');
+    expect(updatedStandard.sticker).toBe('red_bullet');
+    expect(player.dice.find((d) => d.id === gold.id)?.enhancement).toBe('gold');
+  });
+
   test('commit fails when selection is incomplete', () => {
     const { game, player } = setupGame({
       dice: [die({ value: 1 }), die({ value: 2 })],
@@ -367,18 +398,18 @@ describe('consumableFlowHarness — booster pack flows', () => {
     expect(getActiveConsumableTargeting()).toBeNull();
   });
 
-  test('pack mirage clone respects preselect order not lineup order', () => {
+  test('pack mirage clone uses lineup order not preselect click order', () => {
     const { player } = setupGame();
-    const left = die({ value: 1, enhancement: 'lucky' });
-    const right = die({ value: 2 });
+    const source = die({ value: 10, enhancement: 'gold', sticker: 'red_bullet' });
+    const target = die({ value: 5 });
     const extra = die({ value: 3 });
-    player.dice = [left, right, extra];
+    player.dice = [source, target, extra];
 
     enterTestBoosterPack();
-    const lineup = initPackLineup();
-    const lineupIds = lineup.map((d) => d.id);
-    // Pick right before left — row order would clone lucky onto left; pick order clones onto right.
-    setPackLineupSelectedDieIds([right.id, left.id]);
+    sceneActions.patchBoosterPack({ lineupDieIds: [target.id, source.id, extra.id] });
+    const lineupIds = [target.id, source.id, extra.id];
+    // Click source before target — spatial left (target) should still copy spatial right (source).
+    setPackLineupSelectedDieIds([source.id, target.id]);
 
     const ctx = packCardContext(lineupIds);
     const diceSelection = packDiceSelection('mirage');
@@ -394,8 +425,10 @@ describe('consumableFlowHarness — booster pack flows', () => {
       surface: 'pack_lineup',
     });
     expect(commitResult.ok).toBe(true);
-    expect(player.dice.find((d) => d.id === right.id)?.enhancement).toBe('lucky');
-    expect(player.dice.find((d) => d.id === left.id)?.enhancement).toBe('lucky');
+    const updatedTarget = player.dice.find((d) => d.id === target.id)!;
+    expect(updatedTarget.enhancement).toBe('gold');
+    expect(updatedTarget.sticker).toBe('red_bullet');
+    expect(player.dice.find((d) => d.id === source.id)?.enhancement).toBe('gold');
   });
 
   test('cancel pack session writes session selection back to ambient lineup store', () => {

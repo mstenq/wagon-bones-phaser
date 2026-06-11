@@ -44,6 +44,7 @@ import {
   getDiceSelectionMinPicks,
   insertDiceAfterInOrder,
   isDiceSelectionReady,
+  orderSelectedDieIdsByRow,
   refreshLineupDiceFromRun,
   shouldUpdateDisplayedDiceValue,
   syncLineupAfterDiceEffect,
@@ -522,6 +523,11 @@ describe('profession starting dice', () => {
 // ─── Mirage (CLONE) ───
 
 describe('Mirage CLONE effect', () => {
+  test('orderSelectedDieIdsByRow sorts picks by visible row left to right', () => {
+    const row = ['die-a', 'die-b', 'die-c'];
+    expect(orderSelectedDieIdsByRow(['die-c', 'die-a'], row)).toEqual(['die-a', 'die-c']);
+  });
+
   test('left die copies enhancement, sticker, aura from right die', () => {
     const player = resetPlayerState();
     const leftDie = die({ enhancement: 'wooden', aura: null, sticker: null, value: 3 });
