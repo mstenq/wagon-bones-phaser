@@ -124,7 +124,7 @@ Persistent **glow + particles** on cards/dice come from `AuraFX.ts` (`ItemCard`,
 | `ScoreAnimation.ts` | Sequential score playback, floating popups, crack/strip/enhance/grants |
 | `HandUpgradeAnimation.ts` | Sidebar overlay panel; upgrade vs downgrade colors/SFX |
 | `EquipmentFireDestroyAnimation.ts` | Fire particles (`aura_soft`), ambient fire + slice SFX, victim fade; parallel variant for consumables |
-| `EquipmentPopInAnimation.ts` | New cards: scale 0 → `UI.EQUIP_CARD_SCALE`, staggered 150 ms |
+| `EquipmentPopInAnimation.ts` | New cards: scale 0 → 1 (card container already uses `computeCardBarMetrics`), staggered 150 ms |
 | `ConsumableAnimPlayback.ts` | Chains `destroy_dice` → `destroy_equipment` events |
 | `ToastAnimation.ts` | Center toast for playback `toast` command |
 | `scoreAnimPacing.ts` | Gap compression + `trimFx` for long hands |

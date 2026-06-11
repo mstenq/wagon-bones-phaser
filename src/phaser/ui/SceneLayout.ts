@@ -187,7 +187,7 @@ export interface LayoutResult {
 
 /** True when the viewport is taller than wide (portrait). */
 export function isPortraitLayout(width: number, height: number): boolean {
-  return height > width;
+  return width <= 970
 }
 
 /** Shrink chrome on narrow portrait viewports; capped at 1. */

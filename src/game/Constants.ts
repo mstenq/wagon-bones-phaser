@@ -329,17 +329,6 @@ export const UI = {
   /** Display-scale floor when content is narrow (multiplies CARD_BAR_BASE_SCALE) */
   CARD_BAR_SCALE_MIN: 0.66,
 
-  /** @deprecated Use CARD_BAR_BASE_SCALE — kept for legacy references */
-  EQUIP_BAR_HEIGHT: 250,
-  /** @deprecated Use CARD_BAR_BASE_SCALE */
-  EQUIP_CARD_SCALE: 0.9,
-  /** @deprecated Use CARD_BAR_SPACING */
-  EQUIP_CARD_SPACING: 160,
-  /** @deprecated Use CARD_BAR_BASE_SCALE */
-  CONSUMABLE_CARD_SCALE: 0.75,
-  /** @deprecated Use CARD_BAR_SPACING */
-  CONSUMABLE_CARD_SPACING: 130,
-
   // Dice pouch (bottom-right indicator)
   POUCH_SIZE: 56,
   POUCH_MARGIN: 16,
