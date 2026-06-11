@@ -261,6 +261,7 @@ export class ShopScene extends Scene {
     packBox.fillRoundedRect(contentL, box2Top, contentW, box2H, BOX_RADIUS);
     packBox.lineStyle(2, 0x333355, 0.6);
     packBox.strokeRoundedRect(contentL, box2Top, contentW, box2H, BOX_RADIUS);
+    packBox.setDepth(UI.SHOP_PANEL_DEPTH);
 
     // Permit card (left side of box 2)
     const voucherW = BTN_COL_W - 16;
@@ -694,20 +695,34 @@ export class ShopScene extends Scene {
     this.shopStockObjects.push(obj);
   }
 
-  private clearShopStock(): void {
+  private raiseShopActionButtons(): void {
+    for (const obj of this.shopStockObjects) {
+      if (!(obj instanceof Button)) continue;
+      obj.setDepth(UI.SHOP_ACTION_BTN_DEPTH);
+    }
+  }
+
+  private clearShopStock(preserveActionButtons = false): void {
     this.activeTab.dismiss();
     for (const card of this.cards) {
       card.hideTooltip();
     }
+    const keptObjects: Phaser.GameObjects.GameObject[] = [];
     for (const obj of this.shopStockObjects) {
+      if (preserveActionButtons && obj instanceof Button) {
+        keptObjects.push(obj);
+        continue;
+      }
       if (obj.scene) obj.destroy();
     }
-    this.shopStockObjects = [];
+    this.shopStockObjects = preserveActionButtons ? keptObjects : [];
     for (const card of this.cards) {
       if (card.scene) card.destroy();
     }
     this.cards = [];
-    this.rerollBtn = null!;
+    if (!preserveActionButtons) {
+      this.rerollBtn = null!;
+    }
   }
 
   /** Tear down shop UI before resize or full layout rebuild (mirrors CardBar card cleanup). */
@@ -737,6 +752,7 @@ export class ShopScene extends Scene {
     consumables: ReturnType<typeof resolveConsumableList>,
     _trailGuidesFree: boolean,
     metrics: ReturnType<typeof this.getShopLayoutMetrics>,
+    reuseActionButtons = false,
   ): void {
     const {
       contentL,
@@ -752,41 +768,48 @@ export class ShopScene extends Scene {
       BOX_PAD,
       BTN_COL_W,
     } = metrics;
-    this.shopStockObjects = [];
+    if (!reuseActionButtons) {
+      this.shopStockObjects = [];
+    }
 
     const shopBox = this.add.graphics();
     shopBox.fillStyle(0x0d0d1a, 0.75);
     shopBox.fillRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
     shopBox.lineStyle(2, 0x333355, 0.6);
     shopBox.strokeRoundedRect(contentL, box1Top, contentW, box1H, BOX_RADIUS);
+    shopBox.setDepth(UI.SHOP_PANEL_DEPTH);
     this.trackShopStockObject(shopBox);
 
     const btnColX = contentL + BOX_PAD + BTN_COL_W / 2 - 6;
     const btnW = BTN_COL_W - 16;
     const btnH = Math.max(44, Math.floor((52 * metrics.cardScale) / UI.CARD_BAR_BASE_SCALE));
 
-    const hitTrailBtn = new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', btnW, btnH)
-      .setColor(0x8b2020, 0xb03030)
-      .onClick(() => {
+    if (!reuseActionButtons || !this.rerollBtn?.scene) {
+      const hitTrailBtn = new Button(this, btnColX, cardCY1 - btnH / 2 - 8, 'Hit the\nTrail', {
+        variant: 'danger',
+        width: btnW,
+        height: btnH,
+      }).onClick(() => {
         gameFacade.shop.processShopEnd(resolveEquipmentList());
         this.tearDownShopSubscriptions();
         sceneActions.clearShop();
         this.scene.start('RoundSelect', {});
       });
-    this.trackShopStockObject(hitTrailBtn);
+      hitTrailBtn.setDepth(UI.SHOP_ACTION_BTN_DEPTH);
+      this.trackShopStockObject(hitTrailBtn);
 
-    this.rerollBtn = new Button(
-      this,
-      btnColX,
-      cardCY1 + btnH / 2 + 8,
-      `Reroll\n$${selectShopRerollCost(run)}`,
-      btnW,
-      btnH,
-    );
-    this.rerollBtn.setColor(0x2d6b2d, 0x3d8b3d);
-    this.rerollBtn.setEnabled(gameFacade.shop.canRerollShop(run));
-    this.rerollBtn.onClick(() => this.onRerollShop());
-    this.trackShopStockObject(this.rerollBtn);
+      this.rerollBtn = new Button(this, btnColX, cardCY1 + btnH / 2 + 8, `Reroll\n$${selectShopRerollCost(run)}`, {
+        variant: 'success',
+        width: btnW,
+        height: btnH,
+      });
+      this.rerollBtn.setEnabled(gameFacade.shop.canRerollShop(run));
+      this.rerollBtn.onClick(() => this.onRerollShop());
+      this.rerollBtn.setDepth(UI.SHOP_ACTION_BTN_DEPTH);
+      this.trackShopStockObject(this.rerollBtn);
+    } else {
+      this.raiseShopActionButtons();
+    }
 
     this.cards = [];
     const cardAreaLeft = contentL + BOX_PAD + BTN_COL_W + 8;
@@ -868,7 +891,7 @@ export class ShopScene extends Scene {
   }
 
   private rebuildShopStockOnly(): void {
-    this.clearShopStock();
+    this.clearShopStock(true);
     const run = getRunState();
     const { width } = this.scale;
     const layout = computeLayoutMetrics(width, this.scale.height);
@@ -881,6 +904,7 @@ export class ShopScene extends Scene {
       resolveConsumableList(run),
       selectTrailGuidesFree(run),
       shopMetrics,
+      true,
     );
     this.updateDisplays();
   }

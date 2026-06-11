@@ -145,7 +145,7 @@ export class ProfessionSelectScene extends Scene {
       this.divider.setDepth(55);
     }
 
-    this.loadBtn = new Button(this, 120, height - 40, 'Load Game', 160, 48);
+    this.loadBtn = new Button(this, 120, height - 40, 'Load Game', { variant: 'secondary', size: 'lg', width: 160 });
     this.loadBtn.setDepth(100);
     this.loadBtn.onClick(() => {
       void performLoadGame(this, { confirmOverwrite: false });
@@ -163,7 +163,11 @@ export class ProfessionSelectScene extends Scene {
       ? actionBarStartX + backW + btnGap + confirmW / 2
       : this.rightPanelX + this.rightPanelW / 2;
     const confirmY = this.isPortrait ? btnY : height - 40;
-    this.confirmBtn = new Button(this, confirmX, confirmY, 'Select Difficulty', confirmW, 48);
+    this.confirmBtn = new Button(this, confirmX, confirmY, 'Select Difficulty', {
+      variant: 'primary',
+      size: 'lg',
+      width: confirmW,
+    });
     this.confirmBtn.setEnabled(false);
     this.confirmBtn.setVisible(false);
     this.confirmBtn.setDepth(100);
@@ -176,29 +180,23 @@ export class ProfessionSelectScene extends Scene {
 
     if (this.isPortrait) {
       const backX = actionBarStartX + backW / 2;
-      this.backBtn = new Button(this, backX, btnY, 'Back', backW, 48);
+      this.backBtn = new Button(this, backX, btnY, 'Back', { variant: 'secondary', size: 'lg', width: backW });
       this.backBtn.setDepth(100);
       this.backBtn.setVisible(false);
       this.backBtn.onClick(() => this.showPortraitGrid());
 
       const navY = DETAIL_TOP_PAD + PORTRAIT_DETAIL_TOP_Y + PORTRAIT_DETAIL_IMAGE_SIZE / 2;
       const navOffsetX = PORTRAIT_DETAIL_IMAGE_SIZE / 2 + PROF_NAV_GAP + PROF_NAV_BTN_SIZE / 2;
-      this.prevProfBtn = new Button(
-        this,
-        width / 2 - navOffsetX,
-        navY,
-        '',
-        PROF_NAV_BTN_SIZE,
-        PROF_NAV_BTN_SIZE,
-      ).setIcon('icon_chevron_left', 22);
-      this.nextProfBtn = new Button(
-        this,
-        width / 2 + navOffsetX,
-        navY,
-        '',
-        PROF_NAV_BTN_SIZE,
-        PROF_NAV_BTN_SIZE,
-      ).setIcon('icon_chevron_right', 22);
+      this.prevProfBtn = new Button(this, width / 2 - navOffsetX, navY, '', {
+        variant: 'secondary',
+        width: PROF_NAV_BTN_SIZE,
+        height: PROF_NAV_BTN_SIZE,
+      }).setIcon('icon_chevron_left', 22);
+      this.nextProfBtn = new Button(this, width / 2 + navOffsetX, navY, '', {
+        variant: 'secondary',
+        width: PROF_NAV_BTN_SIZE,
+        height: PROF_NAV_BTN_SIZE,
+      }).setIcon('icon_chevron_right', 22);
       for (const navBtn of [this.prevProfBtn, this.nextProfBtn]) {
         navBtn.setDepth(101);
         navBtn.setVisible(false);

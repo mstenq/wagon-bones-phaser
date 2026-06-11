@@ -145,7 +145,7 @@ export class DifficultySelectScene extends Scene {
       this.divider.setDepth(55);
     }
 
-    this.backBtn = new Button(this, 72, 40, '← Back', 120, 36);
+    this.backBtn = new Button(this, 72, 40, '← Back', { variant: 'secondary', width: 120, height: 36 });
     this.backBtn.setDepth(100);
     this.backBtn.onClick(() => this.handleBack());
 
@@ -193,12 +193,20 @@ export class DifficultySelectScene extends Scene {
       : landscapeStartX + landscapeSeedW + landscapeBtnGap + landscapeEmbarkW / 2;
     const actionY = this.isPortrait ? btnY : landscapeY;
 
-    this.seedBtn = new Button(this, seedX, actionY, 'Seeded Run', this.isPortrait ? seedBtnW : landscapeSeedW, 48);
+    this.seedBtn = new Button(this, seedX, actionY, 'Seeded Run', {
+      variant: 'secondary',
+      size: 'lg',
+      width: this.isPortrait ? seedBtnW : landscapeSeedW,
+    });
     this.seedBtn.setDepth(100);
     this.seedBtn.setVisible(!this.isPortrait);
     this.seedBtn.onClick(() => this.openSeededRunModal());
 
-    this.embarkBtn = new Button(this, embarkX, actionY, 'Embark', this.isPortrait ? embarkW : landscapeEmbarkW, 48);
+    this.embarkBtn = new Button(this, embarkX, actionY, 'Embark', {
+      variant: 'primary',
+      size: 'lg',
+      width: this.isPortrait ? embarkW : landscapeEmbarkW,
+    });
     this.embarkBtn.setDepth(100);
     this.embarkBtn.setVisible(!this.isPortrait);
     this.embarkBtn.onClick(() => this.embarkWithSeed(''));
@@ -206,22 +214,16 @@ export class DifficultySelectScene extends Scene {
     if (this.isPortrait) {
       const navY = DETAIL_TOP_PAD + PORTRAIT_DETAIL_TOP_Y + PORTRAIT_DETAIL_IMAGE_SIZE / 2;
       const navOffsetX = PORTRAIT_DETAIL_IMAGE_SIZE / 2 + DIFF_NAV_GAP + DIFF_NAV_BTN_SIZE / 2;
-      this.prevDiffBtn = new Button(
-        this,
-        width / 2 - navOffsetX,
-        navY,
-        '',
-        DIFF_NAV_BTN_SIZE,
-        DIFF_NAV_BTN_SIZE,
-      ).setIcon('icon_chevron_left', 22);
-      this.nextDiffBtn = new Button(
-        this,
-        width / 2 + navOffsetX,
-        navY,
-        '',
-        DIFF_NAV_BTN_SIZE,
-        DIFF_NAV_BTN_SIZE,
-      ).setIcon('icon_chevron_right', 22);
+      this.prevDiffBtn = new Button(this, width / 2 - navOffsetX, navY, '', {
+        variant: 'secondary',
+        width: DIFF_NAV_BTN_SIZE,
+        height: DIFF_NAV_BTN_SIZE,
+      }).setIcon('icon_chevron_left', 22);
+      this.nextDiffBtn = new Button(this, width / 2 + navOffsetX, navY, '', {
+        variant: 'secondary',
+        width: DIFF_NAV_BTN_SIZE,
+        height: DIFF_NAV_BTN_SIZE,
+      }).setIcon('icon_chevron_right', 22);
       for (const navBtn of [this.prevDiffBtn, this.nextDiffBtn]) {
         navBtn.setDepth(101);
         navBtn.setVisible(false);

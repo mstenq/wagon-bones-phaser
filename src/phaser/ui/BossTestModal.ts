@@ -48,7 +48,7 @@ export class BossTestModal extends GameObjects.Container {
     for (const boss of bosses) {
       const minLeg = boss.minimumLeg ?? 1;
       const label = minLeg > 1 ? `${boss.name} (leg ${minLeg}+)` : boss.name;
-      const btn = new Button(scene, 0, rowY, label, btnW, ROW_H);
+      const btn = new Button(scene, 0, rowY, label, { variant: 'secondary', width: btnW, height: ROW_H });
       btn.onClick(() => startBoss(boss));
       this.shell.scrollContainer.add(btn);
       rowY += ROW_H + ROW_GAP;

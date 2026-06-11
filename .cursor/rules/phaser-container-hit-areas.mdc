@@ -1,0 +1,18 @@
+---
+description: Phaser Container pointer input — use Zone child, not setInteractive rects
+globs:
+  - src/phaser/**/*.ts
+alwaysApply: false
+---
+
+# Phaser Container hit areas
+
+**Do not** call `container.setInteractive(Rectangle…)` for center-anchored UI. Use a **Zone child** at `(0, 0, w, h)` and bind pointer events on the zone.
+
+```ts
+const hitZone = scene.add.zone(0, 0, w, h);
+container.add([/* visuals */, hitZone]);
+hitZone.setInteractive({ useHandCursor: true });
+```
+
+Reference: `src/phaser/ui/Button.ts`, `src/phaser/ui/ToggleCheckbox.ts`. Full notes: AGENTS.md § Container hit areas.

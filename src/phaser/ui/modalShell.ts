@@ -140,8 +140,7 @@ export function createModalActionButton(
     layout.panelX + layout.panelW / 2,
     layout.panelY + layout.panelH - bottomOffset,
     label,
-    buttonWidth,
-    buttonHeight,
+    { variant: 'secondary', size: 'sm', width: buttonWidth, height: buttonHeight },
   );
   btn.onClick(onClick);
   return btn;

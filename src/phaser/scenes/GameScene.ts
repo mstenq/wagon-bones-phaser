@@ -488,17 +488,31 @@ export class GameScene extends Scene {
     this.devPanel.build();
 
     // Create buttons (all hidden initially)
-    this.readyBtn = new Button(this, btnCenterX, btnY, 'Roll Selected', 200, 40).onClick(() => this.onReadyToRoll());
-    this.rollBtn = new Button(this, btnCenterX, btnY, 'Roll!', 160, 40).onClick(() => this.onRoll());
-    this.scoreBtn = new Button(this, hud.scoreBtnX, btnY, 'Score Hand', hud.scoreBtnW, 40).onClick(() =>
-      this.onScore(),
+    this.readyBtn = new Button(this, btnCenterX, btnY, 'Roll Selected', {
+      variant: 'secondary',
+      width: 200,
+      height: 40,
+    }).onClick(() => this.onReadyToRoll());
+    this.rollBtn = new Button(this, btnCenterX, btnY, 'Roll!', { variant: 'secondary', width: 160, height: 40 }).onClick(
+      () => this.onRoll(),
     );
-    this.rerollBtn = new Button(this, hud.rerollBtnX, btnY, 'Reroll All', hud.rerollBtnW, 40).onClick(() =>
-      this.onReroll(),
-    );
-    this.continueBtn = new Button(this, btnCenterX, btnY, 'Continue', 160, 40).onClick(() => this.onContinue());
+    this.scoreBtn = new Button(this, hud.scoreBtnX, btnY, 'Score Hand', {
+      variant: 'secondary',
+      width: hud.scoreBtnW,
+      height: 40,
+    }).onClick(() => this.onScore());
+    this.rerollBtn = new Button(this, hud.rerollBtnX, btnY, 'Reroll All', {
+      variant: 'secondary',
+      width: hud.rerollBtnW,
+      height: 40,
+    }).onClick(() => this.onReroll());
+    this.continueBtn = new Button(this, btnCenterX, btnY, 'Continue', {
+      variant: 'primary',
+      width: 160,
+      height: 40,
+    }).onClick(() => this.onContinue());
 
-    this.sortBtn = new Button(this, hud.sortBtnX, btnY, '', hud.sortBtnW, 40)
+    this.sortBtn = new Button(this, hud.sortBtnX, btnY, '', { variant: 'secondary', width: hud.sortBtnW, height: 40 })
       .setIcon('icon_sort', 20)
       .onClick(() => this.onSortDice());
     if (!hud.showInstruction) {
@@ -1082,14 +1096,14 @@ export class GameScene extends Scene {
 
     const selectedIds = this.rollSprites.filter((s) => this.selectedDiceIds.has(s.dieData.id)).map((s) => s.dieData.id);
     const bossWarning = selectedCount > 0 ? gameFacade.round.getBossScoreWarning(selectedIds) : null;
+    const overScoreLimit = selectedCount > selectRoundConfig().scoreSize;
     if (bossWarning) {
       this.bossWarningText.setText(bossWarning);
       this.bossWarningText.setVisible(true);
-      this.scoreBtn.setColor(0x8b2020, 0xb03030);
     } else {
       this.bossWarningText.setVisible(false);
-      this.scoreBtn.setColor(COLORS.BTN_DEFAULT, COLORS.BTN_HOVER);
     }
+    this.scoreBtn.setVariant(bossWarning || overScoreLimit ? 'danger' : 'secondary');
 
     const selectedDice = selectRolledDice().filter((d) => this.selectedDiceIds.has(d.id));
     gameFacade.round.updateHandPreviewOverlay(selectedDice);

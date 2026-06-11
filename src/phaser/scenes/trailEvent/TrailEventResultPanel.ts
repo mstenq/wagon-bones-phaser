@@ -259,7 +259,7 @@ export class TrailEventResultPanel {
     const continueY = this.panelTop + panelH - 30;
 
     const showContinue = () => {
-      this.continueBtn = new Button(scene, contentCX, continueY, 'Continue', 220, 44);
+      this.continueBtn = new Button(scene, contentCX, continueY, 'Continue', { variant: 'primary', width: 220 });
       this.continueBtn.onClick(() => this.onContinue());
     };
 

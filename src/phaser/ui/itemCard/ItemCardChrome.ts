@@ -3,6 +3,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../../game/Constants';
+import { bakeGraphicsToLinearTexture, removeTextureIfExists } from '../rotationSmoothing';
 import type { CardData, CardTextureSource, ItemCardLayout, ItemCardOptions } from './itemCardTypes';
 import { computePriceTagMetrics } from './priceTagLayout';
 
@@ -16,7 +17,9 @@ export interface ItemCardContentResult {
 }
 
 export class ItemCardChrome {
-  readonly cardBg: GameObjects.Graphics;
+  private static nextBgTextureId = 0;
+
+  readonly cardBg: GameObjects.Image;
   readonly soldOverlay: GameObjects.Graphics;
   readonly disabledOverlay: GameObjects.Graphics;
   private readonly scene: Scene;
@@ -24,6 +27,8 @@ export class ItemCardChrome {
   private readonly layout: ItemCardLayout;
   private readonly options: ItemCardOptions;
   private readonly def: CardData;
+  private readonly cardBgTextureKey: string;
+  private readonly cardBgBakeGfx: GameObjects.Graphics;
   private faceDownCover: GameObjects.Graphics | null = null;
   cardImage: GameObjects.Image | null = null;
   costText: GameObjects.Text | null = null;
@@ -40,8 +45,9 @@ export class ItemCardChrome {
     this.layout = layout;
     this.def = def;
     this.options = options;
-
-    this.cardBg = scene.add.graphics();
+    this.cardBgTextureKey = `card_bg_${ItemCardChrome.nextBgTextureId++}`;
+    this.cardBgBakeGfx = scene.add.graphics().setVisible(false);
+    this.cardBg = scene.add.image(0, 0, '__MISSING').setOrigin(0.5);
     this.card.add(this.cardBg);
 
     this.drawCardBackground();
@@ -56,6 +62,11 @@ export class ItemCardChrome {
 
     this.disabledOverlay = scene.add.graphics();
     this.card.add(this.disabledOverlay);
+  }
+
+  destroy(): void {
+    removeTextureIfExists(this.scene, this.cardBgTextureKey);
+    this.cardBgBakeGfx.destroy();
   }
 
   drawBossDisabledOverlay(bossDisabled: boolean): void {
@@ -117,21 +128,33 @@ export class ItemCardChrome {
   }
 
   private drawCardBackground(): void {
-    if (this.options.transparentBg) return;
-
-    const g = this.cardBg;
-    g.clear();
+    if (this.options.transparentBg) {
+      this.cardBg.setVisible(false);
+      return;
+    }
 
     const w = this.layout.cardW;
     const h = this.layout.cardH;
-    const hw = w / 2;
-    const hh = h / 2;
+    const scale = UI.CARD_FACE_TEXTURE_SCALE;
+    const pad = UI.CARD_FACE_TEXTURE_PAD;
+    const bakeW = Math.ceil((w + SHADOW_OFFSET + pad * 2) * scale);
+    const bakeH = Math.ceil((h + SHADOW_OFFSET + pad * 2) * scale);
+    const inset = pad * scale;
+    const faceW = w * scale;
+    const faceH = h * scale;
+    const cornerR = CARD_RADIUS * scale;
+    const shadowOffset = SHADOW_OFFSET * scale;
 
-    g.fillStyle(0x000000, SHADOW_ALPHA);
-    g.fillRoundedRect(-hw + SHADOW_OFFSET, -hh + SHADOW_OFFSET, w, h, CARD_RADIUS);
+    this.cardBgBakeGfx.clear();
+    this.cardBgBakeGfx.fillStyle(0x000000, SHADOW_ALPHA);
+    this.cardBgBakeGfx.fillRoundedRect(inset + shadowOffset, inset + shadowOffset, faceW, faceH, cornerR);
+    this.cardBgBakeGfx.fillStyle(COLORS.BG_CARD, 1);
+    this.cardBgBakeGfx.fillRoundedRect(inset, inset, faceW, faceH, cornerR);
 
-    g.fillStyle(COLORS.BG_CARD, 1);
-    g.fillRoundedRect(-hw, -hh, w, h, CARD_RADIUS);
+    bakeGraphicsToLinearTexture(this.scene, this.cardBgBakeGfx, this.cardBgTextureKey, bakeW, bakeH);
+    this.cardBg.setTexture(this.cardBgTextureKey);
+    this.cardBg.setDisplaySize(w, h);
+    this.cardBg.setVisible(true);
   }
 
   private resolveCardTextureSource(): CardTextureSource {

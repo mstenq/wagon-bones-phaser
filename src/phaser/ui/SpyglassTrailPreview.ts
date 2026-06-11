@@ -75,9 +75,16 @@ export class SpyglassTrailPreview {
 
     const btnW = Math.min(360, contentW - 48);
     const btnY = contentBottom - 96;
-    preview.track(new Button(scene, contentCX, btnY, 'Avoid', btnW, 44).setDepth(10).onClick(callbacks.onAvoid));
     preview.track(
-      new Button(scene, contentCX, btnY + 52, `Investigate (+${investigateMiles} miles)`, btnW, 44)
+      new Button(scene, contentCX, btnY, 'Avoid', { variant: 'secondary', width: btnW })
+        .setDepth(10)
+        .onClick(callbacks.onAvoid),
+    );
+    preview.track(
+      new Button(scene, contentCX, btnY + 52, `Investigate (+${investigateMiles} miles)`, {
+        variant: 'primary',
+        width: btnW,
+      })
         .setDepth(10)
         .onClick(callbacks.onInvestigate),
     );

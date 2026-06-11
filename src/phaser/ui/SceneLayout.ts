@@ -185,9 +185,9 @@ export interface LayoutResult {
   cardBar: CardBarMetrics;
 }
 
-/** True when the viewport is taller than wide (portrait). */
-export function isPortraitLayout(width: number, height: number): boolean {
-  return width <= 970
+/** True on narrow viewports (portrait top-bar layout). */
+export function isPortraitLayout(width: number, _height: number): boolean {
+  return width <= 970;
 }
 
 /** Shrink chrome on narrow portrait viewports; capped at 1. */

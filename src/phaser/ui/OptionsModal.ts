@@ -1,8 +1,7 @@
 // ─── OptionsModal ───
-// Simple options modal with restart and return to menu.
+// Simple options modal with settings and return to menu.
 
 import { GameObjects, Scene } from 'phaser';
-import { resetAllGameStores } from '../../game/store';
 import { isDevMode } from '../../game/DevMode';
 import { ScoreAnimTimingsModal } from '../scenes/dev/ScoreAnimTimingsModal';
 import { Button } from './Button';
@@ -10,7 +9,6 @@ import { BossTestModal } from './BossTestModal';
 import { EquipmentCatalogModal } from './EquipmentCatalogModal';
 import { SoundsSettingsModal } from './SoundsSettingsModal';
 import { PreferencesSettingsModal } from './PreferencesSettingsModal';
-import { clearAutoSave } from '../AutoSaveManager';
 import { exportGameFromScene, exportPreviousAutoSaveFromStorage, performLoadGame } from '../SaveLoadIO';
 import { createModalShell, finalizeModal, wireModalBackdropDismiss } from './modalShell';
 import { createScrollableViewport, type ScrollableViewportHandle } from './ScrollableViewport';
@@ -93,15 +91,6 @@ export class OptionsModal extends GameObjects.Container {
         },
       },
       {
-        label: 'New Run',
-        onClick: () => {
-          this.destroy();
-          clearAutoSave();
-          resetAllGameStores();
-          scene.scene.start('MainMenu', {});
-        },
-      },
-      {
         label: 'Main Menu',
         onClick: () => {
           this.destroy();
@@ -138,14 +127,18 @@ export class OptionsModal extends GameObjects.Container {
 
     let layoutY = CONTENT_PAD_TOP + BTN_H / 2;
     for (const entry of menuEntries) {
-      const btn = new Button(scene, 0, layoutY, entry.label, btnW, BTN_H);
+      const btn = new Button(scene, 0, layoutY, entry.label, { variant: 'secondary', width: btnW, height: BTN_H });
       btn.onClick(entry.onClick);
       this.scrollViewport.content.add(btn);
       layoutY += BTN_H + BTN_GAP;
     }
     this.scrollViewport.setContentHeight(layoutY + CONTENT_PAD_TOP);
 
-    const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 30, 'Close', 120, 34);
+    const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 30, 'Close', {
+      variant: 'secondary',
+      size: 'sm',
+      width: 120,
+    });
     closeBtn.onClick(close);
     this.add(closeBtn);
 

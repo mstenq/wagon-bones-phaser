@@ -125,7 +125,11 @@ export class GameOver extends Scene {
         })
         .setOrigin(0.5);
 
-      const copyBtn = new Button(this, width / 2, seedY + 34, 'Copy Seed', 150, 36);
+      const copyBtn = new Button(this, width / 2, seedY + 34, 'Copy Seed', {
+        variant: 'secondary',
+        width: 150,
+        height: 36,
+      });
       copyBtn.onClick(() => {
         if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
         void navigator.clipboard.writeText(runSeed);
@@ -134,21 +138,27 @@ export class GameOver extends Scene {
     }
 
     if (isStoryVictory) {
-      new Button(this, width / 2, btnBaseY, 'Keep Wandering', 220, 48).onClick(() => {
-        runActions.patch({ endlessMode: true, storyVictoryPending: false });
-        this.scene.start('TrailEvent', {});
-      });
-      new Button(this, width / 2, btnBaseY + 58, 'Make Camp', 220, 48).onClick(() => {
-        clearAutoSave();
-        resetAllGameStores();
-        this.scene.start('MainMenu', {});
-      });
+      new Button(this, width / 2, btnBaseY, 'Keep Wandering', { variant: 'primary', size: 'lg', width: 220 }).onClick(
+        () => {
+          runActions.patch({ endlessMode: true, storyVictoryPending: false });
+          this.scene.start('TrailEvent', {});
+        },
+      );
+      new Button(this, width / 2, btnBaseY + 58, 'Make Camp', { variant: 'secondary', size: 'lg', width: 220 }).onClick(
+        () => {
+          clearAutoSave();
+          resetAllGameStores();
+          this.scene.start('MainMenu', {});
+        },
+      );
     } else {
-      new Button(this, width / 2, btnBaseY, 'Play Again', 200, 48).onClick(() => {
-        clearAutoSave();
-        resetAllGameStores();
-        this.scene.start('MainMenu', {});
-      });
+      new Button(this, width / 2, btnBaseY, 'Play Again', { variant: 'primary', size: 'lg', width: 200 }).onClick(
+        () => {
+          clearAutoSave();
+          resetAllGameStores();
+          this.scene.start('MainMenu', {});
+        },
+      );
     }
 
     EventBus.emit(Events.SCENE_READY, this);

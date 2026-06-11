@@ -187,10 +187,7 @@ describe('shopStock', () => {
 
   test('appendShopStockForSlots keeps unsold rows and only replaces sold slots', () => {
     const existing = shopRowsToStored(generateShopStockRows().slice(0, 2));
-    const mixed = [
-      { ...existing[0]!, sold: true as const },
-      { ...existing[1]! },
-    ];
+    const mixed = [{ ...existing[0]!, sold: true as const }, { ...existing[1]! }];
 
     const refreshed = appendShopStockForSlots(mixed, 3);
 

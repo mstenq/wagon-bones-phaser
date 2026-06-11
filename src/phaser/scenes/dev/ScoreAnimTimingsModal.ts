@@ -53,11 +53,16 @@ export class ScoreAnimTimingsModal extends GameObjects.Container {
 
     const presetY = panelY + TITLE_Y + TITLE_FONT_HALF + TITLE_BOTTOM_GAP + PRESET_BTN_H / 2;
     const presetGap = 6;
-    const presetW = (panelW - pad * 2 - presetGap * (SCORE_ANIM_SPEED_PRESETS.length - 1)) / SCORE_ANIM_SPEED_PRESETS.length;
+    const presetW =
+      (panelW - pad * 2 - presetGap * (SCORE_ANIM_SPEED_PRESETS.length - 1)) / SCORE_ANIM_SPEED_PRESETS.length;
 
     SCORE_ANIM_SPEED_PRESETS.forEach((preset, index) => {
       const cx = panelX + pad + presetW / 2 + index * (presetW + presetGap);
-      const btn = new Button(scene, cx, presetY, SCORE_ANIM_SPEED_PRESET_LABELS[preset], presetW, PRESET_BTN_H);
+      const btn = new Button(scene, cx, presetY, SCORE_ANIM_SPEED_PRESET_LABELS[preset], {
+        variant: 'secondary',
+        width: presetW,
+        height: PRESET_BTN_H,
+      });
       btn.onClick(() => this.applyPreset(preset));
       this.presetButtons.push(btn);
       this.add(btn);

@@ -664,9 +664,11 @@ export class RoundInfoPanel extends GameObjects.Container {
     if (showRoundActions) {
       const playY = hasSkip ? actionY - BTN_H - BTN_GAP : actionY;
 
-      const playBtn = new Button(scene, absX, y + playY, 'Play Round', width - 30, BTN_H)
-        .setColor(0x2d6b2d, 0x3d8b3d)
-        .setDepth(depth + 5);
+      const playBtn = new Button(scene, absX, y + playY, 'Play Round', {
+        variant: 'success',
+        width: width - 30,
+        height: BTN_H,
+      }).setDepth(depth + 5);
       if (config.onPlay) playBtn.onClick(config.onPlay);
       this.registerButton(playBtn);
 
@@ -679,9 +681,11 @@ export class RoundInfoPanel extends GameObjects.Container {
         const skipBtnX = x + tagX + TAG_SIZE + 10 + skipBtnW / 2;
 
         this.addTagBadge(tagX, tagY, tag, TAG_SIZE, config);
-        const skipBtn = new Button(scene, skipBtnX, y + skipY, 'Skip Round', skipBtnW, BTN_H)
-          .setColor(0x8b2020, 0xb03030)
-          .setDepth(depth + 5);
+        const skipBtn = new Button(scene, skipBtnX, y + skipY, 'Skip Round', {
+          variant: 'danger',
+          width: skipBtnW,
+          height: BTN_H,
+        }).setDepth(depth + 5);
         if (config.onSkip) skipBtn.onClick(config.onSkip);
         this.registerButton(skipBtn);
 
@@ -699,9 +703,11 @@ export class RoundInfoPanel extends GameObjects.Container {
     }
 
     if (showBossReroll) {
-      const rerollBtn = new Button(scene, absX, y + actionY, 'Reroll $10', width - 30, BTN_H)
-        .setColor(0x6b2d6b, 0x8b3d8b)
-        .setDepth(depth + 5);
+      const rerollBtn = new Button(scene, absX, y + actionY, 'Reroll $10', {
+        variant: 'warning',
+        width: width - 30,
+        height: BTN_H,
+      }).setDepth(depth + 5);
       const rerollEnabled = config.canRerollBoss?.() ?? true;
       rerollBtn.setEnabled(rerollEnabled);
       rerollBtn.onClick(config.onRerollBoss!);
@@ -743,15 +749,19 @@ export class RoundInfoPanel extends GameObjects.Container {
       const playCenterX = innerLeft + ROW_TAG_SIZE + gap + skipW + gap + playW / 2;
 
       this.addTagBadge(tagX, tagY, tag, ROW_TAG_SIZE, config);
-      const skipBtn = new Button(scene, skipCenterX, actionY, 'Skip', skipW, btnH)
-        .setColor(0x8b2020, 0xb03030)
-        .setDepth(depth + 5);
+      const skipBtn = new Button(scene, skipCenterX, actionY, 'Skip', {
+        variant: 'danger',
+        width: skipW,
+        height: btnH,
+      }).setDepth(depth + 5);
       if (config.onSkip) skipBtn.onClick(config.onSkip);
       this.registerButton(skipBtn);
 
-      const playBtn = new Button(scene, playCenterX, actionY, 'Play Round', playW, btnH)
-        .setColor(0x2d6b2d, 0x3d8b3d)
-        .setDepth(depth + 5);
+      const playBtn = new Button(scene, playCenterX, actionY, 'Play Round', {
+        variant: 'success',
+        width: playW,
+        height: btnH,
+      }).setDepth(depth + 5);
       if (config.onPlay) playBtn.onClick(config.onPlay);
       this.registerButton(playBtn);
 
@@ -769,34 +779,42 @@ export class RoundInfoPanel extends GameObjects.Container {
       const rerollCenterX = innerLeft + btnW / 2;
       const playCenterX = innerLeft + btnW + gap + btnW / 2;
 
-      const rerollBtn = new Button(scene, rerollCenterX, actionY, 'Reroll $10', btnW, btnH)
-        .setColor(0x6b2d6b, 0x8b3d8b)
-        .setDepth(depth + 5);
+      const rerollBtn = new Button(scene, rerollCenterX, actionY, 'Reroll $10', {
+        variant: 'warning',
+        width: btnW,
+        height: btnH,
+      }).setDepth(depth + 5);
       rerollBtn.setEnabled(config.canRerollBoss?.() ?? true);
       rerollBtn.onClick(config.onRerollBoss!);
       this.registerButton(rerollBtn);
 
-      const playBtn = new Button(scene, playCenterX, actionY, 'Play Round', btnW, btnH)
-        .setColor(0x2d6b2d, 0x3d8b3d)
-        .setDepth(depth + 5);
+      const playBtn = new Button(scene, playCenterX, actionY, 'Play Round', {
+        variant: 'success',
+        width: btnW,
+        height: btnH,
+      }).setDepth(depth + 5);
       if (config.onPlay) playBtn.onClick(config.onPlay);
       this.registerButton(playBtn);
       return;
     }
 
     if (showRoundActions) {
-      const playBtn = new Button(scene, x + width / 2, actionY, 'Play Round', innerW, btnH)
-        .setColor(0x2d6b2d, 0x3d8b3d)
-        .setDepth(depth + 5);
+      const playBtn = new Button(scene, x + width / 2, actionY, 'Play Round', {
+        variant: 'success',
+        width: innerW,
+        height: btnH,
+      }).setDepth(depth + 5);
       if (config.onPlay) playBtn.onClick(config.onPlay);
       this.registerButton(playBtn);
       return;
     }
 
     if (showBossReroll) {
-      const rerollBtn = new Button(scene, x + width / 2, actionY, 'Reroll $10', innerW, btnH)
-        .setColor(0x6b2d6b, 0x8b3d8b)
-        .setDepth(depth + 5);
+      const rerollBtn = new Button(scene, x + width / 2, actionY, 'Reroll $10', {
+        variant: 'warning',
+        width: innerW,
+        height: btnH,
+      }).setDepth(depth + 5);
       rerollBtn.setEnabled(config.canRerollBoss?.() ?? true);
       rerollBtn.onClick(config.onRerollBoss!);
       this.registerButton(rerollBtn);

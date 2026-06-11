@@ -482,7 +482,7 @@ export class BoosterPackScene extends Scene {
     this.pendingUsedCardIndices = [];
 
     // Skip button
-    this.skipBtn = new Button(this, this.contentCX, skipBtnY, 'Skip', 140, 44);
+    this.skipBtn = new Button(this, this.contentCX, skipBtnY, 'Skip', { variant: 'secondary', width: 140 });
     this.skipBtn.onClick(() => this.onSkip());
   }
 

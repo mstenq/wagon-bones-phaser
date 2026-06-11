@@ -19,7 +19,7 @@ export class ItemCardAuras {
     scene: Scene,
     card: GameObjects.Container,
     layout: ItemCardLayout,
-    _getCardBg: () => GameObjects.Graphics,
+    _getCardBg: () => GameObjects.Image,
     getCardImage: () => GameObjects.Image | null,
   ) {
     this.scene = scene;

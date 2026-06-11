@@ -3,6 +3,7 @@ import { EventBus, Events } from '../../game/EventBus';
 import { resetAllGameStores } from '../../game/store';
 import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import { Button } from '../ui/Button';
+import { OptionsModal } from '../ui/OptionsModal';
 import { clearAutoSave } from '../AutoSaveManager';
 import { ensureBackgroundMusic } from '../BackgroundMusic';
 
@@ -46,12 +47,21 @@ export class MainMenu extends Scene {
       })
       .setOrigin(0.5);
 
-    // Start button
-    new Button(this, width / 2, height * 0.57, 'Start Journey', 220, 52).onClick(() => {
-      clearAutoSave();
-      resetAllGameStores();
-      this.scene.start('ProfessionSelect', {});
-    });
+    const startY = height * 0.57;
+    const buttonGap = 14;
+
+    new Button(this, width / 2, startY, 'Start Journey', { variant: 'primary', size: 'xl', width: 220 }).onClick(
+      () => {
+        clearAutoSave();
+        resetAllGameStores();
+        this.scene.start('ProfessionSelect', {});
+      },
+    );
+
+    const optionsY = startY + 52 / 2 + buttonGap + 48 / 2;
+    new Button(this, width / 2, optionsY, 'Options', { variant: 'secondary', size: 'lg', width: 220 }).onClick(
+      () => new OptionsModal(this, 0, width, height),
+    );
 
     EventBus.emit(Events.SCENE_READY, this);
   }

@@ -320,7 +320,7 @@ export class TrailEventScene extends Scene {
       const choice = availableChoices[i];
       const btnY = choicesY + i * 56;
       const btnW = Math.min(380, panelW - 60);
-      const btn = new Button(this, contentCX, btnY, choice.label, btnW, 44);
+      const btn = new Button(this, contentCX, btnY, choice.label, { variant: 'primary', width: btnW });
       btn.onClick(() => this.onChoiceSelected(choice));
       this.choiceButtons.push(btn);
       this.eventContainer.add(btn);
@@ -780,7 +780,10 @@ export class TrailEventScene extends Scene {
 
   /** Old saves resolved before `resolvedDisplay` existed — bare Continue only. */
   private showResolvedContinueFallback(layout: Pick<LayoutResult, 'contentCX' | 'contentBottom'>): void {
-    this.resolvedContinueBtn = new Button(this, layout.contentCX, layout.contentBottom - 28, 'Continue', 200, 44);
+    this.resolvedContinueBtn = new Button(this, layout.contentCX, layout.contentBottom - 28, 'Continue', {
+      variant: 'primary',
+      width: 200,
+    });
     this.resolvedContinueBtn.onClick(() => this.proceedToNextScene());
   }
 

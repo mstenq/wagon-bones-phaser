@@ -10,16 +10,16 @@ SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; gameplay lives in Phase
 
 ## Quick Commands
 
-| Task | Command |
-|------|---------|
-| Dev server | `bun run dev` (http://localhost:8080) |
-| Build | `bun run build` |
-| Typecheck | `bun run typecheck` |
-| Tests | `bun test` |
-| Single test | `bun test src/game/__tests__/items/myTest.test.ts` |
-| Format | `bun run format` |
-| Tests + format | `bun run check` |
-| CI locally | `bun run ci` |
+| Task           | Command                                            |
+| -------------- | -------------------------------------------------- |
+| Dev server     | `bun run dev` (http://localhost:8080)              |
+| Build          | `bun run build`                                    |
+| Typecheck      | `bun run typecheck`                                |
+| Tests          | `bun test`                                         |
+| Single test    | `bun test src/game/__tests__/items/myTest.test.ts` |
+| Format         | `bun run format`                                   |
+| Tests + format | `bun run check`                                    |
+| CI locally     | `bun run ci`                                       |
 
 **Never use `npm`, `npx`, or `yarn`.** Use `bun` / `bunx` exclusively.
 
@@ -35,15 +35,15 @@ Fix failures in code you touched. Pre-existing `tsc` errors elsewhere: clear onl
 
 This repo indexes via the **Gortex** MCP server (`.cursor/mcp.json`). **Use Gortex graph tools for architecture and “where does X live?”** — not for input bugs or line-level debugging. See `.cursor/rules/gortex-workflow.mdc`.
 
-| Need | Tool |
-|------|------|
-| Orient / index health | `graph_stats` or `index_health` |
-| Task-scoped context | `smart_context` with a natural-language `task` |
-| Find symbols | `search_symbols` |
-| Read one symbol | `get_symbol_source` |
-| Callers / callees | `get_call_chain`, `find_usages` |
-| Literal search | `search_text` |
-| Community overview | `.cursor/rules/gortex-communities.mdc` |
+| Need                  | Tool                                           |
+| --------------------- | ---------------------------------------------- |
+| Orient / index health | `graph_stats` or `index_health`                |
+| Task-scoped context   | `smart_context` with a natural-language `task` |
+| Find symbols          | `search_symbols`                               |
+| Read one symbol       | `get_symbol_source`                            |
+| Callers / callees     | `get_call_chain`, `find_usages`                |
+| Literal search        | `search_text`                                  |
+| Community overview    | `.cursor/rules/gortex-communities.mdc`         |
 
 ## Architecture (constitution only)
 
@@ -97,14 +97,30 @@ Default missing fields with `??` in deserialize paths. Do not bump `SAVE_VERSION
 
 ### Container hit areas
 
-Containers use a **center transform**. Hit rects must match how children are drawn:
+**Preferred:** put a **`Zone` child** at `(0, 0)` with face `width`/`height` and wire pointer events on the zone — not on the Container. Zone origin is center-based and aligns with center-anchored `fillRoundedRect(-w/2, -h/2, w, h)` without manual `Rectangle` math. See `Button.ts`, `ToggleCheckbox.ts`.
 
-| Pattern | Draw | Hit area |
-|---------|------|----------|
-| **Center-anchored** (preferred) | from `(-w/2, -h/2)` | `Rectangle(0, 0, w, h)` |
-| **Top-left children** | from `(0, 0)` | `Rectangle(w/2, h/2, w, h)` |
+```ts
+// ✅ Preferred — center-anchored Container + Zone hit target
+const hitZone = scene.add.zone(0, 0, w, h);
+container.add([, /* graphics */ hitZone]);
+hitZone.setInteractive({ useHandCursor: true });
+hitZone.on('pointerdown', onPress);
+```
 
-Call `setSize(w, h)` before `setInteractive(...)`.
+**If you must use `container.setInteractive`:** after `setSize(w, h)`, custom hit rects are easy to get wrong (symptoms: shifted up-left, or only the label clickable). Avoid guessing offsets when children are center-anchored or visually offset.
+
+| Pattern               | Child draw                          | Container hit rect (legacy — prefer Zone)                                               |
+| --------------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
+| **Center-anchored**   | `fillRoundedRect(-w/2, -h/2, w, h)` | try `setSize` + `setInteractive({ useHandCursor: true })` with **no** custom rect first |
+| **Top-left children** | `fillRoundedRect(0, 0, w, h)`       | see `DicePouch.ts`                                                                      |
+
+```ts
+// ❌ WRONG — custom rects on Containers are fragile; use a Zone instead
+container.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
+container.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
+```
+
+**Motion vs hit area:** decorative depth offset on `Button` does not change the Zone size — match the **face** only. Interaction tweens target `faceContainer`, not the Zone.
 
 ### Responsive run scenes
 
@@ -140,22 +156,22 @@ Use `wireShopCardPointerUp` (requires pointerdown on the card) so scene transiti
 
 By **effect category**, never `phaseN.test.ts`. Append to the matching file:
 
-| File | Topic |
-|------|-------|
-| `items/xMult.test.ts` | xMult |
-| `items/nonScoring.test.ts` | Lifecycle, shop, reroll, misc |
-| `items/pipEffects.test.ts` | Per-pip |
-| `items/statefulMult.test.ts` | Stateful additive mult |
-| `items/handEffects.test.ts` | Hand-type mult |
-| `items/conditionalEffects.test.ts` | Conditional mult |
-| `items/parityEffects.test.ts` | Even/odd |
-| `items/heldInHand.test.ts` | Held-in-hand |
-| `items/copyEquipment.test.ts` | Copy equipment |
-| `items/loadedDice.test.ts` | Loaded dice |
-| `items/addMult.test.ts` | `ADD_MULT` |
-| `items/legStart.test.ts` | Leg / round start |
-| `items/stickerEffects.test.ts` | Stickers |
-| `scoring.test.ts`, `bosses.test.ts`, `trailEvents.test.ts`, … | Core / meta |
+| File                                                          | Topic                         |
+| ------------------------------------------------------------- | ----------------------------- |
+| `items/xMult.test.ts`                                         | xMult                         |
+| `items/nonScoring.test.ts`                                    | Lifecycle, shop, reroll, misc |
+| `items/pipEffects.test.ts`                                    | Per-pip                       |
+| `items/statefulMult.test.ts`                                  | Stateful additive mult        |
+| `items/handEffects.test.ts`                                   | Hand-type mult                |
+| `items/conditionalEffects.test.ts`                            | Conditional mult              |
+| `items/parityEffects.test.ts`                                 | Even/odd                      |
+| `items/heldInHand.test.ts`                                    | Held-in-hand                  |
+| `items/copyEquipment.test.ts`                                 | Copy equipment                |
+| `items/loadedDice.test.ts`                                    | Loaded dice                   |
+| `items/addMult.test.ts`                                       | `ADD_MULT`                    |
+| `items/legStart.test.ts`                                      | Leg / round start             |
+| `items/stickerEffects.test.ts`                                | Stickers                      |
+| `scoring.test.ts`, `bosses.test.ts`, `trailEvents.test.ts`, … | Core / meta                   |
 
 **Every new item in `items.ts` needs tests** before the task is done (real effect path, not metadata-only).
 

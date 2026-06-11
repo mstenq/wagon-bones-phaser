@@ -18,6 +18,7 @@ import { ItemCardChrome } from './itemCard/ItemCardChrome';
 import { ItemCardHints } from './itemCard/ItemCardHints';
 import { ItemCardTooltip } from './itemCard/ItemCardTooltip';
 import type { CardActionTabConfig, CardData, ItemCardLayout, ItemCardOptions } from './itemCard/itemCardTypes';
+import { disableRoundPixelsTree } from './rotationSmoothing';
 
 export type { CardActionTabConfig, CardData, ItemCardOptions } from './itemCard/itemCardTypes';
 
@@ -95,6 +96,8 @@ export class ItemCard extends GameObjects.Container {
 
     this.on('pointerover', this.onPointerOver, this);
     this.on('pointerout', this.onPointerOut, this);
+
+    this.syncRotationSmoothing();
   }
 
   get def(): CardData {
@@ -121,6 +124,7 @@ export class ItemCard extends GameObjects.Container {
     if (equipment) this._equipment = equipment;
     this.badges.render(this._equipment);
     this.applyFaceDownSuppression();
+    this.syncRotationSmoothing();
   }
 
   /** Suppress arcane hover strikes while the card is being dragged. */
@@ -234,11 +238,13 @@ export class ItemCard extends GameObjects.Container {
   updateHints(round: RoundHintContext | null, player: ItemDisplayContext): void {
     this.setTooltipContext(round, player);
     this.hints.update(round, player, (r, p) => this.resolveDisplay(r, p));
+    this.syncRotationSmoothing();
   }
 
   showActionTabs(tabs: CardActionTabConfig[], options?: ActionTabsShowOptions): void {
     this.actionTabs.show(tabs, options);
     this.tooltip.showActive((r, p) => this.resolveDisplay(r, p));
+    this.syncRotationSmoothing();
   }
 
   hideActionTabs(animate: boolean = false): void {
@@ -267,6 +273,7 @@ export class ItemCard extends GameObjects.Container {
     this.badges.destroy();
     this.auras.destroy();
     this.hints.destroy();
+    this.chrome.destroy();
     super.destroy(fromScene);
   }
 
@@ -287,6 +294,12 @@ export class ItemCard extends GameObjects.Container {
     this.chrome.refreshFaceDown(this._faceDown);
     this.applyFaceDownSuppression();
     this.tooltip.setFaceDown(this._faceDown);
+    this.syncRotationSmoothing();
+  }
+
+  /** Per-card only — keeps global roundPixels for top-bar text on mobile. */
+  private syncRotationSmoothing(): void {
+    disableRoundPixelsTree(this);
   }
 
   private applyFaceDownSuppression(): void {

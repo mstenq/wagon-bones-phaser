@@ -64,25 +64,19 @@ export class SeededRunModal extends GameObjects.Container {
     const close = () => this.destroy();
 
     const btnGap = 16;
-    const cancelBtn = new Button(
-      scene,
-      panelX + panelW / 2 - buttonW / 2 - btnGap / 2,
-      buttonRowY,
-      'Cancel',
-      buttonW,
-      buttonH,
-    );
+    const cancelBtn = new Button(scene, panelX + panelW / 2 - buttonW / 2 - btnGap / 2, buttonRowY, 'Cancel', {
+      variant: 'secondary',
+      width: buttonW,
+      height: buttonH,
+    });
     cancelBtn.onClick(close);
     this.add(cancelBtn);
 
-    const embarkBtn = new Button(
-      scene,
-      panelX + panelW / 2 + buttonW / 2 + btnGap / 2,
-      buttonRowY,
-      'Embark',
-      buttonW,
-      buttonH,
-    );
+    const embarkBtn = new Button(scene, panelX + panelW / 2 + buttonW / 2 + btnGap / 2, buttonRowY, 'Embark', {
+      variant: 'primary',
+      width: buttonW,
+      height: buttonH,
+    });
     embarkBtn.onClick(() => {
       const seed = this.seedInput?.value.trim() ?? '';
       close();

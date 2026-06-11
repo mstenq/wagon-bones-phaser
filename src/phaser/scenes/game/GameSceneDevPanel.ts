@@ -35,9 +35,11 @@ export class GameSceneDevPanel {
     this.buildLoadedDiceControl();
     if (isDevMode()) {
       const devBtnX = this.deps.scene.scale.width - 70;
-      this.devWinBtn = new Button(this.deps.scene, devBtnX, 280, 'Dev Win', 120, 32)
-        .setColor(0x553388, 0x7744aa)
-        .onClick(() => this.deps.onDevWin());
+      this.devWinBtn = new Button(this.deps.scene, devBtnX, 280, 'Dev Win', {
+        variant: 'warning',
+        size: 'sm',
+        width: 120,
+      }).onClick(() => this.deps.onDevWin());
       this.devWinBtn.setDepth(100);
 
       this.devBgLabel = this.deps.scene.add
@@ -50,15 +52,19 @@ export class GameSceneDevPanel {
         .setOrigin(0.5)
         .setDepth(100);
 
-      this.devBgPrevBtn = new Button(this.deps.scene, devBtnX - 40, 342, '◀', 48, 28)
-        .setColor(0x334455, 0x446677)
-        .onClick(() => this.deps.onDevBgCycle(-1));
+      this.devBgPrevBtn = new Button(this.deps.scene, devBtnX - 40, 342, '◀', {
+        variant: 'secondary',
+        width: 48,
+        height: 28,
+      }).onClick(() => this.deps.onDevBgCycle(-1));
       this.devBgPrevBtn.setDepth(100);
       this.devBgPrevBtn.setLabelFontSize(14);
 
-      this.devBgNextBtn = new Button(this.deps.scene, devBtnX + 40, 342, '▶', 48, 28)
-        .setColor(0x334455, 0x446677)
-        .onClick(() => this.deps.onDevBgCycle(1));
+      this.devBgNextBtn = new Button(this.deps.scene, devBtnX + 40, 342, '▶', {
+        variant: 'secondary',
+        width: 48,
+        height: 28,
+      }).onClick(() => this.deps.onDevBgCycle(1));
       this.devBgNextBtn.setDepth(100);
       this.devBgNextBtn.setLabelFontSize(14);
     } else {
@@ -110,7 +116,10 @@ export class GameSceneDevPanel {
       .setOrigin(0, 0.5)
       .setDepth(50);
 
-    this.loadedDiceDecBtn = new Button(this.deps.scene, controlLeft + 12, controlY, '-', 24, 24).onClick(() => {
+    this.loadedDiceDecBtn = new Button(this.deps.scene, controlLeft + 12, controlY, '-', {
+      variant: 'secondary',
+      size: 'xs',
+    }).onClick(() => {
       this.adjustLoadedDieTarget(-1);
     });
     this.loadedDiceDecBtn.setDepth(50);
@@ -145,7 +154,10 @@ export class GameSceneDevPanel {
       .setOrigin(0.5)
       .setDepth(51);
 
-    this.loadedDiceIncBtn = new Button(this.deps.scene, controlLeft + 88, controlY, '+', 24, 24).onClick(() => {
+    this.loadedDiceIncBtn = new Button(this.deps.scene, controlLeft + 88, controlY, '+', {
+      variant: 'secondary',
+      size: 'xs',
+    }).onClick(() => {
       this.adjustLoadedDieTarget(1);
     });
     this.loadedDiceIncBtn.setDepth(50);
@@ -277,8 +289,7 @@ export class GameSceneDevPanel {
         gridStartX + col * (cellWidth + cellGap),
         gridStartY + row * (cellHeight + cellGap),
         String(value),
-        cellWidth,
-        cellHeight,
+        { variant: 'secondary', width: cellWidth, height: cellHeight },
       ).onClick(() => {
         gameFacade.dice.setLoadedDieTarget(value);
         this.destroyPicker();
@@ -286,7 +297,7 @@ export class GameSceneDevPanel {
       button.setDepth(501);
       button.setLabelFontSize(13);
       if (selected === value) {
-        button.setColor(COLORS.GOLD, COLORS.GOLD);
+        button.setVariant('warning');
         button.setEnabled(false);
       }
       picker.add(button);
@@ -295,28 +306,29 @@ export class GameSceneDevPanel {
     let clearBtnY = panelY + panelHeight - 24;
     if (showLuckySync) {
       const syncBtnY = panelY + panelHeight - 58;
-      const syncBtn = new Button(
-        this.deps.scene,
-        panelCenterX,
-        syncBtnY,
-        'Sync Loaded Die with Lucky Number',
-        panelWidth - 28,
-        26,
-      ).onClick(() => {
+      const syncBtn = new Button(this.deps.scene, panelCenterX, syncBtnY, 'Sync Loaded Die with Lucky Number', {
+        variant: 'secondary',
+        width: panelWidth - 28,
+        height: 26,
+      }).onClick(() => {
         gameFacade.dice.setLoadedDieSyncLucky(true);
         this.destroyPicker();
       });
       syncBtn.setDepth(501);
       syncBtn.setLabelFontSize(10);
       if (syncLucky) {
-        syncBtn.setColor(COLORS.GOLD, COLORS.GOLD);
+        syncBtn.setVariant('warning');
         syncBtn.setEnabled(false);
       }
       picker.add(syncBtn);
       clearBtnY = panelY + panelHeight - 24;
     }
 
-    const clearBtn = new Button(this.deps.scene, panelCenterX, clearBtnY, 'Clear', 86, 26).onClick(() => {
+    const clearBtn = new Button(this.deps.scene, panelCenterX, clearBtnY, 'Clear', {
+      variant: 'danger',
+      width: 86,
+      height: 26,
+    }).onClick(() => {
       gameFacade.dice.setLoadedDieTarget(null);
       this.destroyPicker();
     });

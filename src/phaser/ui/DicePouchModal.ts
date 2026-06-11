@@ -81,7 +81,11 @@ export class DicePouchModal extends GameObjects.Container {
 
     for (let i = 0; i < filterLabels.length; i++) {
       const { label, mode } = filterLabels[i];
-      const btn = new Button(scene, filterStartX + i * (filterBtnW + filterGap), filterY, label, filterBtnW, 28);
+      const btn = new Button(scene, filterStartX + i * (filterBtnW + filterGap), filterY, label, {
+        variant: 'secondary',
+        width: filterBtnW,
+        height: 28,
+      });
       btn.setDepth(CATALOG_CHROME_DEPTH);
       btn.onClick(() => {
         this.filterMode = mode;

@@ -197,10 +197,19 @@ export const COLORS = {
   BG_WIN: 0x1a3a1a,
   BG_LOSE: 0x3a1a1a,
 
-  // Button
+  // Button (legacy flat style)
   BTN_DEFAULT: 0x3a3a5c,
   BTN_HOVER: 0x5a5a8c,
   BTN_DISABLED: 0x2a2a3a,
+
+  // Playful button face colors (Tailwind 500 palette)
+  BTN_FACE_PRIMARY: 0x3b82f6,
+  BTN_FACE_SECONDARY: 0xffffff,
+  BTN_FACE_DARK: 0x2d3236,
+  BTN_FACE_DANGER: 0xef4444,
+  BTN_FACE_WARNING: 0xf97316,
+  BTN_FACE_SUCCESS: 0x22c55e,
+  BTN_FACE_DISABLED: 0x9ca3af,
 
   // Tooltip
   TOOLTIP_BG: 0x1a1a2e,
@@ -233,6 +242,8 @@ export const TEXT_COLORS = {
   SECONDARY: '#ebebeb',
   MUTED: '#c0c0c0',
   DISABLED: '#b0b0b0',
+  /** Dark label on disabled playful button face (BTN_FACE_DISABLED) */
+  BTN_DISABLED_LABEL: '#1f2937',
   GOLD: '#ffcc00',
   MONEY: '#ffd700',
   SCORE_GREEN: '#a2d752',
@@ -338,9 +349,25 @@ export const UI = {
   HUD_Y: 20,
   HUD_ALPHA: 0.85,
 
-  // Buttons
+  // Buttons (legacy flat style — SliderControl, ToggleCheckbox, DicePouch)
   BTN_RADIUS: 0,
   BTN_FONT_SIZE: '18px',
+
+  // Playful button chrome (variant face colors in COLORS.BTN_FACE_*)
+  BTN_CORNER_RADIUS: 10,
+  BTN_DEPTH_OFFSET_X: 2,
+  BTN_DEPTH_OFFSET_Y: 2,
+  BTN_DEPTH_ALPHA: 0.25,
+  BTN_EDGE_WIDTH: 1,
+  BTN_EDGE_DARKEN: 0.15,
+  /** Supersampled face bake — smoother edges when faceContainer rotates */
+  BTN_FACE_TEXTURE_SCALE: 2,
+  BTN_FACE_TEXTURE_PAD: 2,
+
+  /** Shop row chrome (semi-transparent panels) — below stock cards and action buttons. */
+  SHOP_PANEL_DEPTH: 1,
+  /** Hit Trail / Reroll — above SHOP_PANEL_DEPTH so 75% alpha panel does not dim them. */
+  SHOP_ACTION_BTN_DEPTH: 15,
 
   // Cards
   /** Equipment modifier badges (cursed / perishable / leased) */
@@ -358,6 +385,9 @@ export const UI = {
   CARD_RADIUS: 10,
   CARD_SHADOW_OFFSET: 4,
   CARD_SHADOW_ALPHA: 0.35,
+  /** Supersampled card chrome bake — smoother edges when ItemCard rotates (wobble/tilt) */
+  CARD_FACE_TEXTURE_SCALE: 2,
+  CARD_FACE_TEXTURE_PAD: 2,
   CARD_PRICE_TAG_H: 26,
   CARD_PRICE_TAG_W: 50,
   CARD_PRICE_TAG_GAP: 6,
@@ -513,6 +543,24 @@ export const ANIM = {
   DICE_ROW_ELASTIC_EASE_PARAMS: [1.05, 0.85] as [number, number],
   HOVER_DURATION: 100,
   CARD_HOVER_SCALE: 1.05,
+
+  // Button interaction
+  BTN_HOVER_MS: 180,
+  BTN_PRESS_MS: 100,
+  BTN_RELEASE_MS: 320,
+  BTN_ELASTIC_EASE_PARAMS: [1.05, 0.85] as [number, number],
+  BTN_CLICK_PUNCH_MS: 80,
+  /** Wiggle preset: rotation at BTN_WIGGLE_WIDTH_REF; scales down as buttons get wider */
+  BTN_WIGGLE_WIDTH_REF: 120,
+  BTN_WIGGLE_WIDTH_MIN: 48,
+  BTN_WIGGLE_HOVER_ANGLE_MIN: 0.006,
+  BTN_WIGGLE_HOVER_ANGLE_MAX: 0.028,
+  BTN_WIGGLE_HOVER_RANDOM_MIN: 0.7,
+  BTN_WIGGLE_HOVER_RANDOM_MAX: 1.0,
+  BTN_WIGGLE_PRESS_ROTATION_FACTOR: 1.15,
+  /** Hover scale bonus (added to 1.0) — clamped; scales with width like rotation */
+  BTN_HOVER_SCALE_BONUS_MAX: 0.1,
+  BTN_HOVER_SCALE_BONUS_MIN: 0.04,
 
   // Card wobble / tilt / drag swing
   CARD_WOBBLE_ANGLE: 0.022, // radians, ~1°

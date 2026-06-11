@@ -169,7 +169,12 @@ export class PayoutScene extends Scene {
     }
 
     const btnY = Math.min(panelY + panelH + 30, contentBottom - 36);
-    new Button(this, contentCX, btnY, 'Collect & Continue', 260, 50).onClick(() => {
+    new Button(this, contentCX, btnY, 'Collect & Continue', {
+      variant: 'primary',
+      size: 'xl',
+      width: 260,
+      height: 50,
+    }).onClick(() => {
       const journeyDone = gameFacade.meta.collectPayout(payout.total, investmentBonus);
 
       sceneActions.clearPayout();

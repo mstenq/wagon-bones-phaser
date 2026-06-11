@@ -60,7 +60,12 @@ export class RoundModificationsModal extends GameObjects.Container {
       this.add(empty);
     }
 
-    const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 32, 'Close', 120, 32);
+    const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 32, 'Close', {
+      variant: 'secondary',
+      size: 'sm',
+      width: 120,
+      height: 32,
+    });
     closeBtn.onClick(() => this.destroy());
     this.add(closeBtn);
 

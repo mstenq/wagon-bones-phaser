@@ -650,8 +650,11 @@ export class Sidebar extends GameObjects.Container {
     y += rowH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Journey Info Button ───
-    this.journeyInfoBtn = new Button(scene, cx, y + 22, 'JOURNEY INFO', innerW - 8, 38);
-    this.journeyInfoBtn.setTextureBackground(TEXTURES.PANEL_GRAY);
+    this.journeyInfoBtn = new Button(scene, cx, y + 22, 'JOURNEY INFO', {
+      variant: 'dark',
+      width: innerW - 8,
+      height: 38,
+    });
     this.journeyInfoBtn.onClick(() => {
       if (this.onJourneyInfo) this.onJourneyInfo();
     });
@@ -659,8 +662,7 @@ export class Sidebar extends GameObjects.Container {
     y += 50;
 
     // ─── Options Button ───
-    this.optionsBtn = new Button(scene, cx, y + 22, 'OPTIONS', innerW - 8, 38);
-    this.optionsBtn.setTextureBackground(TEXTURES.PANEL_GRAY);
+    this.optionsBtn = new Button(scene, cx, y + 22, 'OPTIONS', { variant: 'dark', width: innerW - 8, height: 38 });
     this.optionsBtn.onClick(() => {
       if (this.onOptions) this.onOptions();
     });
@@ -754,24 +756,18 @@ export class Sidebar extends GameObjects.Container {
       .setOrigin(1, 0.5);
     this.add(this.legText);
 
-    this.journeyInfoBtn = new Button(scene, 0, headerCY, 'Info', ctrlBtnW, ctrlBtnH);
-    this.journeyInfoBtn.setTextureBackground(
-      TEXTURES.PANEL_GRAY,
-      COLORS.SIDEBAR_SECTION_BORDER,
-      COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
-    );
+    this.journeyInfoBtn = new Button(scene, 0, headerCY, 'Info', {
+      variant: 'dark',
+      width: ctrlBtnW,
+      height: ctrlBtnH,
+    });
     applyIcon(this.journeyInfoBtn, 'icon_book');
     this.journeyInfoBtn.onClick(() => {
       if (this.onJourneyInfo) this.onJourneyInfo();
     });
     this.add(this.journeyInfoBtn);
 
-    this.optionsBtn = new Button(scene, 0, headerCY, 'Opts', ctrlBtnW, ctrlBtnH);
-    this.optionsBtn.setTextureBackground(
-      TEXTURES.PANEL_GRAY,
-      COLORS.SIDEBAR_SECTION_BORDER,
-      COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
-    );
+    this.optionsBtn = new Button(scene, 0, headerCY, 'Opts', { variant: 'dark', width: ctrlBtnW, height: ctrlBtnH });
     applyIcon(this.optionsBtn, 'icon_menu');
     this.optionsBtn.onClick(() => {
       if (this.onOptions) this.onOptions();

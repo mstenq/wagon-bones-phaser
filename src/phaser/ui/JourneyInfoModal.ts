@@ -104,7 +104,11 @@ export class JourneyInfoModal extends GameObjects.Container {
     this.showKnowledgeTab();
 
     // Close button
-    this.closeBtn = new Button(scene, this.panelX + this.panelW / 2, this.panelY + this.panelH - 38, 'Close', 120, 34);
+    this.closeBtn = new Button(scene, this.panelX + this.panelW / 2, this.panelY + this.panelH - 38, 'Close', {
+      variant: 'secondary',
+      size: 'sm',
+      width: 120,
+    });
     this.closeBtn.onClick(close);
     this.add(this.closeBtn);
 
@@ -451,9 +455,11 @@ export class JourneyInfoModal extends GameObjects.Container {
       }
 
     if (isDevMode()) {
-      const addBtn = new Button(scene, panelX + panelW / 2, this.panelY + this.panelH - 78, 'Add Permit', 140, 32)
-        .setColor(0x4a3a6b, 0x6a4a8b)
-        .setDepth(510);
+      const addBtn = new Button(scene, panelX + panelW / 2, this.panelY + this.panelH - 78, 'Add Permit', {
+        variant: 'primary',
+        size: 'sm',
+        width: 140,
+      }).setDepth(510);
       addBtn.onClick(() => this.devAddPermit());
       this.tabContent.add(addBtn);
     }
