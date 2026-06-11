@@ -66,6 +66,7 @@ import { playRollAnimation } from '../animations/RollAnimation';
 import { ensureAuraTextures } from '../ui/AuraFX';
 import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
+import { isScoreAnimLabUrl } from './dev/scoreAnimLabUrl';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
 import { computeDiceDisplayScale, computeDiceSpacing, getArcOffset } from './game/diceRowGeometry';
 import { ConsumableBarTargetingBridge } from './game/ConsumableBarTargetingBridge';
@@ -168,10 +169,12 @@ export class GameScene extends Scene {
   create() {
     // Initialize game state only on first create (not on relayout)
     if (!this.roundSessionActive) {
-      const restoredRound = getRoundState();
-      gameFacade.round.beginRoundSession({
-        restored: restoredRound !== null && getSceneState().activeScene === 'Game',
-      });
+      if (!isScoreAnimLabUrl()) {
+        const restoredRound = getRoundState();
+        gameFacade.round.beginRoundSession({
+          restored: restoredRound !== null && getSceneState().activeScene === 'Game',
+        });
+      }
       this.roundSessionActive = true;
       this.pendingNewDiceIds = [];
       // Clear roll-phase dice UI from previous round (scene instance is reused)

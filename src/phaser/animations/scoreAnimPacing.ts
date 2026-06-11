@@ -2,14 +2,15 @@
 // One steady gap scale per hand, shared through the round-end held payout pass.
 
 import type { Scene } from 'phaser';
-import { ANIM } from '../../game/Constants';
+import { getScoreAnimTimings } from '../../game/ScoreAnimTimings';
 
 /** Locked when a hand score starts; reused for round-end-held payout on the same hand. */
 let sessionGapScale: number | null = null;
 
 /** Gap compression from event count: 1× below min, linear to SCORE_ACCEL_MAX at SCORE_ACCEL_FULL_AT. */
 export function scoreAnimGapScaleFromCount(eventCount: number): number {
-  const { SCORE_ACCEL_MIN_EVENTS, SCORE_ACCEL_FULL_AT, SCORE_ACCEL_MAX } = ANIM;
+  const T = getScoreAnimTimings();
+  const { SCORE_ACCEL_MIN_EVENTS, SCORE_ACCEL_FULL_AT, SCORE_ACCEL_MAX } = T;
   if (eventCount <= SCORE_ACCEL_MIN_EVENTS) return 1;
   const span = Math.max(SCORE_ACCEL_FULL_AT - SCORE_ACCEL_MIN_EVENTS, 1);
   const t = Math.min((eventCount - SCORE_ACCEL_MIN_EVENTS) / span, 1);
@@ -42,9 +43,13 @@ export function createScoreAnimPacing(gapScale: number): ScoreAnimPacing {
   return {
     gapScale,
     trimFx,
-    gapMs: (baseMs) => Math.max(ANIM.SCORE_ACCEL_MIN_GAP_MS, Math.round(baseMs / gapScale)),
+    gapMs: (baseMs) => {
+      const T = getScoreAnimTimings();
+      return Math.max(T.SCORE_ACCEL_MIN_GAP_MS, Math.round(baseMs / gapScale));
+    },
     wait: (scene, baseMs, cb) => {
-      scene.time.delayedCall(Math.max(ANIM.SCORE_ACCEL_MIN_GAP_MS, Math.round(baseMs / gapScale)), cb);
+      const T = getScoreAnimTimings();
+      scene.time.delayedCall(Math.max(T.SCORE_ACCEL_MIN_GAP_MS, Math.round(baseMs / gapScale)), cb);
     },
   };
 }

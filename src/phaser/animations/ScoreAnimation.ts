@@ -12,7 +12,8 @@ import { Sidebar } from '../ui/Sidebar';
 import { EquipmentBar } from '../ui/EquipmentBar';
 import { ConsumableBar } from '../ui/ConsumableBar';
 import { ensureAuraTextures } from '../ui/AuraFX';
-import { ANIM, UI } from '../../game/Constants';
+import { FONT_NUMBER, UI } from '../../game/Constants';
+import { getScoreAnimTimings } from '../../game/ScoreAnimTimings';
 import { getRoundState } from '../../game/store/roundStore';
 import { resolveDieById } from '../../game/store/roundResolve';
 import { formatScore } from '../../game/formatScore';
@@ -49,12 +50,13 @@ function floatingText(
   color: string,
   direction: 'up' | 'down' = 'up',
 ): void {
+  const T = getScoreAnimTimings();
   const offsetY = direction === 'up' ? -40 : 48;
   const driftY = direction === 'up' ? -18 : 18;
 
   const txt = scene.add
     .text(x, y + offsetY, text, {
-      fontFamily: 'Arial Black',
+      fontFamily: FONT_NUMBER,
       fontSize: '18px',
       color,
       stroke: '#000000',
@@ -71,7 +73,7 @@ function floatingText(
     targets: txt,
     scaleX: 1.2,
     scaleY: 1.2,
-    duration: 100,
+    duration: T.POPUP_POP_IN_MS,
     ease: 'Back.easeOut',
     onComplete: () => {
       // Quick shake
@@ -79,10 +81,10 @@ function floatingText(
       scene.tweens.chain({
         targets: txt,
         tweens: [
-          { x: origX - 2, duration: 30 },
-          { x: origX + 2, duration: 30 },
-          { x: origX - 1, duration: 30 },
-          { x: origX, duration: 30 },
+          { x: origX - 2, duration: T.POPUP_SHAKE_STEP_MS },
+          { x: origX + 2, duration: T.POPUP_SHAKE_STEP_MS },
+          { x: origX - 1, duration: T.POPUP_SHAKE_STEP_MS },
+          { x: origX, duration: T.POPUP_SHAKE_STEP_MS },
         ],
       });
 
@@ -91,15 +93,15 @@ function floatingText(
         targets: txt,
         scaleX: 1,
         scaleY: 1,
-        duration: 80,
+        duration: T.POPUP_SETTLE_MS,
         ease: 'Sine.easeOut',
         onComplete: () => {
           scene.tweens.add({
             targets: txt,
             y: txt.y + driftY,
             alpha: 0,
-            duration: 300,
-            delay: 50,
+            duration: T.POPUP_FADE_MS,
+            delay: T.POPUP_FADE_DELAY_MS,
             ease: 'Sine.easeIn',
             onComplete: () => txt.destroy(),
           });
@@ -150,6 +152,7 @@ function animateGrantToConsumableBar(
     .setDepth(UI.SCORE_POPUP_DEPTH)
     .setScale(0.35);
 
+  const T = getScoreAnimTimings();
   scene.tweens.add({
     targets: ghost,
     x: targetX,
@@ -157,7 +160,7 @@ function animateGrantToConsumableBar(
     scaleX: 0.12,
     scaleY: 0.12,
     alpha: 0.85,
-    duration: 480,
+    duration: T.GRANT_FLY_IN_MS,
     ease: 'Power2',
     onComplete: () => {
       ghost.destroy();
@@ -234,15 +237,16 @@ export interface ScoreAnimationConfig {
 
 /** Wiggle an equipment card */
 function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, equipIndex: number): void {
+  const T = getScoreAnimTimings();
   const card = equipBar.getCardByEquipIndex(equipIndex);
   if (!card) return;
   const origX = card.x;
   scene.tweens.add({
     targets: card,
-    x: origX - 3,
-    duration: 40,
+    x: origX - T.WIGGLE_OFFSET,
+    duration: T.WIGGLE_DURATION_MS,
     yoyo: true,
-    repeat: 2,
+    repeat: T.WIGGLE_REPEAT,
     ease: 'Sine.easeInOut',
     onComplete: () => {
       card.x = origX;
@@ -252,15 +256,16 @@ function wiggleEquipCard(scene: Scene, equipBar: EquipmentBar, equipIndex: numbe
 
 /** Wiggle a consumable bar card */
 function wiggleConsumableCard(scene: Scene, consumableBar: ConsumableBar, consumableIndex: number): void {
+  const T = getScoreAnimTimings();
   const card = consumableBar.getCardAt(consumableIndex);
   if (!card) return;
   const origX = card.x;
   scene.tweens.add({
     targets: card,
-    x: origX - 3,
-    duration: 40,
+    x: origX - T.WIGGLE_OFFSET,
+    duration: T.WIGGLE_DURATION_MS,
     yoyo: true,
-    repeat: 2,
+    repeat: T.WIGGLE_REPEAT,
     ease: 'Sine.easeInOut',
     onComplete: () => {
       card.x = origX;
@@ -270,6 +275,7 @@ function wiggleConsumableCard(scene: Scene, consumableBar: ConsumableBar, consum
 
 /** Aggressive shake for retrigger "Again!" — position, rotation, and scale punch. */
 function shakeEquipCardAgain(scene: Scene, equipBar: EquipmentBar, equipIndex: number): void {
+  const T = getScoreAnimTimings();
   const card = equipBar.getCardByEquipIndex(equipIndex);
   if (!card) return;
 
@@ -281,10 +287,10 @@ function shakeEquipCardAgain(scene: Scene, equipBar: EquipmentBar, equipIndex: n
   const origScaleX = card.scaleX;
   const origScaleY = card.scaleY;
 
-  const stepMs = 36;
-  const jitterSteps = 4;
-  const posIntensity = 2;
-  const rotIntensity = 10;
+  const stepMs = T.AGAIN_STEP_MS;
+  const jitterSteps = T.AGAIN_JITTER_STEPS;
+  const posIntensity = T.AGAIN_POS_INTENSITY;
+  const rotIntensity = T.AGAIN_ROT_INTENSITY;
 
   let step = 0;
   scene.time.addEvent({
@@ -309,9 +315,9 @@ function shakeEquipCardAgain(scene: Scene, equipBar: EquipmentBar, equipIndex: n
     card.angle = origAngle;
     scene.tweens.add({
       targets: card,
-      scaleX: origScaleX * 1.14,
-      scaleY: origScaleY * 1.14,
-      duration: 100,
+      scaleX: origScaleX * T.AGAIN_SCALE_MULT,
+      scaleY: origScaleY * T.AGAIN_SCALE_MULT,
+      duration: T.AGAIN_SCALE_PUNCH_MS,
       yoyo: true,
       ease: 'Back.easeOut',
       onComplete: () => {
@@ -323,15 +329,16 @@ function shakeEquipCardAgain(scene: Scene, equipBar: EquipmentBar, equipIndex: n
 
 /** Shake a die sprite in place */
 function shakeDieSprite(scene: Scene, sprite: DiceSprite): void {
+  const T = getScoreAnimTimings();
   const origX = sprite.x;
   const origY = sprite.y;
   const origScaleX = sprite.scaleX;
   const origScaleY = sprite.scaleY;
-  const punchScaleX = origScaleX * ANIM.DICE_SCORE_PUNCH_MULT;
-  const punchScaleY = origScaleY * ANIM.DICE_SCORE_PUNCH_MULT;
-  const shakeDuration = 60;
-  const shakeCount = 3;
-  const shakeIntensity = 3;
+  const punchScaleX = origScaleX * T.DICE_SCORE_PUNCH_MULT;
+  const punchScaleY = origScaleY * T.DICE_SCORE_PUNCH_MULT;
+  const shakeDuration = T.DIE_SHAKE_DURATION_MS;
+  const shakeCount = T.DIE_SHAKE_COUNT;
+  const shakeIntensity = T.DIE_SHAKE_INTENSITY;
 
   let shakeStep = 0;
   scene.time.addEvent({
@@ -356,7 +363,7 @@ function shakeDieSprite(scene: Scene, sprite: DiceSprite): void {
       targets: sprite,
       scaleX: punchScaleX,
       scaleY: punchScaleY,
-      duration: 100,
+      duration: T.DIE_PUNCH_MS,
       yoyo: true,
       ease: 'Back.easeOut',
     });
@@ -380,7 +387,7 @@ function playAgainRetrigger(
   popupForEquip(scene, equipBar, equipIndex, 'again', value);
   const sfx = getSoundForType('again', stepIdx);
   scene.sound.play(sfx.key, sfx.config);
-  pacing.wait(scene, ANIM.SCORE_ACCEL_AGAIN_DELAY, done);
+  pacing.wait(scene, getScoreAnimTimings().SCORE_ACCEL_AGAIN_DELAY, done);
 }
 
 function getSoundForType(type: string, stepIdx: number): { key: string; config: object } {
@@ -408,6 +415,7 @@ function getSoundForType(type: string, stepIdx: number): { key: string; config: 
 }
 
 function animateDieCrack(scene: Scene, sprite: DiceSprite, onComplete: () => void): void {
+  const T = getScoreAnimTimings();
   ensureAuraTextures(scene);
   const matrix = sprite.getWorldTransformMatrix();
   const worldX = matrix.tx;
@@ -448,13 +456,13 @@ function animateDieCrack(scene: Scene, sprite: DiceSprite, onComplete: () => voi
     alpha: 0,
     angle: sprite.angle + (Math.random() * 32 - 16),
     y: sprite.y - 10,
-    duration: 220,
+    duration: T.CRACK_SHRINK_MS,
     ease: 'Cubic.easeIn',
     onComplete: () => {
       sprite.setVisible(false);
       sprite.disableInteractive();
       sprite.setActive(false);
-      scene.time.delayedCall(500, () => {
+      scene.time.delayedCall(T.CRACK_CLEANUP_MS, () => {
         shardEmitter.destroy();
         mistEmitter.destroy();
       });
@@ -521,6 +529,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   beginScoring();
 
   function beginScoring(): void {
+    const T = getScoreAnimTimings();
     const handBaseMiles = result.handResult.baseMiles;
     const handBaseMult = result.handResult.baseMult;
 
@@ -550,7 +559,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
       const finishEvent = () => {
         eventIdx++;
-        pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
+        pacing.wait(scene, T.SCORE_SUBSTEP_DELAY, processNextEvent);
       };
 
       const runEvent = () => animateEvent(evt, eventIdx, finishEvent);
@@ -563,7 +572,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
           if (sprite) {
             shakeDieSprite(scene, sprite);
           }
-          pacing.wait(scene, ANIM.SCORE_ACCEL_DIE_PREAMBLE_MS, runEvent);
+          pacing.wait(scene, T.SCORE_ACCEL_DIE_PREAMBLE_MS, runEvent);
         } else {
           runEvent();
         }
@@ -586,7 +595,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             scene.tweens.add({
               targets: sprite,
               alpha: 0.3,
-              duration: 80,
+              duration: T.STRIP_FLASH_MS,
               yoyo: true,
               ease: 'Sine.easeInOut',
               onComplete: () => syncDieSpriteFromScore(sprite, target.dieId, scoringDieById),
@@ -594,7 +603,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
           }
         }
         scene.sound.play('sfx_chips1', { volume: 0.2, detune: -200 });
-        pacing.wait(scene, 120, done);
+        pacing.wait(scene, T.STRIP_WAIT_MS, done);
         return;
       }
 
@@ -607,7 +616,9 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             const enhancement = evt.enhancement ?? null;
             const label = enhancement ? (ENHANCEMENT_NAMES.get(enhancement) ?? enhancement) : 'Enhanced';
             floatingText(scene, sprite.x, sprite.y, `+${label}`, POPUP_ENHANCE_COLOR, 'up');
-            pacing.wait(scene, 120, () => syncDieSpriteFromEnhanceEvent(sprite, target.dieId, evt, scoringDieById));
+            pacing.wait(scene, T.ENHANCE_SYNC_WAIT_MS, () =>
+              syncDieSpriteFromEnhanceEvent(sprite, target.dieId, evt, scoringDieById),
+            );
           }
         }
         if (target.kind === 'equip' || target.kind === 'both') {
@@ -615,7 +626,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         }
         const sfx = getSoundForType('enhance', stepIdx);
         scene.sound.play(sfx.key, sfx.config);
-        pacing.wait(scene, 200, done);
+        pacing.wait(scene, T.ENHANCE_FINISH_WAIT_MS, done);
         return;
       }
 
@@ -710,14 +721,14 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         const midY = (milesPos.y + multPos.y) / 2;
         floatingText(scene, midX, midY, 'Balance!', POPUP_BALANCE_COLOR, 'up');
         scene.sound.play('sfx_multhit1', { volume: 0.45, detune: -50 });
-        pacing.wait(scene, 180, () => {
+        pacing.wait(scene, T.BALANCE_FIRST_WAIT_MS, () => {
           sidebar.setMilesAnimated(balanced);
           sidebar.setMultAnimated(balanced);
           sidebar.shakeMilesPill();
           sidebar.shakeMultPill(true);
           currentMiles = balanced;
           currentMult = balanced;
-          pacing.wait(scene, 450, done);
+          pacing.wait(scene, T.BALANCE_SECOND_WAIT_MS, done);
         });
         return;
       }
@@ -768,16 +779,16 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
     function finishScoring() {
       syncAllDieSpritesFromScore(diceSprites, scoringDieById);
-      pacing.wait(scene, ANIM.SCORE_FINAL_FLASH_DELAY, () => {
+      pacing.wait(scene, T.SCORE_FINAL_FLASH_DELAY, () => {
         roundActions.setSidebarOverlay({ milesBaseSave: milesToSave(0), multSave: milesToSave(0) });
         sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));
         scene.sound.play('sfx_timpani', { volume: 0.5 });
-        pacing.wait(scene, ANIM.SCORE_COMPLETE_DELAY + 400, onComplete);
+        pacing.wait(scene, T.SCORE_COMPLETE_DELAY + T.SCORE_ROUND_TOTAL_DELAY, onComplete);
       });
     }
 
     // Start scoring
-    scene.time.delayedCall(pacing.gapMs(ANIM.SCORE_STEP_DELAY), processNextEvent);
+    scene.time.delayedCall(pacing.gapMs(T.SCORE_STEP_DELAY), processNextEvent);
   }
 }
 
@@ -806,6 +817,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
     onComplete();
   };
 
+  const T = getScoreAnimTimings();
   const pacing = pacingForFollowUp(events.length);
 
   const dieSpriteMap = new Map<string, DiceSprite>();
@@ -816,7 +828,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
 
   const finishEvent = () => {
     eventIdx++;
-    pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, processNextEvent);
+    pacing.wait(scene, T.SCORE_SUBSTEP_DELAY, processNextEvent);
   };
 
   const animateEvent = (evt: ScoreAnimEvent, stepIdx: number, done: () => void): void => {
@@ -837,7 +849,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
         });
       } else {
         applyConsumableGrant(evt.consumableId);
-        pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, done);
+        pacing.wait(scene, T.SCORE_SUBSTEP_DELAY, done);
       }
       return;
     }
@@ -866,7 +878,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
         });
       } else {
         applyConsumableGrant(evt.consumableId);
-        pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, done);
+        pacing.wait(scene, T.SCORE_SUBSTEP_DELAY, done);
       }
       return;
     }
@@ -894,7 +906,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
 
   const processNextEvent = () => {
     if (eventIdx >= events.length) {
-      pacing.wait(scene, ANIM.SCORE_SUBSTEP_DELAY, finish);
+      pacing.wait(scene, T.SCORE_SUBSTEP_DELAY, finish);
       return;
     }
 
@@ -910,7 +922,7 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
       if (!pacing.trimFx) {
         const sprite = dieSpriteMap.get(dieId);
         if (sprite) shakeDieSprite(scene, sprite);
-        pacing.wait(scene, ANIM.SCORE_ACCEL_DIE_PREAMBLE_MS, runEvent);
+        pacing.wait(scene, T.SCORE_ACCEL_DIE_PREAMBLE_MS, runEvent);
       } else {
         runEvent();
       }
@@ -919,5 +931,5 @@ export function playDieAnimEvents(config: DieAnimEventsConfig): void {
     }
   };
 
-  scene.time.delayedCall(pacing.gapMs(ANIM.SCORE_STEP_DELAY), processNextEvent);
+  scene.time.delayedCall(pacing.gapMs(T.SCORE_STEP_DELAY), processNextEvent);
 }

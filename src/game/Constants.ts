@@ -519,30 +519,9 @@ export const ANIM = {
   ROLL_DURATION: 600,
   ROLL_INTERVAL: 60,
   ROLL_BOUNCE_DURATION: 80,
-  SCORE_HIGHLIGHT_DURATION: 150,
-  /** Scale multiplier for die punch during score playback (applied to current die scale). */
-  DICE_SCORE_PUNCH_MULT: 1.2,
-  /** Tween duration when moving locked dice into the score line */
-  DICE_SCORE_LAYOUT_DURATION: 400,
   /** Shared elastic timing for dice row backdrop resize and die select lift/drop */
   DICE_ROW_ELASTIC_DURATION: 420,
   DICE_ROW_ELASTIC_EASE_PARAMS: [1.05, 0.85] as [number, number],
-  SCORE_STEP_DELAY: 200, // ms between each scoring step (dice, equip, held)
-  SCORE_SUBSTEP_DELAY: 200, // ms between sub-events on the same die (miles → mult → etc)
-  SCORE_FINAL_FLASH_DELAY: 300,
-  SCORE_COMPLETE_DELAY: 400,
-  /** Score events below this count: normal 1× pacing. */
-  SCORE_ACCEL_MIN_EVENTS: 20,
-  /** Event count at which gap compression reaches SCORE_ACCEL_MAX. */
-  SCORE_ACCEL_FULL_AT: 90,
-  /** Max gap compression (2 = half the wait between steps). Single knob for top speed. */
-  SCORE_ACCEL_MAX: 3,
-  /** Minimum compressed gap between steps (ms). */
-  SCORE_ACCEL_MIN_GAP_MS: 56,
-  /** Pause before animating a newly targeted die (at 1× pacing). */
-  SCORE_ACCEL_DIE_PREAMBLE_MS: 400,
-  /** Wait after retrigger "Again!" before the next event (at 1× pacing). */
-  SCORE_ACCEL_AGAIN_DELAY: 400,
   HOVER_DURATION: 100,
   CARD_HOVER_SCALE: 1.05,
 

@@ -4,6 +4,7 @@
 import { GameObjects, Scene } from 'phaser';
 import { resetAllGameStores } from '../../game/store';
 import { isDevMode } from '../../game/DevMode';
+import { ScoreAnimTimingsModal } from '../scenes/dev/ScoreAnimTimingsModal';
 import { Button } from './Button';
 import { BossTestModal } from './BossTestModal';
 import { EquipmentCatalogModal } from './EquipmentCatalogModal';
@@ -12,8 +13,21 @@ import { PreferencesSettingsModal } from './PreferencesSettingsModal';
 import { clearAutoSave } from '../AutoSaveManager';
 import { exportGameFromScene, exportPreviousAutoSaveFromStorage, performLoadGame } from '../SaveLoadIO';
 import { createModalShell, finalizeModal, wireModalBackdropDismiss } from './modalShell';
+import { createScrollableViewport, type ScrollableViewportHandle } from './ScrollableViewport';
+
+const PANEL_H = 480;
+const LIST_TOP_OFFSET = 56;
+const LIST_BOTTOM_OFFSET = 48;
+const LIST_INSET = 12;
+const BTN_H = 40;
+const BTN_GAP = 10;
+const CONTENT_PAD_TOP = 4;
+
+type MenuEntry = { label: string; onClick: () => void };
 
 export class OptionsModal extends GameObjects.Container {
+  private scrollViewport: ScrollableViewportHandle | null = null;
+
   constructor(scene: Scene, contentX: number, width: number, height: number, contentY = 0) {
     super(scene, 0, 0);
 
@@ -22,7 +36,7 @@ export class OptionsModal extends GameObjects.Container {
       width,
       height,
       contentY,
-      panelHeight: 560,
+      panelHeight: PANEL_H,
       panelMaxWidth: 380,
     });
     const { panelX, panelY, panelW, panelH } = layout;
@@ -31,99 +45,114 @@ export class OptionsModal extends GameObjects.Container {
     const panelBlocker = wireModalBackdropDismiss(dim, close, layout, scene);
     this.add([dim, panelBlocker, panel, title]);
 
-    const equipmentBtn = new Button(scene, panelX + panelW / 2, panelY + 78, 'Equipment', panelW - 60, 40);
-    equipmentBtn.onClick(() => {
-      this.destroy();
-      new EquipmentCatalogModal(scene);
-    });
-    this.add(equipmentBtn);
+    const openOptions = () => new OptionsModal(scene, contentX, width, height, contentY);
+    const btnW = panelW - 60;
 
-    const soundBtn = new Button(scene, panelX + panelW / 2, panelY + 128, 'Sound Settings', panelW - 60, 40);
-    soundBtn.onClick(() => {
-      this.destroy();
-      new SoundsSettingsModal(
-        scene,
-        contentX,
-        width,
-        height,
-        {
-          onBack: () => new OptionsModal(scene, contentX, width, height, contentY),
+    const menuEntries: MenuEntry[] = [
+      {
+        label: 'Equipment',
+        onClick: () => {
+          this.destroy();
+          new EquipmentCatalogModal(scene);
         },
-        contentY,
-      );
-    });
-    this.add(soundBtn);
-
-    const prefsBtn = new Button(scene, panelX + panelW / 2, panelY + 178, 'Preferences', panelW - 60, 40);
-    prefsBtn.onClick(() => {
-      this.destroy();
-      new PreferencesSettingsModal(
-        scene,
-        contentX,
-        width,
-        height,
-        {
-          onBack: () => new OptionsModal(scene, contentX, width, height, contentY),
+      },
+      {
+        label: 'Sound Settings',
+        onClick: () => {
+          this.destroy();
+          new SoundsSettingsModal(scene, contentX, width, height, { onBack: openOptions }, contentY);
         },
-        contentY,
-      );
-    });
-    this.add(prefsBtn);
-
-    const exportBtn = new Button(scene, panelX + panelW / 2, panelY + 228, 'Export Game State', panelW - 60, 40);
-    exportBtn.onClick(() => {
-      exportGameFromScene(scene);
-    });
-    this.add(exportBtn);
-
-    const exportPrevBtn = new Button(
-      scene,
-      panelX + panelW / 2,
-      panelY + 278,
-      'Export Previous Game State (Debug)',
-      panelW - 60,
-      40,
-    );
-    exportPrevBtn.onClick(() => {
-      exportPreviousAutoSaveFromStorage();
-    });
-    this.add(exportPrevBtn);
-
-    const loadBtn = new Button(scene, panelX + panelW / 2, panelY + 328, 'Load Game', panelW - 60, 40);
-    loadBtn.onClick(() => {
-      this.destroy();
-      void performLoadGame(scene, { confirmOverwrite: true });
-    });
-    this.add(loadBtn);
-
-    const newRunBtn = new Button(scene, panelX + panelW / 2, panelY + 378, 'New Run', panelW - 60, 40);
-    newRunBtn.onClick(() => {
-      this.destroy();
-      clearAutoSave();
-      resetAllGameStores();
-      scene.scene.start('MainMenu', {});
-    });
-    this.add(newRunBtn);
-
-    const menuBtn = new Button(scene, panelX + panelW / 2, panelY + 428, 'Main Menu', panelW - 60, 40);
-    menuBtn.onClick(() => {
-      this.destroy();
-      scene.scene.start('MainMenu', {});
-    });
-    this.add(menuBtn);
+      },
+      {
+        label: 'Preferences',
+        onClick: () => {
+          this.destroy();
+          new PreferencesSettingsModal(scene, contentX, width, height, { onBack: openOptions }, contentY);
+        },
+      },
+      {
+        label: 'Score Animation',
+        onClick: () => {
+          this.destroy();
+          new ScoreAnimTimingsModal(scene, contentX, width, height, { onBack: openOptions }, contentY);
+        },
+      },
+      {
+        label: 'Export Game State',
+        onClick: () => exportGameFromScene(scene),
+      },
+      {
+        label: 'Export Previous Game State (Debug)',
+        onClick: () => exportPreviousAutoSaveFromStorage(),
+      },
+      {
+        label: 'Load Game',
+        onClick: () => {
+          this.destroy();
+          void performLoadGame(scene, { confirmOverwrite: true });
+        },
+      },
+      {
+        label: 'New Run',
+        onClick: () => {
+          this.destroy();
+          clearAutoSave();
+          resetAllGameStores();
+          scene.scene.start('MainMenu', {});
+        },
+      },
+      {
+        label: 'Main Menu',
+        onClick: () => {
+          this.destroy();
+          scene.scene.start('MainMenu', {});
+        },
+      },
+    ];
 
     if (isDevMode()) {
-      const bossBtn = new Button(scene, panelX + panelW / 2, panelY + 478, 'Test Boss', panelW - 60, 40);
-      bossBtn.onClick(() => {
-        this.destroy();
-        new BossTestModal(scene, contentX, width, height, contentY);
+      menuEntries.push({
+        label: 'Test Boss',
+        onClick: () => {
+          this.destroy();
+          new BossTestModal(scene, contentX, width, height, contentY);
+        },
       });
-      this.add(bossBtn);
     }
+
+    const listTop = panelY + LIST_TOP_OFFSET;
+    const listBottom = panelY + panelH - LIST_BOTTOM_OFFSET;
+    const scrollAreaH = listBottom - listTop;
+    const viewportX = panelX + LIST_INSET;
+    const viewportW = panelW - LIST_INSET * 2;
+
+    this.scrollViewport = createScrollableViewport({
+      scene,
+      x: viewportX,
+      y: listTop,
+      width: viewportW,
+      height: scrollAreaH,
+      contentCenterX: panelX + panelW / 2,
+    });
+    this.add(this.scrollViewport.root);
+
+    let layoutY = CONTENT_PAD_TOP + BTN_H / 2;
+    for (const entry of menuEntries) {
+      const btn = new Button(scene, 0, layoutY, entry.label, btnW, BTN_H);
+      btn.onClick(entry.onClick);
+      this.scrollViewport.content.add(btn);
+      layoutY += BTN_H + BTN_GAP;
+    }
+    this.scrollViewport.setContentHeight(layoutY + CONTENT_PAD_TOP);
 
     const closeBtn = new Button(scene, panelX + panelW / 2, panelY + panelH - 30, 'Close', 120, 34);
     closeBtn.onClick(close);
     this.add(closeBtn);
+
+    this.once('destroy', () => {
+      this.scrollViewport?.destroy();
+      this.scrollViewport = null;
+    });
 
     finalizeModal(this, scene);
   }

@@ -4,10 +4,12 @@
 import { GAMEPLAY } from './Constants';
 import type { AudioPreferences } from './AudioPreferences';
 import type { GameplayPreferences } from './GameplayPreferences';
+import type { ScoreAnimTimings } from './ScoreAnimTimings';
 
 export interface StoredUserPreferences {
   audio?: Partial<AudioPreferences>;
   gameplay?: Partial<GameplayPreferences>;
+  scoreAnim?: Partial<ScoreAnimTimings>;
 }
 
 export function readStoredUserPreferences(): StoredUserPreferences {
@@ -34,5 +36,6 @@ export function patchStoredUserPreferences(patch: Partial<StoredUserPreferences>
   writeStoredUserPreferences({
     audio: patch.audio !== undefined ? { ...current.audio, ...patch.audio } : current.audio,
     gameplay: patch.gameplay !== undefined ? { ...current.gameplay, ...patch.gameplay } : current.gameplay,
+    scoreAnim: patch.scoreAnim !== undefined ? { ...current.scoreAnim, ...patch.scoreAnim } : current.scoreAnim,
   });
 }

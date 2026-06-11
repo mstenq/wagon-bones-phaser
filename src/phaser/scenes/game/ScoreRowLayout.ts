@@ -1,7 +1,8 @@
 // ─── Score-phase dice row layout tweens ───
 
 import type { Scene } from 'phaser';
-import { ANIM, UI } from '../../../game/Constants';
+import { UI } from '../../../game/Constants';
+import { getScoreAnimTimings } from '../../../game/ScoreAnimTimings';
 import type { ScoreResult } from '../../../game/types';
 import type { DiceSprite } from '../../ui/DiceSprite';
 import { getArcOffset, getRowXPositions } from './diceRowGeometry';
@@ -65,6 +66,8 @@ export class ScoreRowLayout {
       }
     };
 
+    const layoutDuration = getScoreAnimTimings().DICE_SCORE_LAYOUT_DURATION;
+
     for (let i = 0; i < selectedSprites.length; i++) {
       const sprite = selectedSprites[i];
       const isScoring = scoringIds.has(sprite.dieData.id);
@@ -78,7 +81,7 @@ export class ScoreRowLayout {
         x: scorePositions[i],
         y: isScoring ? scoreY : scoreY + UI.DICE_SCORE_FILLER_DROP_Y,
         rotation: 0,
-        duration: ANIM.DICE_SCORE_LAYOUT_DURATION,
+        duration: layoutDuration,
         ease: 'Power2',
         onComplete: onSpriteDone,
       });
@@ -99,7 +102,7 @@ export class ScoreRowLayout {
         x: heldPositions[i],
         y: rollY + arc.y,
         rotation: arc.rotation,
-        duration: ANIM.DICE_SCORE_LAYOUT_DURATION,
+        duration: layoutDuration,
         ease: 'Power2',
         onComplete: onSpriteDone,
       });

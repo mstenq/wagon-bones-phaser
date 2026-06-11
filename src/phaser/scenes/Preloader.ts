@@ -5,6 +5,9 @@ import * as Phaser from 'phaser';
 import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
 import { initAudioPreferences } from '../../game/AudioPreferences';
 import { initGameplayPreferences } from '../../game/GameplayPreferences';
+import { initScoreAnimTimings } from '../../game/ScoreAnimTimings';
+import { isScoreAnimLabUrl } from './dev/scoreAnimLabUrl';
+import { bootstrapScoreAnimLab } from './dev/scoreAnimSandbox';
 import { patchGameAudio } from '../GameAudio';
 
 // Map sticker IDs to their PNG filenames (when they differ)
@@ -150,6 +153,7 @@ export class Preloader extends Scene {
   create() {
     initAudioPreferences();
     initGameplayPreferences();
+    initScoreAnimTimings();
     patchGameAudio();
 
     if (this.textures.exists('dice')) {
@@ -173,6 +177,11 @@ export class Preloader extends Scene {
 
     this.time.delayedCall(400, () => {
       initAutoSave(this.game);
+      if (isScoreAnimLabUrl()) {
+        bootstrapScoreAnimLab();
+        this.scene.start('Game', {});
+        return;
+      }
       if (!tryRestoreAutoSaveOnBoot(this)) {
         this.scene.start('MainMenu', {});
       }

@@ -109,10 +109,10 @@ export function createModalTitle(
 
 export function createModalShell(scene: Scene, titleText: string, options: ModalShellOptions): ModalShellChrome {
   const layout = computeModalPanelLayout(options);
-  const contentY = options.contentY ?? 0;
   return {
     layout,
-    dim: createModalDim(scene, options.height, options.width, contentY),
+    // Full-canvas dim — options.width is the content column only (excludes sidebar).
+    dim: createModalDim(scene, scene.scale.height, scene.scale.width, 0),
     panel: createModalPanel(scene, layout),
     title: createModalTitle(scene, layout, titleText),
   };
