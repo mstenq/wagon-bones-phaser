@@ -5,7 +5,7 @@ import type { Game, Scene } from 'phaser';
 import { getAudioPreferences } from '../game/AudioPreferences';
 
 /** Ordered background music playlist — plays through then repeats. Add keys here and in Preloader. */
-export const BG_MUSIC_PLAYLIST = ['bg_music_1', 'bg_music_2'] as const;
+export const BG_MUSIC_PLAYLIST = ['bg_music_1'] as const;
 
 export type BgMusicTrackKey = (typeof BG_MUSIC_PLAYLIST)[number];
 
