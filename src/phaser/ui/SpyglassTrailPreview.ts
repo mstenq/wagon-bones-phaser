@@ -6,7 +6,7 @@ import { Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, TRAIL_EVENT } from '../../game/Constants';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { getScoutsSpyglassInvestigateMiles } from '../../game/TrailEventsSystem';
-import { computeCoverCrop, trailEventSpyImageKey, trailEventSpyImagePath } from '../../game/trailEventAssets';
+import { TRAIL_EVENTS_SPY_ATLAS_KEY, computeCoverCrop, trailEventAtlasFrame } from '../../game/trailEventAssets';
 import { Button } from './Button';
 import type { LayoutResult } from './SceneLayout';
 
@@ -89,15 +89,10 @@ export class SpyglassTrailPreview {
         .onClick(callbacks.onInvestigate),
     );
 
-    const imageKey = trailEventSpyImageKey(eventId);
-    const onReady = () => preview.showBakedCircleView(contentCX, circleY, viewDiameter, imageKey, eventId);
-    if (scene.textures.exists(imageKey)) {
-      onReady();
-    } else {
-      scene.load.image(imageKey, trailEventSpyImagePath(eventId));
-      scene.load.once('complete', onReady);
-      scene.load.once('loaderror', onReady);
-      scene.load.start();
+    const atlasFrame = trailEventAtlasFrame(eventId);
+    const spyTexture = scene.textures.get(TRAIL_EVENTS_SPY_ATLAS_KEY);
+    if (scene.textures.exists(TRAIL_EVENTS_SPY_ATLAS_KEY) && spyTexture.has(atlasFrame)) {
+      preview.showBakedCircleView(contentCX, circleY, viewDiameter, atlasFrame, eventId);
     }
 
     scene.events.once('shutdown', () => preview.destroy());
@@ -108,16 +103,17 @@ export class SpyglassTrailPreview {
     this.toDestroy.push(obj);
   }
 
-  private bakeCircularTexture(sourceKey: string, eventId: string, diameter: number): string | null {
+  private bakeCircularTexture(atlasFrame: string, eventId: string, diameter: number): string | null {
     const bakedKey = `${BAKED_VIEW_PREFIX}${eventId}_${diameter}`;
     if (this.scene.textures.exists(bakedKey)) {
       return bakedKey;
     }
 
-    const source = this.scene.textures.get(sourceKey);
-    const srcImage = source.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-    const srcW = srcImage.width;
-    const srcH = srcImage.height;
+    const atlas = this.scene.textures.get(TRAIL_EVENTS_SPY_ATLAS_KEY);
+    const frame = atlas.get(atlasFrame);
+    const srcImage = atlas.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const srcW = frame.width;
+    const srcH = frame.height;
     if (!srcW || !srcH) return null;
 
     const { cropX, cropY, cropW, cropH } = computeCoverCrop(srcW, srcH, diameter, diameter);
@@ -133,7 +129,7 @@ export class SpyglassTrailPreview {
     ctx.beginPath();
     ctx.arc(diameter / 2, diameter / 2, diameter / 2, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(srcImage, cropX, cropY, cropW, cropH, 0, 0, diameter, diameter);
+    ctx.drawImage(srcImage, frame.cutX + cropX, frame.cutY + cropY, cropW, cropH, 0, 0, diameter, diameter);
     ctx.restore();
 
     if (this.scene.textures.exists(bakedKey)) {
@@ -143,8 +139,8 @@ export class SpyglassTrailPreview {
     return bakedKey;
   }
 
-  private showBakedCircleView(cx: number, cy: number, diameter: number, imageKey: string, eventId: string): void {
-    const bakedKey = this.bakeCircularTexture(imageKey, eventId, diameter);
+  private showBakedCircleView(cx: number, cy: number, diameter: number, atlasFrame: string, eventId: string): void {
+    const bakedKey = this.bakeCircularTexture(atlasFrame, eventId, diameter);
     if (!bakedKey) return;
 
     const view = this.scene.add.image(cx, cy, bakedKey).setDepth(5);

@@ -10,7 +10,7 @@ import {
 import { PACK_ONLY_FRONTIER_IDS } from '../../Constants';
 import { getLoadedDiceMultiplier } from '../../equipmentUtils';
 import { computeScoredDieRetriggers } from '../../effects/scoredRetrigger';
-import { gt, lte } from '../../scoreMath';
+import { gt } from '../../scoreMath';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
 import { getItemAuraById } from '../../ItemsSystem';
 import { HandType } from '../../types';
@@ -640,49 +640,6 @@ describe('Loaded Dice + Moonshine (ENHANCED_RETRIGGER)', () => {
     // Expected: 2/3 ≈ 0.667
     expect(rate).toBeGreaterThan(0.6);
     expect(rate).toBeLessThan(0.74);
-  });
-});
-
-// ─── Bone Charm: BONE_DICE_XMULT_CHANCE ───
-
-describe('Loaded Dice + Bone Charm (BONE_DICE_XMULT_CHANCE)', () => {
-  test('doubles xMult chance with Loaded Dice (becomes guaranteed)', () => {
-    // Bone Charm: chance [1, 2], value x1.5, with loaded → [2, 2] = 100%
-    let triggered = 0;
-    const runs = 1000;
-
-    for (let i = 0; i < runs; i++) {
-      const { result } = calculateTestScore({
-        scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'bone' })],
-        equipment: [item('bone_charm'), item('loaded_dice')],
-      });
-      // PAIR baseMult=1, +4 per bone die (2 dice=+8), bone charm x1.5 per trigger
-      // Without charm: (1+8)*1 = 9, with both triggered: (1+8)*1.5*1.5 = 20.25
-      if (gt(result.mult, 9.5)) triggered++;
-    }
-
-    // Should be guaranteed with loaded dice (100% per die)
-    expect(triggered).toBe(runs);
-  });
-
-  test('base rate without Loaded Dice (50% per die)', () => {
-    let neitherTriggered = 0;
-    const runs = 5000;
-
-    for (let i = 0; i < runs; i++) {
-      const { result } = calculateTestScore({
-        scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5 })],
-        equipment: [item('bone_charm')],
-      });
-      // PAIR baseMult=1, +4 from bone die, bone charm x1.5 when triggered
-      // Without charm: (1+4)*1 = 5, with charm triggered: (1+4)*1.5 = 7.5
-      if (lte(result.mult, 5.1)) neitherTriggered++;
-    }
-
-    const noTriggerRate = neitherTriggered / runs;
-    // Expected: 50% chance NOT to trigger = 0.5
-    expect(noTriggerRate).toBeGreaterThan(0.43);
-    expect(noTriggerRate).toBeLessThan(0.57);
   });
 });
 

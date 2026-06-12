@@ -474,6 +474,15 @@ export const UI = {
   DICE_ROW_BACKDROP_RADIUS: 8,
   /** Gap between score-row dice bottom and dice row backdrop top during scoring */
   DICE_ROW_BACKDROP_SCORE_CLEARANCE: 8,
+  /** Roll-phase score-slot dots below the dice row backdrop */
+  DICE_SELECTION_DOT_RADIUS: 5,
+  DICE_SELECTION_DOT_GAP: 18,
+  DICE_SELECTION_DOT_GAP_BELOW: 12,
+  DICE_SELECTION_DOT_STROKE: 1.5,
+  DICE_SELECTION_DOT_PULSE_SCALE: 1.25,
+  DICE_SELECTION_DOT_SHRINK_SCALE: 0.90,
+  DICE_SELECTION_DOT_PULSE_UP_MS: 100,
+  DICE_SELECTION_DOT_PULSE_HOLD_MS: 10,
   FELT_PADDING: 12,
   FELT_ALPHA: 0.4,
   FELT_RADIUS: 16,

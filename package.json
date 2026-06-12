@@ -29,7 +29,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "check": "bun test && bun run format:check",
-    "ci": "bun run check && bun run build"
+    "ci": "bun run check && bun run build",
+    "compress:backgrounds": "bun scripts/compress_backgrounds.ts"
   },
   "dependencies": {
     "break_eternity.js": "^2.1.3",
@@ -42,6 +43,7 @@
     "@types/bun": "^1.3.13",
     "@types/seedrandom": "^3.0.8",
     "fallow": "^2.89.0",
+    "pngquant-bin": "^9.0.0",
     "prettier": "^3.8.3",
     "terser": "5.39.0",
     "typescript": "5.7.2",

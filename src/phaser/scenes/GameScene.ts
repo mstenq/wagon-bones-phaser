@@ -77,6 +77,7 @@ import { RollRowController } from './game/RollRowController';
 import { ScoreRowLayout, type ScoreLayoutGate } from './game/ScoreRowLayout';
 import { GameSceneDevPanel } from './game/GameSceneDevPanel';
 import { DiceRowBackdropController } from './game/DiceRowBackdropController';
+import { DiceSelectionDotsController } from './game/DiceSelectionDotsController';
 
 export class GameScene extends Scene {
   private roundSessionActive = false;
@@ -99,6 +100,7 @@ export class GameScene extends Scene {
   // Pre-roll hand row (SELECT phase)
   private playArea!: PlayAreaDiceController;
   private diceRowBackdropController!: DiceRowBackdropController;
+  private diceSelectionDotsController!: DiceSelectionDotsController;
 
   // Buttons
   private readyBtn: Button;
@@ -283,6 +285,15 @@ export class GameScene extends Scene {
       getContentCenterX: () => this.contentCX,
     });
 
+    this.diceSelectionDotsController = new DiceSelectionDotsController({
+      getRollSprites: () => this.rollRow.getRollSprites(),
+      getSelectedCount: () => this.selectedDiceIds.size,
+      getRollRowY: () => this.rollRowY,
+      getDiceSpacing: (count) => this.getDiceSpacing(count),
+      getDiceScale: () => this.getDiceScale(),
+      getContentCenterX: () => this.contentCX,
+    });
+
     this.scoreRowLayout = new ScoreRowLayout({
       scene: this,
       contentCenterX: () => this.contentCX,
@@ -290,7 +301,10 @@ export class GameScene extends Scene {
       getScoreRowY: () => this.scoreRowY,
       getDiceSpacing: (count) => this.getDiceSpacing(count),
       getDiceScale: () => this.getDiceScale(),
-      onLayoutTransitionStart: () => this.diceRowBackdropController.onScoreLayoutStart(),
+      onLayoutTransitionStart: () => {
+        this.diceRowBackdropController.onScoreLayoutStart();
+        this.diceSelectionDotsController.sync(true);
+      },
       onLayoutTransitionEnd: () => this.diceRowBackdropController.onScoreLayoutEnd(),
     });
 
@@ -456,6 +470,7 @@ export class GameScene extends Scene {
     this.showRollInstruction = hud.showInstruction;
 
     this.diceRowBackdropController.rebuild(this);
+    this.diceSelectionDotsController.rebuild(this);
 
     const { btnY, btnCenterX, instructionY } = hud;
     const playAreaW = this.contentW;
@@ -493,9 +508,11 @@ export class GameScene extends Scene {
       width: 200,
       height: 40,
     }).onClick(() => this.onReadyToRoll());
-    this.rollBtn = new Button(this, btnCenterX, btnY, 'Roll!', { variant: 'secondary', width: 160, height: 40 }).onClick(
-      () => this.onRoll(),
-    );
+    this.rollBtn = new Button(this, btnCenterX, btnY, 'Roll!', {
+      variant: 'secondary',
+      width: 160,
+      height: 40,
+    }).onClick(() => this.onRoll());
     this.scoreBtn = new Button(this, hud.scoreBtnX, btnY, 'Score Hand', {
       variant: 'secondary',
       width: hud.scoreBtnW,
@@ -573,6 +590,7 @@ export class GameScene extends Scene {
 
   private notifyDiceRowLayoutChange(): void {
     this.diceRowBackdropController.sync();
+    this.diceSelectionDotsController.sync(true);
   }
 
   private onResize(): void {
@@ -1041,6 +1059,7 @@ export class GameScene extends Scene {
     this.playArea.clear();
     this.rollMarquee.destroy();
     this.diceRowBackdropController?.reset();
+    this.diceSelectionDotsController?.reset();
   }
 
   private hideAllButtons(): void {
@@ -1109,6 +1128,7 @@ export class GameScene extends Scene {
     gameFacade.round.updateHandPreviewOverlay(selectedDice);
 
     this.equipBar?.setHintRound(getRoundHintContext());
+    this.diceSelectionDotsController.sync();
   }
 
   private isDieLifted(sprite: DiceSprite): boolean {

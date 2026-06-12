@@ -16,7 +16,7 @@ import { FONT_NUMBER, UI } from '../../game/Constants';
 import { getScoreAnimTimings } from '../../game/ScoreAnimTimings';
 import { getRoundState } from '../../game/store/roundStore';
 import { resolveDieById } from '../../game/store/roundResolve';
-import { formatScore } from '../../game/formatScore';
+import { formatScore, formatXMult } from '../../game/formatScore';
 import { endScoreAnimSession, pacingForFollowUp, pacingForHandScore, type ScoreAnimPacing } from './scoreAnimPacing';
 import { addScore, multiplyScore, D } from '../../game/scoreMath';
 import { milesToSave } from '../../game/scoreMath';
@@ -118,7 +118,7 @@ function popupForDie(scene: Scene, sprite: DiceSprite, type: ScoreAnimPopupType,
   } else if (type === 'mult') {
     floatingText(scene, sprite.x, sprite.y, `+${value} mult`, POPUP_MULT_COLOR, 'up');
   } else if (type === 'xmult') {
-    floatingText(scene, sprite.x, sprite.y, `x${value} mult`, POPUP_XMULT_COLOR, 'up');
+    floatingText(scene, sprite.x, sprite.y, `x${formatXMult(value)} mult`, POPUP_XMULT_COLOR, 'up');
   } else if (type === 'money') {
     floatingText(scene, sprite.x, sprite.y, `+$${value}`, POPUP_MONEY_COLOR, 'up');
   } else if (type === 'supply') {
@@ -199,7 +199,7 @@ function popupForEquip(
   } else if (type === 'mult') {
     floatingText(scene, wx, wy, `+${value} mult`, POPUP_MULT_COLOR, 'down');
   } else if (type === 'xmult') {
-    floatingText(scene, wx, wy, `x${value} mult`, POPUP_XMULT_COLOR, 'down');
+    floatingText(scene, wx, wy, `x${formatXMult(value)} mult`, POPUP_XMULT_COLOR, 'down');
   } else if (type === 'money') {
     floatingText(scene, wx, wy, `+$${value}`, POPUP_MONEY_COLOR, 'down');
   } else if (type === 'supply') {
@@ -221,7 +221,7 @@ function popupForConsumable(
   const wx = consumableBar.x + card.x;
   const wy = consumableBar.y + card.y;
   if (type === 'xmult') {
-    floatingText(scene, wx, wy, `x${value} mult`, POPUP_XMULT_COLOR, 'down');
+    floatingText(scene, wx, wy, `x${formatXMult(value)} mult`, POPUP_XMULT_COLOR, 'down');
   }
 }
 

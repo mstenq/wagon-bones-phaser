@@ -17,6 +17,7 @@ import {
   shopBuyActions,
   selectBalance,
   subscribeRunSelector,
+  resetAllGameStores,
 } from '../../store';
 
 describe('game stores', () => {
@@ -59,6 +60,12 @@ describe('game stores', () => {
     expect(scene.shop).toBeNull();
     expect(scene.boosterPack).toBeNull();
     expect(scene.trailEvent).toBeNull();
+  });
+
+  test('resetAllGameStores clears scene store (new game from main menu)', () => {
+    sceneActions.enterShop({ stock: [], packs: [], shopRerollCount: 2 });
+    resetAllGameStores();
+    expect(sceneStore.getState()).toEqual(createInitialSceneState());
   });
 
   test('reset returns initial plain state', () => {

@@ -1,21 +1,32 @@
 import { describe, test, expect } from 'bun:test';
-import { existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getAllTrailEvents } from '../TrailEventsSystem';
-import { computeCoverScale, computeCoverCrop, trailEventImagePath, trailEventSpyImagePath } from '../trailEventAssets';
+import { computeCoverScale, computeCoverCrop, trailEventAtlasFrame } from '../trailEventAssets';
 
 const PUBLIC = join(import.meta.dir, '../../../public');
 
+interface TexturePackerAtlas {
+  frames: Array<{ filename: string }>;
+}
+
+function loadAtlasFrames(jsonPath: string): Set<string> {
+  const raw = readFileSync(jsonPath, 'utf8');
+  const atlas = JSON.parse(raw) as TexturePackerAtlas;
+  return new Set(atlas.frames.map((frame) => frame.filename.replace(/\.png$/, '')));
+}
+
 describe('trail event assets', () => {
-  test('every trail event has primary and spy PNG assets', () => {
+  test('every trail event has primary and spy atlas frames', () => {
+    const primaryFrames = loadAtlasFrames(join(PUBLIC, 'assets/trail-events/trail-events.json'));
+    const spyFrames = loadAtlasFrames(join(PUBLIC, 'assets/trail-events-spy/trail-events-spy.json'));
     const missingPrimary: string[] = [];
     const missingSpy: string[] = [];
 
     for (const event of getAllTrailEvents()) {
-      const primary = join(PUBLIC, trailEventImagePath(event.id));
-      const spy = join(PUBLIC, trailEventSpyImagePath(event.id));
-      if (!existsSync(primary)) missingPrimary.push(event.id);
-      if (!existsSync(spy)) missingSpy.push(event.id);
+      const frameId = trailEventAtlasFrame(event.id).replace(/\.png$/, '');
+      if (!primaryFrames.has(frameId)) missingPrimary.push(event.id);
+      if (!spyFrames.has(frameId)) missingSpy.push(event.id);
     }
 
     expect(missingPrimary).toEqual([]);

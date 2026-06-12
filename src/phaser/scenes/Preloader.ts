@@ -87,6 +87,14 @@ export class Preloader extends Scene {
     // Load trail tag icons from TexturePacker single-atlas JSON
     this.load.atlas('trail_tags', 'assets/trail-tags/trail-tags.png', 'assets/trail-tags/trail-tags.json');
 
+    // Load trail event images from TexturePacker single-atlas JSON
+    this.load.atlas('trail_events', 'assets/trail-events/trail-events.png', 'assets/trail-events/trail-events.json');
+    this.load.atlas(
+      'trail_events_spy',
+      'assets/trail-events-spy/trail-events-spy.png',
+      'assets/trail-events-spy/trail-events-spy.json',
+    );
+
     this.load.image('icon_sort', 'assets/icons/sort.svg');
     this.load.image('icon_chevron_left', 'assets/icons/chevron-left.svg');
     this.load.image('icon_chevron_right', 'assets/icons/chevron-right.svg');

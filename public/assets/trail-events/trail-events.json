@@ -1,0 +1,772 @@
+{"frames": [
+
+{
+	"filename": "abandoned_mine.png",
+	"frame": {"x":0,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "abandoned_wagon.png",
+	"frame": {"x":576,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "angels_armory.png",
+	"frame": {"x":1152,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "animal_injured.png",
+	"frame": {"x":1728,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "animal_quicksand.png",
+	"frame": {"x":2304,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "animals_exhausted.png",
+	"frame": {"x":2880,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "bad_mosquitos.png",
+	"frame": {"x":3456,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "bad_water.png",
+	"frame": {"x":4032,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "bandit_ambush.png",
+	"frame": {"x":4608,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "beautiful_sunset.png",
+	"frame": {"x":5184,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "blizzard.png",
+	"frame": {"x":5760,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "blood_moon_rising.png",
+	"frame": {"x":6336,"y":0,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "broken_axle.png",
+	"frame": {"x":0,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "broken_tongue.png",
+	"frame": {"x":576,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "broken_wheel.png",
+	"frame": {"x":1152,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "broken_yoke.png",
+	"frame": {"x":1728,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "buffalo_stampede.png",
+	"frame": {"x":2304,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "calm_river.png",
+	"frame": {"x":2880,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "campfire_songs.png",
+	"frame": {"x":3456,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "caught_fish.png",
+	"frame": {"x":4032,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "clear_skies.png",
+	"frame": {"x":4608,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "cool_breeze.png",
+	"frame": {"x":5184,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "crossroads_deal.png",
+	"frame": {"x":5760,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "crystal_cave.png",
+	"frame": {"x":6336,"y":326,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "cursed_graveyard.png",
+	"frame": {"x":0,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "dead_livestock.png",
+	"frame": {"x":576,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "deer_spotted.png",
+	"frame": {"x":1152,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "demonic_duel.png",
+	"frame": {"x":1728,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "demons_bounty.png",
+	"frame": {"x":2304,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "dust_storm.png",
+	"frame": {"x":2880,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "eagles_overhead.png",
+	"frame": {"x":3456,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "extreme_cold.png",
+	"frame": {"x":4032,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "extreme_heat.png",
+	"frame": {"x":4608,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "fallen_angel.png",
+	"frame": {"x":5184,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "fallen_rocks.png",
+	"frame": {"x":5760,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "fallen_timbers.png",
+	"frame": {"x":6336,"y":652,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "fellow_traveler.png",
+	"frame": {"x":0,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "fire_in_wagon.png",
+	"frame": {"x":576,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "flooded_trail.png",
+	"frame": {"x":1152,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "found_fruit.png",
+	"frame": {"x":1728,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "four_leaf_clover.png",
+	"frame": {"x":2304,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "gold_strike.png",
+	"frame": {"x":2880,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "hailstorm.png",
+	"frame": {"x":3456,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "heavy_fog.png",
+	"frame": {"x":4032,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "hellmouth.png",
+	"frame": {"x":4608,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "infernal_forge.png",
+	"frame": {"x":5184,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "iron_vein.png",
+	"frame": {"x":5760,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "locusts.png",
+	"frame": {"x":6336,"y":978,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "lose_trail.png",
+	"frame": {"x":0,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "lost_severe.png",
+	"frame": {"x":576,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "lost_trail.png",
+	"frame": {"x":1152,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "missing_livestock.png",
+	"frame": {"x":1728,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "missing_person.png",
+	"frame": {"x":2304,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "morning_frost.png",
+	"frame": {"x":2880,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "native_guide.png",
+	"frame": {"x":3456,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "no_grass.png",
+	"frame": {"x":4032,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "no_water.png",
+	"frame": {"x":4608,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "old_burial_ground.png",
+	"frame": {"x":5184,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "old_prospectors_cache.png",
+	"frame": {"x":5760,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "petrified_forest.png",
+	"frame": {"x":6336,"y":1304,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "possessed_wagon.png",
+	"frame": {"x":0,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "prairie_fire.png",
+	"frame": {"x":576,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "preachers_ghost.png",
+	"frame": {"x":1152,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "quarry_site.png",
+	"frame": {"x":1728,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "quicksand.png",
+	"frame": {"x":2304,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "rabbit_warren.png",
+	"frame": {"x":2880,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "river_crossing.png",
+	"frame": {"x":3456,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "rough_trail.png",
+	"frame": {"x":4032,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "severe_thunderstorm.png",
+	"frame": {"x":4608,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "shooting_star.png",
+	"frame": {"x":5184,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "sick_oxen.png",
+	"frame": {"x":5760,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "snowbound.png",
+	"frame": {"x":6336,"y":1630,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "spoiled_food.png",
+	"frame": {"x":0,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "starry_night.png",
+	"frame": {"x":576,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "strangers_ahead.png",
+	"frame": {"x":1152,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "strangers_approach.png",
+	"frame": {"x":1728,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "sunken_chest.png",
+	"frame": {"x":2304,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "swamped_wagon.png",
+	"frame": {"x":2880,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "the_harrowing.png",
+	"frame": {"x":3456,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "theft_from_wagon.png",
+	"frame": {"x":4032,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "thick_dust.png",
+	"frame": {"x":4608,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "thief.png",
+	"frame": {"x":5184,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "tipped_wagon.png",
+	"frame": {"x":5760,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "too_many_at_river.png",
+	"frame": {"x":6336,"y":1956,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "traveling_blacksmith.png",
+	"frame": {"x":0,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wagon_deep_sand.png",
+	"frame": {"x":576,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wagon_fell_through_ice.png",
+	"frame": {"x":1152,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wagon_morale_low.png",
+	"frame": {"x":1728,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wagon_stuck_mud.png",
+	"frame": {"x":2304,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "whale_bones.png",
+	"frame": {"x":2880,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wild_fruit.png",
+	"frame": {"x":3456,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wild_vegetables.png",
+	"frame": {"x":4032,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wildflowers.png",
+	"frame": {"x":4608,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "witchs_offer.png",
+	"frame": {"x":5184,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+},
+{
+	"filename": "wrong_trail.png",
+	"frame": {"x":5760,"y":2282,"w":576,"h":326},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":576,"h":326},
+	"sourceSize": {"w":576,"h":326}
+}],
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "trail-events.png",
+	"format": "RGBA8888",
+	"size": {"w":6912,"h":2608},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:6cd8758e3cab55d01badbdfacc43b142:66b3e952657eb01ba3f899257c3d2e75:682d79e0c67982d73ff09ea818449bbd$"
+}
+}

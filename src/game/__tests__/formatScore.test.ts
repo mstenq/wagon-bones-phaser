@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { formatScore, formatScoreComponent } from '../formatScore';
+import { formatScore, formatScoreComponent, formatXMult } from '../formatScore';
 
 describe('formatScore', () => {
   test('uses thousand separators below 100 billion', () => {
@@ -19,6 +19,16 @@ describe('formatScore', () => {
 
   test('floors fractional values', () => {
     expect(formatScore(1234.9)).toBe('1,234');
+  });
+});
+
+describe('formatXMult', () => {
+  test('rounds to one decimal place', () => {
+    expect(formatXMult(1)).toBe('1');
+    expect(formatXMult(1.5)).toBe('1.5');
+    expect(formatXMult(2)).toBe('2');
+    expect(formatXMult(1.3333333333333333)).toBe('1.3');
+    expect(formatXMult(1.35)).toBe('1.4');
   });
 });
 

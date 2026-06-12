@@ -13,7 +13,7 @@ import type { Die } from '../../game/types';
 import { resolveEquipmentList } from '../../game/store/resolve';
 import { selectEffectiveDays, selectEffectiveRerolls } from '../../game/store/selectors/runSelectors';
 import { COLORS, TEXT_COLORS, FONTS, TRAIL_EVENT } from '../../game/Constants';
-import { trailEventImageKey, trailEventImagePath } from '../../game/trailEventAssets';
+import { TRAIL_EVENTS_ATLAS_KEY, trailEventAtlasFrame } from '../../game/trailEventAssets';
 import { Button } from '../ui/Button';
 import { ItemCard } from '../ui/ItemCard';
 import type { LayoutResult } from '../ui/SceneLayout';
@@ -179,23 +179,10 @@ export class TrailEventScene extends Scene {
 
     this.syncTrailToStore();
 
-    const onDisplayReady = () => {
-      if (this.resolved) {
-        this.rebuildResolvedResult(layout);
-        return;
-      }
-      this.buildEventDisplay(layout);
-    };
-
-    // Load event image dynamically if not already cached
-    const imageKey = trailEventImageKey(this.currentEvent.id);
-    if (!this.textures.exists(imageKey)) {
-      this.load.image(imageKey, trailEventImagePath(this.currentEvent.id));
-      this.load.once('complete', () => onDisplayReady());
-      this.load.once('loaderror', () => onDisplayReady());
-      this.load.start();
+    if (this.resolved) {
+      this.rebuildResolvedResult(layout);
     } else {
-      onDisplayReady();
+      this.buildEventDisplay(layout);
     }
 
     EventBus.emit(Events.SCENE_READY, this);
@@ -255,13 +242,14 @@ export class TrailEventScene extends Scene {
     const panel = this.add.graphics();
     this.eventContainer.add(panel);
 
-    // Event image (load dynamically if available)
-    const imageKey = trailEventImageKey(event.id);
+    // Event image from preloaded atlas
+    const atlasFrame = trailEventAtlasFrame(event.id);
+    const trailTexture = this.textures.get(TRAIL_EVENTS_ATLAS_KEY);
     let imageY = panelTop + 20;
     let imageHeight = 0;
 
-    if (this.textures.exists(imageKey)) {
-      const img = this.add.image(contentCX, imageY + 80, imageKey);
+    if (this.textures.exists(TRAIL_EVENTS_ATLAS_KEY) && trailTexture.has(atlasFrame)) {
+      const img = this.add.image(contentCX, imageY + 80, TRAIL_EVENTS_ATLAS_KEY, atlasFrame);
       const maxImgW = panelW - 40;
       const maxImgH = 160;
       const imgScale = Math.min(maxImgW / img.width, maxImgH / img.height, 1);

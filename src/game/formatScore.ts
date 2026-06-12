@@ -48,6 +48,18 @@ export function formatScoreComponent(value: DecimalSource): string {
   return rounded.toLocaleString('en-US');
 }
 
+/** Format an xMult factor for score popups (one decimal place). */
+export function formatXMult(value: DecimalSource): string {
+  const d = D(value);
+  if (d.eq(D(1))) return '1';
+  const asNum = d.toNumber();
+  if (Number.isFinite(asNum) && Math.abs(asNum) < GAMEPLAY.SCORE_SCIENTIFIC_THRESHOLD) {
+    const rounded = Math.round(asNum * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : String(parseFloat(rounded.toFixed(1)));
+  }
+  return formatScientific(d);
+}
+
 /** Format mult for UI (fractional mults like 1.5 when small). */
 export function formatMult(value: DecimalSource): string {
   const d = D(value);

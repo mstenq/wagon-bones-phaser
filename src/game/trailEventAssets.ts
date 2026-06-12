@@ -1,22 +1,15 @@
 // ─── Trail event image paths and layout helpers (pure TS, no Phaser) ───
 
-export const TRAIL_EVENT_IMAGE_DIR = 'assets/trail-events';
-export const TRAIL_EVENT_SPY_IMAGE_DIR = 'assets/trail-events-spy';
+export const TRAIL_EVENTS_ATLAS_KEY = 'trail_events';
+export const TRAIL_EVENTS_SPY_ATLAS_KEY = 'trail_events_spy';
 
-export function trailEventImagePath(id: string): string {
-  return `${TRAIL_EVENT_IMAGE_DIR}/${id}.png`;
-}
+export const TRAIL_EVENTS_ATLAS_IMAGE = 'assets/trail-events/trail-events.png';
+export const TRAIL_EVENTS_ATLAS_JSON = 'assets/trail-events/trail-events.json';
+export const TRAIL_EVENTS_SPY_ATLAS_IMAGE = 'assets/trail-events-spy/trail-events-spy.png';
+export const TRAIL_EVENTS_SPY_ATLAS_JSON = 'assets/trail-events-spy/trail-events-spy.json';
 
-export function trailEventSpyImagePath(id: string): string {
-  return `${TRAIL_EVENT_SPY_IMAGE_DIR}/${id}.png`;
-}
-
-export function trailEventImageKey(id: string): string {
-  return `trail_event_${id}`;
-}
-
-export function trailEventSpyImageKey(id: string): string {
-  return `trail_event_spy_${id}`;
+export function trailEventAtlasFrame(id: string): string {
+  return `${id}.png`;
 }
 
 /** Scale factor to cover a box (like CSS background-size: cover). */

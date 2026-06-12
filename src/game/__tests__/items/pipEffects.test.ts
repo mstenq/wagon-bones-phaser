@@ -655,8 +655,16 @@ describe('BONE_DICE_XMULT_CHANCE: Bone Charm', () => {
   test('has correct effect type and params', () => {
     const inst = item('bone_charm');
     expect(inst.def.effectType).toBe('BONE_DICE_XMULT_CHANCE');
-    expect(inst.def.effectParams.chance).toEqual([1, 2]);
     expect(inst.def.effectParams.value).toBe(1.5);
+  });
+
+  test('always applies x1.5 mult on bone dice', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 5, enhancement: 'bone' }), die({ value: 5, enhancement: 'bone' })],
+      equipment: [item('bone_charm')],
+    });
+    // PAIR baseMult=1, +4 per bone die (2 dice=+8), bone charm x1.5 per die
+    expect(result.mult).toBeMult(20.25);
   });
 
   test('does not trigger on non-bone dice', () => {

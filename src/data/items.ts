@@ -2209,17 +2209,11 @@ const items: ItemDef[] = [
     cost: 7,
     rarity: 'uncommon',
     effectType: 'BONE_DICE_XMULT_CHANCE',
-    effectParams: { chance: [1, 2], value: 1.5, weightSupply: [{ supplyId: 'buzzards', multiplier: 2 }] },
-    display: (_round, player) => ({
-      hint: [[mult('x1.5'), oddsDisplay([1, 2], player), condition('per bone')]],
+    effectParams: { value: 1.5, weightSupply: [{ supplyId: 'buzzards', multiplier: 2 }] },
+    display: () => ({
+      hint: [[mult('x1.5'), condition('per bone')]],
       tooltip: [
-        [
-          text('Played bone dice have '),
-          oddsDisplay([1, 2], player),
-          text(' chance to give '),
-          mult('x1.5'),
-          text(' mult'),
-        ],
+        [text('Played bone dice give '), mult('x1.5'), text(' mult')],
         [text('Also makes Buzzards supply cards 2 times more likely')],
       ],
     }),
