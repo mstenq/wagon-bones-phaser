@@ -80,10 +80,6 @@ export class OptionsModal extends GameObjects.Container {
         onClick: () => exportGameFromScene(scene),
       },
       {
-        label: 'Export Previous Game State (Debug)',
-        onClick: () => exportPreviousAutoSaveFromStorage(),
-      },
-      {
         label: 'Load Game',
         onClick: () => {
           this.destroy();
@@ -100,6 +96,10 @@ export class OptionsModal extends GameObjects.Container {
     ];
 
     if (isDevMode()) {
+      menuEntries.push({
+        label: 'Export Previous Game State (Debug)',
+        onClick: () => exportPreviousAutoSaveFromStorage(),
+      });
       menuEntries.push({
         label: 'Test Boss',
         onClick: () => {
