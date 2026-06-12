@@ -1691,16 +1691,14 @@ describe('New utility equipment lifecycle effects', () => {
     expectMirrorLakeDoesNotChangeScore('pawn_broker');
   });
 
-  test('pocket watch gains miles from days left and mult from rerolls left at leg round end', () => {
+  test('pocket watch gains miles and mult from rerolls left at leg round end', () => {
     const watch = item('pocket_watch');
     const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
-    const round = getRoundState()!;
     roundActions.patch({ rerollsRemaining: 3 });
     processEndOfRound(player.equipment, { isLegRoundEnd: true });
     const inst = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
-    const daysLeft = round.config.maxDays - round.day + 1;
-    expect(inst.state.miles).toBe(daysLeft * 10);
+    expect(inst.state.miles).toBe(5);
     expect(inst.state.mult).toBe(3);
   });
 
@@ -1734,13 +1732,11 @@ describe('New utility equipment lifecycle effects', () => {
     const watch = item('pocket_watch');
     const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
-    const round = getRoundState()!;
     roundActions.patch({ rerollsRemaining: 3 });
     processEndOfRound(player.equipment, { isLegRoundEnd: true });
     const alone = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
-    const daysLeft = round.config.maxDays - round.day + 1;
     expect(alone.state.mult).toBe(3);
-    expect(alone.state.miles).toBe(daysLeft * 10);
+    expect(alone.state.miles).toBe(5);
 
     const { game: game2, player: player2 } = setupGame({
       equipment: [item('mirror_lake'), item('pocket_watch')],
@@ -1750,7 +1746,7 @@ describe('New utility equipment lifecycle effects', () => {
     processEndOfRound(player2.equipment, { isLegRoundEnd: true });
     const withMirror = player2.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect(withMirror.state.mult).toBe(6);
-    expect(withMirror.state.miles).toBe(daysLeft * 10 * 2);
+    expect(withMirror.state.miles).toBe(10);
   });
 
   test('Mirror Lake does not change score vs pocket watch alone', () => {

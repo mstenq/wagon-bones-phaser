@@ -31,6 +31,7 @@ export class ItemCardAuras {
   setup(aura: ItemAura | null | undefined): void {
     if (!aura || !isRegistryAura(aura.id)) return;
 
+    this.clear();
     this.effectHost = new AuraEffectHost({
       scene: this.scene,
       parent: this.card,

@@ -109,8 +109,13 @@ export function applyBossOnDayStart(day: number): void {
   if (boss.effectType === 'DISABLE_RANDOM_EQUIPMENT') {
     const count = (boss.effectParams.count as number) ?? 1;
     const equipment = resolveEquipmentList();
+    const previousDisabled = getBossRoundState().disabledEquipmentIndices;
     const disabledEquipmentIndices: number[] = [];
-    const available = equipment.map((_, i) => i);
+    let available = equipment.map((_, i) => i);
+    if (previousDisabled.length > 0 && available.length > 1) {
+      const exclude = new Set(previousDisabled);
+      available = available.filter((i) => !exclude.has(i));
+    }
     for (let n = 0; n < count && available.length > 0; n++) {
       const pick = available.splice(Math.floor(rngFloat('boss') * available.length), 1)[0];
       disabledEquipmentIndices.push(pick);

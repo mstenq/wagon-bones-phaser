@@ -218,7 +218,7 @@ export class DiceSprite extends GameObjects.Container {
   }
 
   private hasOrbitSticker(): boolean {
-    if (!this._dieData.sticker) return false;
+    if (!this._dieData.sticker || !this.scene) return false;
     return this.scene.textures.exists(`sticker_${this._dieData.sticker}`);
   }
 
@@ -562,6 +562,7 @@ export class DiceSprite extends GameObjects.Container {
   }
 
   destroy(fromScene?: boolean): void {
+    if (!this.scene) return;
     DiceSprite.instances.delete(this);
     this.hideTooltip();
     if (this.rerollLockLabel) {

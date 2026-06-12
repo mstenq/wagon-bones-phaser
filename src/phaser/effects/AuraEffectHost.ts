@@ -96,30 +96,72 @@ export class AuraEffectHost {
   bindPointer(target: GameObjects.Container): void {
     this.unbindPointer?.();
 
-    const onOver = () => {
-      this.setFrame({ hovered: true });
-    };
-    const onOut = () => {
+    const clearHover = () => {
       this.setFrame({ hovered: false, pointerNormX: 0.5, pointerNormY: 0.5 });
     };
-    const onMove = (pointer: Phaser.Input.Pointer) => {
+
+    const isPointerInside = (pointer: Phaser.Input.Pointer): boolean => {
+      if (!target.active || !target.scene) {
+        return false;
+      }
+      const bounds = target.getBounds();
+      return bounds.contains(pointer.worldX, pointer.worldY);
+    };
+
+    const syncPointer = (pointer: Phaser.Input.Pointer): void => {
+      if (!target.active || !target.scene) {
+        clearHover();
+        return;
+      }
+      if (!isPointerInside(pointer)) {
+        clearHover();
+        return;
+      }
+
       // Cards and dice draw center-anchored at (0,0); norm 0.5 = center (matches Pixi ARCANE/FIRE hosts).
       const local = target.getLocalPoint(pointer.worldX, pointer.worldY);
+      if (!Number.isFinite(local.x) || !Number.isFinite(local.y) || this.mount.width <= 0 || this.mount.height <= 0) {
+        clearHover();
+        return;
+      }
+
       const normX = local.x / this.mount.width + 0.5;
       const normY = local.y / this.mount.height + 0.5;
       this.setFrame({
+        hovered: true,
         pointerNormX: Phaser.Math.Clamp(normX, 0, 1),
         pointerNormY: Phaser.Math.Clamp(normY, 0, 1),
       });
     };
 
+    const onOver = (pointer: Phaser.Input.Pointer) => {
+      syncPointer(pointer);
+    };
+    const onOut = () => {
+      clearHover();
+    };
+    const onMove = (pointer: Phaser.Input.Pointer) => {
+      if (!this.frame.hovered) {
+        return;
+      }
+      syncPointer(pointer);
+    };
+    const onSceneMove = (pointer: Phaser.Input.Pointer) => {
+      if (!this.frame.hovered) {
+        return;
+      }
+      syncPointer(pointer);
+    };
+
     target.on('pointerover', onOver);
     target.on('pointerout', onOut);
     target.on('pointermove', onMove);
+    this.scene.input.on('pointermove', onSceneMove);
     this.unbindPointer = () => {
       target.off('pointerover', onOver);
       target.off('pointerout', onOut);
       target.off('pointermove', onMove);
+      this.scene.input.off('pointermove', onSceneMove);
     };
   }
 

@@ -128,6 +128,10 @@ function nearestRingPointIndex(points: Point[], target: Point): number {
   return best;
 }
 
+function clampNudge(value: number): number {
+  return Math.max(-48, Math.min(48, value));
+}
+
 function directionalRingPointIndex(points: Point[], target: Point): number {
   const dist2 = target.x * target.x + target.y * target.y;
   if (dist2 < 28 * 28) {
@@ -298,7 +302,16 @@ export const arcaneEffect: EffectDefinition = {
         x: (frame.pointerNormX - 0.5) * frame.width,
         y: (frame.pointerNormY - 0.5) * frame.height,
       };
-      const canStrike = frame.hovered && !frame.dragging;
+      const canStrike =
+        frame.hovered &&
+        !frame.dragging &&
+        Number.isFinite(pointer.x) &&
+        Number.isFinite(pointer.y) &&
+        frame.width > 0 &&
+        frame.height > 0;
+      if (!canStrike) {
+        strikes.length = 0;
+      }
       if (
         canStrike &&
         strikes.length < ARCANE_TUNE.hoverStrike.maxConcurrent &&
@@ -339,14 +352,14 @@ export const arcaneEffect: EffectDefinition = {
           (lanePhaseVelocity[lane] ?? 0) + (Math.random() - 0.5) * frame.dt * ARCANE_TUNE.stochastic.phaseKick;
         const dampedPhaseVelocity = phaseVelocity * Math.max(0, 1 - frame.dt * ARCANE_TUNE.stochastic.phaseDamping);
         lanePhaseVelocity[lane] = dampedPhaseVelocity;
-        lanePhaseNudge[lane] = (lanePhaseNudge[lane] ?? 0) + dampedPhaseVelocity * frame.dt;
+        lanePhaseNudge[lane] = clampNudge((lanePhaseNudge[lane] ?? 0) + dampedPhaseVelocity * frame.dt);
         const phaseNudge = lanePhaseNudge[lane] ?? 0;
 
         const gateVelocity =
           (laneGateVelocity[lane] ?? 0) + (Math.random() - 0.5) * frame.dt * ARCANE_TUNE.stochastic.gateKick;
         const dampedGateVelocity = gateVelocity * Math.max(0, 1 - frame.dt * ARCANE_TUNE.stochastic.gateDamping);
         laneGateVelocity[lane] = dampedGateVelocity;
-        laneGateNudge[lane] = (laneGateNudge[lane] ?? 0) + dampedGateVelocity * frame.dt;
+        laneGateNudge[lane] = clampNudge((laneGateNudge[lane] ?? 0) + dampedGateVelocity * frame.dt);
         const gateNudge = laneGateNudge[lane] ?? 0;
 
         const lanePhase = lane * ARCANE_TUNE.lane.phaseStep + seed * ARCANE_TUNE.lane.phaseSeedScale;

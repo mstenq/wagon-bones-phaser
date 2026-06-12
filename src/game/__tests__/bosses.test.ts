@@ -364,6 +364,40 @@ describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
     expect(getBossRoundState().disabledEquipmentIndices).toHaveLength(1);
   });
 
+  test('does not disable the same equipment twice in a row', () => {
+    setupGame({
+      bossId: 'the_jinx',
+      equipment: [item('horseshoe'), item('dynamite'), item('coffee')],
+    });
+    applyBossOnDayStart(1);
+    for (let day = 2; day <= 20; day++) {
+      const previous = getBossRoundState().disabledEquipmentIndices[0]!;
+      applyBossOnDayStart(day);
+      expect(getBossRoundState().disabledEquipmentIndices[0]).not.toBe(previous);
+    }
+  });
+
+  test('with only one equipment, still disables that equipment each day', () => {
+    setupGame({ bossId: 'the_jinx', equipment: [item('horseshoe')] });
+    applyBossOnDayStart(1);
+    expect(getBossRoundState().disabledEquipmentIndices).toEqual([0]);
+    applyBossOnDayStart(2);
+    expect(getBossRoundState().disabledEquipmentIndices).toEqual([0]);
+  });
+
+  test('does not re-disable the same equipment after reorder', () => {
+    setupGame({
+      bossId: 'the_jinx',
+      equipment: [item('mirror_lake'), item('quick_draw'), item('horseshoe')],
+    });
+    applyBossOnDayStart(1);
+    const disabledIndex = getBossRoundState().disabledEquipmentIndices[0]!;
+    equipmentActions.reorderEquipment(disabledIndex, 2);
+    expect(getBossRoundState().disabledEquipmentIndices[0]).toBe(2);
+    applyBossOnDayStart(2);
+    expect(getBossRoundState().disabledEquipmentIndices[0]).not.toBe(2);
+  });
+
   test('disabled equipment re-enabled when boss round is not active', () => {
     setupGame({ bossId: 'the_jinx', equipment: [item('horseshoe')] });
     getBossRoundState().disabledEquipmentIndices = [0];

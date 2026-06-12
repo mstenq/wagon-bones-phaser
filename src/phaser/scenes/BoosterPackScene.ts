@@ -206,6 +206,8 @@ export class BoosterPackScene extends Scene {
     }
 
     this.cardSprites = [];
+    this.lineupSprites = [];
+    this.lineupLockIcons = [];
     const storedSelection = getSceneState().boosterPack?.lineupSelectedDieIds;
     sceneActions.patchPackLineupSelection(storedSelection ?? []);
     this.activeTabCard = null;
@@ -543,8 +545,12 @@ export class BoosterPackScene extends Scene {
 
   private clearDiceLineupSprites(): void {
     this.cancelLineupDrag();
-    for (const s of this.lineupSprites) s.destroy();
-    for (const icon of this.lineupLockIcons) icon.destroy();
+    for (const s of this.lineupSprites) {
+      if (s.scene) s.destroy();
+    }
+    for (const icon of this.lineupLockIcons) {
+      if (icon.scene) icon.destroy();
+    }
     this.lineupSprites = [];
     this.lineupLockIcons = [];
   }
