@@ -33,7 +33,8 @@ export class Preloader extends Scene {
     });
     this.load.once('complete', hideLoadingOverlay);
 
-    // Shop background only; game rounds lazy-load numbered backgrounds in GameScene
+    // Menu / shop backgrounds; game rounds lazy-load numbered backgrounds in GameScene
+    this.load.image('bg_main_menu', 'assets/backgrounds/main-menu.png');
     this.load.image('bg_shop', 'assets/backgrounds/shop.png');
 
     // Tileable panel textures for sidebar / top bar UI

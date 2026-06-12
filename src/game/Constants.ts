@@ -189,7 +189,7 @@ export const PACK_WEIGHTS = {
 // ─── Colors (hex numbers for Phaser tints/fills) ───
 export const COLORS = {
   // Backgrounds
-  BG_PRIMARY: 0x1a1a2e,
+  BG_PRIMARY: 0x1d1716,
   BG_DARK: 0x0a0a1a,
   BG_FELT: 0x2a4a2a,
   BG_CARD: 0x2a2a3a,

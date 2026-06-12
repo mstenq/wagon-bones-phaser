@@ -7,6 +7,8 @@
  * Run: bun scripts/compress_backgrounds.ts
  *      bun scripts/compress_backgrounds.ts --quality 20 --skip 1,2
  *      bun scripts/compress_backgrounds.ts --dry-run
+ *
+ * Per-file minimum quality: edit QUALITY_OVERRIDE below (basename without .png).
  */
 
 import { spawnSync } from 'node:child_process';
@@ -19,6 +21,11 @@ const OUT_DIR = join(ROOT, 'public/assets/backgrounds');
 const PNGQUANT = join(ROOT, 'node_modules/.bin/pngquant');
 
 const DEFAULT_QUALITY = 20;
+
+/** Basename (no extension) → minimum pngquant quality. Unlisted files use --quality / DEFAULT_QUALITY. */
+const QUALITY_OVERRIDE: Record<string, number> = {
+  'main-menu': 90,
+};
 
 type CliOptions = {
   dryRun: boolean;
@@ -74,17 +81,26 @@ function printHelp(): void {
   console.log(`Usage: bun scripts/compress_backgrounds.ts [options]
 
 Options:
-  --quality <n>   Minimum pngquant quality (0-100). Default: ${DEFAULT_QUALITY}
+  --quality <n>   Default minimum pngquant quality (0-100). Default: ${DEFAULT_QUALITY}
+                  Per-file overrides: QUALITY_OVERRIDE in this script (e.g. main-menu: 80).
   --skip <list>   Comma-separated basenames to skip (e.g. 1,2,shop)
   --dry-run       Print actions without writing files
   -h, --help      Show this help
 `);
 }
 
-const BACKGROUND_BASENAME = /^(?:\d+|shop)\.png$/i;
+const BACKGROUND_BASENAME = /^(?:\d+|shop|main-menu)\.png$/i;
 
 function isBackgroundPng(basename: string): boolean {
   return BACKGROUND_BASENAME.test(basename);
+}
+
+function stemFromBasename(basename: string): string {
+  return basename.replace(/\.png$/i, '');
+}
+
+function resolveQuality(basename: string, defaultQuality: number): number {
+  return QUALITY_OVERRIDE[stemFromBasename(basename)] ?? defaultQuality;
 }
 
 function collectPngFiles(dir: string): string[] {
@@ -190,18 +206,20 @@ function main(): void {
       continue;
     }
 
+    const quality = resolveQuality(basename, options.quality);
     const outputPath = join(OUT_DIR, relPath);
     const before = statSync(inputPath).size;
     inputBytes += before;
 
     if (options.dryRun) {
-      console.log(`would compress ${relPath} (${formatBytes(before)})`);
+      const qNote = quality !== options.quality ? `, quality ${quality}` : '';
+      console.log(`would compress ${relPath} (${formatBytes(before)}${qNote})`);
       processed++;
       continue;
     }
 
     mkdirSync(dirname(outputPath), { recursive: true });
-    const result = compressPng(inputPath, outputPath, options.quality);
+    const result = compressPng(inputPath, outputPath, quality);
     if (result === 'skipped-larger') {
       console.log(`keep  ${relPath}  (${formatBytes(before)} — compressed output would be larger)`);
       unchanged++;
@@ -213,8 +231,9 @@ function main(): void {
     processed++;
 
     const ratio = before > 0 ? ((after / before) * 100).toFixed(1) : '0.0';
+    const qNote = quality !== options.quality ? ` q${quality}` : '';
     console.log(
-      `ok    ${relPath}  ${formatBytes(before)} → ${formatBytes(after)} (${ratio}%)`,
+      `ok    ${relPath}  ${formatBytes(before)} → ${formatBytes(after)} (${ratio}%)${qNote}`,
     );
   }
 

@@ -1,11 +1,12 @@
 import { Scene } from 'phaser';
 import { EventBus, Events } from '../../game/EventBus';
 import { resetAllGameStores } from '../../game/store';
-import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
+import { COLORS } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { OptionsModal } from '../ui/OptionsModal';
 import { clearAutoSave } from '../AutoSaveManager';
 import { ensureBackgroundMusic } from '../BackgroundMusic';
+import { applyFitBackgroundImage } from '../ui/SceneLayout';
 
 export class MainMenu extends Scene {
   constructor() {
@@ -20,34 +21,18 @@ export class MainMenu extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => this.scale.off('resize', this.onResize, this));
 
-    // Background
-    const bg = this.add.graphics();
-    bg.fillStyle(COLORS.BG_PRIMARY, 1);
-    bg.fillRect(0, 0, width, height);
+    const screen = { x: 0, y: 0, w: width, h: height };
 
-    // Title
-    this.add
-      .text(width / 2, height * 0.31, 'WAGON BONES', {
-        fontFamily: FONTS.HEADING,
-        fontSize: '64px',
-        color: TEXT_COLORS.GOLD,
-        stroke: '#000000',
-        strokeThickness: 6,
-        align: 'center',
-      })
-      .setOrigin(0.5);
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(COLORS.BG_PRIMARY, 1);
+    backdrop.fillRect(0, 0, width, height);
+    backdrop.setDepth(-2);
 
-    // Subtitle
-    this.add
-      .text(width / 2, height * 0.42, 'A Dice Rolling Journey', {
-        fontFamily: FONTS.PRIMARY,
-        fontSize: '22px',
-        color: TEXT_COLORS.SECONDARY,
-        align: 'center',
-      })
-      .setOrigin(0.5);
+    const bg = this.add.image(0, 0, 'bg_main_menu');
+    const imageBounds = applyFitBackgroundImage(bg, screen);
+    bg.setDepth(-1);
 
-    const startY = height * 0.57;
+    const startY = imageBounds.y + imageBounds.h * 0.80;
     const buttonGap = 14;
 
     new Button(this, width / 2, startY, 'Start Journey', { variant: 'primary', size: 'xl', width: 220 }).onClick(

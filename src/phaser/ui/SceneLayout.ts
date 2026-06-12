@@ -439,6 +439,23 @@ export function applyCoverBackgroundImage(image: GameObjects.Image, region: Back
   image.setScale(scale);
 }
 
+/** Fit-scale an image into a region (centered, letterboxed). Returns the displayed image bounds. */
+export function applyFitBackgroundImage(image: GameObjects.Image, region: BackgroundCoverRegion): BackgroundCoverRegion {
+  const cx = region.x + region.w / 2;
+  const cy = region.y + region.h / 2;
+  image.setPosition(cx, cy);
+  const scale = Math.min(region.w / image.width, region.h / image.height);
+  image.setScale(scale);
+  const displayW = image.width * scale;
+  const displayH = image.height * scale;
+  return {
+    x: cx - displayW / 2,
+    y: cy - displayH / 2,
+    w: displayW,
+    h: displayH,
+  };
+}
+
 export interface LayoutOptions {
   /** Background texture key (e.g. 'bg_1', 'bg_shop'). If null, draws a solid color fill. */
   bgKey?: string | null;
