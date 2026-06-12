@@ -35,6 +35,7 @@ import { deserializeEquipmentInstance } from '../../SaveLoad';
 import { resolveEquipmentInstance } from '../../store/resolve';
 import { rollShopEquipmentPreview } from '../../EquipmentModifiers';
 import { getPlayerState, resetPlayerState } from '../testRunPlayer';
+import { item, setupGame } from '../testHelpers';
 
 describe('shopStock', () => {
   beforeEach(() => {
@@ -297,8 +298,25 @@ describe('buildShopDieDisplayDef', () => {
   test('stickered die appends sticker line to tooltip', () => {
     const die = createDie({ enhancement: 'steel', sticker: 'purple_flower' });
     const displayDef = buildShopDieDisplayDef(die);
-    const tooltip = displayDef.display(null, getItemDisplayContext()).tooltip?.[0]?.[0]?.text ?? '';
-    expect(tooltip).toContain('Sticker: Purple Flower');
+    const stickerRow = displayDef.display(null, getItemDisplayContext()).tooltip?.[1]?.[0]?.text ?? '';
+    expect(stickerRow).toBe('Sticker: Purple Flower');
+  });
+
+  test('green_contagion shop die tooltip shows base odds without loaded dice', () => {
+    const die = createDie({ sticker: 'green_contagion' });
+    const displayDef = buildShopDieDisplayDef(die);
+    const oddsRow = displayDef.display(null, getItemDisplayContext()).tooltip?.[2] ?? [];
+    const oddsSegment = oddsRow.find((seg) => seg.style === 'odds');
+    expect(oddsSegment?.text).toBe('1 in 2');
+  });
+
+  test('green_contagion shop die tooltip shows loaded dice odds', () => {
+    setupGame({ equipment: [item('loaded_dice')] });
+    const die = createDie({ sticker: 'green_contagion' });
+    const displayDef = buildShopDieDisplayDef(die);
+    const oddsRow = displayDef.display(null, getItemDisplayContext()).tooltip?.[2] ?? [];
+    const oddsSegment = oddsRow.find((seg) => seg.style === 'odds');
+    expect(oddsSegment?.text).toBe('2 in 2');
   });
 
   test('shop die display id is tied to die instance', () => {

@@ -322,7 +322,7 @@ export function scoreHand(
   if (scoreContext?.selectedForScoreDice) {
     const scoringIds = new Set(handResult.scoringDice.map((d) => d.id));
     applyPurpleFlowerNonScoring(scoreContext.selectedForScoreDice, scoringIds, pipelineCtx.mutations, animEvents);
-    applyGreenContagionSpread(scoreContext.selectedForScoreDice, pipelineCtx.mutations, animEvents);
+    applyGreenContagionSpread(scoreContext.selectedForScoreDice, equipment, pipelineCtx.mutations, animEvents);
   }
 
   // FIRST_DAY_SOLO_COPY: Bloodline — copy the solo die if scored alone on day 1

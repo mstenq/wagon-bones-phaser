@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, item, calculateTestScore, resetDieIds } from '../testHelpers';
 
 beforeEach(() => resetDieIds());
 
@@ -144,7 +144,7 @@ describe('green_contagion sticker', () => {
     const source = die({ value: 6, enhancement: 'bone', sticker: 'green_contagion' });
     const { player } = calculateTestScore({
       scoredDice: [neighbor, source],
-      runSeed: 'gc-fail-1',
+      runSeed: 'gc-fail-2',
     });
     const patched = player.dice.find((d) => d.id === neighbor.id);
     expect(patched?.sticker).toBeNull();
@@ -157,9 +157,51 @@ describe('green_contagion sticker', () => {
     const right = die({ value: 8 });
     const { player } = calculateTestScore({
       scoredDice: [left, source, right],
-      runSeed: 'gc-both-7',
+      runSeed: 'gc-both-8',
     });
     expect(player.dice.find((d) => d.id === left.id)?.sticker).toBe('green_contagion');
     expect(player.dice.find((d) => d.id === right.id)?.sticker).toBe('green_contagion');
+  });
+
+  test('loaded_dice turns a failing spread seed into a success', () => {
+    const neighbor = die({ value: 4 });
+    const source = die({ value: 6, enhancement: 'bone', sticker: 'green_contagion' });
+    const { player } = calculateTestScore({
+      scoredDice: [neighbor, source],
+      runSeed: 'gc-fail-2',
+      equipment: [item('loaded_dice')],
+    });
+    const patched = player.dice.find((d) => d.id === neighbor.id);
+    expect(patched?.sticker).toBe('green_contagion');
+    expect(patched?.enhancement).toBe('bone');
+  });
+
+  test('loaded_dice doubles spread chance for a single neighbor', () => {
+    const neighbor = die({ value: 4 });
+    const source = die({ value: 6, enhancement: 'bone', sticker: 'green_contagion' });
+    let spreadBase = 0;
+    let spreadLoaded = 0;
+    const runs = 5000;
+
+    for (let i = 0; i < runs; i++) {
+      const { player: basePlayer } = calculateTestScore({
+        scoredDice: [neighbor, source],
+        runSeed: `gc-rate-base-${i}`,
+      });
+      if (basePlayer.dice.find((d) => d.id === neighbor.id)?.sticker === 'green_contagion') spreadBase++;
+
+      const { player: loadedPlayer } = calculateTestScore({
+        scoredDice: [neighbor, source],
+        runSeed: `gc-rate-loaded-${i}`,
+        equipment: [item('loaded_dice')],
+      });
+      if (loadedPlayer.dice.find((d) => d.id === neighbor.id)?.sticker === 'green_contagion') spreadLoaded++;
+    }
+
+    const baseRate = spreadBase / runs;
+    const loadedRate = spreadLoaded / runs;
+    expect(baseRate).toBeGreaterThan(0.42);
+    expect(baseRate).toBeLessThan(0.58);
+    expect(loadedRate).toBeGreaterThan(0.95);
   });
 });

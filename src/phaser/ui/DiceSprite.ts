@@ -12,15 +12,16 @@ import { effectPhaseFromSeed } from '../effects/context';
 import { isRegistryAura } from '../effects/registry';
 import { getAuraPrimary } from './AuraFX';
 import { DICE_ATLAS_KEY, resolveDiceAtlasFrame } from './diceAssets';
-import { HINT_COLORS } from './itemCard/itemCardHintStyles';
+import { getItemDisplayContext } from '../../game/displayContext';
+import type { HintSegment } from '../../game/ItemsSystem';
+import { HINT_COLORS, tooltipSegmentColors } from './itemCard/itemCardHintStyles';
 import diceEnhancements from '../../data/dice_enhancements';
 import diceAuras from '../../data/dice_auras';
-import diceStickers from '../../data/dice_stickers';
+import { getDiceStickerById } from '../../data/dice_stickers';
 
 // Lookup maps for descriptions
 const ENHANCEMENT_INFO = new Map(diceEnhancements.map((e) => [e.id, e]));
 const AURA_INFO = new Map(diceAuras.map((a) => [a.id, a]));
-const STICKER_INFO = new Map(diceStickers.map((s) => [s.id, s]));
 
 const DICE_SIZE = DICE.SIZE;
 const SELECTED_STROKE = DICE.SELECTED_STROKE;
@@ -435,12 +436,13 @@ export class DiceSprite extends GameObjects.Container {
       }
     }
 
-    // Sticker info
-    if (this._dieData.sticker) {
-      const info = STICKER_INFO.get(this._dieData.sticker);
-      const stickerName = info ? info.name : this._dieData.sticker.replace(/_/g, ' ');
-      const stickerDesc = info ? ` - ${info.description}` : '';
-      lines.push(`${stickerName}${stickerDesc}`);
+    const stickerInfo = this._dieData.sticker ? getDiceStickerById(this._dieData.sticker) : null;
+    const stickerTooltipRows = stickerInfo?.tooltip?.(getItemDisplayContext()) ?? null;
+
+    if (stickerInfo && !stickerTooltipRows) {
+      lines.push(`${stickerInfo.name} - ${stickerInfo.description}`);
+    } else if (stickerInfo && stickerTooltipRows) {
+      lines.push(stickerInfo.name);
     }
 
     const infoText = this.scene.add
@@ -466,9 +468,33 @@ export class DiceSprite extends GameObjects.Container {
         .setOrigin(0, 0);
     }
 
-    const contentWidth = Math.max(infoText.width, bonusText?.width ?? 0);
+    const stickerSegmentRows: GameObjects.Text[][] = [];
+    if (stickerTooltipRows) {
+      for (const row of stickerTooltipRows) {
+        stickerSegmentRows.push(this.createSegmentRowTexts(row));
+      }
+    }
+
+    let contentWidth = Math.max(infoText.width, bonusText?.width ?? 0);
+    for (const row of stickerSegmentRows) {
+      const rowWidth = row.reduce((sum, seg) => sum + seg.width, 0);
+      contentWidth = Math.max(contentWidth, rowWidth);
+    }
+
     infoText.setPosition(TOOLTIP_PAD, TOOLTIP_PAD);
     let contentBottom = TOOLTIP_PAD + infoText.height;
+
+    for (const row of stickerSegmentRows) {
+      contentBottom += 4;
+      let curX = TOOLTIP_PAD;
+      for (const segText of row) {
+        segText.setPosition(curX, contentBottom);
+        curX += segText.width;
+      }
+      const rowHeight = row.reduce((max, seg) => Math.max(max, seg.height), 0);
+      contentBottom += rowHeight;
+    }
+
     if (bonusText) {
       bonusText.setPosition(TOOLTIP_PAD, contentBottom + 4);
       contentBottom = bonusText.y + bonusText.height;
@@ -485,9 +511,27 @@ export class DiceSprite extends GameObjects.Container {
     bg.strokeRoundedRect(0, 0, tooltipWidth, tooltipHeight, 8);
     this.tooltip.add(bg);
     this.tooltip.add(infoText);
+    for (const row of stickerSegmentRows) {
+      for (const segText of row) {
+        this.tooltip.add(segText);
+      }
+    }
     if (bonusText) this.tooltip.add(bonusText);
 
     this.positionTooltipAtWorld(matrix.tx, matrix.ty);
+  }
+
+  private createSegmentRowTexts(row: HintSegment[]): GameObjects.Text[] {
+    return row.map((seg) => {
+      const colors = tooltipSegmentColors(seg.style);
+      return this.scene.add
+        .text(0, 0, seg.text, {
+          fontFamily: 'Arial',
+          fontSize: '13px',
+          color: colors.text,
+        })
+        .setOrigin(0, 0);
+    });
   }
 
   private positionTooltipAtWorld(worldX: number, worldY: number): void {

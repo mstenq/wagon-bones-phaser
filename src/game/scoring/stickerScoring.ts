@@ -1,11 +1,11 @@
 // ─── Post-score sticker effects (no Phaser imports) ───
 
+import { GREEN_CONTAGION_SPREAD_CHANCE } from '../../data/dice_stickers';
 import type { Die, ScoreAnimEvent } from '../types';
 import type { ScoringMutations } from '../effects/types';
 import { getRandomSupplyDef } from '../ConsumablesSystem';
-import { rngFloat } from '../RunRng';
-
-const GREEN_CONTAGION_CHANCE = 0.5;
+import { checkLoadedChance } from '../equipmentUtils';
+import type { EquipmentInstance } from '../ItemsSystem';
 
 export function applyPurpleFlowerNonScoring(
   playedDice: Die[],
@@ -32,6 +32,7 @@ export function applyPurpleFlowerNonScoring(
 
 export function applyGreenContagionSpread(
   playedDice: Die[],
+  equipment: EquipmentInstance[],
   mutations: ScoringMutations,
   animEvents: ScoreAnimEvent[],
 ): void {
@@ -44,7 +45,7 @@ export function applyGreenContagionSpread(
     if (i < playedDice.length - 1) neighbors.push(playedDice[i + 1]!);
 
     for (const neighbor of neighbors) {
-      if (rngFloat('dice') >= GREEN_CONTAGION_CHANCE) continue;
+      if (!checkLoadedChance(GREEN_CONTAGION_SPREAD_CHANCE, equipment, 'loadedDice')) continue;
 
       const patch: ScoringMutations['diceEnhanced'][number] = {
         id: neighbor.id,

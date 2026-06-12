@@ -1,6 +1,10 @@
 // ─── Dice Sticker Definitions ───
 // Display metadata for whole-die stickers (purple flower, red bullet, etc.).
 
+import type { ItemDisplayContext } from '../game/displayContextTypes';
+import { formatLoadedOddsLabel } from '../game/equipmentUtils';
+import type { HintSegment } from './items';
+
 // ─── Types ───
 
 export interface DiceStickerDef {
@@ -8,7 +12,13 @@ export interface DiceStickerDef {
   name: string;
   description: string;
   color: string;
+  tooltip?: (player: ItemDisplayContext) => HintSegment[][];
 }
+
+/** Base spread chance per neighbor for green_contagion (× Loaded Dice multiplier). */
+export const GREEN_CONTAGION_SPREAD_CHANCE: [number, number] = [1, 2];
+
+const segment = (text: string, style: HintSegment['style'] = 'text'): HintSegment => ({ text, style });
 
 // ─── Sticker Definitions ───
 
@@ -41,8 +51,22 @@ const diceStickers = [
   {
     id: 'green_contagion',
     name: 'Green Contagion',
-    description: 'When played, 1 in 2 chance to spread this sticker and enhancement to each neighboring played die',
+    description: 'When played, may spread this sticker and enhancement to each neighboring played die',
     color: '0x4caf50',
+    tooltip: (player: ItemDisplayContext) => [
+      [
+        segment('When played, '),
+        segment(
+          formatLoadedOddsLabel(
+            GREEN_CONTAGION_SPREAD_CHANCE[0],
+            GREEN_CONTAGION_SPREAD_CHANCE[1],
+            player.equipment,
+          ),
+          'odds',
+        ),
+        segment(' chance to spread this sticker and enhancement to each neighboring played die.'),
+      ],
+    ],
   },
 ] as const satisfies readonly DiceStickerDef[];
 

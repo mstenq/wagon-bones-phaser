@@ -169,6 +169,15 @@ export function getLoadedDiceMultiplier(equipment: { def: { effectType: string }
   return count > 0 ? Math.pow(2, count) : 1;
 }
 
+/** Human-readable "N in D" odds label accounting for Loaded Dice multiplier. */
+export function formatLoadedOddsLabel(
+  baseNumerator: number,
+  denominator: number,
+  equipment: { def: { effectType: string } }[],
+): string {
+  return `${baseNumerator * getLoadedDiceMultiplier(equipment)} in ${denominator}`;
+}
+
 export function hasGamblersDiceCup(equipment: { def: { effectType: string } }[]): boolean {
   return equipment.some((equip) => equip.def.effectType === 'GAMBLERS_DICE_CUP');
 }

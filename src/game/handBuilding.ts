@@ -18,6 +18,7 @@ export function buildHandDiceIds(options: BuildHandDiceIdsOptions): string[] {
   const { run, rollSize, carryoverIds = [], priorityIds = [], extraHandIds = [] } = options;
   const available = selectAvailableDice(run);
   const availableById = new Map(available.map((d) => [d.id, d]));
+  const reservedExtraHandIds = new Set(extraHandIds);
   const hand: Die[] = [];
   const usedIds = new Set<string>();
 
@@ -41,7 +42,7 @@ export function buildHandDiceIds(options: BuildHandDiceIdsOptions): string[] {
 
   const remainingSlots = rollSize - hand.length;
   if (remainingSlots > 0) {
-    const pool = available.filter((d) => !usedIds.has(d.id));
+    const pool = available.filter((d) => !usedIds.has(d.id) && !reservedExtraHandIds.has(d.id));
     const drawn = drawFromPouch(pool, Math.min(remainingSlots, pool.length)).drawn;
     for (const die of drawn) {
       hand.push(die);
