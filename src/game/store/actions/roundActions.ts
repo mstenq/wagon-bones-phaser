@@ -48,6 +48,7 @@ import {
   getBossAdjustedHandStats,
   recordBossHandPlayed,
   previewBossScoreSelection,
+  getBossRoundState,
   isBossScoreForfeit,
   applyBossTricksterDowngrade,
   initInspectorRollSize,
@@ -419,8 +420,14 @@ export const roundActions = {
   validateScoreSelection(diceIds: string[]): { allowed: boolean; reason?: string; warning?: string } {
     const round = getRoundState();
     if (!round) return { allowed: false, reason: 'No active round' };
+    const rolledIds = new Set(round.rolledDice.map((r) => r.id));
+    const bountyLockedIds = getBossRoundState().lockedDiceIds.filter((id) => rolledIds.has(id));
+    const missingBountyDie = bountyLockedIds.find((id) => !diceIds.includes(id));
+    if (missingBountyDie) {
+      return { allowed: false, reason: 'Marked die must be played' };
+    }
     const selected = resolveDiceByIds(
-      diceIds.filter((id) => round.rolledDice.some((r) => r.id === id)),
+      diceIds.filter((id) => rolledIds.has(id)),
       round,
     );
     if (selected.length !== diceIds.length) return { allowed: false, reason: 'Invalid dice selection' };

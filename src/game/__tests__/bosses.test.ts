@@ -19,6 +19,8 @@ import {
   applyBossTricksterDowngrade,
   applyBossOnDayStart,
   getBossRoundState,
+  applyBossAfterRoll,
+  isDiceLockedByBoss,
   previewBossScoreSelection,
   isBossScoreForfeit,
   getInspectorRollSizeForDay,
@@ -27,7 +29,7 @@ import {
   remapEquipmentDisplayOrderAfterRemove,
   isBossEquipmentHidden,
 } from '../BossEffectsSystem';
-import { bossActions, consumableActions, equipmentActions, progressionActions } from '../store/actions';
+import { bossActions, consumableActions, equipmentActions, progressionActions, roundActions } from '../store/actions';
 import { runActions } from '../store';
 import { getRunState } from '../store/runStore';
 import { selectBossForLeg, selectHandStats, selectTargetMiles } from '../store/selectors/runSelectors';
@@ -428,6 +430,37 @@ describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
     equipmentActions.reorderEquipment(0, 2);
     expect(isEquipmentDisabledByBoss(2)).toBe(true);
     expect(isEquipmentDisabledByBoss(0)).toBe(false);
+  });
+});
+
+describe('LOCK_RANDOM_DICE: The Bounty', () => {
+  test('applyBossAfterRoll marks one rolled die as locked', () => {
+    setupGame({ bossId: 'the_bounty' });
+    resetBossRoundState();
+    initBossRoundState();
+    const rolled = diceFromValues([1, 2, 3, 4, 5, 6, 7, 8]);
+    applyBossAfterRoll(rolled);
+    const locked = getBossRoundState().lockedDiceIds;
+    expect(locked).toHaveLength(1);
+    expect(rolled.some((d) => d.id === locked[0])).toBe(true);
+    expect(isDiceLockedByBoss(locked[0]!)).toBe(true);
+  });
+
+  test('validateScoreSelection rejects hands that omit the bounty die', () => {
+    const rolled = diceFromValues([6, 6, 4, 3, 2, 1, 7, 8]);
+    const { game } = setupGame({ bossId: 'the_bounty', dice: rolled });
+    game.startRound();
+    roundActions.selectForRoll(rolled.map((d) => d.id));
+    const lockedId = getBossRoundState().lockedDiceIds[0]!;
+    const withoutBounty = rolled
+      .filter((d) => d.id !== lockedId)
+      .slice(0, 2)
+      .map((d) => d.id);
+    const check = game.validateScoreSelection(withoutBounty);
+    expect(check.allowed).toBe(false);
+    expect(check.reason).toBe('Marked die must be played');
+    const withBounty = [...withoutBounty, lockedId];
+    expect(game.validateScoreSelection(withBounty).allowed).toBe(true);
   });
 });
 

@@ -32,7 +32,7 @@ import {
   getRandomFrontierDef,
   createConsumableInstance,
 } from './ConsumablesSystem';
-import { generateShopStock, isEquipmentCursed } from './ItemsSystem';
+import { generateRandomEquipment, isEquipmentCursed } from './ItemsSystem';
 import { GAMEPLAY } from './Constants';
 import { acquireRewardEquipmentInstance } from './EquipmentModifiers';
 import { TRAIL_EVENT } from './Constants';
@@ -716,26 +716,22 @@ export function applyEffect(
         });
         break;
       }
-      const stock = generateShopStock(20);
-      const rarityFilter = effect.rarity ? stock.filter((e) => e.rarity === effect.rarity) : stock;
-      const pick = rarityFilter.length > 0 ? rarityFilter[0] : stock[0];
-      if (pick) {
-        const def = effect.aura
-          ? {
-              ...pick,
-              aura: {
-                id: effect.aura,
-                name: effect.aura,
-                description: '',
-                costIncrease: 0,
-                equipmentChance: 0,
-              },
-            }
-          : pick;
-        const list = resolveEquipmentList();
-        list.push(acquireRewardEquipmentInstance(def, getRunState().purchasedPermits));
-        replaceEquipmentList(list);
-      }
+      const generated = generateRandomEquipment({ rarity: effect.rarity ?? undefined });
+      const def = effect.aura
+        ? {
+            ...generated,
+            aura: {
+              id: effect.aura,
+              name: effect.aura,
+              description: '',
+              costIncrease: 0,
+              equipmentChance: 0,
+            },
+          }
+        : generated;
+      const list = resolveEquipmentList();
+      list.push(acquireRewardEquipmentInstance(def, getRunState().purchasedPermits));
+      replaceEquipmentList(list);
       break;
     }
 

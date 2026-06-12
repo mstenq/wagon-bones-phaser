@@ -79,6 +79,8 @@ import { GameSceneDevPanel } from './game/GameSceneDevPanel';
 import { DiceRowBackdropController } from './game/DiceRowBackdropController';
 import { DiceSelectionDotsController } from './game/DiceSelectionDotsController';
 
+type RollDieUiState = 'unselected' | 'selected' | 'rerollLocked' | 'selected_locked';
+
 export class GameScene extends Scene {
   private roundSessionActive = false;
   private sidebar: Sidebar;
@@ -113,7 +115,8 @@ export class GameScene extends Scene {
   private instructionText: Phaser.GameObjects.Text;
   private bossWarningText: Phaser.GameObjects.Text;
 
-  // Roll-phase dice UI: selected = score hand; rerollLocked = keep face, not scored
+  // Roll-phase dice UI: selected = score hand; rerollLocked = keep face, not scored;
+  // selected_locked = boss bounty (forced score + no reroll)
   private selectedDiceIds: Set<string> = new Set();
   private rerollLockedDiceIds: Set<string> = new Set();
   // Sort control
@@ -751,9 +754,8 @@ export class GameScene extends Scene {
     for (const sprite of this.rollSprites) {
       const id = sprite.dieData.id;
       sprite.setDisabled(gameFacade.boss.isDiceScoringDisabled(sprite.dieData));
-      if (bossState.lockedDieIds.includes(id)) {
-        this.rerollLockedDiceIds.add(id);
-      }
+      if (!bossState.lockedDieIds.includes(id)) continue;
+      this.selectedDiceIds.add(id);
     }
     this.syncRollDieVisuals();
     this.syncSelectedForScore();
@@ -761,41 +763,73 @@ export class GameScene extends Scene {
     this.updateRollButtons();
   }
 
-  private getRollDieUiState(id: string): 'unselected' | 'selected' | 'rerollLocked' {
+  private getRollDieUiState(id: string): RollDieUiState {
+    if (gameFacade.boss.isDiceLocked(id)) return 'selected_locked';
     if (this.selectedDiceIds.has(id)) return 'selected';
-    if (this.rerollLockedDiceIds.has(id) || gameFacade.boss.isDiceLocked(id)) return 'rerollLocked';
+    if (this.rerollLockedDiceIds.has(id)) return 'rerollLocked';
     return 'unselected';
+  }
+
+  private isDieRerollable(id: string): boolean {
+    if (gameFacade.boss.isDiceLocked(id)) return false;
+    if (this.selectedDiceIds.has(id)) return false;
+    if (this.rerollLockedDiceIds.has(id)) return false;
+    return true;
+  }
+
+  private getRerollableDieIds(): string[] {
+    return selectRolledDice().map((d) => d.id).filter((id) => this.isDieRerollable(id));
   }
 
   private isRollDieSelected(sprite: DiceSprite): boolean {
     return this.selectedDiceIds.has(sprite.dieData.id);
   }
 
-  private applyRollDieUiState(sprite: DiceSprite, next: 'unselected' | 'selected' | 'rerollLocked'): void {
+  private applyRollDieVisual(sprite: DiceSprite, state: RollDieUiState): void {
+    const isBossLock = state === 'selected_locked';
+    sprite.setForced(isBossLock);
+    sprite.setSelected(!isBossLock && state === 'selected');
+    sprite.setRerollLocked(state === 'rerollLocked' || isBossLock);
+  }
+
+  private applyRollDieUiState(sprite: DiceSprite, next: RollDieUiState): void {
     const id = sprite.dieData.id;
-    if (gameFacade.boss.isDiceLocked(id) && next === 'unselected') {
-      next = 'rerollLocked';
-    }
+    const state = gameFacade.boss.isDiceLocked(id) ? 'selected_locked' : next;
 
     this.selectedDiceIds.delete(id);
     this.rerollLockedDiceIds.delete(id);
 
-    if (next === 'selected') {
+    if (state === 'selected' || state === 'selected_locked') {
       this.selectedDiceIds.add(id);
-    } else if (next === 'rerollLocked') {
+    } else if (state === 'rerollLocked') {
       this.rerollLockedDiceIds.add(id);
     }
 
-    sprite.setSelected(next === 'selected');
-    sprite.setRerollLocked(next === 'rerollLocked');
+    this.applyRollDieVisual(sprite, state);
+  }
+
+  private getNextRollDieUiState(state: RollDieUiState, isRightClick: boolean): RollDieUiState {
+    if (isRightClick) {
+      if (state === 'unselected') return 'rerollLocked';
+      if (state === 'rerollLocked') return 'unselected';
+      return 'rerollLocked';
+    }
+    if (state === 'unselected' || state === 'rerollLocked') return 'selected';
+    return 'unselected';
+  }
+
+  private playRollDieClickSound(next: RollDieUiState): void {
+    if (next === 'selected') {
+      this.sound.play('sfx_highlight1', { volume: 0.3 });
+      return;
+    }
+    this.sound.play('sfx_card_slide2', { volume: 0.25 });
   }
 
   private syncRollDieVisuals(): void {
     for (const sprite of this.rollSprites) {
-      const id = sprite.dieData.id;
-      const state = this.getRollDieUiState(id);
-      sprite.setSelected(state === 'selected');
-      sprite.setRerollLocked(state === 'rerollLocked');
+      const state = this.getRollDieUiState(sprite.dieData.id);
+      this.applyRollDieVisual(sprite, state);
     }
   }
 
@@ -804,32 +838,12 @@ export class GameScene extends Scene {
     if (this.consumableTargeting.isActive()) return;
     const id = sprite.dieData.id;
     const state = this.getRollDieUiState(id);
+    if (state === 'selected_locked') return;
 
-    let next: 'unselected' | 'selected' | 'rerollLocked';
-    if (isRightClick) {
-      if (gameFacade.boss.isDiceLocked(id)) return;
-      if (state === 'unselected') next = 'rerollLocked';
-      else if (state === 'rerollLocked') next = 'unselected';
-      else next = 'rerollLocked';
-    } else if (state === 'unselected') {
-      next = 'selected';
-    } else if (state === 'rerollLocked') {
-      next = 'selected';
-    } else {
-      next = 'unselected';
-    }
-
+    const next = this.getNextRollDieUiState(state, isRightClick);
     this.applyRollDieUiState(sprite, next);
 
-    if (playSound) {
-      if (next === 'selected') {
-        this.sound.play('sfx_highlight1', { volume: 0.3 });
-      } else if (next === 'rerollLocked') {
-        this.sound.play('sfx_card_slide2', { volume: 0.25 });
-      } else {
-        this.sound.play('sfx_card_slide2', { volume: 0.25 });
-      }
-    }
+    if (playSound) this.playRollDieClickSound(next);
 
     const idx = this.rollSprites.indexOf(sprite);
     if (idx >= 0) this.rollRow.animateSelectLift(sprite, idx);
@@ -905,9 +919,7 @@ export class GameScene extends Scene {
   private onReroll(): void {
     if (this.animating) return;
 
-    // Reroll dice that are neither selected for score nor pinned against rerolls
-    const allIds = selectRolledDice().map((d) => d.id);
-    const idsToReroll = allIds.filter((id) => !this.selectedDiceIds.has(id) && !this.rerollLockedDiceIds.has(id));
+    const idsToReroll = this.getRerollableDieIds();
     if (idsToReroll.length === 0) return;
 
     const success = gameFacade.round.rerollUnlockedDice(idsToReroll);
@@ -1097,9 +1109,8 @@ export class GameScene extends Scene {
 
   private updateRollButtons(): void {
     const selectedCount = this.selectedDiceIds.size;
-    const pinnedCount = this.rerollLockedDiceIds.size;
     const totalCount = selectRolledDice().length;
-    const rerollCount = totalCount - selectedCount - pinnedCount;
+    const rerollCount = this.getRerollableDieIds().length;
     const remaining = selectRerollsRemaining();
     const hasRerolls = remaining > 0;
     const canUseReroll = gameFacade.round.canUseReroll();

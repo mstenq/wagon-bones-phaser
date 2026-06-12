@@ -4,9 +4,9 @@
 import * as Phaser from 'phaser';
 import type { Scene } from 'phaser';
 import { getAudioPreferences } from '../game/AudioPreferences';
-import { applyBackgroundMusicPreferences, BG_MUSIC_KEY } from './BackgroundMusic';
+import { applyBackgroundMusicPreferences, BG_MUSIC_PLAYLIST } from './BackgroundMusic';
 
-const MUSIC_KEYS = new Set([BG_MUSIC_KEY]);
+const MUSIC_KEYS = new Set<string>(BG_MUSIC_PLAYLIST);
 
 type SoundConfig = Phaser.Types.Sound.SoundConfig;
 type SoundMarker = Phaser.Types.Sound.SoundMarker;
@@ -98,9 +98,11 @@ export function patchGameAudio(): void {
         this.stopByKey(key);
         return false;
       }
-      if (this.isPlaying(key)) {
-        for (const instance of this.getAll(BG_MUSIC_KEY)) {
-          setSoundVolume(instance, prefs.musicVolume);
+      if (BG_MUSIC_PLAYLIST.some((musicKey) => this.isPlaying(musicKey))) {
+        for (const musicKey of BG_MUSIC_PLAYLIST) {
+          for (const instance of this.getAll(musicKey)) {
+            setSoundVolume(instance, prefs.musicVolume);
+          }
         }
         return true;
       }

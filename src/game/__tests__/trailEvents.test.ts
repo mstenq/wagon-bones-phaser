@@ -677,6 +677,15 @@ describe('Effect application', () => {
     expect(player.equipment.length).toBe(1);
   });
 
+  test('GAIN_RANDOM_EQUIPMENT respects legendary rarity', () => {
+    const player = resetPlayerState();
+    const mods = createEmptyModifiers();
+    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'legendary', aura: 'ghost' }, mods);
+    expect(player.equipment.length).toBe(1);
+    expect(player.equipment[0].def.rarity).toBe('legendary');
+    expect(player.equipment[0].def.aura?.id).toBe('ghost');
+  });
+
   test('GAIN_RANDOM_EQUIPMENT does not apply difficulty modifiers', () => {
     setTestDifficulty(8);
     const player = resetPlayerState();
