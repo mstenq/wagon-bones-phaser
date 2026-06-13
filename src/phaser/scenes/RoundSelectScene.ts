@@ -31,6 +31,7 @@ import {
   selectTargetMiles,
 } from '../../game/store/selectors/runSelectors';
 import { sceneActions } from '../../game/store/sceneStore';
+import { tryEnqueueTutorial } from '../../game/tutorialEnqueue';
 
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
@@ -71,8 +72,28 @@ export class RoundSelectScene extends Scene {
     sceneActions.syncRoundSelectFromRun(getRunState().roundSkipPreviewTags);
 
     this.buildRoundColumns();
+    this.enqueueRoundSelectTutorials();
 
     EventBus.emit(Events.SCENE_READY, this);
+  }
+
+  private enqueueRoundSelectTutorials(): void {
+    const run = getRunState();
+    if (run.leg === 1 && run.round === 1) {
+      tryEnqueueTutorial('round_select_intro');
+      return;
+    }
+    if (run.leg === 1 && run.round === 2) {
+      tryEnqueueTutorial('round_choice_intro');
+      return;
+    }
+    if (run.leg === 1 && run.round === GAMEPLAY.ROUNDS_PER_LEG) {
+      tryEnqueueTutorial('beat_showdown_advance');
+      return;
+    }
+    if (run.leg === 2) {
+      tryEnqueueTutorial('reach_oregon');
+    }
   }
 
   private onPermitBossReroll(): void {

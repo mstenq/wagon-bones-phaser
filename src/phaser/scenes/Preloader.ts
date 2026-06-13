@@ -5,6 +5,7 @@ import * as Phaser from 'phaser';
 import { initAutoSave, tryRestoreAutoSaveOnBoot } from '../AutoSaveManager';
 import { initAudioPreferences } from '../../game/AudioPreferences';
 import { initGameplayPreferences } from '../../game/GameplayPreferences';
+import { initTutorialPreferences } from '../../game/TutorialPreferences';
 import { initScoreAnimTimings } from '../../game/ScoreAnimTimings';
 import { isScoreAnimLabUrl } from './dev/scoreAnimLabUrl';
 import { bootstrapScoreAnimLab } from './dev/scoreAnimSandbox';
@@ -163,6 +164,7 @@ export class Preloader extends Scene {
   create() {
     initAudioPreferences();
     initGameplayPreferences();
+    initTutorialPreferences();
     initScoreAnimTimings();
     patchGameAudio();
 

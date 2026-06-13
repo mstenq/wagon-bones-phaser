@@ -232,9 +232,17 @@ export function createEquipmentInstance(def: EquipmentDef, purchasedPermitIds: s
   };
 }
 
+function filterPoolByExcludeIds(pool: EquipmentDef[], excludeIds?: string[]): EquipmentDef[] {
+  if (!excludeIds || excludeIds.length === 0) return pool;
+  const excluded = new Set(excludeIds);
+  const filtered = pool.filter((i) => !excluded.has(i.id));
+  return filtered.length > 0 ? filtered : pool;
+}
+
 export function generateRandomEquipment(options?: {
   rarity?: string;
   excludeRarity?: string;
+  excludeIds?: string[];
   auraMultiplier?: number;
 }): EquipmentDef {
   let pool = itemsPool().filter((i) => isEquipmentUnlocked(i));
@@ -268,6 +276,8 @@ export function generateRandomEquipment(options?: {
       if (filtered.length > 0) pool = filtered;
     }
   }
+
+  pool = filterPoolByExcludeIds(pool, options?.excludeIds);
 
   const picked = rngPick(stream, pool);
   return applyRandomAura({ ...picked }, effectiveAuraMultiplier);

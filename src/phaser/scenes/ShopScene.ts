@@ -50,7 +50,7 @@ import { selectShopAffordabilityInputs, selectShopStockRevision } from '../../ga
 import { bindStore } from '../store/subscribe';
 import { DEFAULT_SHOP_VISIT_MODS, type ShopSceneState } from '../../game/store/types';
 import {
-  appendShopStockForSlots,
+  refreshShopStockAfterPermitPurchase,
   buildShopDieDisplayDef,
   buildShopPackDisplayDef,
   resolveShopPackPurchaseCost,
@@ -58,6 +58,7 @@ import {
   buildShopPermitDisplayDef,
 } from '../../game/store/shopStock';
 import { clearSceneCardTooltips } from '../ui/itemCard/cardTooltipRegistry';
+import { tryEnqueueTutorial } from '../../game/tutorialEnqueue';
 
 /** A shop stock item — equipment, consumable, or dice */
 type ShopItem =
@@ -84,6 +85,8 @@ export class ShopScene extends Scene {
   private runShell: RunSceneShell | null = null;
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
+  private shopConsumablePurchases = 0;
+  private shopTutorialsEnqueued = false;
 
   constructor() {
     super('Shop');
@@ -191,6 +194,9 @@ export class ShopScene extends Scene {
   }
 
   create() {
+    this.shopConsumablePurchases = 0;
+    this.shopTutorialsEnqueued = false;
+
     const sceneShop = getSceneState().shop;
     if (sceneShop) {
       this.hydrateShopFromState(sceneShop);
@@ -353,6 +359,23 @@ export class ShopScene extends Scene {
       ),
       bindStore(this, sceneStore, selectShopStockRevision, () => this.onShopStockRevisionChanged()),
     ];
+    this.maybeEnqueueShopTutorials();
+  }
+
+  private maybeEnqueueShopTutorials(): void {
+    if (this.shopTutorialsEnqueued) return;
+    this.shopTutorialsEnqueued = true;
+    const run = getRunState();
+    if (run.leg === 1 && run.round === 2) {
+      tryEnqueueTutorial('shop_welcome');
+    } else if (run.leg === 1 && run.round === 3) {
+      tryEnqueueTutorial('shop_extras');
+    }
+  }
+
+  private recordConsumablePurchase(): void {
+    this.shopConsumablePurchases++;
+    tryEnqueueTutorial('consumable_slots', { shopConsumablePurchases: this.shopConsumablePurchases });
   }
 
   private onBuyPack(card: ItemCard, packIndex: number): void {
@@ -465,6 +488,7 @@ export class ShopScene extends Scene {
     card.markSold();
     this.markStockSold(card);
     this.sound.play('sfx_coin', { volume: 0.5 });
+    this.recordConsumablePurchase();
 
     // Animate card shrinking toward consumable bar
     const targetX = this.consumableBar.x + this.consumableBar.width / 2;
@@ -1212,11 +1236,9 @@ export class ShopScene extends Scene {
       ease: 'Power2',
       onComplete: () => {
         card.destroy();
-        // If permit increased shop slots, drop sold rows and fill to the new slot count
-        const newSlotCount = Math.max(1, getRunState().shopSlots);
         const currentStored = this.stockItems.map((item) => this.serializeShopItem(item));
-        const appendedStored = appendShopStockForSlots(currentStored, newSlotCount);
-        this.stockItems = appendedStored.map((s) => this.deserializeShopItem(s));
+        const refreshedStored = refreshShopStockAfterPermitPurchase(currentStored, permit);
+        this.stockItems = refreshedStored.map((s) => this.deserializeShopItem(s));
         this.syncShopToStore();
         // Rebuild layout to reflect all permit changes (prices, sidebar, slots)
         this.tearDownShopLayout();

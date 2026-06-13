@@ -264,6 +264,18 @@ export function appendShopStockForSlots(
   return [...activeStock, ...shopRowsToStored(newRows)];
 }
 
+/** After a permit purchase: only SHOP_SLOTS permits drop sold rows and fill new slots. */
+export function refreshShopStockAfterPermitPurchase(
+  existingStored: StoredShopItem[],
+  permit: PermitDef,
+  run: RunState = getRunState(),
+): StoredShopItem[] {
+  if (permit.effect.type === 'SHOP_SLOTS') {
+    return appendShopStockForSlots(existingStored, Math.max(1, run.shopSlots), run);
+  }
+  return existingStored.map((item) => ({ ...item }));
+}
+
 /** Roll weighted shop stock rows (before tag injection / auras). */
 export function generateShopStockRows(run: RunState = getRunState()): ShopStockGenRow[] {
   const slotCount = Math.max(1, run.shopSlots);

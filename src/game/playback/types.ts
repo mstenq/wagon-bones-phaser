@@ -44,7 +44,9 @@ export type PlaybackCommand =
       applyDestruction?: boolean;
     }
   /** Center-screen toast (e.g. Fool's Gold, Bless). */
-  | { kind: 'toast'; message: string; tone: ToastTone };
+  | { kind: 'toast'; message: string; tone: ToastTone }
+  /** First-run tutorial popup (dismissible modal). */
+  | { kind: 'tutorial'; tutorialId: string };
 
 const PLAYBACK_COMMAND_KINDS = new Set<PlaybackCommand['kind']>([
   'dice-added',
@@ -61,6 +63,7 @@ const PLAYBACK_COMMAND_KINDS = new Set<PlaybackCommand['kind']>([
   'tag-earned',
   'modifier-feedback',
   'toast',
+  'tutorial',
 ]);
 
 /** Type guard for deserialized or untyped queue entries (tests, debug). */

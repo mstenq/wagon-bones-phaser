@@ -55,6 +55,7 @@ import {
   getInspectorRollSizeForDay,
 } from '../../BossEffectsSystem';
 import { generateRandomEquipment, isEquipmentCursed } from '../../ItemsSystem';
+import { getEquipmentPackExcludeIds } from '../../BoosterPackSystem';
 import { applySurveyorsScopeScoring, getPermitAuraMultiplier } from '../../PermitsSystem';
 import { acquireRewardEquipmentInstance } from '../../EquipmentModifiers';
 import { pickGameRoundBackgroundIndex } from '../../roundBackgrounds';
@@ -284,12 +285,19 @@ export const roundActions = {
       const allowedRarities =
         roundStartEffects.equipmentCreateRarities.length > 0 ? roundStartEffects.equipmentCreateRarities : ['common'];
       const auraMultiplier = getPermitAuraMultiplier(freshRun.purchasedPermits);
+      const ownedExcludeIds = getEquipmentPackExcludeIds(freshRun);
+      const usedIds = new Set(ownedExcludeIds ?? []);
       for (let i = 0; i < roundStartEffects.equipmentToCreate; i++) {
         const used = equip.filter((e) => e.def.aura?.id !== 'ghost').length;
         if (used < freshRun.maxEquipmentSlots) {
           const rarity = rngPick('createRandomEquipment', allowedRarities);
-          const def = generateRandomEquipment({ rarity, auraMultiplier });
+          const def = generateRandomEquipment({
+            rarity,
+            auraMultiplier,
+            excludeIds: usedIds.size > 0 ? [...usedIds] : undefined,
+          });
           equip.push(acquireRewardEquipmentInstance(def, freshRun.purchasedPermits));
+          if (ownedExcludeIds) usedIds.add(def.id);
           created++;
         }
       }

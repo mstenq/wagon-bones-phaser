@@ -104,6 +104,44 @@ describe('run store actions', () => {
     expect(getPermitAuraMultiplier(state.purchasedPermits)).toBe(4);
   });
 
+  test('junk dealer avoids duplicate equipment without counterfeit_goods', () => {
+    initRunRng('junk-dealer-no-dupes');
+    setupActions.finalizeRunSetup();
+    runActions.patch({ maxEquipmentSlots: 99 });
+
+    for (let i = 0; i < 50; i++) {
+      equipmentActions.setEquipment([item('junk_dealer'), item('deadeye')]);
+      roundActions.startRound();
+
+      const created = runStore.getState().equipment.slice(2);
+      expect(created.length).toBe(2);
+      for (const eq of created) {
+        expect(eq.defId).not.toBe('deadeye');
+      }
+      expect(new Set(created.map((eq) => eq.defId)).size).toBe(2);
+    }
+  });
+
+  test('junk dealer allows duplicates with counterfeit_goods', () => {
+    setupActions.finalizeRunSetup();
+    runActions.patch({ maxEquipmentSlots: 99 });
+
+    let sawDeadeyeDupe = false;
+    for (let i = 0; i < 100; i++) {
+      initRunRng(`junk-dealer-dupes-${i}`);
+      equipmentActions.setEquipment([item('junk_dealer'), item('deadeye'), item('counterfeit_goods')]);
+      roundActions.startRound();
+
+      const created = runStore.getState().equipment.slice(3);
+      expect(created.length).toBe(2);
+      if (created.some((eq) => eq.defId === 'deadeye')) {
+        sawDeadeyeDupe = true;
+        break;
+      }
+    }
+    expect(sawDeadeyeDupe).toBe(true);
+  });
+
   test('diceActions addDie assigns monotonic ids', () => {
     const added = diceActions.addDie({
       id: 'temp',

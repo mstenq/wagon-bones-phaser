@@ -288,7 +288,7 @@ const items: ItemDef[] = [
     effectType: 'CONDITIONAL_MULT',
     effectParams: { condition: 'SCORED_DICE_LTE', threshold: 3, value: 20 },
     display: (round, _player) => {
-      const diceCount = round?.rolledDice?.length ?? 0;
+      const diceCount = round?.selectedForScore?.length ?? 0;
       const isActive = diceCount > 0 && diceCount <= 3;
       return {
         hint: isActive

@@ -8,6 +8,7 @@ import {
   setGameplayPreferences,
   type GameplayPreferences,
 } from '../../game/GameplayPreferences';
+import { markAllTutorialsSeen, resetAllTutorials } from '../../game/TutorialPreferences';
 import { Button } from './Button';
 import { DiceSprite } from './DiceSprite';
 import { TOGGLE_CHECKBOX_HIT, ToggleCheckbox } from './ToggleCheckbox';
@@ -33,7 +34,7 @@ export class PreferencesSettingsModal extends GameObjects.Container {
       width,
       height,
       contentY,
-      panelHeight: 360,
+      panelHeight: 500,
     });
     const { labelX, controlRight } = layout;
 
@@ -93,6 +94,41 @@ export class PreferencesSettingsModal extends GameObjects.Container {
     );
     stickerCheckbox.onChange((checked) => this.updatePref({ stationaryStickers: checked }));
     this.add(stickerCheckbox);
+
+    const tutorialRowY = stickerRowY + 88;
+    const disableTutorialBtn = new Button(scene, layout.panelX + layout.panelW / 2, tutorialRowY, 'Disable Tutorial', {
+      variant: 'secondary',
+      width: layout.panelW - 64,
+      height: 36,
+    });
+    disableTutorialBtn.onClick(() => markAllTutorialsSeen());
+    this.add(disableTutorialBtn);
+
+    const disableHint = scene.add.text(labelX, tutorialRowY + 28, 'Hide all tutorial messages', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '13px',
+      color: TEXT_COLORS.MUTED,
+    });
+    disableHint.setOrigin(0, 0);
+    this.add(disableHint);
+
+    const resetRowY = tutorialRowY + 64;
+    const resetTutorialBtn = new Button(scene, layout.panelX + layout.panelW / 2, resetRowY, 'Reset Tutorial', {
+      variant: 'secondary',
+      width: layout.panelW - 64,
+      height: 36,
+    });
+    resetTutorialBtn.onClick(() => resetAllTutorials());
+    this.add(resetTutorialBtn);
+
+    const resetHint = scene.add.text(labelX, resetRowY + 28, 'Show tutorial messages again on your next run', {
+      fontFamily: FONTS.PRIMARY,
+      fontSize: '13px',
+      color: TEXT_COLORS.MUTED,
+      wordWrap: { width: layout.panelW - 64 },
+    });
+    resetHint.setOrigin(0, 0);
+    this.add(resetHint);
 
     const backBtn = createModalBackButton(scene, layout, () => {
       this.destroy();

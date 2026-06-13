@@ -68,6 +68,9 @@ import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
 import { isScoreAnimLabUrl } from './dev/scoreAnimLabUrl';
 import { getGameplayPreferences } from '../../game/GameplayPreferences';
+import { isTutorialSeen } from '../../game/TutorialPreferences';
+import { tryEnqueueTutorial } from '../../game/tutorialEnqueue';
+import { resolveConsumableList, resolveEquipmentList } from '../../game/store/resolve';
 import { computeDiceDisplayScale, computeDiceSpacing, getArcOffset } from './game/diceRowGeometry';
 import { ConsumableBarTargetingBridge } from './game/ConsumableBarTargetingBridge';
 import { GameConsumableTargetingController } from './game/GameConsumableTargetingController';
@@ -207,6 +210,7 @@ export class GameScene extends Scene {
       onArmEnter: () => {
         const def = gameFacade.consumable.targeting.active()?.diceSelection;
         if (def) this.consumableTargeting.enter(def);
+        this.enqueueGameplayTutorials({ consumableUse: true });
       },
       onApplySuccess: async (result) => {
         this.consumableTargeting.complete();
@@ -548,6 +552,7 @@ export class GameScene extends Scene {
     this.hideAllButtons();
 
     if (!isRelayout) {
+      this.enqueueGameplayTutorials();
       this.playbackRunner.drainInitialSync();
     }
 
@@ -565,10 +570,48 @@ export class GameScene extends Scene {
     EventBus.emit(Events.SCENE_READY, this);
   }
 
+  private shouldDeferAutoRollForTutorial(): boolean {
+    const run = getRunState();
+    if (run.leg !== 1 || run.round !== 1) return false;
+    return !isTutorialSeen('first_round_play');
+  }
+
+  private enqueueGameplayTutorials(options: { consumableUse?: boolean } = {}): void {
+    if (isScoreAnimLabUrl()) return;
+    const run = getRunState();
+    const equipmentCount = resolveEquipmentList(run).filter(Boolean).length;
+    const consumableCount = resolveConsumableList(run).length;
+    const phase = selectRoundPhase();
+    const ctx = {
+      phase,
+      equipmentCount,
+      consumableCount,
+      roundDay: selectRoundDay(),
+      rerollsRemaining: selectRerollsRemaining(),
+    };
+
+    if (phase === 'SELECT') {
+      tryEnqueueTutorial('first_round_play', { ...ctx, phase: 'SELECT' });
+    }
+    if (phase === 'ROLL') {
+      tryEnqueueTutorial('reroll_intro', { ...ctx, phase: 'ROLL' });
+    }
+    if ((ctx.roundDay ?? 1) >= 2) {
+      tryEnqueueTutorial('days_rerolls_limit', ctx);
+    }
+    if (equipmentCount >= 2) {
+      tryEnqueueTutorial('equipment_order', ctx);
+    }
+    if (options.consumableUse) {
+      tryEnqueueTutorial('consumable_use', ctx);
+    }
+  }
+
   private enterCurrentPhase(isRelayout: boolean = false): void {
+    const deferAutoRoll = this.shouldDeferAutoRollForTutorial();
     const phase = selectRoundPhase();
     if (phase === 'SELECT') {
-      this.enterDrawPhase(false, null, { autoRoll: !isRelayout });
+      this.enterDrawPhase(false, null, { autoRoll: !isRelayout && !deferAutoRoll });
     } else if (phase === 'ROLL') {
       this.enterRollPhaseLayout();
     } else if (phase === 'SCORE' || phase === 'DAY_END') {
@@ -578,7 +621,7 @@ export class GameScene extends Scene {
         this.onContinue();
       }
     } else {
-      this.enterDrawPhase(false, null, { autoRoll: !isRelayout });
+      this.enterDrawPhase(false, null, { autoRoll: !isRelayout && !deferAutoRoll });
     }
     this.updateHUD();
   }
@@ -701,6 +744,8 @@ export class GameScene extends Scene {
 
     this.updateHUD();
 
+    this.enqueueGameplayTutorials();
+
     if (options.autoRoll && !animateFromPouch) {
       this.time.delayedCall(0, () => this.maybeAutoRollFirstHand());
     }
@@ -708,6 +753,7 @@ export class GameScene extends Scene {
 
   /** Auto-roll when the preference is on and the player is in the pre-roll SELECT phase. */
   private maybeAutoRollFirstHand(): void {
+    if (this.shouldDeferAutoRollForTutorial()) return;
     if (!getGameplayPreferences().autoRollFirstHand) return;
     if (this.animating) return;
     if (selectRoundPhase() !== 'SELECT') return;
@@ -743,6 +789,7 @@ export class GameScene extends Scene {
       this.instructionText.setText(this.getRollPhaseInstruction());
       this.applyBossRollDiceState();
       this.refreshConsumableUseTabs();
+      this.enqueueGameplayTutorials();
     });
 
     this.updateHUD();
@@ -778,7 +825,9 @@ export class GameScene extends Scene {
   }
 
   private getRerollableDieIds(): string[] {
-    return selectRolledDice().map((d) => d.id).filter((id) => this.isDieRerollable(id));
+    return selectRolledDice()
+      .map((d) => d.id)
+      .filter((id) => this.isDieRerollable(id));
   }
 
   private isRollDieSelected(sprite: DiceSprite): boolean {
@@ -886,6 +935,7 @@ export class GameScene extends Scene {
     this.applyBossRollDiceState();
     this.refreshConsumableUseTabs();
     this.updateHUD();
+    this.enqueueGameplayTutorials();
   }
 
   private enterScorePhase(result: ScoreResult): void {
@@ -1011,7 +1061,7 @@ export class GameScene extends Scene {
       for (const sprite of this.rollSprites) {
         carryover.set(sprite.dieData.id, { x: sprite.x, y: sprite.y, rotation: sprite.rotation });
       }
-      this.enterDrawPhase(true, carryover, { autoRoll: true });
+      this.enterDrawPhase(true, carryover, { autoRoll: !this.shouldDeferAutoRollForTutorial() });
     };
 
     if (deferredDestroyIndices.length > 0) {

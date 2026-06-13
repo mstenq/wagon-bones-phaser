@@ -19,7 +19,11 @@ import { animateEquipmentPopIn } from '../animations/EquipmentPopInAnimation';
 import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
 import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
 import { playCenterToast } from '../animations/ToastAnimation';
+import { showTutorialModal } from '../ui/TutorialModal';
 import { playTagEarnedFlyIn } from './tagEarnedPlayback';
+import { isTutorialMessageId, resolveTutorialMessage } from '../../data/tutorialMessages';
+import { isTutorialSeen, markTutorialSeen } from '../../game/TutorialPreferences';
+import { selectTargetMiles } from '../../game/store/selectors/runSelectors';
 import type { ConsumableBar } from '../ui/ConsumableBar';
 import type { DiceSprite } from '../ui/DiceSprite';
 import type { EquipmentBar } from '../ui/EquipmentBar';
@@ -83,9 +87,22 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
       return playModifierFeedbackPlayback(ctx, command.payload, command.applyDestruction);
     case 'toast':
       return playCenterToast(ctx.scene, command.message, command.tone);
+    case 'tutorial':
+      return playTutorialPlayback(ctx, command.tutorialId);
     default:
       return Promise.resolve();
   }
+}
+
+function playTutorialPlayback(ctx: PlaybackHandlerContext, tutorialId: string): Promise<void> {
+  if (!isTutorialMessageId(tutorialId) || isTutorialSeen(tutorialId)) {
+    return Promise.resolve();
+  }
+  const run = getRunState();
+  const message = resolveTutorialMessage(tutorialId, { targetMiles: selectTargetMiles(run) });
+  return showTutorialModal(ctx.scene, message).then(() => {
+    markTutorialSeen(tutorialId);
+  });
 }
 
 function playRoundStartDestructions(

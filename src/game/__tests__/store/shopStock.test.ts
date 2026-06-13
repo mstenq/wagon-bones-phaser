@@ -10,6 +10,7 @@ import {
   generateNewShopState,
   generateRerolledShopStock,
   generateShopStockRows,
+  refreshShopStockAfterPermitPurchase,
   resolveShopEquipmentFromStored,
   resolveShopPackPurchaseCost,
   resolveShopStockPurchaseCost,
@@ -194,6 +195,30 @@ describe('shopStock', () => {
 
     expect(refreshed.length).toBe(3);
     expect(refreshed[0]).toEqual(mixed[1]);
+    expect(refreshed.every((item) => !item.sold)).toBe(true);
+  });
+
+  test('refreshShopStockAfterPermitPurchase preserves sold rows for non-SHOP_SLOTS permits', () => {
+    const existing = shopRowsToStored(generateShopStockRows().slice(0, 2));
+    const mixed = [{ ...existing[0]!, sold: true as const }, { ...existing[1]! }];
+    const permit = getPermitById('bargain_bin')!;
+
+    const refreshed = refreshShopStockAfterPermitPurchase(mixed, permit);
+
+    expect(refreshed.length).toBe(2);
+    expect(refreshed[0]).toEqual(mixed[0]);
+    expect(refreshed[1]).toEqual(mixed[1]);
+  });
+
+  test('refreshShopStockAfterPermitPurchase drops sold rows and fills slots for SHOP_SLOTS permits', () => {
+    const existing = shopRowsToStored(generateShopStockRows().slice(0, 2));
+    const soldOut = existing.map((item) => ({ ...item, sold: true as const }));
+    const permit = getPermitById('supply_wagon')!;
+    runActions.patch({ shopSlots: 3 });
+
+    const refreshed = refreshShopStockAfterPermitPurchase(soldOut, permit);
+
+    expect(refreshed.length).toBe(3);
     expect(refreshed.every((item) => !item.sold)).toBe(true);
   });
 
