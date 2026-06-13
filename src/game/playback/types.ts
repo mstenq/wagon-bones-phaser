@@ -1,4 +1,5 @@
 import type { ConsumableAnimEvent } from '../ConsumablesSystem';
+import type { TrailGuideEatEvent } from '../effects/lifecycle/onRoundStart';
 import type { HandUpgradeInfo, ScoreAnimEvent, ScoreResult } from '../types';
 
 /** Center-screen success / failure toast tone. */
@@ -17,6 +18,8 @@ export type PlaybackCommand =
   | { kind: 'dice-added'; dieIds: string[] }
   /** Batch equipment destructions at round start (e.g. Dynamite). */
   | { kind: 'round-start-destructions'; entries: { sourceIdx: number; victimIdx: number }[] }
+  /** Ashfang eats trail guides — cards fly from consumable bar to equipment. */
+  | { kind: 'round-start-trail-guide-eats'; events: TrailGuideEatEvent[] }
   /** Junk Dealer (and similar) spawns equipment at round start. */
   | { kind: 'round-start-equipment-created'; count: number }
   /** Specific equipment slots gained a new item. */
@@ -51,6 +54,7 @@ export type PlaybackCommand =
 const PLAYBACK_COMMAND_KINDS = new Set<PlaybackCommand['kind']>([
   'dice-added',
   'round-start-destructions',
+  'round-start-trail-guide-eats',
   'round-start-equipment-created',
   'equipment-created',
   'equipment-created-count',

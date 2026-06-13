@@ -35,6 +35,13 @@ interface DiceGroup {
 const PANEL_MARGIN = 16;
 const PANEL_MAX_WIDTH = 700;
 const PANEL_WIDTH_INSET = 40;
+/** Center-to-center column spacing in the dice grid */
+const GRID_COL_SPACING = 100;
+/** Row step: die + label + breathing room (aura particles extend past die bounds) */
+const GRID_ROW_STEP = DICE.SIZE + 52;
+const LABEL_DEPTH = 10;
+const DEV_WRENCH_DEPTH = 11;
+const DICE_SPRITE_DEPTH = 1;
 
 export class DicePouchModal extends GameObjects.Container {
   private diceSprites: DiceSprite[] = [];
@@ -171,21 +178,25 @@ export class DicePouchModal extends GameObjects.Container {
     const markSpent = this.filterMode === 'all';
     const groups = this.groupDice(dice, markSpent);
 
-    const spacing = 96;
-    const rowStep = DICE.SIZE + 28;
-    const cols = Math.max(1, Math.floor((panelW - 40) / spacing));
+    const cols = Math.max(1, Math.floor((panelW - 40) / GRID_COL_SPACING));
     const totalGroups = groups.length;
-    const totalW = (Math.min(totalGroups, cols) - 1) * spacing;
+    const totalW = (Math.min(totalGroups, cols) - 1) * GRID_COL_SPACING;
     const gridStartX = -totalW / 2;
+
+    type LabelEntry = { x: number; y: number; text: string; color: string };
+    type WrenchEntry = { x: number; y: number; group: DiceGroup };
+    const labelEntries: LabelEntry[] = [];
+    const wrenchEntries: WrenchEntry[] = [];
 
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = gridStartX + col * spacing;
-      const y = gridStartY + row * rowStep;
+      const x = gridStartX + col * GRID_COL_SPACING;
+      const y = gridStartY + row * GRID_ROW_STEP;
 
-      const sprite = new DiceSprite(this.scene, x, y, group.representative);
+      const sprite = new DiceSprite(this.scene, x, y, group.representative, { catalogPreview: true });
+      sprite.setDepth(DICE_SPRITE_DEPTH);
 
       if (this.filterMode === 'all' && group.isSpent) {
         sprite.setAlpha(0.4);
@@ -194,30 +205,45 @@ export class DicePouchModal extends GameObjects.Container {
       this.shell.scrollContainer.add(sprite);
       this.diceSprites.push(sprite);
 
-      const countLabel = this.scene.add
-        .text(x, y + DICE.SIZE / 2 + 12, getDiceGroupDisplayLabel(group.representative, group.dice.length), {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '12px',
-          color: group.isSpent ? TEXT_COLORS.DISABLED : TEXT_COLORS.SECONDARY,
-        })
-        .setOrigin(0.5);
-      this.shell.scrollContainer.add(countLabel);
+      labelEntries.push({
+        x,
+        y: y + DICE.SIZE / 2 + 14,
+        text: getDiceGroupDisplayLabel(group.representative, group.dice.length),
+        color: group.isSpent ? TEXT_COLORS.DISABLED : TEXT_COLORS.SECONDARY,
+      });
 
       if (isDevMode()) {
-        const wrench = this.scene.add
-          .text(x, y - DICE.SIZE / 2 - 14, '🔧', {
-            fontSize: '14px',
-          })
-          .setOrigin(0.5)
-          .setInteractive({ useHandCursor: true });
-        wrench.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-          pointer.event.stopPropagation();
-          this.devEditDiceGroup(group);
-        });
-        wrench.on('pointerover', () => wrench.setScale(1.2));
-        wrench.on('pointerout', () => wrench.setScale(1));
-        this.shell.scrollContainer.add(wrench);
+        wrenchEntries.push({ x, y, group });
       }
+    }
+
+    for (const entry of labelEntries) {
+      const countLabel = this.scene.add
+        .text(entry.x, entry.y, entry.text, {
+          fontFamily: FONTS.PRIMARY,
+          fontSize: '12px',
+          color: entry.color,
+        })
+        .setOrigin(0.5)
+        .setDepth(LABEL_DEPTH);
+      this.shell.scrollContainer.add(countLabel);
+    }
+
+    for (const entry of wrenchEntries) {
+      const wrench = this.scene.add
+        .text(entry.x + DICE.SIZE / 2 - 6, entry.y - DICE.SIZE / 2 + 4, '🔧', {
+          fontSize: '12px',
+        })
+        .setOrigin(1, 0)
+        .setDepth(DEV_WRENCH_DEPTH)
+        .setInteractive({ useHandCursor: true });
+      wrench.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        pointer.event.stopPropagation();
+        this.devEditDiceGroup(entry.group);
+      });
+      wrench.on('pointerover', () => wrench.setScale(1.2));
+      wrench.on('pointerout', () => wrench.setScale(1));
+      this.shell.scrollContainer.add(wrench);
     }
 
     const summaryParts: string[] = [];
@@ -236,7 +262,7 @@ export class DicePouchModal extends GameObjects.Container {
     this.shell.scrollContainer.add(countText);
 
     const numRows = Math.ceil(groups.length / cols);
-    const contentHeight = gridStartY + numRows * rowStep + DICE.SIZE / 2 + 16;
+    const contentHeight = gridStartY + numRows * GRID_ROW_STEP + DICE.SIZE / 2 + 16;
     this.shell.setContentHeight(contentHeight);
   }
 

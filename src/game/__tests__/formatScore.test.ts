@@ -23,12 +23,14 @@ describe('formatScore', () => {
 });
 
 describe('formatXMult', () => {
-  test('rounds to one decimal place', () => {
+  test('rounds to two decimal places', () => {
     expect(formatXMult(1)).toBe('1');
     expect(formatXMult(1.5)).toBe('1.5');
     expect(formatXMult(2)).toBe('2');
-    expect(formatXMult(1.3333333333333333)).toBe('1.3');
-    expect(formatXMult(1.35)).toBe('1.4');
+    expect(formatXMult(0.75)).toBe('0.75');
+    expect(formatXMult(0.25)).toBe('0.25');
+    expect(formatXMult(1.3333333333333333)).toBe('1.33');
+    expect(formatXMult(1.335)).toBe('1.34');
   });
 });
 

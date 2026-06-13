@@ -615,6 +615,13 @@ export abstract class CardBar extends GameObjects.Container {
     return Array.from({ length: count }, (_, i) => startX + i * spacing);
   }
 
+  /** World center of a slot in a prior layout (e.g. before consumables were removed). */
+  getSlotWorldCenter(slotIndex: number, slotCount: number): { x: number; y: number } {
+    const positions = this.getCardXPositions(slotCount);
+    const localX = positions[slotIndex] ?? this.barWidth / 2;
+    return { x: this.x + localX, y: this.y + this.cardCenterY };
+  }
+
   private canStartCardDrag(card: ItemCard): boolean {
     if (this.cards.indexOf(card) === -1) return false;
     if (this.activeTabCard) return false;

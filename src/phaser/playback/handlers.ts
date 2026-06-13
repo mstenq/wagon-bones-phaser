@@ -10,6 +10,7 @@ import { getRoundHintContext } from '../../game/displayContext';
 import { roundActions } from '../../game/store/actions/roundActions';
 import { selectHandStats } from '../../game/store/selectors/runSelectors';
 import { getRunState } from '../../game/store/runStore';
+import { animateAshfangTrailGuideEat } from '../animations/AshfangEatAnimation';
 import { applyConsumableAnimEvents, playEquipmentCreatedPopIn } from '../animations/ConsumableAnimPlayback';
 import {
   animateEquipmentFireDestruction,
@@ -59,6 +60,8 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
       return Promise.resolve();
     case 'round-start-destructions':
       return playRoundStartDestructions(ctx, command.entries);
+    case 'round-start-trail-guide-eats':
+      return playRoundStartTrailGuideEats(ctx, command.events);
     case 'round-start-equipment-created':
       return animateEquipmentPopIn(ctx.scene, ctx.equipBar, command.count);
     case 'equipment-created':
@@ -112,6 +115,16 @@ function playRoundStartDestructions(
   if (entries.length === 0) return Promise.resolve();
   return new Promise((resolve) => {
     animateEquipmentFireDestructionSequence(ctx.scene, ctx.equipBar, entries, resolve);
+  });
+}
+
+function playRoundStartTrailGuideEats(
+  ctx: PlaybackHandlerContext,
+  events: Extract<PlaybackCommand, { kind: 'round-start-trail-guide-eats' }>['events'],
+): Promise<void> {
+  if (events.length === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    animateAshfangTrailGuideEat(ctx.scene, ctx.consumableBar, ctx.equipBar, events, resolve);
   });
 }
 

@@ -3367,8 +3367,11 @@ const items: ItemDef[] = [
       const equip = findOwnedEquip(player, 'pawn_broker');
       const sv = equip?.sellValue ?? 1;
       return {
-        hint: [[money(`$${sv}`)], [condition('when money earned', 'xs')]],
-        tooltip: [[text('This item gains '), money('$1'), text(' sell value whenever money is earned')]],
+        hint: [[money(`$${sv}`)], [condition('sell value', 'xs')]],
+        tooltip: [
+          [text('This item gains '), money('$1'), text(' sell value whenever money is earned')],
+          [text('current sell value: '), money(`$${sv}`)],
+        ],
       };
     },
   },

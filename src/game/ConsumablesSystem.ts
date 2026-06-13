@@ -495,11 +495,15 @@ export function executeConsumableEffect(
       return { success: true, consumablesCreated: created };
     }
     case 'compass': {
-      // Creates 2 random trail guide consumables
+      // Creates 2 random trail guide consumables (distinct picks)
       let created = 0;
+      const excludeIds: string[] = [];
       for (let i = 0; i < 2; i++) {
-        const tgDef = getRandomTrailGuideDef();
-        if (consumableActions.addConsumable(tgDef)) created++;
+        const tgDef = getRandomTrailGuideDef(undefined, excludeIds);
+        if (consumableActions.addConsumable(tgDef)) {
+          created++;
+          excludeIds.push(tgDef.id);
+        }
       }
       return { success: true, consumablesCreated: created };
     }

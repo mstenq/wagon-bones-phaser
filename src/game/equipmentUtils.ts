@@ -41,6 +41,8 @@ export type ResolveEquipmentSlotOptions = {
   logResolution?: boolean;
   /** Apply canonical defaults for this walk policy when options are omitted. */
   policy?: EquipmentWalkPolicy;
+  /** When true, Jinx-disabled slots still dispatch (round-start lifecycle only). */
+  ignoreBossDisable?: boolean;
 };
 
 type WalkPreset = Required<Pick<ResolveEquipmentSlotOptions, 'unresolvedCopy' | 'logResolution'>>;
@@ -68,7 +70,7 @@ export function resolveEquipmentSlotAtIndex(
   index: number,
   options: ResolveEquipmentSlotOptions = {},
 ): ResolvedEquipmentSlot | null {
-  if (isEquipmentDisabledByBoss(index)) return null;
+  if (!options.ignoreBossDisable && isEquipmentDisabledByBoss(index)) return null;
 
   const original = equipment[index];
   const { unresolvedCopy, logResolution } = resolveWalkOptions(options);

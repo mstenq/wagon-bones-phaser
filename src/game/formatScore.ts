@@ -48,14 +48,14 @@ export function formatScoreComponent(value: DecimalSource): string {
   return rounded.toLocaleString('en-US');
 }
 
-/** Format an xMult factor for score popups (one decimal place). */
+/** Format an xMult factor for score popups (two decimal places). */
 export function formatXMult(value: DecimalSource): string {
   const d = D(value);
   if (d.eq(D(1))) return '1';
   const asNum = d.toNumber();
   if (Number.isFinite(asNum) && Math.abs(asNum) < GAMEPLAY.SCORE_SCIENTIFIC_THRESHOLD) {
-    const rounded = Math.round(asNum * 10) / 10;
-    return Number.isInteger(rounded) ? String(rounded) : String(parseFloat(rounded.toFixed(1)));
+    const rounded = Math.round(asNum * 100) / 100;
+    return Number.isInteger(rounded) ? String(rounded) : String(parseFloat(rounded.toFixed(2)));
   }
   return formatScientific(d);
 }

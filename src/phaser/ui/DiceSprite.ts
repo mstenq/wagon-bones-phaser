@@ -96,6 +96,7 @@ export class DiceSprite extends GameObjects.Container {
   private tooltip: GameObjects.Container | null = null;
   private tooltipLayout: { width: number; height: number } | null = null;
   private effectHost: AuraEffectHost | null = null;
+  private catalogAuraRing: GameObjects.Graphics | null = null;
   private _dieData: Die;
   private _selected: boolean = false;
   private _rerollLocked: boolean = false;
@@ -105,18 +106,20 @@ export class DiceSprite extends GameObjects.Container {
   _disabled: boolean = false;
   private disabledOverlay: GameObjects.Graphics;
   private _showAuraLabel: boolean = false;
+  private _catalogPreview: boolean = false;
 
   constructor(
     scene: Scene,
     x: number,
     y: number,
     dieData: Die,
-    options?: { showAuraLabel?: boolean; showSelectedStroke?: boolean },
+    options?: { showAuraLabel?: boolean; showSelectedStroke?: boolean; catalogPreview?: boolean },
   ) {
     super(scene, x, y);
     this._dieData = dieData;
     this._showAuraLabel = options?.showAuraLabel ?? false;
     this._showSelectedStroke = options?.showSelectedStroke ?? false;
+    this._catalogPreview = options?.catalogPreview ?? false;
 
     this.dieImage = scene.add.image(0, 0, DICE_ATLAS_KEY, 'standard-01.png').setOrigin(0.5, 0.5);
     this.selectionGfx = scene.add.graphics();
@@ -358,6 +361,20 @@ export class DiceSprite extends GameObjects.Container {
       this.effectHost.destroy();
       this.effectHost = null;
     }
+    if (this.catalogAuraRing) {
+      this.catalogAuraRing.destroy();
+      this.catalogAuraRing = null;
+    }
+  }
+
+  /** Static ring for catalog grids — avoids art filters and ADD particles over neighbor labels. */
+  private drawCatalogAuraIndicator(color: number): void {
+    const ring = this.scene.add.graphics();
+    ring.lineStyle(2, color, 0.55);
+    ring.strokeCircle(0, 0, DICE_SIZE / 2 - 1);
+    ring.setDepth(-1);
+    this.add(ring);
+    this.catalogAuraRing = ring;
   }
 
   private drawAuraFX(): void {
@@ -373,6 +390,11 @@ export class DiceSprite extends GameObjects.Container {
     const half = DICE_SIZE / 2;
     const color = getAuraPrimary(aura);
     const info = AURA_INFO.get(aura);
+
+    if (this._catalogPreview) {
+      this.drawCatalogAuraIndicator(color);
+      return;
+    }
 
     if (isRegistryAura(aura)) {
       this.effectHost = new AuraEffectHost({

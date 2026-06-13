@@ -628,6 +628,24 @@ describe('Copy item familiar: Ashfang', () => {
     expect(ashfang.state.xMult).toBeCloseTo(1.25, 5);
   });
 
+  test('mirror lake copy does not produce its own trailGuideEat event', () => {
+    const mirrorLake = item('mirror_lake');
+    const ashfang = item('ashfang');
+    const tg = createConsumableInstance(getTrailGuideDefById('tg_high_value')!);
+    replaceConsumableList([tg]);
+
+    const result = processEquipmentOnRoundStart([mirrorLake, ashfang]);
+
+    expect(result.trailGuideEats).toEqual([
+      {
+        equipIndex: 1,
+        priorConsumableCount: 1,
+        eaten: [{ slotIndex: 0, defId: 'tg_high_value' }],
+        xMultGained: 0.25,
+      },
+    ]);
+  });
+
   test('two ashfangs left to right: only the first gains xMult when trail guides are present', () => {
     const ashfangLeft = item('ashfang');
     const ashfangRight = item('ashfang');

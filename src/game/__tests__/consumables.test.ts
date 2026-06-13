@@ -150,6 +150,23 @@ describe('PlayerState consumable management', () => {
     expect(player.consumables).toHaveLength(2);
   });
 
+  test('compass creates two distinct trail guides', () => {
+    const compassDef = getSupplyDefById('compass')!;
+
+    for (let seed = 0; seed < 100; seed++) {
+      const player = resetPlayerState();
+      player.maxConsumableSlots = 5;
+      initRunRng(`compass-distinct-${seed}`);
+
+      const result = executeConsumableEffect(createConsumableInstance(compassDef));
+      expect(result.success).toBe(true);
+      expect(result.consumablesCreated).toBe(2);
+
+      const ids = player.consumables.map((c) => c.def.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
   test('ghost aura consumable does not count against max slots', () => {
     const player = resetPlayerState();
     const def1 = getSupplyDefById('coffee_tin')!;

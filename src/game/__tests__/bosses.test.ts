@@ -4,8 +4,9 @@ import { HandType, PhaseState } from '../types';
 import { GAMEPLAY } from '../Constants';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
 import { isFinisherLeg } from '../../data/bosses';
-import { setupGame, calculateTestScore, die, diceFromValues, item, setTestDifficulty } from './testHelpers';
-import { getSupplyDefById } from '../ConsumablesSystem';
+import { setupGame, calculateTestScore, die, diceFromValues, item, itemWithState, setTestDifficulty } from './testHelpers';
+import { createConsumableInstance, getSupplyDefById, getTrailGuideDefById } from '../ConsumablesSystem';
+import { processEquipmentOnRoundStart } from '../EquipmentEffects';
 import { multiplyScore, eq, gt, lt, D } from '../scoreMath';
 import {
   getBossRoundConfigMods,
@@ -32,6 +33,7 @@ import {
 import { bossActions, consumableActions, equipmentActions, progressionActions, roundActions } from '../store/actions';
 import { runActions } from '../store';
 import { getRunState } from '../store/runStore';
+import { replaceConsumableList, resolveConsumableList, resolveEquipmentList } from '../store/resolve';
 import { selectBossForLeg, selectHandStats, selectTargetMiles } from '../store/selectors/runSelectors';
 
 describe('Boss round config', () => {
@@ -464,6 +466,34 @@ describe('DISABLE_RANDOM_EQUIPMENT: Jinx', () => {
     equipmentActions.reorderEquipment(0, 2);
     expect(isEquipmentDisabledByBoss(2)).toBe(true);
     expect(isEquipmentDisabledByBoss(0)).toBe(false);
+  });
+
+  test('jinxed Ashfang still scores without round-start xMult gain', () => {
+    const ashfang = itemWithState('ashfang', { xMult: 1 });
+    const { game } = setupGame({
+      bossId: 'the_jinx',
+      equipment: [ashfang, item('horseshoe')],
+    });
+    game.startRound();
+    getBossRoundState().disabledEquipmentIndices = [0];
+
+    const tg = createConsumableInstance(getTrailGuideDefById('tg_high_value')!);
+    replaceConsumableList([tg]);
+    processEquipmentOnRoundStart(resolveEquipmentList());
+
+    expect(ashfang.state.xMult).toBe(1);
+    expect(resolveConsumableList()).toHaveLength(0);
+
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = diceFromValues([6, 6]);
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    const disabledResult = game.calculateScore()!;
+
+    const { result: horseshoeOnly } = calculateTestScore({
+      scoredDice: diceFromValues([6, 6]),
+      equipment: [item('horseshoe')],
+    });
+    expect(eq(disabledResult.mult, horseshoeOnly.mult)).toBe(true);
   });
 });
 

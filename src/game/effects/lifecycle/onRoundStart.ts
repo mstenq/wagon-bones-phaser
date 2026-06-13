@@ -15,11 +15,20 @@ import { replaceEquipmentList, resolveEquipmentList } from '../../store/resolve'
 import { replaceConsumableList, resolveConsumableList } from '../../store/resolve';
 import { economyActions } from '../../store/actions/economyActions';
 import { diceActions } from '../../store/actions/diceActions';
+import { isEquipmentDisabledByBoss } from '../../BossEffectsSystem';
 
 /** A single animated equipment destruction: source triggered victim's removal */
 export interface AnimatedDestruction {
   sourceIdx: number;
   victimIdx: number;
+}
+
+/** Ashfang (and similar) ate trail guides at round start — drives fly-in playback. */
+export interface TrailGuideEatEvent {
+  equipIndex: number;
+  priorConsumableCount: number;
+  eaten: { slotIndex: number; defId: string }[];
+  xMultGained: number;
 }
 
 export interface RoundStartAccumulators {
@@ -32,6 +41,7 @@ export interface RoundStartAccumulators {
   burnBarrelMoney: number;
   burnBarrelTriggered: boolean;
   supplyCardsToAdd: number;
+  trailGuideEats: TrailGuideEatEvent[];
 }
 
 /** Mutable context passed to each on-round-start handler */
@@ -199,11 +209,24 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
     case 'ROUND_START_DESTROY_TRAIL_GUIDES_XMULT': {
       if (isCopy) break;
       const consumables = resolveConsumableList();
-      const trailGuideCount = consumables.filter((c) => c.def.category === 'trail_guide').length;
-      if (trailGuideCount === 0) break;
-      replaceConsumableList(consumables.filter((c) => c.def.category !== 'trail_guide'));
+      const eaten = consumables
+        .map((c, slotIndex) => ({ c, slotIndex }))
+        .filter(({ c }) => c.def.category === 'trail_guide')
+        .map(({ c, slotIndex }) => ({ slotIndex, defId: c.def.id }));
+      if (eaten.length === 0) break;
       const gain = (equip.def.effectParams.value as number) ?? 0.25;
-      equip.state.xMult = (equip.state.xMult ?? 1) + trailGuideCount * gain;
+      const jinxed = isEquipmentDisabledByBoss(i);
+      const xMultGained = jinxed ? 0 : eaten.length * gain;
+      result.trailGuideEats.push({
+        equipIndex: i,
+        priorConsumableCount: consumables.length,
+        eaten,
+        xMultGained,
+      });
+      replaceConsumableList(consumables.filter((c) => c.def.category !== 'trail_guide'));
+      if (!jinxed) {
+        equip.state.xMult = (equip.state.xMult ?? 1) + eaten.length * gain;
+      }
       break;
     }
     case 'ROULETTE_WHEEL':
@@ -228,6 +251,7 @@ export function processEquipmentOnRoundStart(
   burnBarrelMoney: number;
   burnBarrelTriggered: boolean;
   supplyCardsToAdd: number;
+  trailGuideEats: TrailGuideEatEvent[];
 } {
   const destroyedIndices: number[] = [];
   const animatedDestructions: AnimatedDestruction[] = [];
@@ -242,6 +266,7 @@ export function processEquipmentOnRoundStart(
     burnBarrelMoney: 0,
     burnBarrelTriggered: false,
     supplyCardsToAdd: 0,
+    trailGuideEats: [],
   };
 
   const ctx: RoundStartContext = {
@@ -256,13 +281,17 @@ export function processEquipmentOnRoundStart(
   };
 
   /** perSlot policy — every bar slot dispatches; handlers use ctx.isCopy for index-sensitive destruction. */
-  walkEquipmentPerSlot(equipment, (slot) => {
-    if (pendingAnimatedDestroy.has(slot.index) || destroyedIndices.includes(slot.index)) return;
+  walkEquipmentPerSlot(
+    equipment,
+    (slot) => {
+      if (pendingAnimatedDestroy.has(slot.index) || destroyedIndices.includes(slot.index)) return;
 
-    ctx.index = slot.index;
-    ctx.isCopy = slot.isCopy;
-    dispatchLifecycle('on-round-start', slot.equip, ctx);
-  });
+      ctx.index = slot.index;
+      ctx.isCopy = slot.isCopy;
+      dispatchLifecycle('on-round-start', slot.equip, ctx);
+    },
+    { ignoreBossDisable: true },
+  );
 
   replaceEquipmentList(equipment);
 
@@ -278,5 +307,6 @@ export function processEquipmentOnRoundStart(
     burnBarrelMoney: result.burnBarrelMoney,
     burnBarrelTriggered: result.burnBarrelTriggered,
     supplyCardsToAdd: result.supplyCardsToAdd,
+    trailGuideEats: result.trailGuideEats,
   };
 }

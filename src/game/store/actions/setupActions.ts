@@ -7,6 +7,7 @@ import { getSupplyDefById } from '../../ConsumablesSystem';
 import { getProfessionById } from '../../../data/professions';
 import { getEquipmentDefById } from '../../equipmentCatalog';
 import { acquireEquipmentInstance } from '../../EquipmentModifiers';
+import { applyPermitEffectToRun, getPermitById } from '../../PermitsSystem';
 import { rngPick } from '../../RunRng';
 import { GAMEPLAY } from '../../Constants';
 import { getRunState, runActions, runStore } from '../runStore';
@@ -66,6 +67,11 @@ export const setupActions = {
       maxConsumableSlots,
       purchasedPermits: [...new Set(startingPermits)],
     });
+
+    for (const permitId of startingPermits) {
+      const permit = getPermitById(permitId);
+      if (permit) applyPermitEffectToRun(permit);
+    }
 
     if (Array.isArray(m.startingSupplyCards)) {
       for (const entry of m.startingSupplyCards as (string | { id: string; aura?: string })[]) {

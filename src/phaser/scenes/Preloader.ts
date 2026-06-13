@@ -136,6 +136,7 @@ export class Preloader extends Scene {
     this.load.audio('sfx_multhit1', 'assets/sounds/multhit1.ogg');
     this.load.audio('sfx_multhit2', 'assets/sounds/multhit2.ogg');
     this.load.audio('sfx_whoosh', 'assets/sounds/whoosh.ogg');
+    this.load.audio('sfx_whoosh1', 'assets/sounds/whoosh1.ogg');
     this.load.audio('sfx_whoosh2', 'assets/sounds/whoosh2.ogg');
     this.load.audio('sfx_tarot1', 'assets/sounds/tarot1.ogg');
     this.load.audio('sfx_tarot2', 'assets/sounds/tarot2.ogg');
@@ -155,6 +156,7 @@ export class Preloader extends Scene {
     this.load.audio('sfx_ambient_fire', 'assets/sounds/ambientFire1.ogg');
     this.load.audio('sfx_slice1', 'assets/sounds/slice1.ogg');
     this.load.audio('sfx_other1', 'assets/sounds/other1.ogg');
+    this.load.audio('sfx_dog_bark', 'assets/sounds/dog-bark.mp3');
 
     // Background music (playlist order in BackgroundMusic.ts)
     this.load.audio('bg_music_1', 'assets/sounds/bg_music_1.mp3');

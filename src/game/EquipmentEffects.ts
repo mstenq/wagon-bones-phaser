@@ -27,7 +27,11 @@ import {
 import { addScore, multiplyScore, balanceMilesAndMult, ZERO, ONE } from './scoreMath';
 import { enhancementHeldGoldPayout, enhancementHeldSteelXMult, hasAlchemyKit } from './alchemyKit';
 import type { Decimal } from './decimal';
-export { processEquipmentOnRoundStart, type AnimatedDestruction } from './effects/lifecycle/onRoundStart';
+export {
+  processEquipmentOnRoundStart,
+  type AnimatedDestruction,
+  type TrailGuideEatEvent,
+} from './effects/lifecycle/onRoundStart';
 
 export interface ScoringContext {
   handResult: HandResult;

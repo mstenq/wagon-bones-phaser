@@ -31,6 +31,7 @@ import {
   processGoldHeldAtRoundEnd,
   processBlueMoonHeldAtRoundEnd,
 } from '../../EquipmentEffects';
+import type { TrailGuideEatEvent } from '../../effects/lifecycle/onRoundStart';
 import { DICE_STICKER_IDS } from '../../../data/dice_stickers';
 import { getRandomSupplyDef } from '../../ConsumablesSystem';
 import { createEmptyScoringMutations, mergeMutations, applyScoringMutations } from '../../effects/applyMutations';
@@ -167,6 +168,22 @@ function adjustDestructionIndices(
   });
 }
 
+function adjustEquipIndex(equipIndex: number, splicedIndices: number[]): number {
+  let adjusted = equipIndex;
+  const sorted = [...splicedIndices].sort((a, b) => a - b);
+  for (const spliced of sorted) {
+    if (spliced < adjusted) adjusted--;
+  }
+  return adjusted;
+}
+
+function adjustTrailGuideEatEvents(events: TrailGuideEatEvent[], splicedIndices: number[]): TrailGuideEatEvent[] {
+  return events.map((event) => ({
+    ...event,
+    equipIndex: adjustEquipIndex(event.equipIndex, splicedIndices),
+  }));
+}
+
 export const roundActions = {
   /** Legacy constructor behavior: initial SELECT hand without round-start hooks. */
   seedConstructorRound(config: Partial<GameConfig> = {}): void {
@@ -272,6 +289,10 @@ export const roundActions = {
     removeEquipmentAtIndices([...roundStartEffects.destroyedIndices].sort((a, b) => b - a));
 
     const splicedIndices = roundStartEffects.destroyedIndices.sort((a, b) => a - b);
+    const trailGuideEatEvents = adjustTrailGuideEatEvents(roundStartEffects.trailGuideEats, splicedIndices);
+    if (trailGuideEatEvents.length > 0) {
+      runActions.enqueuePlayback({ kind: 'round-start-trail-guide-eats', events: trailGuideEatEvents });
+    }
     const destructionEntries = adjustDestructionIndices(roundStartEffects.animatedDestructions, splicedIndices);
     if (destructionEntries.length > 0) {
       runActions.enqueuePlayback({ kind: 'round-start-destructions', entries: destructionEntries });

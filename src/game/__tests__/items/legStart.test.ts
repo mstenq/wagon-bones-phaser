@@ -19,8 +19,9 @@ import {
 import { HandType } from '../../types';
 import { D } from '../../scoreMath';
 import { createConsumableInstance, getSupplyDefById, getTrailGuideDefById } from '../../ConsumablesSystem';
-import { replaceConsumableList, resolveConsumableList } from '../../store/resolve';
+import { replaceConsumableList, resolveConsumableList, resolveEquipmentList } from '../../store/resolve';
 import { runActions } from '../../store';
+import { applyBossOnDayStart, getBossRoundState } from '../../BossEffectsSystem';
 
 beforeEach(() => resetDieIds());
 
@@ -494,11 +495,80 @@ describe('ROUND_START_DESTROY_TRAIL_GUIDES_XMULT: Ashfang', () => {
     const supply = createConsumableInstance(getSupplyDefById('coffee_tin')!);
     replaceConsumableList([tg, supply]);
 
-    processEquipmentOnRoundStart([ashfang]);
+    const result = processEquipmentOnRoundStart([ashfang]);
 
     expect(resolveConsumableList()).toHaveLength(1);
     expect(resolveConsumableList()[0]!.def.id).toBe('coffee_tin');
     expect(ashfang.state.xMult).toBeCloseTo(1.25, 5);
+    expect(result.trailGuideEats).toEqual([
+      {
+        equipIndex: 0,
+        priorConsumableCount: 2,
+        eaten: [{ slotIndex: 0, defId: 'tg_high_value' }],
+        xMultGained: 0.25,
+      },
+    ]);
+  });
+
+  test('records empty trailGuideEats when no trail guides are present', () => {
+    const ashfang = item('ashfang');
+    const supply = createConsumableInstance(getSupplyDefById('coffee_tin')!);
+    replaceConsumableList([supply]);
+
+    const result = processEquipmentOnRoundStart([ashfang]);
+
+    expect(result.trailGuideEats).toEqual([]);
+    expect(ashfang.state.xMult).toBe(1);
+  });
+
+  test('records all eaten trail guide slots when multiple are present', () => {
+    const ashfang = item('ashfang');
+    const tgA = createConsumableInstance(getTrailGuideDefById('tg_high_value')!);
+    const tgB = createConsumableInstance(getTrailGuideDefById('tg_pair')!);
+    const supply = createConsumableInstance(getSupplyDefById('coffee_tin')!);
+    replaceConsumableList([supply, tgA, tgB]);
+
+    const result = processEquipmentOnRoundStart([ashfang]);
+
+    expect(result.trailGuideEats).toEqual([
+      {
+        equipIndex: 0,
+        priorConsumableCount: 3,
+        eaten: [
+          { slotIndex: 1, defId: 'tg_high_value' },
+          { slotIndex: 2, defId: 'tg_pair' },
+        ],
+        xMultGained: 0.5,
+      },
+    ]);
+    expect(ashfang.state.xMult).toBeCloseTo(1.5, 5);
+  });
+
+  test('jinxed Ashfang still eats trail guides but gains no xMult', () => {
+    setupGame({
+      bossId: 'the_jinx',
+      equipment: [item('ashfang'), item('horseshoe')],
+      round: 3,
+    });
+    applyBossOnDayStart(1);
+    getBossRoundState().disabledEquipmentIndices = [0];
+
+    const ashfang = resolveEquipmentList()[0]!;
+    const tg = createConsumableInstance(getTrailGuideDefById('tg_high_value')!);
+    replaceConsumableList([tg]);
+
+    const result = processEquipmentOnRoundStart([ashfang]);
+
+    expect(resolveConsumableList()).toHaveLength(0);
+    expect(ashfang.state.xMult).toBe(1);
+    expect(result.trailGuideEats).toEqual([
+      {
+        equipIndex: 0,
+        priorConsumableCount: 1,
+        eaten: [{ slotIndex: 0, defId: 'tg_high_value' }],
+        xMultGained: 0,
+      },
+    ]);
   });
 });
 

@@ -1,5 +1,6 @@
 import '../setup';
 import { afterEach, describe, expect, test } from 'bun:test';
+import { GAMEPLAY } from '../../Constants';
 import { getPlayerState, resetPlayerState } from '../../__tests__/testRunPlayer';
 import { getPermitAuraMultiplier } from '../../PermitsSystem';
 import { roundActions } from '../../store/actions/roundActions';
@@ -46,6 +47,13 @@ describe('run store actions', () => {
     expect(state.professionId).toBe('banker');
     expect(state.dice.length).toBeGreaterThan(0);
     expect(state.balance).toBeGreaterThanOrEqual(initialBalance);
+  });
+
+  test('prospector starting supply_wagon permit applies +1 shop slot', () => {
+    setupActions.applyProfession('prospector');
+    const state = runStore.getState();
+    expect(state.purchasedPermits).toContain('supply_wagon');
+    expect(state.shopSlots).toBe(GAMEPLAY.SHOP_SLOTS + 1);
   });
 
   test('witch grantProfessionStartingEquipment grants one cursed familiar after RNG seed', () => {
