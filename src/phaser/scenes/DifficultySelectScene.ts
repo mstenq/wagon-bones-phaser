@@ -13,7 +13,7 @@ import { Button } from '../ui/Button';
 import { addDifficultyImage } from '../ui/DifficultyAssets';
 import { startAutoSaveLoop } from '../AutoSaveManager';
 import { getHighestUnlockedDifficulty, isDifficultyUnlocked } from '../../game/UserStats';
-import { isPortraitLayout } from '../ui/SceneLayout';
+import { isPortraitLayout, computePortraitSelectActionBar } from '../ui/SceneLayout';
 import { SeededRunModal } from '../ui/SeededRunModal';
 import { wireTapOnlySession } from '../ui/pointerDragSession';
 import { createScrollableViewport, type ScrollableViewportHandle } from '../ui/ScrollableViewport';
@@ -28,7 +28,6 @@ const LEFT_HEADER_SUB = 70;
 const GRID_TOP_MARGIN = 100;
 const GRID_TOP_MARGIN_PORTRAIT = 92;
 const DETAIL_TOP_PAD = 12;
-const PORTRAIT_BOTTOM_BAR_H = 72;
 const PORTRAIT_GRID_PAD = 12;
 const PORTRAIT_GRID_GAP = 10;
 const PORTRAIT_DETAIL_IMAGE_SIZE = 140;
@@ -72,6 +71,7 @@ export class DifficultySelectScene extends Scene {
   private gridChrome: Array<{ setVisible(visible: boolean): unknown }> = [];
   private divider: Phaser.GameObjects.Graphics | null = null;
   private sceneHeight = 0;
+  private portraitBottomBarH = 0;
   private detailScrollMinY = DETAIL_TOP_PAD;
   private isDetailDragging = false;
   private dragStartY = 0;
@@ -173,7 +173,9 @@ export class DifficultySelectScene extends Scene {
   }
 
   private buildActionButtons(width: number, height: number): void {
-    const btnY = height - PORTRAIT_BOTTOM_BAR_H / 2;
+    const portraitActionBar = computePortraitSelectActionBar(height);
+    this.portraitBottomBarH = portraitActionBar.bottomBarH;
+    const btnY = portraitActionBar.btnY;
     const seedBtnW = width < 400 ? 110 : 130;
     const embarkW = width < 400 ? 130 : 160;
     const btnGap = 10;
@@ -352,7 +354,7 @@ export class DifficultySelectScene extends Scene {
     if (this.isPortrait) {
       this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         if (this.portraitViewMode !== 'detail') return;
-        if (pointer.y >= this.sceneHeight - PORTRAIT_BOTTOM_BAR_H) return;
+        if (pointer.y >= this.sceneHeight - this.portraitBottomBarH) return;
         this.isDetailDragging = true;
         this.dragStartY = pointer.y;
         this.scrollStartY = this.detailContainer.y;
@@ -615,7 +617,7 @@ export class DifficultySelectScene extends Scene {
     }
 
     if (this.isPortrait) {
-      const bottomPad = PORTRAIT_BOTTOM_BAR_H + 12;
+      const bottomPad = this.portraitBottomBarH + 12;
       const availableH = this.sceneHeight - DETAIL_TOP_PAD - bottomPad;
       const contentH = y;
       const overflow = contentH - availableH;

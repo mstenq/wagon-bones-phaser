@@ -13,7 +13,7 @@ import { performLoadGame } from '../SaveLoadIO';
 import { getDifficultyBeatColor, getDifficultyBeatStrokeColor, getHighestDifficultyBeaten } from '../../game/UserStats';
 import { DiceSprite } from '../ui/DiceSprite';
 import { getDiceGroupDisplayLabel, groupDiceByVisualIdentity } from '../ui/diceGrouping';
-import { isPortraitLayout } from '../ui/SceneLayout';
+import { isPortraitLayout, computePortraitSelectActionBar } from '../ui/SceneLayout';
 import { wireTapOnlySession } from '../ui/pointerDragSession';
 import { createScrollableViewport, type ScrollableViewportHandle } from '../ui/ScrollableViewport';
 
@@ -31,7 +31,6 @@ const LEFT_HEADER_SUB = 70;
 const GRID_TOP_MARGIN = 100;
 const GRID_TOP_MARGIN_PORTRAIT = 92;
 const DETAIL_TOP_PAD = 12;
-const PORTRAIT_BOTTOM_BAR_H = 72;
 const PORTRAIT_GRID_PAD = 12;
 const PORTRAIT_GRID_GAP = 10;
 const PORTRAIT_DETAIL_IMAGE_SIZE = 140;
@@ -74,6 +73,7 @@ export class ProfessionSelectScene extends Scene {
   private divider: Phaser.GameObjects.Graphics | null = null;
   private loadBtn: Button | null = null;
   private sceneHeight = 0;
+  private portraitBottomBarH = 0;
   private detailScrollMinY = DETAIL_TOP_PAD;
   private isDetailDragging = false;
   private gridLayout: GridLayoutMetrics;
@@ -152,7 +152,9 @@ export class ProfessionSelectScene extends Scene {
     });
     this.gridChrome.push(this.loadBtn);
 
-    const btnY = height - PORTRAIT_BOTTOM_BAR_H / 2;
+    const portraitActionBar = computePortraitSelectActionBar(height);
+    this.portraitBottomBarH = portraitActionBar.bottomBarH;
+    const btnY = portraitActionBar.btnY;
     const backW = 120;
     const confirmW = 200;
     const btnGap = 12;
@@ -262,7 +264,7 @@ export class ProfessionSelectScene extends Scene {
     if (this.isPortrait) {
       this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         if (this.portraitViewMode !== 'detail') return;
-        if (pointer.y >= this.sceneHeight - PORTRAIT_BOTTOM_BAR_H) return;
+        if (pointer.y >= this.sceneHeight - this.portraitBottomBarH) return;
         this.isDetailDragging = true;
         this.dragStartY = pointer.y;
         this.scrollStartY = this.detailContainer.y;
@@ -628,7 +630,7 @@ export class ProfessionSelectScene extends Scene {
     this.detailContainer.add(beatValue);
 
     if (this.isPortrait) {
-      const bottomPad = PORTRAIT_BOTTOM_BAR_H + 12;
+      const bottomPad = this.portraitBottomBarH + 12;
       const availableH = this.sceneHeight - DETAIL_TOP_PAD - bottomPad;
       const contentH = y + beatValue.height;
       const overflow = contentH - availableH;

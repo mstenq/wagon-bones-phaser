@@ -430,6 +430,10 @@ export const UI = {
   GAME_HUD_BTN_GAP: 10,
   /** Extra lift for portrait HUD above corner pouch / loaded-die */
   GAME_HUD_PORTRAIT_LIFT: 28,
+  /** Portrait profession/difficulty select: clearance from screen bottom to action button bottom */
+  PORTRAIT_SELECT_ACTION_BOTTOM_PAD: 56,
+  /** Large action button height on portrait select screens (matches Button size lg) */
+  PORTRAIT_SELECT_ACTION_BTN_H: 48,
   /** Portrait roll-phase button widths (fit between corner widgets) */
   GAME_HUD_SCORE_BTN_W_PORTRAIT: 104,
   /** Landscape reroll button — short label + corner badge for remaining count */

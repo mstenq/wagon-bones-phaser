@@ -190,6 +190,21 @@ export function isPortraitLayout(width: number, _height: number): boolean {
   return width <= 970;
 }
 
+export type PortraitSelectActionBarLayout = {
+  btnY: number;
+  /** Reserved strip at bottom — scroll padding and drag hit-test guard */
+  bottomBarH: number;
+};
+
+/** Portrait bottom action bar for profession/difficulty select scenes. */
+export function computePortraitSelectActionBar(height: number): PortraitSelectActionBarLayout {
+  const btnH = UI.PORTRAIT_SELECT_ACTION_BTN_H;
+  const bottomPad = UI.PORTRAIT_SELECT_ACTION_BOTTOM_PAD;
+  const btnY = height - bottomPad - btnH / 2;
+  const bottomBarH = bottomPad + btnH + 8;
+  return { btnY, bottomBarH };
+}
+
 /** Shrink chrome on narrow portrait viewports; capped at 1. */
 export function computeUiScale(width: number, height: number): number {
   if (!isPortraitLayout(width, height)) {
