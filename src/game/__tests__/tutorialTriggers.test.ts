@@ -48,4 +48,9 @@ describe('tutorialTriggers', () => {
     expect(canShowTutorial('equipment_order', baseRun(), { equipmentCount: 1 })).toBe(false);
     expect(canShowTutorial('equipment_order', baseRun(), { equipmentCount: 2 })).toBe(true);
   });
+
+  test('loaded_dice_intro when a loaded die is in the lineup', () => {
+    expect(canShowTutorial('loaded_dice_intro', baseRun(), { hasLoadedDieInLineup: false })).toBe(false);
+    expect(canShowTutorial('loaded_dice_intro', baseRun(), { hasLoadedDieInLineup: true })).toBe(true);
+  });
 });

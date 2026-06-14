@@ -107,6 +107,11 @@ export interface HandUpgradeInfo {
   newBaseMult: number;
 }
 
+/** Pre-score hand upgrade chance failed (Surveyor's Transit, Stew day 1). */
+export interface HandUpgradeMissInfo {
+  equipIndex: number;
+}
+
 export interface ScoreResult {
   handResult: HandResult;
   totalValue: number; // sum of scoring dice values (base miles from dice)

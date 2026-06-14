@@ -16,7 +16,7 @@ export function createInitialRunState(): RunState {
   return {
     balance: GAMEPLAY.STARTING_MONEY,
     dice: [],
-    loadedDieTarget: null,
+    loadedDieTarget: 12,
     loadedDieSyncLucky: false,
     spentDiceIds: [],
     equipment: [],

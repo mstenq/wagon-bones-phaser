@@ -5,11 +5,102 @@
 
 import { Scene } from 'phaser';
 import { Sidebar } from '../ui/Sidebar';
-import { HandUpgradeInfo } from '../../game/types';
+import { EquipmentBar } from '../ui/EquipmentBar';
+import { HandUpgradeInfo, HandUpgradeMissInfo } from '../../game/types';
 import { FONTS, TEXT_COLORS, COLORS, UI } from '../../game/Constants';
 
 const TICK_DELAY = 500; // ms between each animated value change
 const HOLD_DELAY = 1500; // ms to hold the final values before fading out
+const MISS_HOLD_DELAY = 900; // ms to hold "Nope!" before next miss
+
+export interface HandUpgradeMissAnimConfig {
+  scene: Scene;
+  equipBar: EquipmentBar;
+  misses: HandUpgradeMissInfo[];
+  onComplete: () => void;
+}
+
+/** Brief "Nope!" popup on equipment when a pre-score upgrade roll fails. */
+export function playHandUpgradeMissAnimation(config: HandUpgradeMissAnimConfig): void {
+  const { scene, equipBar, misses, onComplete } = config;
+
+  let missIdx = 0;
+
+  function playNext() {
+    if (missIdx >= misses.length) {
+      onComplete();
+      return;
+    }
+    animateOneMiss(scene, equipBar, misses[missIdx], () => {
+      missIdx++;
+      playNext();
+    });
+  }
+
+  playNext();
+}
+
+function animateOneMiss(scene: Scene, equipBar: EquipmentBar, miss: HandUpgradeMissInfo, onDone: () => void): void {
+  const card = equipBar.getCardByEquipIndex(miss.equipIndex);
+  if (!card) {
+    onDone();
+    return;
+  }
+
+  const wx = equipBar.x + card.x;
+  const wy = equipBar.y + card.y;
+  const origX = card.x;
+
+  scene.tweens.add({
+    targets: card,
+    x: origX - 6,
+    duration: 60,
+    yoyo: true,
+    repeat: 3,
+    ease: 'Sine.easeInOut',
+    onComplete: () => {
+      card.x = origX;
+    },
+  });
+
+  const popup = scene.add
+    .text(wx, wy + 48, 'Nope!', {
+      fontFamily: FONTS.HEADING,
+      fontSize: '20px',
+      color: '#ff8888',
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+    })
+    .setOrigin(0.5)
+    .setDepth(UI.SCORE_POPUP_DEPTH)
+    .setScale(0.3)
+    .setAlpha(1);
+
+  scene.sound.play('sfx_cancel', { volume: 0.5 });
+
+  scene.tweens.add({
+    targets: popup,
+    scaleX: 1.15,
+    scaleY: 1.15,
+    duration: 120,
+    ease: 'Back.easeOut',
+    onComplete: () => {
+      scene.tweens.add({
+        targets: popup,
+        y: popup.y + 18,
+        alpha: 0,
+        duration: 400,
+        delay: MISS_HOLD_DELAY - 520,
+        ease: 'Sine.easeIn',
+        onComplete: () => {
+          popup.destroy();
+          onDone();
+        },
+      });
+    },
+  });
+}
 
 export interface HandUpgradeAnimConfig {
   scene: Scene;

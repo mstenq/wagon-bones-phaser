@@ -262,7 +262,7 @@ function playerSaveToRunState(data: PlayerSaveData): SerializedRunState {
   return {
     balance: data.balance,
     dice: data.dice.map((d) => ({ ...d })),
-    loadedDieTarget: data.loadedDieTarget,
+    loadedDieTarget: data.loadedDieTarget ?? 12,
     loadedDieSyncLucky: data.loadedDieSyncLucky ?? false,
     spentDiceIds: [...data.spentDiceIds],
     equipment: data.equipment.map((eq) => ({ ...eq })),

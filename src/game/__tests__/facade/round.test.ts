@@ -54,6 +54,28 @@ describe('gameFacade.round', () => {
     expect(runStore.getState().playbackQueue).toEqual([{ kind: 'score', result: result! }]);
   });
 
+  test('submitScore enqueues hand-upgrade-misses before score when upgrade roll fails', () => {
+    const original = Math.random;
+    Math.random = () => 0.9;
+    try {
+      setupGame({ dice: diceWithValue(5, 8), equipment: [item('surveyors_transit')] });
+      gameFacade.round.beginRoundSession();
+
+      const handIds = selectHandDice()
+        .slice(0, 2)
+        .map((d) => d.id);
+      gameFacade.round.selectDiceForRoll(handIds);
+
+      const result = gameFacade.round.submitScore(handIds);
+      expect(result?.handUpgrades).toBeUndefined();
+      const queue = runStore.getState().playbackQueue;
+      expect(queue[0]).toMatchObject({ kind: 'hand-upgrade-misses', misses: [{ equipIndex: 0 }] });
+      expect(queue[1]).toMatchObject({ kind: 'score', result });
+    } finally {
+      Math.random = original;
+    }
+  });
+
   test('submitScore enqueues hand-upgrades before score when a proc upgrades the hand', () => {
     const original = Math.random;
     Math.random = () => 0;

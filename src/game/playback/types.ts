@@ -1,6 +1,6 @@
 import type { ConsumableAnimEvent } from '../ConsumablesSystem';
 import type { TrailGuideEatEvent } from '../effects/lifecycle/onRoundStart';
-import type { HandUpgradeInfo, ScoreAnimEvent, ScoreResult } from '../types';
+import type { HandUpgradeInfo, HandUpgradeMissInfo, ScoreAnimEvent, ScoreResult } from '../types';
 
 /** Center-screen success / failure toast tone. */
 export type ToastTone = 'success' | 'failure';
@@ -36,6 +36,8 @@ export type PlaybackCommand =
   | { kind: 'score-events'; events: ScoreAnimEvent[]; label?: 'round-end-held' }
   /** Hand level-up banners (queue before `score` when upgrades affect the scored hand). */
   | { kind: 'hand-upgrades'; upgrades: HandUpgradeInfo[] }
+  /** Failed pre-score hand upgrade roll — "Nope!" on equipment card. */
+  | { kind: 'hand-upgrade-misses'; misses: HandUpgradeMissInfo[] }
   /** End-of-day equipment self-destruct (Dynamite, Nitro) before continue. */
   | { kind: 'day-end-destructions'; indices: number[]; destroyedNames: string[]; holdMs: number }
   /** Trail tag fly-in to the tag stack (Round Select). */
@@ -63,6 +65,7 @@ const PLAYBACK_COMMAND_KINDS = new Set<PlaybackCommand['kind']>([
   'score',
   'score-events',
   'hand-upgrades',
+  'hand-upgrade-misses',
   'day-end-destructions',
   'tag-earned',
   'modifier-feedback',

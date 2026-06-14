@@ -1,10 +1,17 @@
 // ─── Playback enqueue helpers (No Phaser imports) ───
 
 import type { ModifierFeedbackPayload } from '../playback/types';
-import type { HandUpgradeInfo } from '../types';
+import type { HandUpgradeInfo, HandUpgradeMissInfo } from '../types';
 import type { UseConsumableResult } from '../ConsumablesSystem';
 import type { EquipmentModifierRoundResult } from '../EquipmentModifiers';
 import { runActions } from './runStore';
+
+/** Queue failed pre-score hand upgrade rolls (before successful hand-upgrades / score). */
+export function enqueueHandUpgradeMisses(misses: HandUpgradeMissInfo[] | HandUpgradeMissInfo | undefined | null): void {
+  const list = misses == null ? [] : Array.isArray(misses) ? misses : [misses];
+  if (list.length === 0) return;
+  runActions.enqueuePlayback({ kind: 'hand-upgrade-misses', misses: list });
+}
 
 /** Queue hand level-up banners (before score, consumables, tags, etc.). */
 export function enqueueHandUpgrades(upgrades: HandUpgradeInfo[] | HandUpgradeInfo | undefined | null): void {

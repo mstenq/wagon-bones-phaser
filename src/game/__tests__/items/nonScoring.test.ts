@@ -522,7 +522,9 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
       const inst = item('surveyors_transit');
       const { player } = setupGame({ equipment: [inst] });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      processPreScoreHandUpgrades([inst], HandType.PAIR);
+      const { upgrades, misses } = processPreScoreHandUpgrades([inst], HandType.PAIR);
+      expect(upgrades.length).toBe(0);
+      expect(misses).toEqual([{ equipIndex: 0 }]);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore);
     } finally {
       Math.random = original;
@@ -550,7 +552,9 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
       const inst = item('surveyors_transit');
       const { player } = setupGame({ equipment: [inst], profession: 'surveyor' });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      processPreScoreHandUpgrades([inst], HandType.PAIR);
+      const { upgrades, misses } = processPreScoreHandUpgrades([inst], HandType.PAIR);
+      expect(upgrades.length).toBe(0);
+      expect(misses).toEqual([{ equipIndex: 0 }]);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore);
     } finally {
       Math.random = original;
@@ -587,7 +591,7 @@ describe("HAND_UPGRADE_CHANCE: Surveyor's Transit", () => {
       const equipment = [item('mirror_lake'), item('surveyors_transit')];
       const { player } = setupGame({ equipment });
       const levelBefore = player.getHandStats(HandType.PAIR).level;
-      const upgrades = processPreScoreHandUpgrades(equipment, HandType.PAIR);
+      const { upgrades } = processPreScoreHandUpgrades(equipment, HandType.PAIR);
       expect(upgrades.length).toBe(2);
       expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore + 2);
     } finally {
@@ -1802,12 +1806,29 @@ describe('STEW', () => {
       const stew = item('stew');
       const { game } = setupGame({ equipment: [stew] });
       game.startRound();
-      const day1Upgrades = processPreScoreHandUpgrades([stew], HandType.PAIR);
+      const { upgrades: day1Upgrades } = processPreScoreHandUpgrades([stew], HandType.PAIR);
       expect(day1Upgrades.length).toBe(1);
 
       roundActions.patch({ day: 2 });
-      const day2Upgrades = processPreScoreHandUpgrades([stew], HandType.PAIR);
+      const { upgrades: day2Upgrades, misses: day2Misses } = processPreScoreHandUpgrades([stew], HandType.PAIR);
       expect(day2Upgrades.length).toBe(0);
+      expect(day2Misses.length).toBe(0);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('records miss on day 1 when upgrade roll fails', () => {
+    const original = Math.random;
+    Math.random = () => 0.9;
+    try {
+      const stew = item('stew');
+      const { player } = setupGame({ equipment: [stew] });
+      const levelBefore = player.getHandStats(HandType.PAIR).level;
+      const { upgrades, misses } = processPreScoreHandUpgrades([stew], HandType.PAIR);
+      expect(upgrades.length).toBe(0);
+      expect(misses).toEqual([{ equipIndex: 0 }]);
+      expect(player.getHandStats(HandType.PAIR).level).toBe(levelBefore);
     } finally {
       Math.random = original;
     }
@@ -1838,7 +1859,7 @@ describe('STEW', () => {
       const equipment = [item('mirror_lake'), item('stew')];
       const { game } = setupGame({ equipment });
       game.startRound();
-      const upgrades = processPreScoreHandUpgrades(equipment, HandType.PAIR);
+      const { upgrades } = processPreScoreHandUpgrades(equipment, HandType.PAIR);
       expect(upgrades.length).toBe(2);
     } finally {
       Math.random = original;

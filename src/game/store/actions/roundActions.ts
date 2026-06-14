@@ -523,7 +523,10 @@ export const roundActions = {
     }
 
     const tricksterDowngrade = applyBossTricksterDowngrade(handType);
-    const preScoreHandUpgrades = processPreScoreHandUpgrades(scoringEquipment, handType);
+    const { upgrades: preScoreHandUpgrades, misses: preScoreHandUpgradeMisses } = processPreScoreHandUpgrades(
+      scoringEquipment,
+      handType,
+    );
     const stats = getBossAdjustedHandStats(handType, selectHandStats(getRunState(), handType));
     recordBossHandPlayed(handType);
     applyBossOnScore(handType, selectedDice);
@@ -599,6 +602,9 @@ export const roundActions = {
       ...preScoreHandUpgrades,
       ...postScoreHandUpgrades,
     ];
+    if (preScoreHandUpgradeMisses.length > 0) {
+      runActions.enqueuePlayback({ kind: 'hand-upgrade-misses', misses: preScoreHandUpgradeMisses });
+    }
     if (allHandUpgrades.length > 0) {
       finalResult.handUpgrades = allHandUpgrades;
       runActions.enqueuePlayback({ kind: 'hand-upgrades', upgrades: allHandUpgrades });

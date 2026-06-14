@@ -17,7 +17,7 @@ import {
   animateEquipmentFireDestructionSequence,
 } from '../animations/EquipmentFireDestroyAnimation';
 import { animateEquipmentPopIn } from '../animations/EquipmentPopInAnimation';
-import { playHandUpgradeAnimation } from '../animations/HandUpgradeAnimation';
+import { playHandUpgradeAnimation, playHandUpgradeMissAnimation } from '../animations/HandUpgradeAnimation';
 import { playDieAnimEvents, playScoreAnimation } from '../animations/ScoreAnimation';
 import { playCenterToast } from '../animations/ToastAnimation';
 import { showTutorialModal } from '../ui/TutorialModal';
@@ -82,6 +82,8 @@ export function playPlaybackCommand(ctx: PlaybackHandlerContext, command: Playba
       return playScoreEventsPlayback(ctx, command.events, command.label);
     case 'hand-upgrades':
       return playHandUpgradesPlayback(ctx, command.upgrades);
+    case 'hand-upgrade-misses':
+      return playHandUpgradeMissesPlayback(ctx, command.misses);
     case 'day-end-destructions':
       return playDayEndDestructionsPlayback(ctx, command.indices, command.destroyedNames, command.holdMs);
     case 'tag-earned':
@@ -175,6 +177,26 @@ function playScoreEventsPlayback(
       onComplete: () => resolve(),
     });
   });
+}
+
+function playHandUpgradeMissesPlayback(
+  ctx: PlaybackHandlerContext,
+  misses: NonNullable<Extract<PlaybackCommand, { kind: 'hand-upgrade-misses' }>['misses']>,
+): Promise<void> {
+  if (misses.length === 0) return Promise.resolve();
+  return (async () => {
+    if (ctx.scoreLayoutGate) {
+      await ctx.scoreLayoutGate.promise;
+    }
+    await new Promise<void>((resolve) => {
+      playHandUpgradeMissAnimation({
+        scene: ctx.scene,
+        equipBar: ctx.equipBar,
+        misses,
+        onComplete: () => resolve(),
+      });
+    });
+  })();
 }
 
 function playHandUpgradesPlayback(

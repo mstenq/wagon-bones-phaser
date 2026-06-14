@@ -585,6 +585,12 @@ export class GameScene extends Scene {
     return !isTutorialSeen('first_round_play');
   }
 
+  private shouldDeferAutoRollForLoadedDiceTutorial(): boolean {
+    if (isTutorialSeen('loaded_dice_intro')) return false;
+    if (selectRoundPhase() !== 'SELECT') return false;
+    return selectHandDice().some((die) => die.enhancement === 'loaded');
+  }
+
   private enqueueGameplayTutorials(options: { consumableUse?: boolean } = {}): void {
     if (isScoreAnimLabUrl()) return;
     const run = getRunState();
@@ -613,6 +619,15 @@ export class GameScene extends Scene {
     }
     if (options.consumableUse) {
       tryEnqueueTutorial('consumable_use', ctx);
+    }
+    const hasLoadedDieInLineup =
+      phase === 'SELECT'
+        ? selectHandDice().some((die) => die.enhancement === 'loaded')
+        : phase === 'ROLL'
+          ? selectRolledDice().some((die) => die.enhancement === 'loaded')
+          : false;
+    if (hasLoadedDieInLineup) {
+      tryEnqueueTutorial('loaded_dice_intro', { ...ctx, hasLoadedDieInLineup: true });
     }
   }
 
@@ -793,6 +808,7 @@ export class GameScene extends Scene {
   /** Auto-roll when the preference is on and the player is in the pre-roll SELECT phase. */
   private maybeAutoRollFirstHand(): void {
     if (this.shouldDeferAutoRollForTutorial()) return;
+    if (this.shouldDeferAutoRollForLoadedDiceTutorial()) return;
     if (!getGameplayPreferences().autoRollFirstHand) return;
     if (this.animating) return;
     if (selectRoundPhase() !== 'SELECT') return;

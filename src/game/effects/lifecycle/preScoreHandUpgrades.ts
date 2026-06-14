@@ -6,23 +6,34 @@ import { checkLoadedChance } from '../../equipmentUtils';
 import { applyHandLevelUpgrade } from '../../handStatsHelpers';
 import { getRunState } from '../../store/runStore';
 import { getRoundState } from '../../store/roundStore';
-import type { HandType, HandUpgradeInfo } from '../../types';
+import type { HandType, HandUpgradeInfo, HandUpgradeMissInfo } from '../../types';
 import { forEachEquipmentScoring, resolveChance } from '../helpers';
 
-export function processPreScoreHandUpgrades(equipment: EquipmentInstance[], handType: HandType): HandUpgradeInfo[] {
+export interface PreScoreHandUpgradeResult {
+  upgrades: HandUpgradeInfo[];
+  misses: HandUpgradeMissInfo[];
+}
+
+export function processPreScoreHandUpgrades(
+  equipment: EquipmentInstance[],
+  handType: HandType,
+): PreScoreHandUpgradeResult {
   const upgrades: HandUpgradeInfo[] = [];
+  const misses: HandUpgradeMissInfo[] = [];
   const run = getRunState();
   const roundDay = getRoundState()?.day ?? 1;
 
   forEachEquipmentScoring(
     equipment,
-    (equip) => {
+    (equip, _original, index) => {
       switch (equip.def.effectType) {
         case 'HAND_UPGRADE_CHANCE': {
           const p = equip.def.effectParams as Record<string, unknown>;
           const chance = resolveChance(p, run.professionId ?? undefined);
           if (checkLoadedChance(chance, equipment)) {
             upgrades.push(applyHandLevelUpgrade(handType));
+          } else {
+            misses.push({ equipIndex: index });
           }
           break;
         }
@@ -31,6 +42,8 @@ export function processPreScoreHandUpgrades(equipment: EquipmentInstance[], hand
           const chance = (equip.def.effectParams.chance as [number, number]) ?? [1, 2];
           if (checkLoadedChance(chance, equipment)) {
             upgrades.push(applyHandLevelUpgrade(handType));
+          } else {
+            misses.push({ equipIndex: index });
           }
           break;
         }
@@ -39,5 +52,5 @@ export function processPreScoreHandUpgrades(equipment: EquipmentInstance[], hand
     { unresolvedCopy: 'skip', logResolution: false },
   );
 
-  return upgrades;
+  return { upgrades, misses };
 }

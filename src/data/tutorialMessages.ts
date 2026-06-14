@@ -17,6 +17,7 @@ export const TUTORIAL_MESSAGE_IDS = [
   'reach_oregon',
   'equipment_order',
   'consumable_use',
+  'loaded_dice_intro',
 ] as const;
 
 export type TutorialMessageId = (typeof TUTORIAL_MESSAGE_IDS)[number];
@@ -49,6 +50,8 @@ const STATIC_MESSAGES = {
   reach_oregon: 'Reach Oregon City on leg 8 to win the trail. Choose your next round when you are ready.',
   equipment_order: 'You can drag equipment to reorder it. Equipment triggers left to right — position matters!',
   consumable_use: "Select dice and press USE on a supply card to enhance them. Don't let consumables sit unused!",
+  loaded_dice_intro:
+    'Loaded dice have a 1 in 3 chance to roll your Loaded Die Number. Change it in the lower-left corner — tap the value or use +/− to adjust before you roll.',
 } satisfies Record<TutorialMessageId, string | ((ctx: TutorialMessageContext) => string)>;
 
 export function resolveTutorialMessage(id: TutorialMessageId, ctx: TutorialMessageContext = {}): string {

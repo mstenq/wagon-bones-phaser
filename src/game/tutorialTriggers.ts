@@ -13,6 +13,7 @@ export interface TutorialTriggerContext {
   permitVisible?: boolean;
   roundDay?: number;
   rerollsRemaining?: number;
+  hasLoadedDieInLineup?: boolean;
 }
 
 function isFirstMileRound(run: RunState): boolean {
@@ -56,6 +57,8 @@ export function canShowTutorial(id: TutorialMessageId, run: RunState, ctx: Tutor
       return (ctx.equipmentCount ?? 0) >= 2;
     case 'consumable_use':
       return (ctx.consumableCount ?? 0) >= 1;
+    case 'loaded_dice_intro':
+      return ctx.hasLoadedDieInLineup === true;
     default:
       return false;
   }
