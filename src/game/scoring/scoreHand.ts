@@ -364,6 +364,7 @@ export function scoreHand(
       if (!frontierDef) return;
 
       pipelineCtx.mutations.consumablesGranted.push(frontierDef.id);
+      animEvents.push({ target: { kind: 'die', dieId: hellfireSoloDie.id }, popupType: 'crack', value: 0 });
       animEvents.push({
         target: { kind: 'equip', equipIndex: slot.index },
         popupType: 'supply',

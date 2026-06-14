@@ -16,6 +16,7 @@ import { FONT_NUMBER, UI } from '../../game/Constants';
 import { getScoreAnimTimings } from '../../game/ScoreAnimTimings';
 import { getRoundState } from '../../game/store/roundStore';
 import { resolveDieById } from '../../game/store/roundResolve';
+import { removeDestroyedDiceFromRound } from '../../game/store/roundWrites';
 import { formatScore, formatXMult } from '../../game/formatScore';
 import { endScoreAnimSession, pacingForFollowUp, pacingForHandScore, type ScoreAnimPacing } from './scoreAnimPacing';
 import { addScore, multiplyScore, D } from '../../game/scoreMath';
@@ -414,6 +415,12 @@ function getSoundForType(type: string, stepIdx: number): { key: string; config: 
   }
 }
 
+function finalizeDestroyedDie(dieId: string, diceSprites: DiceSprite[]): void {
+  removeDestroyedDiceFromRound(new Set([dieId]));
+  const idx = diceSprites.findIndex((s) => s.dieData.id === dieId);
+  if (idx >= 0) diceSprites.splice(idx, 1);
+}
+
 function animateDieCrack(scene: Scene, sprite: DiceSprite, onComplete: () => void): void {
   const T = getScoreAnimTimings();
   ensureAuraTextures(scene);
@@ -630,7 +637,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         return;
       }
 
-      // Special: die crack and shatter (diamond crack, moonshine, trail destroys)
+      // Special: die crack and shatter (diamond crack, moonshine, trail destroys, hellfire)
       if (popupType === 'crack') {
         if (target.kind === 'die' || target.kind === 'both') {
           const sprite = dieSpriteMap.get(target.dieId);
@@ -640,6 +647,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             popupForDie(scene, sprite, 'crack', value);
             animateDieCrack(scene, sprite, () => {
               dieSpriteMap.delete(target.dieId);
+              finalizeDestroyedDie(target.dieId, diceSprites);
               done();
             });
             return;

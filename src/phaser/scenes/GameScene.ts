@@ -1253,7 +1253,9 @@ export class GameScene extends Scene {
 
   /** Keep game-state dice order aligned with on-screen roll sprite order (held-in-hand scoring). */
   private syncRolledDiceFromSprites(): void {
-    gameFacade.round.syncRolledDiceFromFaces(this.rollSprites.map((s) => s.dieData));
+    const runIds = new Set(getRunState().dice.map((d) => d.id));
+    const faces = this.rollSprites.map((s) => s.dieData).filter((d) => runIds.has(d.id));
+    gameFacade.round.syncRolledDiceFromFaces(faces);
   }
 
   /** Keep SELECT-phase hand order aligned with play-area sprite order (mirage left→right). */

@@ -63,5 +63,12 @@ export function removeDestroyedDiceFromRound(destroyedIds: Set<string>): void {
   if (round.phase === 'ROLL') {
     syncRolledDiceFromFaces(selectRolledDice().filter((d) => !destroyedIds.has(d.id)));
     setSelectedForScoreDice(selectSelectedForScore().filter((d) => !destroyedIds.has(d.id)));
+    return;
+  }
+  if (round.phase === 'SCORE' || round.phase === 'DAY_END') {
+    roundActions.patch({
+      rolledDice: round.rolledDice.filter((r) => !destroyedIds.has(r.id)),
+      selectedForScoreIds: round.selectedForScoreIds.filter((id) => !destroyedIds.has(id)),
+    });
   }
 }

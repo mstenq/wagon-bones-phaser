@@ -606,6 +606,32 @@ describe('FIRST_HAND_ENHANCED_SIX: Hellfire Round', () => {
     expect(frontier.length).toBeGreaterThanOrEqual(1);
   });
 
+  test('with Lucky Find: destroys solo unenhanced 6 enhanced on day 1 and grants frontier card', () => {
+    const original = Math.random;
+    Math.random = () => 0;
+    try {
+      const solo6 = die({ value: 6 });
+      const { player, result } = calculateTestScore({
+        scoredDice: [solo6],
+        equipment: [item('lucky_find'), item('hellfire_round')],
+        currentDay: 1,
+      });
+      expect(result.handResult.scoringDice[0].enhancement).toBe('bone');
+      expect(player.dice.filter((d) => d.id === solo6.id).length).toBe(0);
+      expect(player.consumables.filter((c) => c.def.category === 'frontier').length).toBeGreaterThanOrEqual(1);
+      expect(
+        result.animEvents.some(
+          (e) =>
+            e.popupType === 'crack' &&
+            (e.target.kind === 'die' || e.target.kind === 'both') &&
+            e.target.dieId === solo6.id,
+        ),
+      ).toBe(true);
+    } finally {
+      Math.random = original;
+    }
+  });
+
   test('does not trigger when enhanced 6 is part of a multi-die hand', () => {
     const enhanced6 = die({ value: 6, enhancement: 'bone' });
     const { player } = calculateTestScore({
