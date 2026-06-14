@@ -7,11 +7,7 @@ import { FONTS, UI } from '../../game/Constants';
 import type { LayoutMode } from '../../game/Constants';
 import { D, type DecimalSource } from '../../game/decimal';
 import { formatScore, formatScoreComponent } from '../../game/formatScore';
-import {
-  getScoreProgressTierColor,
-  getStackedProgressLayers,
-  type ScoreProgressLayer,
-} from './roundScoreProgressMath';
+import { getScoreProgressTierColor, getStackedProgressLayers, type ScoreProgressLayer } from './roundScoreProgressMath';
 
 export type RoundScoreProgressVariant = LayoutMode;
 
