@@ -28,6 +28,7 @@ import {
   resolveChoice,
   buildTrailEventResultFromResolvedDisplay,
   filterEquipmentEligibleForTrailSacrifice,
+  outcomeIncludesEquipmentTrade,
   checkCondition,
   isNegativeEffect,
   applyEffect,
@@ -707,6 +708,22 @@ describe('Effect application', () => {
     expect(player.dice[player.dice.length - 1]?.enhancement).not.toBeNull();
   });
 
+  test('GAIN_RANDOM_EQUIPMENT grants equipment over slot limit when paired with equipment sacrifice', () => {
+    const player = resetPlayerState();
+    player.maxEquipmentSlots = 2;
+    player.equipment = [item('horseshoe'), item('war_drums')];
+    const diceBefore = player.dice.length;
+    const mods = createEmptyModifiers();
+    applyEffect(
+      { type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null },
+      mods,
+      () => 0,
+      { allowEquipmentOverSlotLimit: true },
+    );
+    expect(player.equipment.length).toBe(3);
+    expect(player.dice.length).toBe(diceBefore);
+  });
+
   test('GAIN_RANDOM_EQUIPMENT still grants ghost equipment when inventory is full', () => {
     const player = resetPlayerState();
     player.maxEquipmentSlots = 2;
@@ -886,6 +903,19 @@ describe('Outcome resolution', () => {
     expect(eligible).toHaveLength(before.length);
     expect(eligible[0]?.def.id).toBe('horseshoe');
     expect(eligible.some((inst) => inst.def.id === after[after.length - 1]?.def.id)).toBe(false);
+  });
+
+  test('fellow_traveler trade grants equipment when inventory is full', () => {
+    const player = resetPlayerState();
+    player.maxEquipmentSlots = 2;
+    player.equipment = [item('horseshoe'), item('war_drums')];
+    player.persistEquipment();
+    const diceBefore = player.dice.length;
+    const event = getTrailEventById('fellow_traveler')!;
+    resolveChoice(event, 'trade', () => 0.6);
+    expect(player.equipment.length).toBe(3);
+    expect(player.dice.length).toBe(diceBefore);
+    expect(outcomeIncludesEquipmentTrade(event.choices[0]!.outcomes[1]!.effects)).toBe(true);
   });
 });
 

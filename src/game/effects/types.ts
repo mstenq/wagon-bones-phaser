@@ -63,15 +63,14 @@ export interface ScoringMutations {
 }
 
 /**
- * Handler for an equipment effect during the "independent equipment pass"
- * (SCORE Step 5 additive pass: after scoreHand + held-in-hand, before equipment xMult).
+ * Handler for an equipment effect during SCORE Step 5 (per bar slot, left → right).
  */
 export interface AdditiveEffectHandler {
   (ctx: ScoringPipelineContext, equip: EquipmentInstance, equipIndex: number): void;
 }
 
 /**
- * Handler for an equipment effect during the xMult pass.
+ * Handler for an equipment xMult effect during SCORE Step 5 (same per-slot walk as additive).
  */
 export interface XMultEffectHandler {
   (ctx: ScoringPipelineContext, equip: EquipmentInstance, equipIndex: number): void;

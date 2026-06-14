@@ -107,10 +107,8 @@ describe('COPY_LEFTMOST: Echo Chamber', () => {
       currentDay: 5,
       maxDays: 5,
     });
-    // PAIR baseMult=1, +4 (horseshoe) = 5 mult
-    // xMult: x3 (high_noon) x3 (echo copies high_noon) = x9
-    // finalMult = 5 * 9 = 45
-    expect(result.mult).toBeMult(45);
+    // Bar order: high_noon x3 → 3, horseshoe +4 → 7, echo copies high_noon x3 → 21
+    expect(result.mult).toBeMult(21);
   });
 });
 
@@ -220,10 +218,8 @@ describe('Copy item edge cases — side effects', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('nitro'), item('horseshoe'), item('echo_chamber')],
     });
-    // PAIR baseMult=1, +4 (horseshoe) = 5
-    // xMult: x3 (nitro) x3 (echo copies nitro) = x9
-    // finalMult = 5 * 9 = 45
-    expect(result.mult).toBeMult(45);
+    // Bar order: nitro x3 → 3, horseshoe +4 → 7, echo copies nitro x3 → 21
+    expect(result.mult).toBeMult(21);
   });
 });
 

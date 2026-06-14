@@ -298,7 +298,7 @@ export const UI = {
   TOP_BAR_CTRL_GAP: 6,
   TOP_BAR_PILL_W: 114,
   TOP_BAR_PILL_H: 26,
-  TOP_BAR_SCORE_BLOCK_RATIO: 0.34,
+  TOP_BAR_SCORE_BLOCK_RATIO: 0.5,
   /** Portrait reference width for UI scale (typical phone) */
   UI_SCALE_REF_WIDTH: 420,
   UI_SCALE_MIN: 0.72,
@@ -308,6 +308,17 @@ export const UI = {
   SIDEBAR_SECTION_GAP: 8,
   /** Corner radius for textured sidebar/topbar panels */
   SIDEBAR_PANEL_RADIUS: 6,
+
+  /** Round score / target progress bar (sidebar + topbar). */
+  SCORE_PROGRESS_ANIM_MS: 2000,
+  SCORE_PROGRESS_LEVELUP_SEC: 2.12,
+  SCORE_PROGRESS_MAX_TIER: 4,
+  /** Shared chrome height for sidebar + topbar score boxes. */
+  SCORE_PROGRESS_SECTION_H: 28,
+  SCORE_PROGRESS_BAR_RADIUS: 4,
+  SCORE_PROGRESS_MULTIPLIER_PAD: 8,
+  SCORE_PROGRESS_TRACK: 0x1a1a2e,
+  SCORE_PROGRESS_TIER_COLORS: [0xa2d752, 0x4488cc, 0x9944cc, 0xffcc00, 0xffffff] as const,
 
   // Equipment + consumable card bars (shared sizing — see computeCardBarMetrics in SceneLayout)
   EQUIP_BAR_RATIO: 0.8,
@@ -484,7 +495,7 @@ export const UI = {
   DICE_SELECTION_DOT_GAP_BELOW: 12,
   DICE_SELECTION_DOT_STROKE: 1.5,
   DICE_SELECTION_DOT_PULSE_SCALE: 1.25,
-  DICE_SELECTION_DOT_SHRINK_SCALE: 0.90,
+  DICE_SELECTION_DOT_SHRINK_SCALE: 0.9,
   DICE_SELECTION_DOT_PULSE_UP_MS: 100,
   DICE_SELECTION_DOT_PULSE_HOLD_MS: 10,
   FELT_PADDING: 12,

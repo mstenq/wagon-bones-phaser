@@ -262,6 +262,30 @@ describe('item auras', () => {
     expect(fireIdx).toBeLessThan(calendarMultIdx);
   });
 
+  test('equipment anim events follow bar order across additive and xMult (marked → dust_trail → work_boots)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(4, 2),
+      equipment: [itemWithState('marked', { mult: 5 }), item('dust_trail'), item('work_boots')],
+      currentDay: 2,
+      maxDays: 4,
+    });
+    const equipEvents = result.animEvents.filter((e) => e.target.kind === 'equip');
+    const markedIdx = equipEvents.findIndex(
+      (e) => e.target.kind === 'equip' && e.target.equipIndex === 0 && e.popupType === 'mult',
+    );
+    const dustIdx = equipEvents.findIndex(
+      (e) => e.target.kind === 'equip' && e.target.equipIndex === 1 && e.popupType === 'xmult',
+    );
+    const bootsIdx = equipEvents.findIndex(
+      (e) => e.target.kind === 'equip' && e.target.equipIndex === 2 && e.popupType === 'miles',
+    );
+    expect(markedIdx).toBeGreaterThanOrEqual(0);
+    expect(dustIdx).toBeGreaterThanOrEqual(0);
+    expect(bootsIdx).toBeGreaterThanOrEqual(0);
+    expect(markedIdx).toBeLessThan(dustIdx);
+    expect(dustIdx).toBeLessThan(bootsIdx);
+  });
+
   test('holy aura on equipment applies x1.5', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(4, 2),

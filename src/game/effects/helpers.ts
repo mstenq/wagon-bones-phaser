@@ -56,6 +56,23 @@ export function applyEquipmentAuras(equipment: EquipmentInstance[], ctx: Scoring
   }
 }
 
+/** Holy aura xMult on one bar slot (original card). Called after that slot's additive + fire/arcane. */
+export function applyHolyAuraForSlot(
+  equipment: EquipmentInstance[],
+  slotIndex: number,
+  finalMult: Decimal,
+  ctx: ScoringPipelineContext,
+): Decimal {
+  if (isEquipmentDisabledByBoss(slotIndex)) return finalMult;
+  const originalEquip = equipment[slotIndex];
+  if (originalEquip.def.aura?.id !== 'holy') return finalMult;
+
+  const updated = multiplyScore(finalMult, 1.5);
+  ctx.animEvents.push({ target: { kind: 'equip', equipIndex: slotIndex }, popupType: 'xmult', value: 1.5 });
+  console.log(`  [equip] ${originalEquip.def.name} HOLY aura: x1.5 mult (finalMult: ${updated})`);
+  return updated;
+}
+
 /** Apply holy aura xMult multipliers after additive bonuses. */
 export function applyHolyAuraXMult(
   baseMult: DecimalSource,
@@ -64,13 +81,7 @@ export function applyHolyAuraXMult(
 ): Decimal {
   let finalMult = D(baseMult);
   for (let i = 0; i < equipment.length; i++) {
-    if (isEquipmentDisabledByBoss(i)) continue;
-    const equip = equipment[i];
-    if (equip.def.aura?.id === 'holy') {
-      finalMult = multiplyScore(finalMult, 1.5);
-      ctx.animEvents.push({ target: { kind: 'equip', equipIndex: i }, popupType: 'xmult', value: 1.5 });
-      console.log(`  [equip] ${equip.def.name} HOLY aura: x1.5 mult (finalMult: ${finalMult})`);
-    }
+    finalMult = applyHolyAuraForSlot(equipment, i, finalMult, ctx);
   }
   return finalMult;
 }

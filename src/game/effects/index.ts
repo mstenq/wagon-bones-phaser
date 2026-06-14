@@ -7,6 +7,7 @@ export {
   forEachEquipmentScoring,
   applyEquipmentAuras,
   applyEquipmentAuraForSlot,
+  applyHolyAuraForSlot,
   applyHolyAuraXMult,
   dieMatchesPip,
   dieMatchesParity,

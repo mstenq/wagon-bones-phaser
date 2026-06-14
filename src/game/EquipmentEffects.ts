@@ -19,12 +19,12 @@ import { createEmptyScoringMutations, mergeMutations } from './effects/applyMuta
 import type { ScoringMutations } from './effects/types';
 import {
   applyEquipmentAuraForSlot,
-  applyHolyAuraXMult,
+  applyHolyAuraForSlot,
   forEachEquipmentScoring,
   hasStackedDeck,
   multiplyCtxXMult,
 } from './effects/helpers';
-import { addScore, multiplyScore, balanceMilesAndMult, ZERO, ONE } from './scoreMath';
+import { addScore, multiplyScore, balanceMilesAndMult, divideScore, eq, D, ZERO, ONE } from './scoreMath';
 import { enhancementHeldGoldPayout, enhancementHeldSteelXMult, hasAlchemyKit } from './alchemyKit';
 import type { Decimal } from './decimal';
 export {
@@ -88,32 +88,38 @@ export function applyEquipmentEffects(
   context: ScoringContext,
   animEvents: ScoreAnimEvent[] = [],
 ): ScoreResult {
-  console.log('[SCORE] Step 5 — Equipment pass (additive → auras → xMult → final miles)');
+  console.log('[SCORE] Step 5 — Equipment pass (bar order, left → right per slot)');
   const ctx = createEquipmentScoringContext(baseResult, equipment, context, animEvents);
-
-  console.log('  [equip] Additive pass (bar order, fire/arcane per slot)');
-  forEachEquipmentScoring(equipment, (equip, _original, i) => {
-    effectRegistry.dispatchAdditive(equip.def.effectType, ctx, equip, i);
-    applyEquipmentAuraForSlot(equipment, i, ctx);
-  });
-
-  console.log(`  [equip] After additive + auras: bonusMiles ${ctx.bonusMiles}, bonusMult ${ctx.bonusMult}`);
 
   const totalValue = baseResult.totalValue;
   const baseMiles = baseResult.handResult.baseMiles;
-  let finalMult = applyHolyAuraXMult(addScore(baseResult.mult, ctx.bonusMult), equipment, ctx);
+  let finalMult = D(baseResult.mult);
 
-  console.log('  [equip] xMult pass (bar order)');
-  ctx.xMult = ONE;
   forEachEquipmentScoring(
     equipment,
     (equip, _original, i) => {
+      const bonusMultBefore = ctx.bonusMult;
+      effectRegistry.dispatchAdditive(equip.def.effectType, ctx, equip, i);
+      finalMult = addScore(finalMult, D(ctx.bonusMult).sub(D(bonusMultBefore)));
+
+      const bonusMultBeforeAura = ctx.bonusMult;
+      applyEquipmentAuraForSlot(equipment, i, ctx);
+      finalMult = addScore(finalMult, D(ctx.bonusMult).sub(D(bonusMultBeforeAura)));
+
+      finalMult = applyHolyAuraForSlot(equipment, i, finalMult, ctx);
+
+      const xMultBefore = ctx.xMult;
       effectRegistry.dispatchXMult(equip.def.effectType, ctx, equip, i);
+      if (!eq(ctx.xMult, xMultBefore)) {
+        finalMult = multiplyScore(finalMult, divideScore(ctx.xMult, xMultBefore));
+      }
     },
     { unresolvedCopy: 'skip', logResolution: false },
   );
-  finalMult = multiplyScore(finalMult, ctx.xMult);
-  console.log(`  [equip] After xMult: equipment xMult ${ctx.xMult}, merged mult ${finalMult}`);
+
+  console.log(
+    `  [equip] After equipment bar: bonusMiles ${ctx.bonusMiles}, equipment xMult ${ctx.xMult}, merged mult ${finalMult}`,
+  );
 
   const milesComponent = addScore(addScore(baseMiles, totalValue), ctx.bonusMiles);
   const run = getRunState();

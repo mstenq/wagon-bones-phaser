@@ -10,6 +10,7 @@ import {
   setupGame,
   resetDieIds,
   syncEquipmentInstances,
+  seedTestRoll,
 } from '../testHelpers';
 import {
   processEquipmentOnHandPlayed,
@@ -49,6 +50,55 @@ describe('MARKED_NO_SIX_MULT: Marked', () => {
     const scoringDice = [die({ value: 6 }), die({ value: 6 })];
     processEquipmentOnHandPlayed([inst], HandType.PAIR, scoringDice);
     expect(inst.state.mult).toBe(0);
+  });
+
+  test('kicker 6 in selection does not reset bank (only scoring dice count)', () => {
+    const marked = itemWithState('marked', { mult: 3 });
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 5 }), die({ value: 5 }), die({ value: 6 })],
+      equipment: [marked],
+    });
+    const live = player.equipment.find((e) => e.def.id === 'marked');
+    expect(live?.state.mult).toBe(4);
+  });
+
+  test('held 6 does not reset bank', () => {
+    const marked = itemWithState('marked', { mult: 2 });
+    const { player } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 6 })],
+      equipment: [marked],
+    });
+    const live = player.equipment.find((e) => e.def.id === 'marked');
+    expect(live?.state.mult).toBe(3);
+  });
+
+  test('pair of 6s in scoring hand resets bank via calculateScore', () => {
+    const marked = itemWithState('marked', { mult: 4 });
+    const { player } = calculateTestScore({
+      scoredDice: [die({ value: 6 }), die({ value: 6 })],
+      equipment: [marked],
+    });
+    const live = player.equipment.find((e) => e.def.id === 'marked');
+    expect(live?.state.mult).toBe(0);
+  });
+
+  test('playScoredDayAndEnd: pair with kicker 6 keeps marked streak', () => {
+    const marked = itemWithState('marked', { mult: 2 });
+    const pair = diceWithValue(5, 2);
+    const kicker = die({ value: 6 });
+    const filler = diceWithValue(2, 10);
+    const { game } = setupGame({
+      equipment: [marked],
+      dice: [...pair, kicker, ...filler],
+    });
+    game.startRound();
+    seedTestRoll([...pair, kicker, ...filler.slice(0, 3)]);
+    game.selectForRoll([...pair, kicker, ...filler.slice(0, 3)].map((d) => d.id));
+    game.selectForScore([pair[0].id, pair[1].id, kicker.id]);
+    game.calculateScore();
+    syncEquipmentInstances(marked);
+    expect(marked.state.mult).toBe(3);
   });
 
   test('accumulated mult applies during scoring (gains +1 before scoring if no 6)', () => {

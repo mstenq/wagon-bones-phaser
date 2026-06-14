@@ -5,7 +5,7 @@
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
 import { COLORS, TEXT_COLORS, FONTS, UI, GAMEPLAY, TEXTURES } from '../../game/Constants';
-import { formatScore, formatScoreComponent, formatMult } from '../../game/formatScore';
+import { formatScoreComponent, formatMult } from '../../game/formatScore';
 import { milesFromSave } from '../../game/scoreMath';
 import type { DecimalSource } from '../../game/decimal';
 import type { ProfessionDef } from '../../data/professions';
@@ -15,6 +15,7 @@ import { roundStore } from '../../game/store/roundStore';
 import { getRunProfession } from '../../game/store/runReads';
 import { selectRunSidebarModel, selectSidebarOverlayRevision } from '../../game/store/selectors/uiSelectors';
 import { selectRoundTotalMiles } from '../../game/store/selectors/roundSelectors';
+import { RoundScoreProgress } from './RoundScoreProgress';
 import { Button } from './Button';
 import { addDifficultyImage, getDifficultyDef } from './DifficultyAssets';
 import { DifficultyTooltip } from './DifficultyTooltip';
@@ -63,7 +64,7 @@ export class Sidebar extends GameObjects.Container {
 
   // Text elements for updating
   private titleText: GameObjects.Text;
-  private roundScoreText: GameObjects.Text;
+  private scoreProgress!: RoundScoreProgress;
   private handNameText: GameObjects.Text;
   private milesBaseText: GameObjects.Text;
   private multText: GameObjects.Text;
@@ -71,7 +72,6 @@ export class Sidebar extends GameObjects.Container {
   private rerollsText: GameObjects.Text;
   private moneyText: GameObjects.Text;
   private legText: GameObjects.Text;
-  private targetText: GameObjects.Text;
 
   private journeyInfoBtn: Button;
   private optionsBtn: Button;
@@ -85,8 +85,6 @@ export class Sidebar extends GameObjects.Container {
   private statusPanelsContainer: GameObjects.Container;
   private statusPanelsTotalHeight = 0;
   private modifiersIndicator: GameObjects.Container | null = null;
-  private scoreTargetLabel: GameObjects.Text | null = null;
-  private topBarTargetMiles: DecimalSource = 0;
   private profBtnCX = 0;
   private profBtnCY = 0;
   private profBtnSize = 0;
@@ -167,6 +165,20 @@ export class Sidebar extends GameObjects.Container {
     }
 
     return tile;
+  }
+
+  private scoreProgressPanelOpts(): {
+    border: number;
+    borderAlpha: number;
+    alpha: number;
+    radius: number;
+  } {
+    return {
+      border: COLORS.SIDEBAR_SECTION_BORDER,
+      borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
+      alpha: 0.25,
+      radius: 0,
+    };
   }
 
   /** Portrait top bar: difficulty + phase title | meta | journey | menu | profile. */
@@ -384,7 +396,6 @@ export class Sidebar extends GameObjects.Container {
       // Right side content area
       const rightX = profImgSize;
       const rightW = w - rightX;
-      const rightEdge = rightX + rightW - pad;
 
       // Title
       const profNameText = scene.add.text(rightX, y + 8, prof.title, {
@@ -435,25 +446,6 @@ export class Sidebar extends GameObjects.Container {
       });
       this.professionContainer.add(this.legText);
 
-      // Target info (hugging bottom-right)
-      const targetLabel = scene.add
-        .text(rightEdge, bottomLabelY, 'TARGET', {
-          fontFamily: FONTS.TITLE,
-          fontSize: '10px',
-          color: TEXT_COLORS.MUTED,
-        })
-        .setOrigin(1, 0);
-      this.professionContainer.add(targetLabel);
-
-      this.targetText = scene.add
-        .text(rightEdge, bottomValueY, '300 mi', {
-          fontFamily: FONTS.TITLE,
-          fontSize: '14px',
-          color: TEXT_COLORS.SCORE_GREEN,
-        })
-        .setOrigin(1, 0);
-      this.professionContainer.add(this.targetText);
-
       // Hover hitzone for tooltip
       const hitZone = scene.add.graphics();
       hitZone.fillStyle(0x000000, 0);
@@ -499,44 +491,17 @@ export class Sidebar extends GameObjects.Container {
         color: TEXT_COLORS.PRIMARY,
       });
       this.mainContentContainer.add(this.legText);
-
-      this.targetText = scene.add
-        .text(w - pad - 8, y + 26, '300 mi', {
-          fontFamily: FONTS.TITLE,
-          fontSize: '16px',
-          color: TEXT_COLORS.SCORE_GREEN,
-        })
-        .setOrigin(1, 0);
-      this.mainContentContainer.add(this.targetText);
       y += legH + UI.SIDEBAR_SECTION_GAP;
     }
 
-    // ─── Round Score Section ───
-    const scoreSectionH = 38;
+    // ─── Round Score / Target Progress ───
+    const scoreSectionH = UI.SCORE_PROGRESS_SECTION_H;
     this.texturePanel(this.mainContentContainer, pad, y, innerW, scoreSectionH, TEXTURES.PANEL_GRAY, {
-      border: COLORS.SIDEBAR_SECTION_BORDER,
-      borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
-      alpha: 0.25,
-      radius: 0,
+      ...this.scoreProgressPanelOpts(),
     });
 
-    const scoreLabel = scene.add
-      .text(pad + 10, y + scoreSectionH / 2, 'ROUND SCORE', {
-        fontFamily: FONTS.TITLE,
-        fontSize: '11px',
-        color: TEXT_COLORS.MUTED,
-      })
-      .setOrigin(0, 0.5);
-    this.mainContentContainer.add(scoreLabel);
-
-    this.roundScoreText = scene.add
-      .text(w - pad - 10, y + scoreSectionH / 2, '0', {
-        fontFamily: FONTS.NUMBER,
-        fontSize: '22px',
-        color: TEXT_COLORS.PRIMARY,
-      })
-      .setOrigin(1, 0.5);
-    this.mainContentContainer.add(this.roundScoreText);
+    this.scoreProgress = new RoundScoreProgress(scene, pad, y, innerW, 'sidebar');
+    this.mainContentContainer.add(this.scoreProgress);
     y += scoreSectionH + UI.SIDEBAR_SECTION_GAP;
 
     // ─── Hand Name / Level Display (above miles/mult) ───
@@ -828,33 +793,35 @@ export class Sidebar extends GameObjects.Container {
       borderAlpha: COLORS.SIDEBAR_SECTION_BORDER_ALPHA,
     });
 
-    const scoreBlockX = pad + 12;
+    const scoreSectionH = UI.SCORE_PROGRESS_SECTION_H;
+    const scoreBoxX = pad + 8;
+    const halfSplit = Math.floor(innerW / 2);
+    const scoreBoxW = halfSplit - 16;
+    const scoreBoxY = localY + Math.floor((scoreRowH - scoreSectionH) / 2);
 
-    this.scoreTargetLabel = scene.add.text(scoreBlockX, localY + 10, 'SCORE / TARGET', {
-      fontFamily: FONTS.TITLE,
-      fontSize: '10px',
-      color: TEXT_COLORS.MUTED,
+    this.texturePanel(this.mainContentContainer, scoreBoxX, scoreBoxY, scoreBoxW, scoreSectionH, TEXTURES.PANEL_GRAY, {
+      ...this.scoreProgressPanelOpts(),
     });
-    this.mainContentContainer.add(this.scoreTargetLabel);
 
-    this.roundScoreText = scene.add.text(scoreBlockX, localY + 26, '0 / 300 mi', {
-      fontFamily: FONTS.NUMBER,
-      fontSize: '17px',
-      color: TEXT_COLORS.SCORE_GREEN,
+    this.scoreProgress = new RoundScoreProgress(scene, scoreBoxX, scoreBoxY, scoreBoxW, 'topbar', {
+      labelMaxWidth: scoreBoxW - 8,
     });
-    this.mainContentContainer.add(this.roundScoreText);
+    this.mainContentContainer.add(this.scoreProgress);
 
-    this.targetText = scene.add.text(0, 0, '').setVisible(false);
-    this.mainContentContainer.add(this.targetText);
-
-    const pillW = UI.TOP_BAR_PILL_W;
     const pillH = UI.TOP_BAR_PILL_H;
     const pillGap = 18;
-    const clusterRight = pad + innerW - 8;
-    const multX = clusterRight - pillW;
-    const milesX = multX - pillGap - pillW;
-    const clusterCX = (milesX + multX + pillW) / 2;
-    const pillY = localY + scoreRowH - pillH - 8;
+    const rightHalfStart = pad + halfSplit;
+    const rightHalfW = innerW - halfSplit;
+    let pillW: number = UI.TOP_BAR_PILL_W;
+    let clusterW = pillW * 2 + pillGap;
+    if (clusterW > rightHalfW - 12) {
+      pillW = Math.max(72, Math.floor((rightHalfW - 12 - pillGap) / 2));
+      clusterW = pillW * 2 + pillGap;
+    }
+    const milesX = rightHalfStart + Math.floor((rightHalfW - clusterW) / 2);
+    const multX = milesX + pillW + pillGap;
+    const clusterCX = milesX + clusterW / 2;
+    const pillY = localY + Math.floor((scoreRowH - pillH) / 2);
     this.handDisplayLocalY = pillY - 4;
     this.handNameText = scene.add
       .text(clusterCX, pillY - 4, '', {
@@ -918,19 +885,9 @@ export class Sidebar extends GameObjects.Container {
   syncRoundScoreFromStore(): void {
     const miles = selectRoundTotalMiles();
     if (miles !== null) {
-      if (this.layoutMode === 'topbar') {
-        this.updateTopBarScoreTarget(miles, this.topBarTargetMiles);
-      } else {
-        this.roundScoreText.setText(formatScore(miles));
-      }
+      const model = selectRunSidebarModel();
+      this.scoreProgress.setInstant(miles, model.targetMiles);
     }
-  }
-
-  private updateTopBarScoreTarget(roundScore: DecimalSource, targetMiles: DecimalSource): void {
-    if (this.layoutMode !== 'topbar') return;
-    this.topBarTargetMiles = targetMiles;
-    this.roundScoreText.setText(`${formatScore(roundScore)} / ${formatScore(targetMiles)} mi`);
-    this.fitTopBarScoreTarget();
   }
 
   private formatTopBarHandName(handName: string, handLevel?: number): string {
@@ -978,13 +935,8 @@ export class Sidebar extends GameObjects.Container {
       this.daysText.setText(`${model.daysRemaining}`);
       this.rerollsText.setText(`${model.rerolls}`);
     }
-    if (this.layoutMode === 'topbar') {
-      this.legText.setText(`Leg ${model.leg} - ${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
-      this.updateTopBarScoreTarget(selectRoundTotalMiles() ?? 0, model.targetMiles);
-    } else {
-      this.legText.setText(`Leg ${model.leg} - ${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
-      this.targetText.setText(`${formatScore(model.targetMiles)} mi`);
-    }
+    this.legText.setText(`Leg ${model.leg} - ${model.round}/${GAMEPLAY.ROUNDS_PER_LEG}`);
+    this.scoreProgress.setTarget(model.targetMiles);
     this.updateBossPanel(model.boss);
     this.updateStatusPanels(model.statusTraits ?? []);
 
@@ -1041,13 +993,10 @@ export class Sidebar extends GameObjects.Container {
         this.layoutSidebarTitleHeader();
       }
     }
-    if (data.roundScore !== undefined) {
-      if (this.layoutMode === 'topbar') {
-        const target = data.targetMiles ?? this.topBarTargetMiles;
-        this.updateTopBarScoreTarget(data.roundScore, target);
-      } else {
-        this.roundScoreText.setText(formatScore(data.roundScore));
-      }
+    if (data.roundScore !== undefined || data.targetMiles !== undefined) {
+      const roundScore = data.roundScore ?? selectRoundTotalMiles() ?? 0;
+      const target = data.targetMiles ?? selectRunSidebarModel().targetMiles;
+      this.scoreProgress.setInstant(roundScore, target);
     }
     if (data.milesBase !== undefined) this.milesBaseText.setText(formatScoreComponent(data.milesBase));
     if (data.mult !== undefined) this.multText.setText(formatMult(data.mult));
@@ -1080,13 +1029,10 @@ export class Sidebar extends GameObjects.Container {
       }
       this.legText.setText(roundLabel);
     }
-    if (data.targetMiles !== undefined) {
-      if (this.layoutMode === 'topbar') {
-        const roundScore = selectRoundTotalMiles() ?? 0;
-        this.updateTopBarScoreTarget(roundScore, data.targetMiles);
-      } else {
-        this.targetText.setText(`${formatScore(data.targetMiles)} mi`);
-      }
+    if (data.targetMiles !== undefined && data.roundScore === undefined) {
+      const roundScore = selectRoundTotalMiles() ?? 0;
+      this.scoreProgress.setTarget(data.targetMiles);
+      this.scoreProgress.setInstant(roundScore, data.targetMiles);
     }
 
     if (data.boss !== undefined) {
@@ -1251,19 +1197,6 @@ export class Sidebar extends GameObjects.Container {
     this.modifiersIndicator.add(badge);
   }
 
-  private fitTopBarScoreTarget(): void {
-    if (this.layoutMode !== 'topbar') return;
-    const pad = UI.TOP_BAR_PAD;
-    const innerW = this.sidebarWidth - pad * 2;
-    const maxW = Math.floor(innerW * UI.TOP_BAR_SCORE_BLOCK_RATIO) - 16;
-    let size = 17;
-    this.roundScoreText.setFontSize(`${size}px`);
-    while (this.roundScoreText.width > maxW && size > 10) {
-      size -= 1;
-      this.roundScoreText.setFontSize(`${size}px`);
-    }
-  }
-
   getContentX(): number {
     return this.sidebarWidth;
   }
@@ -1300,22 +1233,10 @@ export class Sidebar extends GameObjects.Container {
     });
   }
 
-  /** Set round score with a pop animation */
+  /** Set round score with progress bar animation */
   setRoundScoreAnimated(value: DecimalSource): void {
-    if (this.layoutMode === 'topbar') {
-      this.roundScoreText.setText(`${formatScoreComponent(value)} / ${formatScore(this.topBarTargetMiles)} mi`);
-      this.fitTopBarScoreTarget();
-    } else {
-      this.roundScoreText.setText(formatScoreComponent(value));
-    }
-    this.scene.tweens.add({
-      targets: this.roundScoreText,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 100,
-      yoyo: true,
-      ease: 'Back.easeOut',
-    });
+    const model = selectRunSidebarModel();
+    this.scoreProgress.animateTo(value, model.targetMiles);
   }
 
   /** Clear hand display */

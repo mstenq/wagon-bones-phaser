@@ -535,7 +535,7 @@ export const roundActions = {
       baseMult: addScore(scoringHandResult.baseMult, D(stats.multPerLevel * levelBonus)),
     };
 
-    processEquipmentOnHandPlayed(scoringEquipment, handType, selectedDice);
+    processEquipmentOnHandPlayed(scoringEquipment, handType, scoringHandResult.scoringDice);
 
     const baseResult = scoreHand(leveledResult, scoringEquipment, {
       currentDay: round.day,

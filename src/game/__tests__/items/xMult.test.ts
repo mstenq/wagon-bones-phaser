@@ -644,8 +644,8 @@ describe('XMULT_RISKY: Nitro', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('nitro'), item('horseshoe')],
     });
-    // PAIR: baseMult=1, +4 from horseshoe = 5, x3 from nitro = 15
-    expect(result.mult).toBeMult(15);
+    // PAIR: baseMult=1, nitro x3 first (bar order), then horseshoe +4 → 7
+    expect(result.mult).toBeMult(7);
   });
 
   test('Mirror Lake doubles xMult', () => {

@@ -98,6 +98,13 @@ export function buildTrailEventResultFromResolvedDisplay(
   };
 }
 
+/** Same outcome sacrifices equipment and grants random gear — gain may exceed slot limit until sacrifice. */
+export function outcomeIncludesEquipmentTrade(effects: readonly TrailEventEffect[]): boolean {
+  const sacrifices = effects.some((e) => e.type === 'LOSE_EQUIPMENT_CHOICE');
+  const gainsRandomEquipment = effects.some((e) => e.type === 'GAIN_RANDOM_EQUIPMENT');
+  return sacrifices && gainsRandomEquipment;
+}
+
 /** Equipment owned before a trail choice resolved (excludes instances gained from that choice). */
 export function filterEquipmentEligibleForTrailSacrifice(
   ownedBeforeChoice: readonly EquipmentInstance[],
@@ -414,6 +421,7 @@ export function resolveChoice(
   const outcomeIndex = rollOutcome(choice.outcomes, rng);
   const outcome = choice.outcomes[outcomeIndex];
   const modifiers = createEmptyModifiers();
+  const allowEquipmentOverSlotLimit = outcomeIncludesEquipmentTrade(outcome.effects);
 
   let trailRepairKitNegatedEvent = false;
   let omenConsumed = false;
@@ -430,7 +438,7 @@ export function resolveChoice(
         continue;
       }
     }
-    applyEffect(effect, modifiers, rng);
+    applyEffect(effect, modifiers, rng, { allowEquipmentOverSlotLimit });
   }
 
   const negatedNegativeEffects =
@@ -538,6 +546,11 @@ function hasNegativeEffects(effects: TrailEventEffect[]): boolean {
 
 // ─── Effect Application ───
 
+export type ApplyEffectContext = {
+  /** Equipment sacrifice in the same outcome frees a slot after UI — grant gear even when full. */
+  allowEquipmentOverSlotLimit?: boolean;
+};
+
 /**
  * Apply a single effect to the player state and/or accumulate modifiers.
  * Some effects are immediate (money, dice), others are deferred (day penalties for next round).
@@ -546,6 +559,7 @@ export function applyEffect(
   effect: TrailEventEffect,
   modifiers: TrailEventModifiers,
   rng: () => number = () => rngFloat('trail'),
+  context: ApplyEffectContext = {},
 ): void {
   const run = getRunState();
   switch (effect.type) {
@@ -701,7 +715,8 @@ export function applyEffect(
 
     case 'GAIN_RANDOM_EQUIPMENT': {
       const isGhostReward = effect.aura === 'ghost';
-      if (!isGhostReward && selectEquipmentSlotsFree(getRunState()) <= 0) {
+      const inventoryFull = selectEquipmentSlotsFree(getRunState()) <= 0;
+      if (!isGhostReward && inventoryFull && !context.allowEquipmentOverSlotLimit) {
         const enhancement = rngPick(
           'trail',
           diceEnhancements.map((e) => e.id),
