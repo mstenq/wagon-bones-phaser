@@ -26,7 +26,8 @@ import { getRoundState } from '../../game/store/roundStore';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import { bindScenePlaybackRunner } from '../playback/bindScenePlaybackRunner';
 import type { PlaybackRunnerHandle } from '../playback/PlaybackRunner';
-import { prepareScoreSidebar } from '../playback/handlers';
+import { isAutoDrainCommand, prepareScoreSidebar } from '../playback/handlers';
+import { destroyRunSceneLayout } from './runSceneShell';
 import { enqueueDayEndDestructions } from '../../game/store/playbackEnqueue';
 import { ScoreResult, type PhaseState } from '../../game/types';
 import {
@@ -51,12 +52,14 @@ import {
   type ConsumableTargetingRequest,
 } from '../ui/ConsumableBar';
 import { DicePouch } from '../ui/DicePouch';
+import { TagStack } from '../ui/TagStack';
 import {
   applyCoverBackgroundImage,
   computeGameHudLayout,
   computeLayoutMetricsFromScene,
   createLayout,
   getContentBackgroundRegion,
+  type LayoutResult,
 } from '../ui/SceneLayout';
 import { RoundModificationsModal } from '../ui/RoundModificationsModal';
 import { shouldPromptRoundModifications } from '../../game/store/selectors/uiSelectors';
@@ -90,6 +93,7 @@ export class GameScene extends Scene {
   private equipBar: EquipmentBar;
   private consumableBar: ConsumableBar;
   private dicePouch: DicePouch;
+  private tagStack: TagStack;
 
   // Layout helpers
   private contentCX: number = 0;
@@ -195,6 +199,8 @@ export class GameScene extends Scene {
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
+      this.playbackRunner?.unbind();
+      this.playbackRunner = null;
       this.devPanel?.destroyPicker();
       this.stopEquipDestroySounds();
       this.rollRow?.stopDrag();
@@ -422,6 +428,7 @@ export class GameScene extends Scene {
     this.consumableBar.setCanUsePredicate((def) => this.canUseConsumable(def));
     this.consumableBar.setTargetingStateProvider(() => this.consumableBarBridge.getTargetingState());
     this.dicePouch = layout.dicePouch;
+    this.tagStack = layout.tagStack;
     this.sidebarW = layout.sidebarW;
     this.contentCX = layout.contentCX;
     this.contentW = layout.contentW;
@@ -554,6 +561,8 @@ export class GameScene extends Scene {
     if (!isRelayout) {
       this.enqueueGameplayTutorials();
       this.playbackRunner.drainInitialSync();
+    } else {
+      void this.playbackRunner.drainMatching(isAutoDrainCommand);
     }
 
     // Re-enter current phase
@@ -639,12 +648,42 @@ export class GameScene extends Scene {
     this.diceSelectionDotsController.sync(true);
   }
 
-  private onResize(): void {
-    // Preserve game state, destroy all display objects, rebuild layout
+  private tearDownGameLayout(): void {
+    this.playbackRunner?.unbind();
+    this.playbackRunner = null;
+
+    this.scoreLayoutGate?.release();
+    this.scoreLayoutGate = null;
+    this.animating = false;
+
+    this.stopEquipDestroySounds();
+    this.rollRow?.stopDrag();
+    this.rollMarquee?.stopTracking();
+    if (this.consumableTargeting?.isActive()) {
+      this.consumableTargeting.cancel();
+    }
+
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+
     this.rollRow.destroyRollSprites();
     this.playArea.clear();
     this.rollMarquee.destroy();
+
+    destroyRunSceneLayout({
+      sidebar: this.sidebar,
+      equipBar: this.equipBar,
+      consumableBar: this.consumableBar,
+      dicePouch: this.dicePouch,
+      tagStack: this.tagStack,
+    } as LayoutResult);
+
     this.children.removeAll(true);
+  }
+
+  private onResize(): void {
+    // Preserve game state, destroy all display objects, rebuild layout
+    this.tearDownGameLayout();
     this.buildLayout(true);
   }
 
