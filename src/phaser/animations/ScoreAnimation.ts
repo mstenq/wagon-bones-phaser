@@ -782,11 +782,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       pacing.wait(scene, T.SCORE_FINAL_FLASH_DELAY, () => {
         roundActions.setSidebarOverlay({ milesBaseSave: milesToSave(0), multSave: milesToSave(0) });
         sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));
-        pacing.wait(
-          scene,
-          UI.SCORE_PROGRESS_ANIM_MS + T.SCORE_ROUND_TOTAL_DELAY,
-          onComplete,
-        );
+        pacing.wait(scene, UI.SCORE_PROGRESS_ANIM_MS + T.SCORE_ROUND_TOTAL_DELAY, onComplete);
       });
     }
 

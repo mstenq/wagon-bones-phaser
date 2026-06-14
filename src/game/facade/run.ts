@@ -4,10 +4,9 @@ import { GAMEPLAY } from '../Constants';
 import { grantGhostMedicine } from '../ConsumablesSystem';
 import { milesToSave } from '../scoreMath';
 import { computePayoutBreakdown } from '../runProgression';
-import { grantTag, processBossPayoutTags } from '../TagSystem';
-import { getTrailTagById } from '../../data/trail_tags';
+import { processBossPayoutTags } from '../TagSystem';
 import { resetAllGameStores } from '../store/resetAll';
-import { getRunState } from '../store/runStore';
+import { getRunState, runStore } from '../store/runStore';
 import { sceneActions } from '../store/sceneStore';
 import { selectIsBossRound, selectProfession } from '../store/selectors/runSelectors';
 import {
@@ -38,8 +37,8 @@ export const gameRun = {
       investmentBonus = processBossPayoutTags();
       const profMods = selectProfession(run)?.modifiers as Record<string, unknown> | undefined;
       if (profMods?.doubleTagOnBoss) {
-        const twinWagonDef = getTrailTagById('tag_twin_wagon');
-        if (twinWagonDef) grantTag(twinWagonDef);
+        const state = getRunState();
+        runStore.setState({ twinWagonCount: state.twinWagonCount + 1 });
       }
       if (profMods?.ghostMedicineOnBoss) {
         grantGhostMedicine();

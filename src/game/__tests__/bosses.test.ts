@@ -4,7 +4,15 @@ import { HandType, PhaseState } from '../types';
 import { GAMEPLAY } from '../Constants';
 import { getBaseTargetMilesForLeg } from '../../data/target_miles';
 import { isFinisherLeg } from '../../data/bosses';
-import { setupGame, calculateTestScore, die, diceFromValues, item, itemWithState, setTestDifficulty } from './testHelpers';
+import {
+  setupGame,
+  calculateTestScore,
+  die,
+  diceFromValues,
+  item,
+  itemWithState,
+  setTestDifficulty,
+} from './testHelpers';
 import { createConsumableInstance, getSupplyDefById, getTrailGuideDefById } from '../ConsumablesSystem';
 import { processEquipmentOnRoundStart } from '../EquipmentEffects';
 import { multiplyScore, eq, gt, lt, D } from '../scoreMath';

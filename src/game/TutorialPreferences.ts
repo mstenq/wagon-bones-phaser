@@ -16,8 +16,7 @@ let cachedSeen: Set<TutorialMessageId> | null = null;
 function normalizeSeenIds(ids: unknown): TutorialMessageId[] {
   if (!Array.isArray(ids)) return [];
   return ids.filter(
-    (id): id is TutorialMessageId =>
-      typeof id === 'string' && (TUTORIAL_MESSAGE_IDS as readonly string[]).includes(id),
+    (id): id is TutorialMessageId => typeof id === 'string' && (TUTORIAL_MESSAGE_IDS as readonly string[]).includes(id),
   );
 }
 

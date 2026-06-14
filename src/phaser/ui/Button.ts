@@ -22,6 +22,7 @@ import {
   type ButtonVariant,
 } from './buttonTheme';
 import { getPointerDragDistance } from './pointerDragTrack';
+import { createCornerBadge, CORNER_COUNT_BADGE_LAYOUT, layoutCornerBadge } from './CornerBadge';
 import {
   bakeGraphicsToLinearTexture,
   disableRoundPixels,
@@ -30,11 +31,6 @@ import {
 } from './rotationSmoothing';
 
 export type { ButtonOptions, ButtonSize, ButtonVariant } from './buttonTheme';
-
-const CORNER_BADGE_FONT_SIZE = 14;
-const CORNER_BADGE_PAD_X = 6;
-const CORNER_BADGE_PAD_Y = 2;
-const CORNER_BADGE_MIN = 16;
 
 export class Button extends GameObjects.Container {
   private static nextFaceTextureId = 0;
@@ -172,35 +168,22 @@ export class Button extends GameObjects.Container {
     }
 
     if (!this.cornerBadge) {
-      this.cornerBadgeBg = this.ownerScene.add.graphics();
-      this.cornerBadgeLabel = this.ownerScene.add
-        .text(0, 0, '', {
-          fontFamily: FONTS.TITLE,
-          fontSize: `${CORNER_BADGE_FONT_SIZE}px`,
-          color: '#ffffff',
-          fontStyle: 'normal',
-        })
-        .setOrigin(0.5);
-      this.cornerBadge = this.ownerScene.add.container(0, 0, [this.cornerBadgeBg!, this.cornerBadgeLabel]);
+      const parts = createCornerBadge(this.ownerScene, CORNER_COUNT_BADGE_LAYOUT);
+      this.cornerBadgeBg = parts.bg;
+      this.cornerBadgeLabel = parts.label;
+      this.cornerBadge = parts.container;
       this.faceContainer.add(this.cornerBadge);
       this.syncRotationSmoothing();
     }
 
-    this.cornerBadgeLabel!.setText(String(value));
-    const badgeW = Math.max(CORNER_BADGE_MIN, this.cornerBadgeLabel!.width + CORNER_BADGE_PAD_X * 2);
-    const badgeH = Math.max(CORNER_BADGE_MIN, this.cornerBadgeLabel!.height + CORNER_BADGE_PAD_Y * 2);
-    const inset = 2;
-    this.cornerBadge!.setPosition(this._width / 2 - badgeW / 2 + inset, -this._height / 2 + badgeH / 2 - inset);
-
-    const edgeColor = darkenFaceColor(bgColor, UI.BTN_EDGE_DARKEN);
-    this.cornerBadgeBg!.clear();
-    this.cornerBadgeBg!.fillStyle(bgColor, 1);
-    this.cornerBadgeBg!.fillRoundedRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, badgeH / 2);
-    this.cornerBadgeBg!.lineStyle(UI.BTN_EDGE_WIDTH, edgeColor, 1);
-    this.cornerBadgeBg!.strokeRoundedRect(-badgeW / 2, -badgeH / 2, badgeW, badgeH, badgeH / 2);
-
-    this.cornerBadge!.setVisible(true);
-    this.cornerBadge!.setAlpha(1);
+    layoutCornerBadge(
+      { container: this.cornerBadge!, bg: this.cornerBadgeBg!, label: this.cornerBadgeLabel! },
+      value,
+      this._width,
+      this._height,
+      bgColor,
+      CORNER_COUNT_BADGE_LAYOUT,
+    );
     return this;
   }
 

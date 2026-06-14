@@ -714,12 +714,9 @@ describe('Effect application', () => {
     player.equipment = [item('horseshoe'), item('war_drums')];
     const diceBefore = player.dice.length;
     const mods = createEmptyModifiers();
-    applyEffect(
-      { type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null },
-      mods,
-      () => 0,
-      { allowEquipmentOverSlotLimit: true },
-    );
+    applyEffect({ type: 'GAIN_RANDOM_EQUIPMENT', rarity: 'uncommon', aura: null }, mods, () => 0, {
+      allowEquipmentOverSlotLimit: true,
+    });
     expect(player.equipment.length).toBe(3);
     expect(player.dice.length).toBe(diceBefore);
   });

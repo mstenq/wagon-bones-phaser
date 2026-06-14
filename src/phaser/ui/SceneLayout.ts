@@ -455,7 +455,10 @@ export function applyCoverBackgroundImage(image: GameObjects.Image, region: Back
 }
 
 /** Fit-scale an image into a region (centered, letterboxed). Returns the displayed image bounds. */
-export function applyFitBackgroundImage(image: GameObjects.Image, region: BackgroundCoverRegion): BackgroundCoverRegion {
+export function applyFitBackgroundImage(
+  image: GameObjects.Image,
+  region: BackgroundCoverRegion,
+): BackgroundCoverRegion {
   const cx = region.x + region.w / 2;
   const cy = region.y + region.h / 2;
   image.setPosition(cx, cy);

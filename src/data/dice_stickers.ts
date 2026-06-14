@@ -57,11 +57,7 @@ const diceStickers = [
       [
         segment('When played, '),
         segment(
-          formatLoadedOddsLabel(
-            GREEN_CONTAGION_SPREAD_CHANCE[0],
-            GREEN_CONTAGION_SPREAD_CHANCE[1],
-            player.equipment,
-          ),
+          formatLoadedOddsLabel(GREEN_CONTAGION_SPREAD_CHANCE[0], GREEN_CONTAGION_SPREAD_CHANCE[1], player.equipment),
           'odds',
         ),
         segment(' chance to spread this sticker and enhancement to each neighboring played die.'),

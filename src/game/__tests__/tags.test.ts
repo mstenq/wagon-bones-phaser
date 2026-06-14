@@ -36,6 +36,8 @@ import { runActions } from '../store/runStore';
 import { getTagDisplayContext } from '../displayContext';
 import type { TagDisplayContext } from '../displayContextTypes';
 import { computeImmediateMoneyPayout } from '../tagPayout';
+import { setupGame } from './testHelpers';
+import { GAMEPLAY } from '../Constants';
 
 const ALL_TAGS = trailTags;
 
@@ -163,6 +165,41 @@ describe('TagSystem', () => {
 
       player.addTag(ALL_TAGS.find((t) => t.id === 'tag_shortcut')!);
       expect(player.pendingTags[0].copies).toBe(4);
+    });
+  });
+
+  describe('Hunter (Nathan Cole)', () => {
+    it('does not grant Twin Wagon on non-boss round payout', () => {
+      setupGame({ profession: 'hunter', leg: 1, round: 1 });
+      expect(getRunState().twinWagonCount).toBe(0);
+      gameFacade.run.preparePayoutPresentation();
+      expect(getRunState().twinWagonCount).toBe(0);
+    });
+
+    it('grants +1 Twin Wagon stack on boss round payout', () => {
+      setupGame({ profession: 'hunter', leg: 1, round: GAMEPLAY.ROUNDS_PER_LEG });
+      expect(getRunState().twinWagonCount).toBe(0);
+      gameFacade.run.preparePayoutPresentation();
+      expect(getRunState().twinWagonCount).toBe(1);
+    });
+
+    it('linearly stacks across four boss payouts without consuming tags', () => {
+      setupGame({ profession: 'hunter', leg: 1, round: GAMEPLAY.ROUNDS_PER_LEG });
+      for (let i = 0; i < 4; i++) {
+        gameFacade.run.preparePayoutPresentation();
+      }
+      expect(getRunState().twinWagonCount).toBe(4);
+    });
+
+    it('consumes Twin Wagon when the next trail tag is earned', () => {
+      setupGame({ profession: 'hunter', leg: 1, round: GAMEPLAY.ROUNDS_PER_LEG });
+      gameFacade.run.preparePayoutPresentation();
+      expect(getRunState().twinWagonCount).toBe(1);
+
+      const player = getPlayerState();
+      player.addTag(ALL_TAGS.find((t) => t.id === 'tag_shortcut')!);
+      expect(getRunState().twinWagonCount).toBe(0);
+      expect(player.pendingTags[0].copies).toBe(2);
     });
   });
 

@@ -312,13 +312,11 @@ export const UI = {
   /** Round score / target progress bar (sidebar + topbar). */
   SCORE_PROGRESS_ANIM_MS: 2000,
   SCORE_PROGRESS_LEVELUP_SEC: 2.12,
-  SCORE_PROGRESS_MAX_TIER: 4,
   /** Shared chrome height for sidebar + topbar score boxes. */
   SCORE_PROGRESS_SECTION_H: 28,
   SCORE_PROGRESS_BAR_RADIUS: 4,
   SCORE_PROGRESS_MULTIPLIER_PAD: 8,
   SCORE_PROGRESS_TRACK: 0x1a1a2e,
-  SCORE_PROGRESS_TIER_COLORS: [0xa2d752, 0x4488cc, 0x9944cc, 0xffcc00, 0xffffff] as const,
 
   // Equipment + consumable card bars (shared sizing — see computeCardBarMetrics in SceneLayout)
   EQUIP_BAR_RATIO: 0.8,

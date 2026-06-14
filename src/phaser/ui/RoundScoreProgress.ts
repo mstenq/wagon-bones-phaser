@@ -3,13 +3,12 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { COLORS, FONTS, UI } from '../../game/Constants';
+import { FONTS, UI } from '../../game/Constants';
 import type { LayoutMode } from '../../game/Constants';
 import { D, type DecimalSource } from '../../game/decimal';
 import { formatScore, formatScoreComponent } from '../../game/formatScore';
 import {
-  barLabelTextColor,
-  contrastingTextColor,
+  getScoreProgressTierColor,
   getStackedProgressLayers,
   type ScoreProgressLayer,
 } from './roundScoreProgressMath';
@@ -62,6 +61,8 @@ export class RoundScoreProgress extends GameObjects.Container {
         fontFamily: FONTS.NUMBER,
         fontSize: variant === 'topbar' ? '11px' : '12px',
         color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 2,
       })
       .setOrigin(0, 0.5)
       .setVisible(false);
@@ -71,6 +72,8 @@ export class RoundScoreProgress extends GameObjects.Container {
         fontFamily: FONTS.NUMBER,
         fontSize: labelSize,
         color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 2,
       })
       .setOrigin(0.5);
 
@@ -161,15 +164,13 @@ export class RoundScoreProgress extends GameObjects.Container {
     const scoreStr = format(roundScore);
     const targetStr = format(targetMiles);
     this.barOverlayText.setText(`${scoreStr} / ${targetStr} mi`);
-    this.fitBarLabel();
   }
 
-  private fitBarLabel(): void {
-    if (this.labelMaxWidth === null) return;
+  private fitBarLabel(maxWidth: number): void {
     const baseSize = this.variant === 'topbar' ? 12 : 14;
     let size = baseSize;
     this.barOverlayText.setFontSize(`${size}px`);
-    while (this.barOverlayText.width > this.labelMaxWidth && size > 9) {
+    while (this.barOverlayText.width > maxWidth && size > 9) {
       size -= 1;
       this.barOverlayText.setFontSize(`${size}px`);
     }
@@ -188,7 +189,7 @@ export class RoundScoreProgress extends GameObjects.Container {
 
   private drawBar(roundScore: DecimalSource, targetMiles: DecimalSource): void {
     const radius = UI.SCORE_PROGRESS_BAR_RADIUS;
-    const stacked = getStackedProgressLayers(roundScore, targetMiles, UI.SCORE_PROGRESS_MAX_TIER);
+    const stacked = getStackedProgressLayers(roundScore, targetMiles);
     const barW = this.sectionW;
     const barH = this.sectionH;
 
@@ -200,22 +201,28 @@ export class RoundScoreProgress extends GameObjects.Container {
     this.drawOverlayLayers(stacked.layers, barW, barH, radius);
 
     const barCY = barH / 2;
-    this.barOverlayText.setPosition(barW / 2, barCY);
+    let labelCenterX = barW / 2;
+    let labelFitMaxW = this.labelMaxWidth;
 
     if (stacked.multiplierLabel !== null) {
       this.multiplierText.setText(`x${stacked.multiplierLabel}`);
       this.multiplierText.setVisible(true);
       this.multiplierText.setPosition(UI.SCORE_PROGRESS_MULTIPLIER_PAD, barCY);
-      const multColor = fillColorAtX(stacked.layers, barW, UI.SCORE_PROGRESS_MULTIPLIER_PAD + 4);
-      this.multiplierText.setColor(contrastingTextColor(multColor));
-      this.multiplierText.setStroke('#000000', 3);
+
+      if (labelFitMaxW !== null) {
+        const leftGutter = this.multiplierText.width + UI.SCORE_PROGRESS_MULTIPLIER_PAD + 4;
+        const availableW = barW - leftGutter;
+        labelFitMaxW = Math.min(labelFitMaxW, Math.max(0, availableW - 4));
+        labelCenterX = leftGutter + availableW / 2;
+      }
     } else {
       this.multiplierText.setVisible(false);
     }
 
-    const labelColor = stackedLabelTextColor(stacked.layers, barW);
-    this.barOverlayText.setColor(labelColor);
-    this.barOverlayText.setStroke(labelColor === '#ffffff' ? '#000000' : '#ffffff', 2);
+    this.barOverlayText.setPosition(labelCenterX, barCY);
+    if (labelFitMaxW !== null) {
+      this.fitBarLabel(labelFitMaxW);
+    }
 
     this.bringToTop(this.multiplierText);
     this.bringToTop(this.barOverlayText);
@@ -224,7 +231,7 @@ export class RoundScoreProgress extends GameObjects.Container {
   /** Same x/y/height for every tier — later layers paint over earlier ones. */
   private drawOverlayLayers(layers: ScoreProgressLayer[], barW: number, barH: number, radius: number): void {
     for (const layer of layers) {
-      const fillColor = UI.SCORE_PROGRESS_TIER_COLORS[layer.tierIndex] ?? COLORS.SCORE_GREEN;
+      const fillColor = getScoreProgressTierColor(layer.tierIndex);
       const fillW = Math.max(0, Math.min(1, layer.fill)) * barW;
       if (fillW <= 0) continue;
 
@@ -232,29 +239,4 @@ export class RoundScoreProgress extends GameObjects.Container {
       this.fillGfx.fillRoundedRect(0, 0, fillW, barH, radius);
     }
   }
-}
-
-function fillColorAtX(layers: ScoreProgressLayer[], barW: number, x: number): number {
-  for (let i = layers.length - 1; i >= 0; i--) {
-    const layer = layers[i];
-    if (layer.fill * barW >= x) {
-      return UI.SCORE_PROGRESS_TIER_COLORS[layer.tierIndex] ?? COLORS.SCORE_GREEN;
-    }
-  }
-  return UI.SCORE_PROGRESS_TRACK;
-}
-
-function stackedLabelTextColor(layers: ScoreProgressLayer[], barW: number): string {
-  const textCenterX = barW / 2;
-
-  for (let i = layers.length - 1; i >= 0; i--) {
-    const layer = layers[i];
-    const fillW = layer.fill * barW;
-    if (fillW >= textCenterX) {
-      const fillColor = UI.SCORE_PROGRESS_TIER_COLORS[layer.tierIndex] ?? COLORS.SCORE_GREEN;
-      return contrastingTextColor(fillColor);
-    }
-  }
-
-  return barLabelTextColor(UI.SCORE_PROGRESS_TRACK, 0, barW);
 }

@@ -4,7 +4,7 @@
 import { D, divideScore, type DecimalSource } from '../../game/decimal';
 
 export interface ScoreProgressState {
-  /** 0-indexed tier (0 = first target chunk, 4 = 400%+). */
+  /** 0-indexed tier (0 = first target chunk, 1 = second lap, …). */
   tierIndex: number;
   /** Fill within the current tier, 0–1. */
   tierFill: number;
@@ -24,7 +24,52 @@ export interface StackedScoreProgressState extends ScoreProgressState {
   multiplierLabel: number | null;
 }
 
-export const SCORE_PROGRESS_MAX_TIER = 4;
+/** Golden-angle hue step — maximally distinct saturated tiers without a fixed palette cap. */
+const SCORE_PROGRESS_HUE_STEP = 137.508;
+const SCORE_PROGRESS_BASE_HUE = 120;
+const SCORE_PROGRESS_SATURATION = 0.94;
+const SCORE_PROGRESS_LIGHTNESS = 0.5;
+
+function hslToColor(hueDeg: number, saturation: number, lightness: number): number {
+  const h = ((hueDeg % 360) + 360) % 360;
+  const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = lightness - c / 2;
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) {
+    r = c;
+    g = x;
+  } else if (h < 120) {
+    r = x;
+    g = c;
+  } else if (h < 180) {
+    g = c;
+    b = x;
+  } else if (h < 240) {
+    g = x;
+    b = c;
+  } else if (h < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+
+  const R = Math.round((r + m) * 255);
+  const G = Math.round((g + m) * 255);
+  const B = Math.round((b + m) * 255);
+  return (R << 16) | (G << 8) | B;
+}
+
+/** Vibrant fill color for a 0-based tier; tier 0 is green, hues spread via golden angle. */
+export function getScoreProgressTierColor(tierIndex: number): number {
+  const hue = SCORE_PROGRESS_BASE_HUE + tierIndex * SCORE_PROGRESS_HUE_STEP;
+  return hslToColor(hue, SCORE_PROGRESS_SATURATION, SCORE_PROGRESS_LIGHTNESS);
+}
 
 function ratioToNumber(roundScore: DecimalSource, targetMiles: DecimalSource): number {
   const target = D(targetMiles);
@@ -34,29 +79,7 @@ function ratioToNumber(roundScore: DecimalSource, targetMiles: DecimalSource): n
   return ratio.toNumber();
 }
 
-/** Pick light or dark label text for readability on a fill color. */
-export function contrastingTextColor(fillColor: number): string {
-  const r = (fillColor >> 16) & 0xff;
-  const g = (fillColor >> 8) & 0xff;
-  const b = fillColor & 0xff;
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.58 ? '#1a1a2e' : '#ffffff';
-}
-
-/** Label color for text centered on the progress bar track. */
-export function barLabelTextColor(fillColor: number, fillW: number, barW: number): string {
-  const textCenterX = barW / 2;
-  if (fillW >= textCenterX) {
-    return contrastingTextColor(fillColor);
-  }
-  return '#ffffff';
-}
-
-export function getScoreProgressState(
-  roundScore: DecimalSource,
-  targetMiles: DecimalSource,
-  maxTier: number = SCORE_PROGRESS_MAX_TIER,
-): ScoreProgressState {
+export function getScoreProgressState(roundScore: DecimalSource, targetMiles: DecimalSource): ScoreProgressState {
   const ratio = ratioToNumber(roundScore, targetMiles);
 
   if (ratio <= 0) {
@@ -71,12 +94,10 @@ export function getScoreProgressState(
   const fractional = ratio - floored;
 
   if (fractional === 0) {
-    const tierIndex = Math.min(floored - 1, maxTier);
-    return { tierIndex, tierFill: 1, ratio };
+    return { tierIndex: floored - 1, tierFill: 1, ratio };
   }
 
-  const tierIndex = Math.min(floored, maxTier);
-  return { tierIndex, tierFill: fractional, ratio };
+  return { tierIndex: floored, tierFill: fractional, ratio };
 }
 
 /** Overflow lap label shown when score has passed the target at least once. */
@@ -92,9 +113,8 @@ export function getOverflowMultiplierLabel(ratio: number): number | null {
 export function getStackedProgressLayers(
   roundScore: DecimalSource,
   targetMiles: DecimalSource,
-  maxTier: number = SCORE_PROGRESS_MAX_TIER,
 ): StackedScoreProgressState {
-  const state = getScoreProgressState(roundScore, targetMiles, maxTier);
+  const state = getScoreProgressState(roundScore, targetMiles);
   const multiplierLabel = getOverflowMultiplierLabel(state.ratio);
 
   if (state.ratio < 1) {

@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
-  barLabelTextColor,
-  contrastingTextColor,
   getOverflowMultiplierLabel,
   getScoreProgressState,
+  getScoreProgressTierColor,
   getStackedProgressLayers,
 } from '../../phaser/ui/roundScoreProgressMath';
 
@@ -44,8 +43,29 @@ describe('getScoreProgressState', () => {
     expect(getScoreProgressState(1500, 300)).toEqual({ tierIndex: 4, tierFill: 1, ratio: 5 });
   });
 
-  test('caps at tier 4 white beyond 5x', () => {
-    expect(getScoreProgressState(1800, 300)).toEqual({ tierIndex: 4, tierFill: 1, ratio: 6 });
+  test('tier 5 full at 6x exact', () => {
+    expect(getScoreProgressState(1800, 300)).toEqual({ tierIndex: 5, tierFill: 1, ratio: 6 });
+  });
+
+  test('tier 10 half fill at 10.5x', () => {
+    expect(getScoreProgressState(3150, 300)).toEqual({ tierIndex: 10, tierFill: 0.5, ratio: 10.5 });
+  });
+});
+
+describe('getScoreProgressTierColor', () => {
+  test('tier 0 is green-dominant', () => {
+    const color = getScoreProgressTierColor(0);
+    const r = (color >> 16) & 0xff;
+    const g = (color >> 8) & 0xff;
+    const b = color & 0xff;
+    expect(g).toBeGreaterThan(r);
+    expect(g).toBeGreaterThan(b);
+  });
+
+  test('consecutive tiers are distinct', () => {
+    for (let tier = 0; tier < 20; tier++) {
+      expect(getScoreProgressTierColor(tier)).not.toBe(getScoreProgressTierColor(tier + 1));
+    }
   });
 });
 
@@ -86,23 +106,5 @@ describe('stacked progress layers', () => {
       { tierIndex: 1, fill: 1 },
       { tierIndex: 2, fill: 0.5 },
     ]);
-  });
-});
-
-describe('bar label contrast', () => {
-  test('uses dark text on white fill', () => {
-    expect(contrastingTextColor(0xffffff)).toBe('#1a1a2e');
-  });
-
-  test('uses light text on blue fill', () => {
-    expect(contrastingTextColor(0x4488cc)).toBe('#ffffff');
-  });
-
-  test('uses dark text when fill covers label center', () => {
-    expect(barLabelTextColor(0xffffff, 100, 100)).toBe('#1a1a2e');
-  });
-
-  test('uses light text when label sits on empty track', () => {
-    expect(barLabelTextColor(0xffffff, 10, 100)).toBe('#ffffff');
   });
 });

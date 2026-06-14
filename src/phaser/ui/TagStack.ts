@@ -4,14 +4,17 @@
 
 import * as Phaser from 'phaser';
 import { GameObjects, Scene } from 'phaser';
-import { TEXT_COLORS, FONTS, UI, TAG_STACK } from '../../game/Constants';
+import { COLORS, TEXT_COLORS, FONTS, UI, TAG_STACK } from '../../game/Constants';
 import { getTagDisplayContext } from '../../game/displayContext';
 import { getRunState, runStore } from '../../game/store/runStore';
 import { selectTagStackModel } from '../../game/store/selectors/uiSelectors';
 import { resolveTagDescription } from '../../data/trail_tags';
 import { TrailTagInstance } from '../../game/types';
 import { bindGameObject } from '../store/subscribe';
+import { createCornerBadge, CORNER_COUNT_BADGE_LAYOUT, layoutCornerBadge } from './CornerBadge';
 import { addTrailTagBadgeIcon, drawTrailTagBadgeBackground } from './TrailTagBadge';
+
+const TOOLTIP_GAP = 8;
 
 const { BADGE_SIZE, BADGE_GAP, TOOLTIP_WIDTH, POUCH_CLEARANCE } = TAG_STACK;
 
@@ -99,19 +102,7 @@ export class TagStack extends GameObjects.Container {
     addTrailTagBadgeIcon(this.scene, container, -half, -half, BADGE_SIZE, tag.def.id);
 
     if (tag.copies > 1) {
-      const copyBg = this.scene.add.graphics();
-      copyBg.fillStyle(0xff4444, 1);
-      copyBg.fillCircle(half - 4, -half + 4, 8);
-      container.add(copyBg);
-
-      const copyText = this.scene.add
-        .text(half - 4, -half + 4, `×${tag.copies}`, {
-          fontFamily: FONTS.PRIMARY,
-          fontSize: '9px',
-          color: '#ffffff',
-        })
-        .setOrigin(0.5);
-      container.add(copyText);
+      this.addCountBadge(container, tag.copies);
     }
 
     container.setSize(BADGE_SIZE, BADGE_SIZE);
@@ -143,14 +134,7 @@ export class TagStack extends GameObjects.Container {
 
     addTrailTagBadgeIcon(this.scene, container, -half, -half, BADGE_SIZE, 'tag_twin_wagon');
 
-    const text = this.scene.add
-      .text(0, 0, `×${count + 1}`, {
-        fontFamily: FONTS.HEADING,
-        fontSize: '16px',
-        color: '#ffdd44',
-      })
-      .setOrigin(0.5);
-    container.add(text);
+    this.addCountBadge(container, count);
 
     container.setSize(BADGE_SIZE, BADGE_SIZE);
     container.setInteractive(new Phaser.Geom.Rectangle(0, 0, BADGE_SIZE, BADGE_SIZE), Phaser.Geom.Rectangle.Contains);
@@ -163,15 +147,30 @@ export class TagStack extends GameObjects.Container {
     return container;
   }
 
+  private addCountBadge(container: GameObjects.Container, count: number): void {
+    const copyBadge = createCornerBadge(this.scene, CORNER_COUNT_BADGE_LAYOUT);
+    layoutCornerBadge(copyBadge, count, BADGE_SIZE, BADGE_SIZE, COLORS.ERROR_RED, CORNER_COUNT_BADGE_LAYOUT);
+    copyBadge.container.setDepth(10);
+    container.add(copyBadge.container);
+    container.bringToTop(copyBadge.container);
+  }
+
+  private tooltipX(badgeCx: number, tooltipW: number): number {
+    const half = BADGE_SIZE / 2;
+    return badgeCx - half - tooltipW - TOOLTIP_GAP;
+  }
+
+  private centerTooltipY(badgeCy: number, tooltipH: number): number {
+    return badgeCy - tooltipH / 2;
+  }
+
   private showTooltip(tag: TrailTagInstance, badgeCx: number, badgeCy: number): void {
     this.hideTooltip();
 
-    const half = BADGE_SIZE / 2;
     const tooltipH = 60;
-    const tx = badgeCx - TOOLTIP_WIDTH - 8;
-    const ty = badgeCy - half;
+    const tx = this.tooltipX(badgeCx, TOOLTIP_WIDTH);
 
-    this.tooltip = this.scene.add.container(tx, ty);
+    this.tooltip = this.scene.add.container(tx, this.centerTooltipY(badgeCy, tooltipH));
 
     const bg = this.scene.add.graphics();
     bg.fillStyle(0x1a1a2e, 0.95);
@@ -206,6 +205,8 @@ export class TagStack extends GameObjects.Container {
     bg.lineStyle(1, 0x444466, 0.8);
     bg.strokeRoundedRect(0, 0, TOOLTIP_WIDTH, actualH, 8);
 
+    this.tooltip.setY(this.centerTooltipY(badgeCy, actualH));
+
     this.tooltip.setDepth(200);
     this.add(this.tooltip);
   }
@@ -213,13 +214,11 @@ export class TagStack extends GameObjects.Container {
   private showTwinWagonTooltip(count: number, badgeCx: number, badgeCy: number): void {
     this.hideTooltip();
 
-    const half = BADGE_SIZE / 2;
     const tooltipW = 180;
     const tooltipH = 50;
-    const tx = badgeCx - tooltipW - 8;
-    const ty = badgeCy - half;
+    const tx = this.tooltipX(badgeCx, tooltipW);
 
-    this.tooltip = this.scene.add.container(tx, ty);
+    this.tooltip = this.scene.add.container(tx, this.centerTooltipY(badgeCy, tooltipH));
 
     const bg = this.scene.add.graphics();
     bg.fillStyle(0x1a1a2e, 0.95);
@@ -235,7 +234,8 @@ export class TagStack extends GameObjects.Container {
     });
     this.tooltip.add(name);
 
-    const desc = this.scene.add.text(8, 24, `Next tag earned is duplicated ×${count + 1}`, {
+    const stackLabel = count === 1 ? '1 Twin Wagon stacked' : `${count} Twin Wagons stacked`;
+    const desc = this.scene.add.text(8, 24, `${stackLabel}. Next tag earned is duplicated ×${count + 1}`, {
       fontFamily: FONTS.PRIMARY,
       fontSize: '10px',
       color: TEXT_COLORS.SECONDARY,

@@ -1654,7 +1654,15 @@ const items: ItemDef[] = [
       const hint = [[money(`$${amount}`)], [condition(HAND_NAMES[handType] ?? '?', 'sm')]];
       return {
         hint,
-        tooltip: [[text('Earn '), money(`$${amount}`), text(' when hand is '), condition(HAND_NAMES[handType] ?? '?')]],
+        tooltip: [
+          [text('Earn '), money(`$${amount}`), text(' when hand is '), condition(HAND_NAMES[handType] ?? '?')],
+          [
+            text('Nathan Cole (Hunter) earns '),
+            money('$8'),
+            text(' when hand is '),
+            condition(HAND_NAMES[handType] ?? '?'),
+          ],
+        ],
       };
     },
   }, // ─── Phase 5 Items ───

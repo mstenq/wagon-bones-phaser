@@ -32,16 +32,14 @@ export class MainMenu extends Scene {
     const imageBounds = applyFitBackgroundImage(bg, screen);
     bg.setDepth(-1);
 
-    const startY = imageBounds.y + imageBounds.h * 0.80;
+    const startY = imageBounds.y + imageBounds.h * 0.8;
     const buttonGap = 14;
 
-    new Button(this, width / 2, startY, 'Start Journey', { variant: 'primary', size: 'xl', width: 220 }).onClick(
-      () => {
-        clearAutoSave();
-        resetAllGameStores();
-        this.scene.start('ProfessionSelect', {});
-      },
-    );
+    new Button(this, width / 2, startY, 'Start Journey', { variant: 'primary', size: 'xl', width: 220 }).onClick(() => {
+      clearAutoSave();
+      resetAllGameStores();
+      this.scene.start('ProfessionSelect', {});
+    });
 
     const optionsY = startY + 52 / 2 + buttonGap + 48 / 2;
     new Button(this, width / 2, optionsY, 'Options', { variant: 'secondary', size: 'lg', width: 220 }).onClick(
