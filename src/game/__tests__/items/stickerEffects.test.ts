@@ -1,6 +1,41 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, calculateTestScore, resetDieIds } from '../testHelpers';
+import { die, diceWithValue, item, calculateTestScore, resetDieIds, setupGame } from '../testHelpers';
+import { createConsumableInstance, getSupplyDefById, type ConsumableDef } from '../../ConsumablesSystem';
+import { initRunRng } from '../../RunRng';
+import { roundActions } from '../../store';
+import { getPlayerState } from '../testRunPlayer';
+import type { EquipmentInstance } from '../../ItemsSystem';
+
+function scorePurpleFlowerKicker(options: {
+  runSeed?: string;
+  equipment?: EquipmentInstance[];
+  startingConsumable?: ConsumableDef;
+}) {
+  const scoredDice = [die({ value: 5 }), die({ value: 5 }), die({ value: 3, sticker: 'purple_flower' })];
+  const { game } = setupGame({
+    equipment: options.equipment ?? [],
+    dice: [...scoredDice, ...diceWithValue(1, 50)],
+  });
+  const player = getPlayerState();
+  if (options.startingConsumable) {
+    player.consumables = [createConsumableInstance(options.startingConsumable)];
+  }
+  if (options.runSeed) initRunRng(options.runSeed);
+
+  game.startRound();
+  roundActions.patch({
+    phase: 'ROLL',
+    rolledDice: scoredDice.map((d) => ({ id: d.id, value: d.value })),
+    selectedForRollIds: scoredDice.map((d) => d.id),
+    dieValuesByDieId: Object.fromEntries(scoredDice.map((d) => [d.id, d.value])),
+    rerollsRemaining: 6,
+  });
+  game.selectForScore(scoredDice.map((d) => d.id));
+  const result = game.calculateScore();
+  player.syncFromStore();
+  return { result, player };
+}
 
 beforeEach(() => resetDieIds());
 
@@ -33,6 +68,42 @@ describe('purple_flower sticker', () => {
       ],
     });
     expect(player.consumables.length).toBe(2);
+  });
+
+  test('avoids owned supply cards without counterfeit_goods', () => {
+    const ownedId = 'coffee_tin';
+    const owned = getSupplyDefById(ownedId)!;
+
+    for (let i = 0; i < 50; i++) {
+      const { player } = scorePurpleFlowerKicker({
+        runSeed: `purple-flower-no-dupe-${i}`,
+        startingConsumable: owned,
+      });
+      expect(player.consumables.length).toBe(2);
+      const granted = player.consumables.find((c) => c.def.id !== ownedId);
+      expect(granted).toBeDefined();
+      expect(granted!.def.id).not.toBe(ownedId);
+    }
+  });
+
+  test('allows duplicate supply with counterfeit_goods', () => {
+    const ownedId = 'coffee_tin';
+    const owned = getSupplyDefById(ownedId)!;
+    let sawDuplicate = false;
+
+    for (let i = 0; i < 80; i++) {
+      const { player } = scorePurpleFlowerKicker({
+        runSeed: `purple-flower-dupe-${i}`,
+        startingConsumable: owned,
+        equipment: [item('counterfeit_goods')],
+      });
+      if (player.consumables.filter((c) => c.def.id === ownedId).length > 1) {
+        sawDuplicate = true;
+        break;
+      }
+    }
+
+    expect(sawDuplicate).toBe(true);
   });
 });
 

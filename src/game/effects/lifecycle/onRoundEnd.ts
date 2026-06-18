@@ -80,12 +80,14 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       break;
     }
     case 'ADD_MULT_RISKY':
+      if (!ctx.isLegRoundEnd) break;
       if (ctx.isCopy) break;
       if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
         pushDestroyIndexIfAllowed(ctx);
       }
       break;
     case 'XMULT_RISKY':
+      if (!ctx.isLegRoundEnd) break;
       if (ctx.isCopy) break;
       if (checkLoadedChance(p.destroyChance as [number, number], ctx.equipment)) {
         pushDestroyIndexIfAllowed(ctx);

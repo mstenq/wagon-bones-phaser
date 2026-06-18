@@ -331,7 +331,8 @@ export class GameScene extends Scene {
         cx: this.contentCX,
         cy: (this.scale.height - this.hudBottomReserve) / 2,
       }),
-      onSpriteHit: (sprite, playSound) => this.onRollDieClick(sprite, false, playSound, false),
+      onSpriteHit: (sprite, playSound, isRightClick) =>
+        this.onRollDieClick(sprite, isRightClick, playSound, false),
       onSelectionComplete: () => this.updateRollButtons(),
       onDragBegin: () => {
         this.wasDragging = true;
@@ -937,7 +938,7 @@ export class GameScene extends Scene {
     }
   }
 
-  /** Click rolled die: left = select for score, right = reroll lock (marquee uses left-click rules). */
+  /** Click rolled die: left = select for score, right = reroll lock; marquee mirrors the same button rules. */
   private onRollDieClick(sprite: DiceSprite, isRightClick: boolean, playSound = true, updateButtons = true): void {
     if (this.consumableTargeting.isActive()) return;
     const id = sprite.dieData.id;
@@ -1273,7 +1274,7 @@ export class GameScene extends Scene {
 
   private getRollPhaseInstruction(): string {
     if (!this.showRollInstruction) return '';
-    return 'Click to select for score · Right-click to lock against rerolls';
+    return 'Left-click to select · Right-click to lock · Drag to apply to multiple dice';
   }
 
   private getSidebarOverlayTitle(phase: PhaseState | null, bossName: string | undefined): string {

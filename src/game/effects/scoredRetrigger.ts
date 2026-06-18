@@ -1,7 +1,7 @@
 import type { Die } from '../types';
 import type { EquipmentInstance } from '../ItemsSystem';
 import { walkEquipmentPerSlot } from '../equipmentUtils';
-import { dieMatchesPip, hasStackedDeck } from './helpers';
+import { collectPipRetriggerSources, dieMatchesPip, hasStackedDeck } from './helpers';
 import type { RetriggerEquipSource } from './retriggerAnim';
 
 export type ScoredRetriggerScoreContext = { currentDay: number; maxDays: number };
@@ -9,6 +9,7 @@ export type ScoredRetriggerScoreContext = { currentDay: number; maxDays: number 
 export type ScoredDieRetriggerOptions = {
   die: Die;
   equipment: EquipmentInstance[];
+  scoringDice?: Die[];
   firstDieId: string | null;
   lastDieId: string | null;
   scoreContext?: ScoredRetriggerScoreContext;
@@ -67,23 +68,23 @@ type PerDieScoredRetriggerCollect = {
 function collectPerDieScoredRetriggerSources(options: {
   die: Die;
   equipment: EquipmentInstance[];
+  scoringDice: Die[];
   firstDieId: string | null;
   lastDieId: string | null;
   stackedDeck: boolean;
   isEnhanced: boolean;
   isLucky: boolean;
 }): PerDieScoredRetriggerCollect {
-  const { die, equipment, firstDieId, lastDieId, stackedDeck, isEnhanced, isLucky } = options;
+  const { die, equipment, scoringDice, firstDieId, lastDieId, stackedDeck, isEnhanced, isLucky } = options;
   const equipSources: RetriggerEquipSource[] = [];
   let unattributedTriggerCount = 0;
 
+  const pipSources = collectPipRetriggerSources(die, equipment, stackedDeck);
+  for (const source of pipSources) {
+    equipSources.push(source);
+  }
+
   walkEquipmentPerSlot(equipment, ({ equip, index }) => {
-    if (
-      equip.def.effectType === 'PIP_RETRIGGER' &&
-      dieMatchesPip(die, equip.def.effectParams.pip as number, equipment, stackedDeck)
-    ) {
-      equipSources.push({ equipIndex: index });
-    }
     if (equip.def.effectType === 'FIRST_DICE_RETRIGGER' && die.id === firstDieId) {
       const extra = equip.def.effectParams.value as number;
       for (let i = 0; i < extra; i++) equipSources.push({ equipIndex: index });
@@ -94,6 +95,13 @@ function collectPerDieScoredRetriggerSources(options: {
     }
     if (equip.def.effectType === 'ENHANCED_RETRIGGER' && isEnhanced) {
       equipSources.push({ equipIndex: index });
+    }
+    if (equip.def.effectType === 'FIRST_PIP_XMULT') {
+      const pip = equip.def.effectParams.pip as number;
+      const firstPipDieId = scoringDice.find((d) => dieMatchesPip(d, pip, equipment, stackedDeck))?.id;
+      if (firstPipDieId && die.id === firstPipDieId) {
+        equipSources.push({ equipIndex: index });
+      }
     }
     if (equip.def.effectType === 'LOADED_CHAMBER' && isLucky) {
       unattributedTriggerCount++;
@@ -111,6 +119,7 @@ export function computeScoredDieRetriggers(options: ScoredDieRetriggerOptions): 
   const {
     die,
     equipment,
+    scoringDice = [],
     firstDieId,
     lastDieId,
     scoreContext,
@@ -129,6 +138,7 @@ export function computeScoredDieRetriggers(options: ScoredDieRetriggerOptions): 
   const { equipSources: perDieSources, unattributedTriggerCount } = collectPerDieScoredRetriggerSources({
     die,
     equipment,
+    scoringDice,
     firstDieId,
     lastDieId,
     stackedDeck,

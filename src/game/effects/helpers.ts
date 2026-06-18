@@ -1,7 +1,7 @@
 // ─── Shared Utility Functions ───
 
 import { EquipmentInstance } from '../ItemsSystem';
-import { walkEquipmentScoring, type ResolveEquipmentSlotOptions } from '../equipmentUtils';
+import { walkEquipmentPerSlot, walkEquipmentScoring, type ResolveEquipmentSlotOptions } from '../equipmentUtils';
 import { Die, HandType } from '../types';
 import type { ScoringPipelineContext } from './types';
 import { addScore, D, gte, multiplyScore, type Decimal, type DecimalSource } from '../scoreMath';
@@ -185,6 +185,38 @@ export function dieMatchesPip(die: Die, pip: number, equipment: EquipmentInstanc
   if (die.value === pip) return true;
   if ((stackedDeck ?? hasStackedDeck(equipment)) && die.enhancement === 'loaded') return true;
   return false;
+}
+
+export function getEffectPips(params: Record<string, unknown>): number[] {
+  if (Array.isArray(params.pips)) return params.pips as number[];
+  if (typeof params.pip === 'number') return [params.pip];
+  return [];
+}
+
+export function dieMatchesAnyPip(
+  die: Die,
+  pips: number[],
+  equipment: EquipmentInstance[],
+  stackedDeck?: boolean,
+): boolean {
+  return pips.some((pip) => dieMatchesPip(die, pip, equipment, stackedDeck));
+}
+
+export function collectPipRetriggerSources(
+  die: Die,
+  equipment: EquipmentInstance[],
+  stackedDeck?: boolean,
+): { equipIndex: number }[] {
+  const resolvedStacked = stackedDeck ?? hasStackedDeck(equipment);
+  const sources: { equipIndex: number }[] = [];
+  walkEquipmentPerSlot(equipment, ({ equip, index }) => {
+    if (equip.def.effectType !== 'PIP_RETRIGGER') return;
+    const pips = getEffectPips(equip.def.effectParams as Record<string, unknown>);
+    if (dieMatchesAnyPip(die, pips, equipment, resolvedStacked)) {
+      sources.push({ equipIndex: index });
+    }
+  });
+  return sources;
 }
 
 /** True if die matches even/odd parity (Stacked Deck: loaded = all pips, so both parities). */

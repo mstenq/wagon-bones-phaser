@@ -1442,6 +1442,25 @@ describe("PIP_XMULT: The Devil's Hand", () => {
     });
     expect(result.mult).toBeMultCloseTo(16, 5);
   });
+
+  test('x2 mult on held 6', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 6 })],
+      equipment: [item('devils_hand')],
+    });
+    expect(result.mult).toBeMultCloseTo(2, 5);
+  });
+
+  test('x2 mult on held and scored 6s stacks', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 6 }), die({ value: 5 })],
+      heldDice: [die({ value: 6 })],
+      equipment: [item('devils_hand')],
+    });
+    // Scored 6: x2, held 6: x2 → x4
+    expect(result.mult).toBeMultCloseTo(4, 5);
+  });
 });
 
 // ─── REROLL_COUNT_XMULT: The 23rd Psalm ───

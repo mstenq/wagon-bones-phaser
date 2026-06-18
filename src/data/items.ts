@@ -673,12 +673,12 @@ const items: ItemDef[] = [
     cost: 8,
     rarity: 'rare',
     effectType: 'LUCKY_NUMBER_PIP_XMULT',
-    effectParams: { value: 1.5, professionOverrides: { gambler: { value: 2 } } },
+    effectParams: { value: 2, professionOverrides: { gambler: { value: 2.5 } } },
     initialState: { pip: 7 },
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'lucky_number');
       const pip = equip?.state.pip ?? 7;
-      const xVal = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 1.5 }, 'value', player.professionId);
+      const xVal = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 2 }, 'value', player.professionId);
       const hint = [[mult(`x${xVal}`), condition(`per ${pip}`)]];
       return {
         hint,
@@ -990,8 +990,8 @@ const items: ItemDef[] = [
     effectType: 'PIP_XMULT',
     effectParams: { pip: 6, value: 2 },
     display: (_round, _player) => ({
-      hint: [[mult('x2'), condition('per 6 scored')]],
-      tooltip: [[text('Played '), condition('6'), text("'s give "), mult('x2'), text(' mult when scored')]],
+      hint: [[mult('x2'), condition('per 6 held or played')]],
+      tooltip: [[text('Held or played '), condition('6'), text("'s give "), mult('x2'), text(' mult')]],
     }),
   },
   {
@@ -1399,10 +1399,10 @@ const items: ItemDef[] = [
     cost: 6,
     rarity: 'uncommon',
     effectType: 'PIP_RETRIGGER',
-    effectParams: { pip: 1 },
+    effectParams: { pips: [1, 11] },
     display: (_round, _player) => ({
-      hint: [[retrigger('Retrigger')], [condition('scored 1s', 'sm')]],
-      tooltip: [[text('Retrigger each played 1')]],
+      hint: [[retrigger('Retrigger')], [condition('1s and 11s', 'sm')]],
+      tooltip: [[text('Retrigger each held or played 1 and 11')]],
     }),
   },
   {
@@ -2873,8 +2873,18 @@ const items: ItemDef[] = [
     effectType: 'FIRST_PIP_XMULT',
     effectParams: { pip: 2, value: 2 },
     display: (_round, _player) => ({
-      hint: [[mult('x2'), condition('first 2 scored')]],
-      tooltip: [[text('First played '), mult('2'), text(' pip die gives '), mult('x2'), text(' mult when scored')]],
+      hint: [[mult('x2'), retrigger('Retrigger', "xs")], [condition('first 2 scored', 'xs')]],
+      tooltip: [
+        [
+          text('First played '),
+          mult('2'),
+          text(' gives '),
+          mult('x2'),
+          text(' mult and '),
+          retrigger('retriggers'),
+          text(' once when scored'),
+        ],
+      ],
     }),
   },
   {

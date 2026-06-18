@@ -33,6 +33,7 @@ import {
 } from '../consumables/consumableUseContext';
 import type { ConsumableUseMode } from '../../data/consumableTypes';
 import { getRunState } from '../store/runStore';
+import { getEquipmentPackExcludeIds } from '../BoosterPackSystem';
 import { selectRunStatusTraits } from '../runStatusTraits';
 import { shouldPromptRoundModifications } from '../store/selectors/uiSelectors';
 import { initRunRng } from '../RunRng';
@@ -1102,6 +1103,29 @@ describe('supply/frontier execution parity for shared effect engines', () => {
 
     expect(frontierResult.success).toBe(true);
     expect(player.economy.balance).toBe(0);
+  });
+
+  test('magic_beans avoids owned rare equipment without counterfeit_goods', () => {
+    initRunRng('magic-beans-no-dupes');
+    const player = resetPlayerState();
+    player.equipment = [item('ace_in_the_hole')];
+
+    for (let i = 0; i < 50; i++) {
+      player.equipment = [item('ace_in_the_hole')];
+      const frontierDef = getFrontierDefById('magic_beans')!;
+      executeConsumableEffect(createConsumableInstance(frontierDef));
+
+      const created = player.equipment.slice(1);
+      expect(created.length).toBe(1);
+      expect(created[0]!.def.id).not.toBe('ace_in_the_hole');
+      expect(created[0]!.def.rarity).toBe('rare');
+    }
+  });
+
+  test('magic_beans respects counterfeit_goods duplicate allowance', () => {
+    const player = resetPlayerState();
+    player.equipment = [item('ace_in_the_hole'), item('counterfeit_goods')];
+    expect(getEquipmentPackExcludeIds(getRunState())).toBeUndefined();
   });
 });
 

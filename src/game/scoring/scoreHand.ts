@@ -181,6 +181,7 @@ export function scoreHand(
     const { triggerCount: triggers, equipSources: retriggerSources } = computeScoredDieRetriggers({
       die,
       equipment,
+      scoringDice: handResult.scoringDice,
       firstDieId,
       lastDieId,
       scoreContext,

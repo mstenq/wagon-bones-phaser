@@ -549,6 +549,8 @@ export const DICE = {
 // ─── Marquee selection (roll phase dice lock) ───
 export const MARQUEE = {
   FILL_ALPHA: 0.15,
+  /** Marquee outline when left-dragging to lock/unlock dice */
+  LOCK_STROKE: 0x66a3ff,
   GFX_DEPTH: 25,
   ZONE_DEPTH: 5,
   /** Bottom strip reserved for action buttons, sort controls, and instruction text */

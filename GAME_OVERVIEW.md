@@ -97,9 +97,11 @@ Card Synergy: funeral_pyre - Gains 4x the the sell value as mult of the destroye
    - Holy aura bonus (This goes last for greater xMult affect).
 6. Then the miles are multipled against the xmult and the score is determined. Professions like "Accountant Henry Pritchard" will balance the miles and mult the two numbers before multiplying.
 
-## Also See:
-GAME_BOSS_OVERVIEW.md
-GAME_DICE_OVERVIEW.md
-GAME_EQUIPMENT_OVERVIEW.md
-
-
+snake_eyes: Make it 1 in 3
+double_barrel: make it so the first 2 also gets retriggered once. So x2 and an additional trigger. This thematically makes sense and should make it more powerful.
+five_mile_marker: leave as is. This one works pretty well actually
+devils_hand: x2 is good, but honestly eight_second_ride is better and its not a legendary. Lets make devils_hand x2 for held or played 6s. That feels more worthy of legendary.
+lucky_number: make it x2 (and x2.5 for gambler)
+eight_second_ride: works ok already
+ace_in_the_hole: already gets buffed by silver bullets and one_eyed_jack
+eleventh_crossing: already gets buffed by silver bullets and one_eyed_jack

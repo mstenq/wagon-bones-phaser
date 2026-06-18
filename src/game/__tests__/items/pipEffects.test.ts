@@ -64,13 +64,13 @@ describe('GOLD_DICE_MONEY: Gold Tooth', () => {
 // ─── LUCKY_NUMBER_PIP_XMULT: Lucky Number ───
 
 describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
-  test('matching pip gives x1.5 per matching die', () => {
+  test('matching pip gives x2 per matching die', () => {
     const luckyNum = itemWithState('lucky_number', { pip: 5 });
     processEquipmentOnRoundStart([luckyNum]);
     luckyNum.state.pip = 5;
 
     expect(luckyNum.state.pip).toBe(5);
-    expect(luckyNum.def.effectParams.value).toBe(1.5);
+    expect(luckyNum.def.effectParams.value).toBe(2);
   });
 
   test('pip randomizes on round start', () => {
@@ -85,10 +85,10 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
   test('has correct effect type and params', () => {
     const inst = item('lucky_number');
     expect(inst.def.effectType).toBe('LUCKY_NUMBER_PIP_XMULT');
-    expect(inst.def.effectParams.value).toBe(1.5);
+    expect(inst.def.effectParams.value).toBe(2);
   });
 
-  test('gambler uses x2 mult on lucky pip', () => {
+  test('gambler uses x2.5 mult on lucky pip', () => {
     const luckyNum = itemWithState('lucky_number', { pip: 5 });
     const scored = [die({ value: 5 }), die({ value: 5 })];
     const { game, player } = setupGame({
@@ -105,8 +105,8 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     game.state.rerollsRemaining = 6;
     game.selectForScore(scored.map((d) => d.id));
     const result = game.calculateScore()!;
-    // Two matching lucky dice each apply x2 → 1 × 2 × 2 = 4
-    expect(result.mult).toBeMultCloseTo(4, 5);
+    // Two matching lucky dice each apply x2.5 → 1 × 2.5 × 2.5 = 6.25
+    expect(result.mult).toBeMultCloseTo(6.25, 5);
     expect(player.profession?.id).toBe('gambler');
   });
 
@@ -126,8 +126,8 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     game.state.rerollsRemaining = 6;
     game.selectForScore(scored.map((d) => d.id));
     const result = game.calculateScore()!;
-    // PAIR of lucky 5s: each die gets x1.5 twice (lucky + mirror copy) → x2.25 per die
-    expect(result.mult).toBeMultCloseTo(5.07, 2);
+    // PAIR of lucky 5s: each die gets x2 twice (lucky + mirror copy) → x4 per die
+    expect(result.mult).toBeMultCloseTo(16, 2);
   });
 });
 
@@ -145,7 +145,16 @@ describe('PIP_RETRIGGER: One-Eyed Jack', () => {
     expect(result.totalValue).toBe(4);
   });
 
-  test('does not retrigger non-1 dice', () => {
+  test('retriggers dice with pip value 11', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(11, 2),
+      equipment: [item('one_eyed_jack')],
+    });
+    // PAIR: each 11 gets retriggered once: totalValue = 11+11+11+11 = 44
+    expect(result.totalValue).toBe(44);
+  });
+
+  test('does not retrigger non-1 or non-11 dice', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [item('one_eyed_jack')],
@@ -154,14 +163,14 @@ describe('PIP_RETRIGGER: One-Eyed Jack', () => {
     expect(result.totalValue).toBe(10);
   });
 
-  test('retriggers only 1s in mixed hand', () => {
+  test('retriggers only 1s and 11s in mixed hand', () => {
     const { result } = calculateTestScore({
-      scoredDice: [...diceWithValue(1, 2), ...diceWithValue(5, 2)],
+      scoredDice: [...diceWithValue(1, 2), ...diceWithValue(11, 2)],
       equipment: [item('one_eyed_jack')],
     });
-    // TWO_PAIR: two 1s retriggered once each = +2 value
-    // totalValue = 1+1+5+5 + 1+1 (retriggers) = 14
-    expect(result.totalValue).toBe(14);
+    // TWO_PAIR: two 1s and two 11s retriggered once each = +2 + +22 = +24 value
+    // totalValue = 1+1+11+11 + 1+1+11+11 = 48
+    expect(result.totalValue).toBe(48);
   });
 
   test('Mirror Lake copies one-eyed jack retrigger', () => {
@@ -170,6 +179,46 @@ describe('PIP_RETRIGGER: One-Eyed Jack', () => {
       equipment: [item('mirror_lake'), item('one_eyed_jack')],
     });
     expect(result.totalValue).toBe(6);
+  });
+
+  test('Snake Eyes: retriggered 1 rolls supply chance again', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+
+    try {
+      const { result } = calculateTestScore({
+        scoredDice: [die({ value: 1 })],
+        equipment: [item('one_eyed_jack'), item('snake_eyes')],
+      });
+      // HIGH_VALUE: 1 scored + 1 retrigger = 2 totalValue
+      expect(result.totalValue).toBe(2);
+      // Snake Eyes fires on both triggers
+      expect(result.mutations.consumablesGranted).toHaveLength(2);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('Ace in the Hole: held 1 retriggers xMult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 1 })],
+      equipment: [item('one_eyed_jack'), item('ace_in_the_hole')],
+    });
+    // PAIR: baseMult=1
+    // Held 1: ace x1.5 twice (base + one_eyed_jack retrigger) → x2.25
+    expect(result.mult).toBeMultCloseTo(2.25, 5);
+  });
+
+  test('Eleventh Crossing: held 11 retriggers +11 mult', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      heldDice: [die({ value: 11 })],
+      equipment: [item('one_eyed_jack'), item('eleventh_crossing')],
+    });
+    // PAIR: baseMult=1
+    // Held 11: +11 twice (base + one_eyed_jack retrigger) → heldMult = 23
+    expect(result.mult).toBeMult(23);
   });
 });
 
@@ -765,12 +814,13 @@ describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
 // ─── FIRST_PIP_XMULT: Double Barrel ───
 
 describe('FIRST_PIP_XMULT: Double Barrel', () => {
-  test('first scored 2 gives x2 mult', () => {
+  test('first scored 2 gives x2 mult and retriggers once', () => {
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 2 }), die({ value: 2 })],
       equipment: [item('double_barrel')],
     });
-    expect(result.mult).toBeMult(2);
+    // First 2 triggers twice (base + double barrel) → x2 × x2 = x4
+    expect(result.mult).toBeMult(4);
   });
 
   test('x2 triggers again on each retrigger of the first played 2 (War Drums)', () => {
@@ -779,8 +829,8 @@ describe('FIRST_PIP_XMULT: Double Barrel', () => {
       scoredDice: [die({ value: 2 }), die({ value: 2 })],
       equipment: [item('double_barrel'), warDrums],
     });
-    // PAIR baseMult=1; first 2 triggers twice (base + war drums) → x2 × x2 = x4
-    expect(result.mult).toBeMult(4);
+    // First 2 triggers three times (base + double barrel + war drums) → x2 × x2 × x2 = x8
+    expect(result.mult).toBeMult(8);
   });
 
   test('Mirror Lake copies double barrel xMult on first 2', () => {
@@ -788,7 +838,8 @@ describe('FIRST_PIP_XMULT: Double Barrel', () => {
       scoredDice: [die({ value: 2 }), die({ value: 2 })],
       equipment: [item('mirror_lake'), item('double_barrel')],
     });
-    expect(result.mult).toBeMult(4);
+    // First 2 triggers 3×; each trigger applies x2 twice (double barrel + mirror) → x4^3
+    expect(result.mult).toBeMult(64);
   });
 });
 
@@ -847,8 +898,8 @@ describe('STACKED_DECK: Stacked Deck', () => {
     game.state.rerollsRemaining = 6;
     game.selectForScore(scored.map((d) => d.id));
     const result = game.calculateScore()!;
-    // PAIR: baseMult=1, x1.5 from lucky number on loaded die
-    expect(result.mult).toBeMultCloseTo(1.5, 5);
+    // PAIR: baseMult=1, x2 from lucky number on loaded die
+    expect(result.mult).toBeMultCloseTo(2, 5);
   });
 
   test('Even Odds: loaded die triggers even parity bonus', () => {

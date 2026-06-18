@@ -273,9 +273,12 @@ export const arcaneEffect: EffectDefinition = {
     );
     const laneGateVelocity = Array.from({ length: ARCANE_TUNE.laneCount }, () => 0);
     const strikes: Strike[] = [];
+    let elapsed = 0;
 
     const step = (frame: EffectFrameContext) => {
-      const t = frame.time + frame.phase * 0.13 + timeOffset;
+      // Wrap local elapsed time (like fire/ghost) — absolute frame.time loses sin/hash precision over a long session.
+      elapsed = (elapsed + frame.dt) % 240;
+      const t = (elapsed + timeOffset + frame.phase * 0.13) % 240;
       const pulse =
         ARCANE_TUNE.pulse.base +
         pulse01(t, ARCANE_TUNE.pulse.layer1PeriodBase + seed * ARCANE_TUNE.pulse.layer1PeriodSeedScale) *

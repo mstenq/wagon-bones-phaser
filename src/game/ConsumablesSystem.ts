@@ -8,6 +8,7 @@ import type { HintSegment, ItemDisplayResult } from './ItemsSystem';
 import { getItemAuraById, isEquipmentCursed } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
+import { getConsumablePackExcludeIds, getEquipmentPackExcludeIds } from './BoosterPackSystem';
 import { HandType, HandDefinition, HandUpgradeInfo } from './types';
 import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
 import hands from '../data/hands';
@@ -191,9 +192,10 @@ export function createConsumableInstance(def: ConsumableDef): ConsumableInstance
 
 /** Get a random supply card def */
 export function getRandomSupplyDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
+  const effectiveExcludeIds = excludeIds ?? getConsumablePackExcludeIds();
   let pool = SUPPLY_CARDS;
-  if (excludeIds && excludeIds.length > 0) {
-    const excluded = new Set(excludeIds);
+  if (effectiveExcludeIds && effectiveExcludeIds.length > 0) {
+    const excluded = new Set(effectiveExcludeIds);
     pool = pool.filter((c) => !excluded.has(c.id));
   }
   if (pool.length === 0) pool = SUPPLY_CARDS; // fallback if all excluded
@@ -793,6 +795,7 @@ export function applyRunInstantEffect(effect: InstantEffect): UseConsumableResul
         const def = generateRandomEquipment({
           rarity: effect.rarity,
           excludeRarity: effect.excludeRarity,
+          excludeIds: getEquipmentPackExcludeIds(state),
         });
         list.push(acquireRewardEquipmentInstance(def, state.purchasedPermits));
         writeEquipment(list);

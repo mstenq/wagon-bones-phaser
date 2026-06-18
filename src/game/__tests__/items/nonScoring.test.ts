@@ -34,10 +34,11 @@ import {
   processEquipmentOnShopEnd,
   processEquipmentOnPackSkipped,
 } from '../../EquipmentEffects';
-import { getRandomSupplyDef } from '../../ConsumablesSystem';
+import { getRandomSupplyDef, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
 import { resolveChance, resolveEffectParam } from '../../effectParams';
 import { HandType } from '../../types';
 import { GAMEPLAY } from '../../Constants';
+import { initRunRng } from '../../RunRng';
 
 beforeEach(() => resetDieIds());
 
@@ -709,6 +710,23 @@ describe('PACK_OPEN_SUPPLY_CHANCE: Leftovers', () => {
     expect(result).toBe(false);
   });
 
+  test('avoids owned supply cards without counterfeit_goods', async () => {
+    const { gameFacade } = await import('../../facade');
+    const { getPackDefById } = await import('../../BoosterPackSystem');
+    const ownedId = 'coffee_tin';
+    const owned = getSupplyDefById(ownedId)!;
+    const pack = getPackDefById('equipment_standard')!;
+
+    for (let i = 0; i < 50; i++) {
+      const { player } = setupGame({ equipment: [item('leftovers')], profession: 'cook' });
+      player.consumables = [createConsumableInstance(owned)];
+      initRunRng(`leftovers-no-dupe-${i}`);
+      gameFacade.pack.openPack(pack);
+      expect(player.consumables.length).toBe(2);
+      expect(player.consumables.filter((c) => c.def.id === ownedId).length).toBe(1);
+    }
+  });
+
   test('Mirror Lake doubles pack-open supply roll attempts', () => {
     setupGame({ equipment: [] });
     let aloneGranted = 0;
@@ -826,7 +844,7 @@ describe('XMULT_RISKY: Nitro (end of round)', () => {
     // Run many times — extremely unlikely to destroy (1/1000)
     let destroyed = false;
     for (let i = 0; i < 100; i++) {
-      const result = processEndOfRound([inst]);
+      const result = processEndOfRound([inst], { isLegRoundEnd: true });
       if (result.destroyedIndices.length > 0) {
         destroyed = true;
         break;
@@ -1247,6 +1265,20 @@ describe('ROUND_START_SUPPLY: Supply Drop', () => {
     const consumablesBefore = player.consumables.length;
     game.startRound();
     expect(player.consumables.length).toBe(consumablesBefore + 1);
+  });
+
+  test('avoids owned supply cards without counterfeit_goods', () => {
+    const ownedId = 'coffee_tin';
+    const owned = getSupplyDefById(ownedId)!;
+
+    for (let i = 0; i < 50; i++) {
+      const { game, player } = setupGame({ equipment: [item('supply_drop')] });
+      player.consumables = [createConsumableInstance(owned)];
+      initRunRng(`supply-drop-no-dupe-${i}`);
+      game.startRound();
+      expect(player.consumables.length).toBe(2);
+      expect(player.consumables.filter((c) => c.def.id === ownedId).length).toBe(1);
+    }
   });
 
   test('Mirror Lake does not change score vs supply drop alone', () => {

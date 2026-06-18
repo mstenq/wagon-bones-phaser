@@ -396,7 +396,9 @@ describe('Loaded Dice + Dynamite (ADD_MULT_RISKY)', () => {
     const trials = 10000;
 
     for (let i = 0; i < trials; i++) {
-      const { destroyedIndices } = processEndOfRound([item('dynamite'), item('loaded_dice')]);
+      const { destroyedIndices } = processEndOfRound([item('dynamite'), item('loaded_dice')], {
+        isLegRoundEnd: true,
+      });
       if (destroyedIndices.includes(0)) destroyed++;
     }
 
@@ -411,7 +413,7 @@ describe('Loaded Dice + Dynamite (ADD_MULT_RISKY)', () => {
     const trials = 10000;
 
     for (let i = 0; i < trials; i++) {
-      const { destroyedIndices } = processEndOfRound([item('dynamite')]);
+      const { destroyedIndices } = processEndOfRound([item('dynamite')], { isLegRoundEnd: true });
       if (destroyedIndices.includes(0)) destroyed++;
     }
 
@@ -431,7 +433,9 @@ describe('Loaded Dice + Nitro (XMULT_RISKY)', () => {
     const trials = 100000;
 
     for (let i = 0; i < trials; i++) {
-      const { destroyedIndices } = processEndOfRound([item('nitro'), item('loaded_dice')]);
+      const { destroyedIndices } = processEndOfRound([item('nitro'), item('loaded_dice')], {
+        isLegRoundEnd: true,
+      });
       if (destroyedIndices.includes(0)) destroyed++;
     }
 
@@ -725,7 +729,10 @@ describe('Loaded Dice stacking (2 copies = 4x)', () => {
     const runs = 10000;
 
     for (let i = 0; i < runs; i++) {
-      const { destroyedIndices } = processEndOfRound([item('dynamite'), item('loaded_dice'), item('loaded_dice')]);
+      const { destroyedIndices } = processEndOfRound(
+        [item('dynamite'), item('loaded_dice'), item('loaded_dice')],
+        { isLegRoundEnd: true },
+      );
       if (destroyedIndices.includes(0)) destroyed++;
     }
 

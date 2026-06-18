@@ -10,7 +10,7 @@ import { GAMEPLAY } from './Constants';
 import { isDiceScoringDisabledByBoss } from './BossEffectsSystem';
 import { walkEquipmentPerSlot } from './equipmentUtils';
 import {
-  buildHeldRetriggerSources,
+  computeHeldDieRetriggers,
   heldDieHasRetriggerableEffects,
   pushRetriggerAgainEvent,
 } from './effects/retriggerAnim';
@@ -160,10 +160,6 @@ export { processEndOfRound, willEndLegRoundOnDayEnd } from './effects/lifecycle/
 
 // ─── Held-in-Hand Processing (SCORE Step 4) ───
 
-function getHeldDieTriggerCount(die: Die, doubleDownCount: number): number {
-  return 1 + (die.sticker === 'red_bullet' ? 1 : 0) + doubleDownCount;
-}
-
 interface HeldInHandResult {
   bonusMult: Decimal;
   xMult: Decimal;
@@ -183,9 +179,6 @@ export function processHeldInHand(
   scoredHandType?: HandType,
 ): HeldInHandResult {
   const animEvents: ScoreAnimEvent[] = [];
-
-  const heldRetriggerSources = buildHeldRetriggerSources(equipment);
-  const doubleDownCount = heldRetriggerSources.length;
 
   const heldCtx: ScoringPipelineContext = {
     handResult: {
@@ -225,9 +218,9 @@ export function processHeldInHand(
   for (const die of heldDice) {
     if (isDiceScoringDisabledByBoss(die)) continue;
 
-    const triggers = getHeldDieTriggerCount(die, doubleDownCount);
+    const { triggerCount, equipSources: heldRetriggerSources } = computeHeldDieRetriggers(die, equipment);
 
-    for (let t = 0; t < triggers; t++) {
+    for (let t = 0; t < triggerCount; t++) {
       if (t > 0 && heldDieHasRetriggerableEffects(die, heldDice, equipment, scoredHandType)) {
         pushRetriggerAgainEvent(animEvents, die, t, heldRetriggerSources);
       }
@@ -268,8 +261,6 @@ export function processGoldHeldAtRoundEnd(
   heldDice: Die[],
   equipment: EquipmentInstance[],
 ): { moneyEarned: number; animEvents: ScoreAnimEvent[] } {
-  const heldRetriggerSources = buildHeldRetriggerSources(equipment);
-  const doubleDownCount = heldRetriggerSources.length;
   const animEvents: ScoreAnimEvent[] = [];
   let moneyEarned = 0;
   const perTrigger = GAMEPLAY.GOLD_DICE_HELD_MONEY;
@@ -277,8 +268,8 @@ export function processGoldHeldAtRoundEnd(
 
   for (const die of heldDice) {
     if (!enhancementHeldGoldPayout(die.enhancement, alchemy)) continue;
-    const triggers = getHeldDieTriggerCount(die, doubleDownCount);
-    for (let t = 0; t < triggers; t++) {
+    const { triggerCount, equipSources: heldRetriggerSources } = computeHeldDieRetriggers(die, equipment);
+    for (let t = 0; t < triggerCount; t++) {
       pushRetriggerAgainEvent(animEvents, die, t, heldRetriggerSources);
       moneyEarned += perTrigger;
       animEvents.push({
@@ -301,16 +292,14 @@ export function processBlueMoonHeldAtRoundEnd(
 ): { consumablesGranted: string[]; animEvents: ScoreAnimEvent[] } {
   if (!scoredHandType) return { consumablesGranted: [], animEvents: [] };
 
-  const heldRetriggerSources = buildHeldRetriggerSources(equipment);
-  const doubleDownCount = heldRetriggerSources.length;
   const animEvents: ScoreAnimEvent[] = [];
   const consumablesGranted: string[] = [];
   const tgDef = getTrailGuideDefForHand(scoredHandType);
 
   for (const die of heldDice) {
     if (die.sticker !== 'blue_moon') continue;
-    const triggers = getHeldDieTriggerCount(die, doubleDownCount);
-    for (let t = 0; t < triggers; t++) {
+    const { triggerCount, equipSources: heldRetriggerSources } = computeHeldDieRetriggers(die, equipment);
+    for (let t = 0; t < triggerCount; t++) {
       pushRetriggerAgainEvent(animEvents, die, t, heldRetriggerSources);
       consumablesGranted.push(tgDef.id);
       animEvents.push({

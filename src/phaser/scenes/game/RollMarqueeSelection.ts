@@ -11,7 +11,7 @@ export type RollMarqueeSelectionDeps = {
   canUseMarquee: () => boolean;
   getRollSprites: () => DiceSprite[];
   getZoneBounds: () => { width: number; height: number; cx: number; cy: number };
-  onSpriteHit: (sprite: DiceSprite, playSound: boolean) => void;
+  onSpriteHit: (sprite: DiceSprite, playSound: boolean, isRightClick: boolean) => void;
   onSelectionComplete: () => void;
   onDragBegin: () => void;
 };
@@ -23,6 +23,8 @@ export class RollMarqueeSelection {
   private marqueeStartY = 0;
   private marqueeActive = false;
   private marqueePointerId: number | null = null;
+  /** Left-drag = select/deselect; right-drag = lock/unlock (matches single-click die rules). */
+  private marqueeIsRightClick = false;
   private detachMarqueeTrack: (() => void) | null = null;
 
   constructor(private readonly deps: RollMarqueeSelectionDeps) {}
@@ -37,10 +39,12 @@ export class RollMarqueeSelection {
 
     this.rollMarqueeZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (!this.deps.canUseMarquee()) return;
+      if (!pointer.leftButtonDown() && !pointer.rightButtonDown()) return;
 
       this.marqueeStartX = pointer.worldX;
       this.marqueeStartY = pointer.worldY;
       this.marqueePointerId = pointer.id;
+      this.marqueeIsRightClick = pointer.rightButtonDown();
       this.marqueeActive = false;
 
       this.stopTracking();
@@ -98,7 +102,7 @@ export class RollMarqueeSelection {
       const hits = this.getDiceInMarquee(rect);
       let playSound = true;
       for (const sprite of hits) {
-        this.deps.onSpriteHit(sprite, playSound);
+        this.deps.onSpriteHit(sprite, playSound, this.marqueeIsRightClick);
         playSound = false;
       }
       if (hits.length > 0) this.deps.onSelectionComplete();
@@ -113,9 +117,10 @@ export class RollMarqueeSelection {
     }
     const rect = this.getMarqueeRect(x1, y1, x2, y2);
     this.marqueeGfx.clear();
-    this.marqueeGfx.fillStyle(DICE.SELECTED_STROKE, MARQUEE.FILL_ALPHA);
+    const stroke = this.marqueeIsRightClick ? MARQUEE.LOCK_STROKE : DICE.SELECTED_STROKE;
+    this.marqueeGfx.fillStyle(stroke, MARQUEE.FILL_ALPHA);
     this.marqueeGfx.fillRect(rect.x, rect.y, rect.width, rect.height);
-    this.marqueeGfx.lineStyle(2, DICE.SELECTED_STROKE, 1);
+    this.marqueeGfx.lineStyle(2, stroke, 1);
     this.marqueeGfx.strokeRect(rect.x, rect.y, rect.width, rect.height);
   }
 

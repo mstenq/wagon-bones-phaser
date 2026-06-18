@@ -78,7 +78,7 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
     Math.random = () => 0.1; // 0.1 < 1/6 → explodes
     try {
       const equip = [item('horseshoe'), item('dynamite')];
-      const result = processEndOfRound(equip);
+      const result = processEndOfRound(equip, { isLegRoundEnd: true });
       expect(result.destroyedIndices).toContain(1); // dynamite is at index 1
     } finally {
       Math.random = original;
@@ -90,8 +90,26 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
     Math.random = () => 0.5; // 0.5 > 1/6 → survives
     try {
       const equip = [item('horseshoe'), item('dynamite')];
-      const result = processEndOfRound(equip);
+      const result = processEndOfRound(equip, { isLegRoundEnd: true });
       expect(result.destroyedIndices).toEqual([]);
+    } finally {
+      Math.random = original;
+    }
+  });
+
+  test('does not detonate on mid-round day end', () => {
+    const original = Math.random;
+    Math.random = () => 0.1;
+    try {
+      const { game, player } = setupGame({
+        equipment: [item('horseshoe'), item('dynamite')],
+        dice: diceWithValue(5, 50),
+      });
+      game.startRound();
+      game.config.targetMiles = D(999_999);
+      playScoredDayAndEnd(game, { avoidWin: true });
+      expect(player.equipment.map((e) => e.def.id)).toEqual(['horseshoe', 'dynamite']);
+      expect(player.dynamiteSelfDestructed).toBe(false);
     } finally {
       Math.random = original;
     }
@@ -106,10 +124,16 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
         dice: diceWithValue(5, 50),
       });
       game.startRound();
-      const { deferredDestroyIndices } = playScoredDayAndEnd(game, {
-        avoidWin: true,
-        endDay: { deferEquipmentDestructionAnimation: true },
-      });
+      game.config.targetMiles = D(999_999);
+      const maxDays = getRoundState()!.config.maxDays;
+      let deferredDestroyIndices: number[] = [];
+      for (let day = 0; day < maxDays; day++) {
+        const result = playScoredDayAndEnd(game, {
+          avoidWin: true,
+          endDay: { deferEquipmentDestructionAnimation: true },
+        });
+        deferredDestroyIndices = result.deferredDestroyIndices;
+      }
       expect(deferredDestroyIndices).toEqual([1]);
       expect(player.equipment).toHaveLength(3);
       roundActions.applyEndOfRoundDestructions(deferredDestroyIndices);
@@ -137,13 +161,11 @@ describe('ADD_MULT_RISKY: Dynamite', () => {
         dice: diceWithValue(5, 50),
       });
       game.startRound();
-      // Play through a day: SELECT → ROLL → SCORE → DAY_END
-      const diceIds = game.state.hand.slice(0, 5).map((d) => d.id);
-      game.selectForRoll(diceIds);
-      const scoredIds = game.state.rolledDice.slice(0, 2).map((d) => d.id);
-      game.selectForScore(scoredIds);
-      game.calculateScore();
-      game.endDay();
+      game.config.targetMiles = D(999_999);
+      const maxDays = getRoundState()!.config.maxDays;
+      for (let day = 0; day < maxDays; day++) {
+        playScoredDayAndEnd(game, { avoidWin: true });
+      }
       // Dynamite should be gone, horseshoe remains; unlocks Nitro in shops
       expect(player.equipment.length).toBe(1);
       expect(player.equipment[0].def.id).toBe('horseshoe');

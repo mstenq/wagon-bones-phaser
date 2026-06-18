@@ -2,7 +2,7 @@ import type { Die, HandType, ScoreAnimEvent } from '../types';
 import type { EquipmentInstance } from '../ItemsSystem';
 import { walkEquipmentPerSlot } from '../equipmentUtils';
 import { isDiceScoringDisabledByBoss } from '../BossEffectsSystem';
-import { dieMatchesPip, hasStackedDeck, isLowestHeldDieTarget } from './helpers';
+import { collectPipRetriggerSources, dieMatchesPip, hasStackedDeck, isLowestHeldDieTarget } from './helpers';
 import { enhancementHeldSteelXMult, hasAlchemyKit } from '../alchemyKit';
 
 export type RetriggerEquipSource = { equipIndex: number };
@@ -19,6 +19,19 @@ export function buildHeldRetriggerSources(equipment: EquipmentInstance[]): Retri
   });
 
   return sources;
+}
+
+export function computeHeldDieRetriggers(
+  die: Die,
+  equipment: EquipmentInstance[],
+): { triggerCount: number; equipSources: RetriggerEquipSource[] } {
+  const stackedDeck = hasStackedDeck(equipment);
+  const pipSources = collectPipRetriggerSources(die, equipment, stackedDeck);
+  const globalSources = buildHeldRetriggerSources(equipment);
+  const equipSources = [...pipSources, ...globalSources];
+  const stickerBonus = die.sticker === 'red_bullet' ? 1 : 0;
+  const triggerCount = 1 + stickerBonus + equipSources.length;
+  return { triggerCount, equipSources };
 }
 
 /**
@@ -46,7 +59,11 @@ export function heldDieHasRetriggerableEffects(
       found = true;
       return false;
     }
-    if (equip.def.effectType === 'HELD_PIP_XMULT' || equip.def.effectType === 'HELD_PIP_MULT') {
+    if (
+      equip.def.effectType === 'HELD_PIP_XMULT' ||
+      equip.def.effectType === 'HELD_PIP_MULT' ||
+      equip.def.effectType === 'PIP_XMULT'
+    ) {
       const pip = equip.def.effectParams.pip as number;
       if (dieMatchesPip(die, pip, equipment, stackedDeck)) {
         found = true;

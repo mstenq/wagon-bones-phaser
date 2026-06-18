@@ -34,6 +34,16 @@ effectRegistry.registerHeldDie('HELD_PIP_MULT', (ctx, equip, _idx, die, _t) => {
   }
 });
 
+effectRegistry.registerHeldDie('PIP_XMULT', (ctx, equip, _idx, die, _t) => {
+  const p = equip.def.effectParams as Record<string, unknown>;
+  if (dieMatchesPip(die, p.pip as number, ctx.equipment, ctx.hasStackedDeck)) {
+    const xVal = p.value as number;
+    multiplyCtxXMult(ctx, xVal);
+    ctx.animEvents.push({ target: { kind: 'both', dieId: die.id, equipIndex: _idx }, popupType: 'xmult', value: xVal });
+    console.log(`  [held] Die ${die.id} → ${equip.def.name}: x${xVal} mult (xMult: ${ctx.xMult})`);
+  }
+});
+
 effectRegistry.registerHeldDie('HELD_ENHANCED_MONEY', (ctx, equip, _idx, die, _t) => {
   if (die.enhancement !== null) {
     const p = equip.def.effectParams as Record<string, unknown>;
