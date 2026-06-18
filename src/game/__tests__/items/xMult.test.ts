@@ -322,6 +322,64 @@ describe('New xMult equipment', () => {
     expect(result.mult).toBeMult(1);
   });
 
+  describe('SPLIT_TRAIL + STACKED_DECK', () => {
+    const stacked = () => item('stacked_deck');
+    const splitTrail = () => item('split_trail');
+    const loaded = (value: number) => die({ value, enhancement: 'loaded' });
+    const twoPairAllEven = () => [loaded(2), loaded(2), loaded(4), loaded(4)];
+
+    test('two loaded evens with no non-loaded dice triggers x2.5', () => {
+      const { result } = calculateTestScore({
+        scoredDice: twoPairAllEven(),
+        equipment: [stacked(), splitTrail()],
+      });
+      // TWO_PAIR: baseMult=2, x2.5 from split trail => 5
+      expect(result.mult).toBeMultCloseTo(5, 5);
+    });
+
+    test('two loaded odds with no non-loaded dice triggers x2.5', () => {
+      const { result } = calculateTestScore({
+        scoredDice: [loaded(1), loaded(1), loaded(3), loaded(3)],
+        equipment: [stacked(), splitTrail()],
+      });
+      expect(result.mult).toBeMultCloseTo(5, 5);
+    });
+
+    test('standard even plus loaded even triggers x2.5', () => {
+      const { result } = calculateTestScore({
+        scoredDice: [die({ value: 2 }), loaded(2), die({ value: 4 }), die({ value: 4 })],
+        equipment: [stacked(), splitTrail()],
+      });
+      expect(result.mult).toBeMultCloseTo(5, 5);
+    });
+
+    test('one loaded die when non-loaded already has both parities still triggers', () => {
+      const { result } = calculateTestScore({
+        scoredDice: [die({ value: 1 }), die({ value: 2 }), die({ value: 3 }), loaded(4)],
+        equipment: [stacked(), splitTrail()],
+      });
+      // FOUR_STRAIGHT: baseMult=2, x2.5 => 5
+      expect(result.mult).toBeMultCloseTo(5, 5);
+    });
+
+    test('single loaded die alone does not trigger split trail', () => {
+      const { result } = calculateTestScore({
+        scoredDice: [loaded(2)],
+        equipment: [stacked(), splitTrail()],
+      });
+      // HIGH_VALUE: baseMult=1, hand type gate blocks split trail
+      expect(result.mult).toBeMult(1);
+    });
+
+    test('without stacked deck all-even faces do not trigger split trail', () => {
+      const { result } = calculateTestScore({
+        scoredDice: [die({ value: 2 }), loaded(2), die({ value: 4 }), die({ value: 4 })],
+        equipment: [splitTrail()],
+      });
+      expect(result.mult).toBeMult(2);
+    });
+  });
+
   test('roulette wheel applies rolled xMult when scoring', () => {
     const inst = item('roulette_wheel');
     const { result } = calculateTestScore({

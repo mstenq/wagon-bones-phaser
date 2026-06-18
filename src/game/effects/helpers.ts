@@ -233,6 +233,38 @@ export function dieMatchesParity(
   return false;
 }
 
+/**
+ * Split Trail parity: scored hand has both even and odd values.
+ * Unlike dieMatchesParity, a single loaded die cannot satisfy both sides at once —
+ * non-loaded face parity is resolved first, then each loaded die fills one missing side.
+ */
+export function scoredHandHasBothParities(
+  scoringDice: Die[],
+  equipment: EquipmentInstance[],
+  stackedDeck?: boolean,
+): boolean {
+  const resolvedStacked = stackedDeck ?? hasStackedDeck(equipment);
+  if (!resolvedStacked) {
+    return scoringDice.some((d) => d.value % 2 === 0) && scoringDice.some((d) => d.value % 2 === 1);
+  }
+
+  const nonLoaded = scoringDice.filter((d) => d.enhancement !== 'loaded');
+  let hasEven = nonLoaded.some((d) => d.value % 2 === 0);
+  let hasOdd = nonLoaded.some((d) => d.value % 2 === 1);
+  if (hasEven && hasOdd) return true;
+
+  for (const die of scoringDice) {
+    if (die.enhancement !== 'loaded') continue;
+    if (!hasEven) {
+      hasEven = true;
+    } else if (!hasOdd) {
+      hasOdd = true;
+    }
+    if (hasEven && hasOdd) return true;
+  }
+  return false;
+}
+
 /** Boss effects are negated by Saint Elmo's Shield or selling Sheriff's Badge this round. */
 export function isBossEffectNegated(): boolean {
   const state = getRunState();

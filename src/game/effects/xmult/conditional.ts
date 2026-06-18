@@ -2,7 +2,7 @@
 
 import { effectRegistry } from '../registry';
 import { checkLoadedChance } from '../../equipmentUtils';
-import { handTypeMatches, multiplyCtxXMult } from '../helpers';
+import { handTypeMatches, multiplyCtxXMult, scoredHandHasBothParities } from '../helpers';
 import { HandType } from '../../types';
 import { getRunState } from '../../store/runStore';
 
@@ -126,9 +126,7 @@ effectRegistry.registerXMult('SPLIT_TRAIL', (ctx, equip, index) => {
   ) {
     return;
   }
-  const hasEven = ctx.scoringDice.some((die) => die.value % 2 === 0);
-  const hasOdd = ctx.scoringDice.some((die) => die.value % 2 === 1);
-  if (!hasEven || !hasOdd) return;
+  if (!scoredHandHasBothParities(ctx.scoringDice, ctx.equipment, ctx.hasStackedDeck)) return;
   const xVal = (equip.def.effectParams as Record<string, unknown>).value as number;
   multiplyCtxXMult(ctx, xVal);
   ctx.animEvents.push({ target: { kind: 'equip', equipIndex: index }, popupType: 'xmult', value: xVal });

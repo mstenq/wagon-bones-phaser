@@ -11,6 +11,7 @@ export {
   applyHolyAuraXMult,
   dieMatchesPip,
   dieMatchesParity,
+  scoredHandHasBothParities,
   hasStackedDeck,
   isBossEffectNegated,
 } from './helpers';
