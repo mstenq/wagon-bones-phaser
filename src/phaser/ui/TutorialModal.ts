@@ -34,12 +34,7 @@ function measureTutorialBodyHeight(scene: Scene, message: string, wordWrapWidth:
   return textH;
 }
 
-function computeTutorialPanelHeight(
-  scene: Scene,
-  message: string,
-  modalHeight: number,
-  panelWidth: number,
-): number {
+function computeTutorialPanelHeight(scene: Scene, message: string, modalHeight: number, panelWidth: number): number {
   const wordWrapWidth = panelWidth - BODY_SIDE_INSET;
   const textH = measureTutorialBodyHeight(scene, message, wordWrapWidth);
   const contentH = BODY_TOP + textH + BODY_BUTTON_GAP + BUTTON_HEIGHT + BUTTON_BOTTOM_OFFSET;

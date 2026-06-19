@@ -331,8 +331,7 @@ export class GameScene extends Scene {
         cx: this.contentCX,
         cy: (this.scale.height - this.hudBottomReserve) / 2,
       }),
-      onSpriteHit: (sprite, playSound, isRightClick) =>
-        this.onRollDieClick(sprite, isRightClick, playSound, false),
+      onSpriteHit: (sprite, playSound, isRightClick) => this.onRollDieClick(sprite, isRightClick, playSound, false),
       onSelectionComplete: () => this.updateRollButtons(),
       onDragBegin: () => {
         this.wasDragging = true;
