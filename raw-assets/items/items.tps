@@ -74,7 +74,7 @@
         <key>textureSubPath</key>
         <string></string>
         <key>textureFormat</key>
-        <enum type="SettingsBase::TextureFormat">png8</enum>
+        <enum type="SettingsBase::TextureFormat">png</enum>
         <key>borderPadding</key>
         <uint>0</uint>
         <key>maxTextureSize</key>
@@ -234,6 +234,7 @@
             <key type="filename">gold_tooth.png</key>
             <key type="filename">golden_spike.png</key>
             <key type="filename">graverobber.png</key>
+            <key type="filename">gravity.png</key>
             <key type="filename">guardian_totem.png</key>
             <key type="filename">guide_lantern.png</key>
             <key type="filename">hardtack.png</key>
@@ -268,7 +269,6 @@
             <key type="filename">odd_fellow.png</key>
             <key type="filename">offering_bowl.png</key>
             <key type="filename">oil_baron.png</key>
-            <key type="filename">old_calendar.png</key>
             <key type="filename">one_armed_bandit.png</key>
             <key type="filename">one_eyed_jack.png</key>
             <key type="filename">one_man_posse.png</key>
@@ -281,6 +281,7 @@
             <key type="filename">penny_pincher.png</key>
             <key type="filename">phantom_wagon.png</key>
             <key type="filename">pioneer_spirit.png</key>
+            <key type="filename">pocket_watch.png</key>
             <key type="filename">posse_wagon.png</key>
             <key type="filename">potluck.png</key>
             <key type="filename">prospectors_pouch.png</key>
@@ -475,7 +476,6 @@
                     <filename>odd_fellow.png</filename>
                     <filename>offering_bowl.png</filename>
                     <filename>oil_baron.png</filename>
-                    <filename>old_calendar.png</filename>
                     <filename>one_armed_bandit.png</filename>
                     <filename>one_eyed_jack.png</filename>
                     <filename>one_man_posse.png</filename>
@@ -558,6 +558,8 @@
                     <filename>nightshard.png</filename>
                     <filename>shadowpaw.png</filename>
                     <filename>skullwing.png</filename>
+                    <filename>gravity.png</filename>
+                    <filename>pocket_watch.png</filename>
                 </array>
             </struct>
         </map>

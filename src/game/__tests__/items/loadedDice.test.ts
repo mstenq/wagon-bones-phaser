@@ -1,6 +1,15 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import '../setup';
-import { die, diceWithValue, item, itemWithState, setupGame, calculateTestScore, resetDieIds } from '../testHelpers';
+import {
+  die,
+  diceWithValue,
+  item,
+  itemWithState,
+  setupGame,
+  calculateTestScore,
+  resetDieIds,
+  seedTestRoll,
+} from '../testHelpers';
 import {
   processEndOfRound,
   processPreScoreHandUpgrades,
@@ -8,7 +17,7 @@ import {
   processEquipmentOnRoundStart,
 } from '../../EquipmentEffects';
 import { PACK_ONLY_FRONTIER_IDS } from '../../Constants';
-import { getLoadedDiceMultiplier } from '../../equipmentUtils';
+import { getLoadedDiceMultiplier, getGravityModeFace, getGravityRollChance } from '../../equipmentUtils';
 import { computeScoredDieRetriggers } from '../../effects/scoredRetrigger';
 import { gt } from '../../scoreMath';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
@@ -16,6 +25,9 @@ import { getItemAuraById } from '../../ItemsSystem';
 import { HandType } from '../../types';
 import { rollDie } from '../../DiceSystem';
 import { getPlayerState, resetPlayerState } from '../testRunPlayer';
+import { initRunRng } from '../../RunRng';
+import { getRoundState } from '../../store/roundStore';
+import { roundActions } from '../../store';
 import '../../effects';
 
 beforeEach(() => {
@@ -729,10 +741,9 @@ describe('Loaded Dice stacking (2 copies = 4x)', () => {
     const runs = 10000;
 
     for (let i = 0; i < runs; i++) {
-      const { destroyedIndices } = processEndOfRound(
-        [item('dynamite'), item('loaded_dice'), item('loaded_dice')],
-        { isLegRoundEnd: true },
-      );
+      const { destroyedIndices } = processEndOfRound([item('dynamite'), item('loaded_dice'), item('loaded_dice')], {
+        isLegRoundEnd: true,
+      });
       if (destroyedIndices.includes(0)) destroyed++;
     }
 
@@ -811,6 +822,193 @@ describe('Loaded Dice + Bless supply card', () => {
 
     expect(result.success).toBe(false);
     expect(result.failReason).toBe('All equipment already has auras!');
+  });
+});
+
+// ─── GRAVITY ───
+
+describe('GRAVITY: helpers', () => {
+  test('getGravityRollChance follows the odds table', () => {
+    const equipment = [item('horseshoe')];
+    expect(getGravityRollChance(0, equipment)).toBe(0);
+    expect(getGravityRollChance(1, equipment)).toBe(0);
+    expect(getGravityRollChance(2, equipment)).toBeCloseTo(1 / 6);
+    expect(getGravityRollChance(3, equipment)).toBeCloseTo(1 / 3);
+    expect(getGravityRollChance(4, equipment)).toBeCloseTo(1 / 2);
+    expect(getGravityRollChance(5, equipment)).toBe(1);
+    expect(getGravityRollChance(8, equipment)).toBe(1);
+  });
+
+  test('getGravityRollChance scales with Loaded Dice multiplier', () => {
+    const equipment = [item('loaded_dice'), item('loaded_dice')];
+    expect(getGravityRollChance(2, equipment)).toBeCloseTo(2 / 3);
+    expect(getGravityRollChance(3, equipment)).toBe(1);
+  });
+
+  test('getGravityModeFace ignores stone dice and tie-breaks to highest pip', () => {
+    const sixes = diceWithValue(6, 2);
+    const eights = diceWithValue(8, 2);
+    expect(getGravityModeFace([...sixes, ...eights])).toEqual({ face: 8, count: 2 });
+    expect(getGravityModeFace([die({ value: 6 }), die({ enhancement: 'stone', value: 0 })])).toBeNull();
+    expect(getGravityModeFace([die({ value: 4 })])).toBeNull();
+  });
+});
+
+describe('GRAVITY: composition with loaded/cup', () => {
+  test('gravity + gamblers_dice_cup gives ~1/6 for loaded target and ~1/6 for mode face', () => {
+    const rolled = [die({ value: 3 }), die({ value: 3 }), die({ value: 7 })];
+    setupGame({ equipment: [item('gravity'), item('gamblers_dice_cup')], dice: rolled });
+    getPlayerState().setLoadedDieTarget(1);
+    seedTestRoll(rolled);
+
+    let face1 = 0;
+    let face3 = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      const result = rollDie(die({ value: 0 }));
+      if (result.value === 1) face1++;
+      if (result.value === 3) face3++;
+    }
+
+    expect(face1 / trials).toBeGreaterThan(0.15);
+    expect(face1 / trials).toBeLessThan(0.185);
+    expect(face3 / trials).toBeGreaterThan(0.15);
+    expect(face3 / trials).toBeLessThan(0.185);
+  });
+
+  test('gravity + loaded enhancement gives ~1/3 for loaded target and ~1/6 for mode face', () => {
+    const rolled = [die({ value: 3 }), die({ value: 3 }), die({ value: 7 })];
+    setupGame({ equipment: [item('gravity')], dice: rolled });
+    getPlayerState().setLoadedDieTarget(1);
+    seedTestRoll(rolled);
+
+    let face1 = 0;
+    let face3 = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      const result = rollDie(die({ enhancement: 'loaded', value: 0 }));
+      if (result.value === 1) face1++;
+      if (result.value === 3) face3++;
+    }
+
+    expect(face1 / trials).toBeGreaterThan(0.31);
+    expect(face1 / trials).toBeLessThan(0.36);
+    expect(face3 / trials).toBeGreaterThan(0.15);
+    expect(face3 / trials).toBeLessThan(0.185);
+  });
+
+  test('guaranteed gravity overwhelms loaded enhancement', () => {
+    const rolled = diceWithValue(3, 5);
+    setupGame({ equipment: [item('gravity')], dice: rolled });
+    getPlayerState().setLoadedDieTarget(1);
+    seedTestRoll(rolled);
+
+    const result = rollDie(die({ enhancement: 'loaded', value: 0 }));
+    expect(result.value).toBe(3);
+  });
+
+  test('guaranteed gravity overwhelms gamblers_dice_cup', () => {
+    const rolled = diceWithValue(3, 5);
+    setupGame({ equipment: [item('gravity'), item('gamblers_dice_cup')], dice: rolled });
+    getPlayerState().setLoadedDieTarget(1);
+    seedTestRoll(rolled);
+
+    const result = rollDie(die({ value: 0 }));
+    expect(result.value).toBe(3);
+  });
+
+  test('same-face stacking combines chances capped at 1', () => {
+    const rolled = [die({ value: 3 }), die({ value: 3 }), die({ value: 7 })];
+    setupGame({ equipment: [item('gravity'), item('gamblers_dice_cup')], dice: rolled });
+    getPlayerState().setLoadedDieTarget(3);
+    seedTestRoll(rolled);
+
+    let face3 = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ value: 0 })).value === 3) face3++;
+    }
+
+    expect(face3 / trials).toBeGreaterThan(0.31);
+    expect(face3 / trials).toBeLessThan(0.36);
+  });
+});
+
+describe('GRAVITY: rolling', () => {
+  test('does not bias the initial roll (SELECT phase, no rolled dice yet)', () => {
+    const rolled = diceWithValue(6, 5);
+    setupGame({ equipment: [item('gravity')], dice: rolled });
+    initRunRng('GRAVITYFIRST');
+    roundActions.patch({ phase: 'SELECT', rolledDice: [] });
+    const result = rollDie(die({ value: 1 }));
+    expect(result.value).toBe(4);
+  });
+
+  test('guarantees the mode face on reroll with five matches', () => {
+    const rolled = diceWithValue(6, 5);
+    setupGame({ equipment: [item('gravity')], dice: rolled });
+    seedTestRoll(rolled);
+    const rerolled = rollDie(die({ value: 1 }));
+    expect(rerolled.value).toBe(6);
+  });
+
+  test('biases toward mode face on reroll when gravity bucket hits', () => {
+    const rolled = [die({ value: 6 }), die({ value: 6 }), die({ value: 3 })];
+    setupGame({ equipment: [item('gravity')], dice: rolled });
+    initRunRng('GRAV2');
+    seedTestRoll(rolled);
+    const rerolled = rollDie(die({ value: 1 }));
+    expect(rerolled.value).toBe(6);
+  });
+
+  test('player reroll path applies gravity with five matching faces', () => {
+    const rolled = diceWithValue(6, 5);
+    const { game } = setupGame({ equipment: [item('gravity')], dice: rolled });
+    game.startRound();
+    const handIds = rolled.map((d) => d.id);
+    game.selectForRoll(handIds);
+    roundActions.patch({
+      rolledDice: rolled.map((d) => ({ id: d.id, value: 6 })),
+    });
+    const rerollId = handIds[0]!;
+    expect(game.reroll([rerollId])).toBe(true);
+    const ref = getRoundState()!.rolledDice.find((r) => r.id === rerollId);
+    expect(ref?.value).toBe(6);
+  });
+});
+
+describe('GRAVITY: item definition', () => {
+  test('has correct properties', () => {
+    const inst = item('gravity');
+    expect(inst.def.effectType).toBe('GRAVITY');
+    expect(inst.def.cost).toBe(8);
+    expect(inst.def.rarity).toBe('rare');
+  });
+
+  test('does not itself affect scoring', () => {
+    const { result: withGravity } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('gravity')],
+    });
+    const { result: without } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [],
+    });
+    expect(withGravity.miles).toBeMiles(without.miles);
+  });
+});
+
+describe('Gravity cannot be copied', () => {
+  test('Mirror Lake cannot copy Gravity', () => {
+    const { result: withCopy } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('mirror_lake'), item('gravity')],
+    });
+    const { result: justGravity } = calculateTestScore({
+      scoredDice: diceWithValue(5, 2),
+      equipment: [item('gravity')],
+    });
+    expect(withCopy.miles).toBeMiles(justGravity.miles);
   });
 });
 

@@ -5,7 +5,7 @@ import { COPY_INCOMPATIBLE_EFFECTS, LIFECYCLE_MIRROR_DOUBLES } from './Constants
 import { EquipmentInstance } from './ItemsSystem';
 import { isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { rngFloat, type RngStream } from './RunRng';
-import type { DiceEnhancement } from './types';
+import type { Die, DiceEnhancement } from './types';
 
 export type UnresolvedCopyBehavior = 'none' | 'skip';
 
@@ -200,6 +200,41 @@ export function getLoadedFaceRollChance(
     return Math.min(1, ldm / 6);
   }
   return 0;
+}
+
+export function hasGravityEquipment(equipment: { def: { effectType: string } }[]): boolean {
+  return equipment.some((equip) => equip.def.effectType === 'GRAVITY');
+}
+
+/** Most common face among rolled dice (stone excluded). Tie-break: highest pip. */
+export function getGravityModeFace(rolledDice: Die[]): { face: number; count: number } | null {
+  let bestFace = -1;
+  let bestCount = 0;
+  const freq = new Map<number, number>();
+  for (const d of rolledDice) {
+    if (d.enhancement === 'stone' || d.value < 1 || d.value > 12) continue;
+    const count = (freq.get(d.value) ?? 0) + 1;
+    freq.set(d.value, count);
+    if (count > bestCount || (count === bestCount && d.value > bestFace)) {
+      bestFace = d.value;
+      bestCount = count;
+    }
+  }
+  if (bestCount < 2) return null;
+  return { face: bestFace, count: bestCount };
+}
+
+/** Per-die gravity chance from matching count (× Loaded Dice multiplier). */
+export function getGravityRollChance(matchCount: number, equipment: { def: { effectType: string } }[]): number {
+  if (matchCount < 2) return 0;
+  if (matchCount >= 5) return 1;
+  const base = (2 * matchCount - 2) / 12;
+  return Math.min(1, base * getLoadedDiceMultiplier(equipment));
+}
+
+/** Human-readable gravity odds for card hints. */
+export function formatGravityOddsLabel(matchCount: number, equipment: { def: { effectType: string } }[]): string {
+  return formatLoadedFaceOdds(getGravityRollChance(matchCount, equipment));
 }
 
 function formatLoadedFaceOdds(chance: number): string {

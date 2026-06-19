@@ -49,7 +49,12 @@ export interface ItemDisplayResult {
 
 import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
 import { HandType, type EquipmentModifier } from '../game/types';
-import { getLoadedDiceMultiplier, resolveCopyTarget } from '../game/equipmentUtils';
+import {
+  getGravityModeFace,
+  getLoadedDiceMultiplier,
+  formatGravityOddsLabel,
+  resolveCopyTarget,
+} from '../game/equipmentUtils';
 import { resolveEffectParam, resolveChance, savingsAccountEligibleBalance } from '../game/effectParams';
 import {
   unlockAnyEnhanced,
@@ -413,19 +418,7 @@ const items: ItemDef[] = [
         tooltip: [[text('Earn'), money('$4'), text('at end of round. Jesse Rawlins (Outlaw) earns'), money('$12')]],
       };
     },
-  }, // ─── Held-in-Hand Items ───
-  // Deprecated in favor of silver_bullets item
-  // {
-  //   id: 'double_down',
-  //   name: 'Double Down',
-  //   cardTemplate: "white-text-black-outline",
-  //   cost: 5,
-  //   rarity: 'uncommon',
-  //   description: 'Retrigger all held-in-hand abilities',
-  //   effectType: 'HELD_RETRIGGER',
-  //   effectParams: { value: 1 },
-  //   hintDisplay: () => [[text('Retrigger'), condition('held dice')]],
-  // },
+  },
   {
     id: 'bottom_dollar',
     name: 'Bottom Dollar',
@@ -2357,6 +2350,42 @@ const items: ItemDef[] = [
     }),
   },
   {
+    id: 'gravity',
+    name: 'Gravity',
+    cardTemplate: 'white-text-black-outline',
+    cost: 8,
+    rarity: 'rare',
+    effectType: 'GRAVITY',
+    effectParams: {},
+    display: (round, player) => {
+      const tooltip = [
+        [
+          text(
+            'After your first roll each day, your most common selected die face gains gravity. Each matching die increases its chance of appearing: 2 dice = 1/6, 3 dice = 1/3, 4 dice = 1/2, 5 dice = guaranteed.',
+          ),
+        ],
+      ];
+      if (!round || round.phase !== 'ROLL') {
+        return {
+          hint: [[inactive('After first roll')]],
+          tooltip,
+        };
+      }
+      const mode = getGravityModeFace(round.rolledDice);
+      if (!mode) {
+        return {
+          hint: [[inactive('Inactive')]],
+          tooltip,
+        };
+      }
+      const oddsLabel = formatGravityOddsLabel(mode.count, player.equipment);
+      return {
+        hint: [[condition(String(mode.face)), odds(oddsLabel)]],
+        tooltip,
+      };
+    },
+  },
+  {
     id: 'one_armed_bandit',
     name: 'One Armed Bandit',
     cardTemplate: 'white-text-black-outline',
@@ -2873,7 +2902,7 @@ const items: ItemDef[] = [
     effectType: 'FIRST_PIP_XMULT',
     effectParams: { pip: 2, value: 2 },
     display: (_round, _player) => ({
-      hint: [[mult('x2'), retrigger('Retrigger', "xs")], [condition('first 2 scored', 'xs')]],
+      hint: [[mult('x2'), retrigger('Retrigger', 'xs')], [condition('first 2 scored', 'xs')]],
       tooltip: [
         [
           text('First played '),

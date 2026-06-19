@@ -8,7 +8,14 @@ import { getRunState } from './store/runStore';
 import { selectResolvedLoadedDieTarget } from './store/selectors/runSelectors';
 import { resolveEquipmentList } from './store/resolve';
 import { GAMEPLAY } from './Constants';
-import { getLoadedFaceRollChance } from './equipmentUtils';
+import {
+  getGravityModeFace,
+  getGravityRollChance,
+  getLoadedFaceRollChance,
+  hasGravityEquipment,
+} from './equipmentUtils';
+import { getRoundState } from './store/roundStore';
+import { rolledRefsToDice } from './store/roundResolve';
 import { D } from './scoreMath';
 import { rngFloat, rngInt, rngPick, rngShuffle } from './RunRng';
 
@@ -67,25 +74,81 @@ export function createRunStartingPouch(
 
 // ─── Rolling ───
 
-export function rollDie(die: Die): Die {
-  // Stone dice never get a numeric value
-  if (die.enhancement === 'stone') return { ...die, value: 0 };
-  const run = getRunState();
-  const equipment = resolveEquipmentList();
+const D12_FACES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+
+type FaceRollBiasSource = 'loaded' | 'gravity';
+
+type FaceRollBias = {
+  face: number;
+  chance: number;
+  source: FaceRollBiasSource;
+};
+
+function collectFaceRollBiases(
+  die: Die,
+  equipment: ReturnType<typeof resolveEquipmentList>,
+  run: ReturnType<typeof getRunState>,
+): FaceRollBias[] {
+  const biases: FaceRollBias[] = [];
+
   const loadedTarget = selectResolvedLoadedDieTarget(run);
   if (loadedTarget !== null) {
     const loadedChance = getLoadedFaceRollChance(equipment, die.enhancement);
     if (loadedChance > 0) {
-      const otherFaces = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((face) => face !== loadedTarget);
-      if (rngFloat('loadedDice') < loadedChance) return { ...die, value: loadedTarget };
-      return { ...die, value: rngPick('loadedDice', otherFaces) };
+      biases.push({ face: loadedTarget, chance: loadedChance, source: 'loaded' });
     }
   }
+
+  const round = getRoundState();
+  if (round?.phase === 'ROLL' && hasGravityEquipment(equipment)) {
+    const mode = getGravityModeFace(rolledRefsToDice(round.rolledDice, round, run));
+    if (mode) {
+      const gravityChance = getGravityRollChance(mode.count, equipment);
+      if (gravityChance > 0) {
+        biases.push({ face: mode.face, chance: gravityChance, source: 'gravity' });
+      }
+    }
+  }
+
+  return biases;
+}
+
+function resolveBiasedFaceRoll(die: Die, biases: FaceRollBias[]): Die | null {
+  if (biases.length === 0) return null;
+
+  const guaranteedGravity = biases.find((bias) => bias.source === 'gravity' && bias.chance >= 1);
+  if (guaranteedGravity) return { ...die, value: guaranteedGravity.face };
+
+  const chanceByFace = new Map<number, number>();
+  for (const bias of biases) {
+    const current = chanceByFace.get(bias.face) ?? 0;
+    chanceByFace.set(bias.face, Math.min(1, current + bias.chance));
+  }
+
+  let roll = rngFloat('loadedDice');
+  for (const [face, chance] of chanceByFace) {
+    if (roll < chance) return { ...die, value: face };
+    roll -= chance;
+  }
+
+  const biasedFaces = new Set(chanceByFace.keys());
+  const otherFaces = D12_FACES.filter((face) => !biasedFaces.has(face));
+  return { ...die, value: rngPick('loadedDice', otherFaces) };
+}
+
+export function rollDie(die: Die): Die {
+  if (die.enhancement === 'stone') return { ...die, value: 0 };
+
+  const run = getRunState();
+  const equipment = resolveEquipmentList();
+  const biasedRoll = resolveBiasedFaceRoll(die, collectFaceRollBiases(die, equipment, run));
+  if (biasedRoll) return biasedRoll;
+
   return { ...die, value: rngInt('dice', 1, 12) };
 }
 
 export function rollDice(dice: Die[]): Die[] {
-  return dice.map(rollDie);
+  return dice.map((d) => rollDie(d));
 }
 
 // ─── Pouch Management ───

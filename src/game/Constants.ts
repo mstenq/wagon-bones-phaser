@@ -637,6 +637,7 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'ROUND_START_SELL_VALUE', // Antique Revolver
   'END_ROUND_SELL_VALUE_ALL', // Raffle Ticket
   'LOADED_DICE', // Loaded Dice
+  'GRAVITY', // Gravity
   'STACKED_DECK', // Stacked Deck
   'END_ROUND_MONEY_SCALING', // Railroad Bonds
   'SELL_DISABLE_BOSS', // Sheriff's Badge
