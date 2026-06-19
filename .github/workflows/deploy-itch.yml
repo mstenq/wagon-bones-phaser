@@ -1,0 +1,40 @@
+name: Deploy to itch.io
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+env:
+  ITCH_TARGET: voltron2112/wagon-bones:html
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Resolve user version
+        id: version
+        run: |
+          VERSION=$(bun -e 'console.log(require("./package.json").version)')
+          echo "value=${VERSION}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup butler
+        uses: remarkablegames/setup-butler@v2
+
+      - name: Push to itch.io
+        run: butler push dist ${{ env.ITCH_TARGET }} --userversion "${{ steps.version.outputs.value }}"
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
