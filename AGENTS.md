@@ -68,6 +68,11 @@ public/assets/  # Art
 
 - **No inline type imports** (`import('./x').Foo`). Use top-level `import type { Foo } from '...'`.
 
+### Control flow
+
+- Prefer **guard clauses** (early `return` / `continue`) over nested `if` blocks.
+- Avoid deep nesting; flatten with guards or a small named helper when a branch grows.
+
 ### Score animation
 
 Logic pushes `ScoreAnimEvent[]` during scoring; `ScoreAnimation.ts` plays them back. No duplicated scoring in Phaser.
