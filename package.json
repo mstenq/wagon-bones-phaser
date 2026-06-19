@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "dev": "vite --config vite/config.dev.mjs --host",
-    "build": "vite build --config vite/config.prod.mjs",
+    "build": "vite build --config vite/config.prod.mjs && bsdtar -a -cf dist.zip dist",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",

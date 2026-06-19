@@ -15,7 +15,7 @@ import {
   hasGravityEquipment,
 } from './equipmentUtils';
 import { getRoundState } from './store/roundStore';
-import { rolledRefsToDice } from './store/roundResolve';
+import { selectSelectedForScore } from './store/selectors/roundSelectors';
 import { D } from './scoreMath';
 import { rngFloat, rngInt, rngPick, rngShuffle } from './RunRng';
 
@@ -101,7 +101,7 @@ function collectFaceRollBiases(
 
   const round = getRoundState();
   if (round?.phase === 'ROLL' && hasGravityEquipment(equipment)) {
-    const mode = getGravityModeFace(rolledRefsToDice(round.rolledDice, round, run));
+    const mode = getGravityModeFace(selectSelectedForScore(round));
     if (mode) {
       const gravityChance = getGravityRollChance(mode.count, equipment);
       if (gravityChance > 0) {

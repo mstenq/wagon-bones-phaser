@@ -206,12 +206,12 @@ export function hasGravityEquipment(equipment: { def: { effectType: string } }[]
   return equipment.some((equip) => equip.def.effectType === 'GRAVITY');
 }
 
-/** Most common face among rolled dice (stone excluded). Tie-break: highest pip. */
-export function getGravityModeFace(rolledDice: Die[]): { face: number; count: number } | null {
+/** Most common face among selected dice (stone excluded). Tie-break: highest pip. */
+export function getGravityModeFace(selectedDice: Die[]): { face: number; count: number } | null {
   let bestFace = -1;
   let bestCount = 0;
   const freq = new Map<number, number>();
-  for (const d of rolledDice) {
+  for (const d of selectedDice) {
     if (d.enhancement === 'stone' || d.value < 1 || d.value > 12) continue;
     const count = (freq.get(d.value) ?? 0) + 1;
     freq.set(d.value, count);

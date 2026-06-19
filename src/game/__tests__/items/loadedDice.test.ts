@@ -18,6 +18,9 @@ import {
 } from '../../EquipmentEffects';
 import { PACK_ONLY_FRONTIER_IDS } from '../../Constants';
 import { getLoadedDiceMultiplier, getGravityModeFace, getGravityRollChance } from '../../equipmentUtils';
+import { getEquipmentDefById } from '../../ItemsSystem';
+import { getItemDisplayContext } from '../../displayContext';
+import { selectEquipmentHintRoundContext } from '../../store/selectors/roundSelectors';
 import { computeScoredDieRetriggers } from '../../effects/scoredRetrigger';
 import { gt } from '../../scoreMath';
 import { executeConsumableEffect, createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
@@ -852,6 +855,13 @@ describe('GRAVITY: helpers', () => {
     expect(getGravityModeFace([die({ value: 6 }), die({ enhancement: 'stone', value: 0 })])).toBeNull();
     expect(getGravityModeFace([die({ value: 4 })])).toBeNull();
   });
+
+  test('getGravityModeFace only counts selected dice', () => {
+    const twelves = diceWithValue(12, 5);
+    const selected = twelves.slice(0, 2);
+    expect(getGravityModeFace(selected)).toEqual({ face: 12, count: 2 });
+    expect(getGravityRollChance(2, [item('horseshoe')])).toBeCloseTo(1 / 6);
+  });
 });
 
 describe('GRAVITY: composition with loaded/cup', () => {
@@ -961,6 +971,22 @@ describe('GRAVITY: rolling', () => {
     expect(rerolled.value).toBe(6);
   });
 
+  test('uses only selected dice for gravity odds on reroll', () => {
+    const twelves = diceWithValue(12, 5);
+    const selected = twelves.slice(0, 2);
+    setupGame({ equipment: [item('gravity')], dice: twelves });
+    seedTestRoll(twelves, { selectedForScore: selected });
+
+    let face12 = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ value: 1 })).value === 12) face12++;
+    }
+
+    expect(face12 / trials).toBeGreaterThan(0.15);
+    expect(face12 / trials).toBeLessThan(0.185);
+  });
+
   test('player reroll path applies gravity with five matching faces', () => {
     const rolled = diceWithValue(6, 5);
     const { game } = setupGame({ equipment: [item('gravity')], dice: rolled });
@@ -969,6 +995,7 @@ describe('GRAVITY: rolling', () => {
     game.selectForRoll(handIds);
     roundActions.patch({
       rolledDice: rolled.map((d) => ({ id: d.id, value: 6 })),
+      selectedForScoreIds: handIds,
     });
     const rerollId = handIds[0]!;
     expect(game.reroll([rerollId])).toBe(true);
@@ -983,6 +1010,18 @@ describe('GRAVITY: item definition', () => {
     expect(inst.def.effectType).toBe('GRAVITY');
     expect(inst.def.cost).toBe(8);
     expect(inst.def.rarity).toBe('rare');
+  });
+
+  test('hint shows 1 in 6 when only two matching faces are selected', () => {
+    const twelves = diceWithValue(12, 5);
+    const selected = twelves.slice(0, 2);
+    setupGame({ equipment: [item('gravity')], dice: twelves });
+    seedTestRoll(twelves, { selectedForScore: selected });
+
+    const def = getEquipmentDefById('gravity');
+    const display = def?.display(selectEquipmentHintRoundContext(), getItemDisplayContext());
+    const oddsSegment = display?.hint?.[0]?.find((seg) => seg.style === 'odds');
+    expect(oddsSegment?.text).toBe('1 in 6');
   });
 
   test('does not itself affect scoring', () => {

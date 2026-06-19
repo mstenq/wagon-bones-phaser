@@ -2371,7 +2371,7 @@ const items: ItemDef[] = [
           tooltip,
         };
       }
-      const mode = getGravityModeFace(round.rolledDice);
+      const mode = getGravityModeFace(round.selectedForScore);
       if (!mode) {
         return {
           hint: [[inactive('Inactive')]],
