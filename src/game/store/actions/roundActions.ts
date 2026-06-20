@@ -75,6 +75,7 @@ import {
   selectAvailableDice,
   selectEffectiveDays,
   selectEffectiveRerolls,
+  selectEffectiveRollSize,
   selectHandStats,
   selectIsBossRound,
   selectTargetMiles,
@@ -240,7 +241,7 @@ export const roundActions = {
     const equipment = resolveEquipmentList();
     const mods = getConfigModifiers(equipment);
     const trailMods = run.trailEventModifiers;
-    const wideSaddleBonus = run.wideSaddleBonus;
+    const rollSize = selectEffectiveRollSize(run);
 
     runActions.patch({ wideSaddleBonus: 0 });
 
@@ -248,7 +249,7 @@ export const roundActions = {
       ...config,
       maxRerolls: selectEffectiveRerolls(run) + mods.rerollsBonus,
       maxDays: Math.max(1, selectEffectiveDays(run) - mods.daysPenalty),
-      rollSize: Math.max(1, run.handSize + mods.rollSizeBonus - trailMods.handSizePenalty + wideSaddleBonus),
+      rollSize,
     };
 
     if (trailMods.scoreMultiplier !== 1.0) {

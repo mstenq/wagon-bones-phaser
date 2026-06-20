@@ -1,9 +1,11 @@
 import './setup';
 import { describe, expect, test } from 'bun:test';
-import { die } from './testHelpers';
+import { die, item, setupGame } from './testHelpers';
 import { getPlayerState, resetPlayerState } from './testRunPlayer';
+import { GAMEPLAY } from '../Constants';
 import { createFrontierConsumableDef } from '../ConsumablesSystem';
 import { applyDiceSelectionEffect } from '../DiceSelectionSystem';
+import { getPermitById } from '../PermitsSystem';
 import {
   initPackLineup,
   reorderPackLineup,
@@ -12,6 +14,7 @@ import {
 } from '../visibleDiceRow';
 import { sceneActions } from '../store/sceneStore';
 import { getSceneState } from '../store/sceneStore';
+import { selectEffectiveRollSize } from '../store/selectors/runSelectors';
 import frontierEncountersData from '../../data/frontier_encounters';
 
 function enterTestPack(lineupDieIds: string[] = []): void {
@@ -88,5 +91,39 @@ describe('visibleDiceRow pack lineup', () => {
     enterTestPack([d1.id, d2.id, d3.id]);
 
     expect(selectPackLineupDice().map((d) => d.id)).toEqual([d1.id, d3.id]);
+  });
+
+  test('initPackLineup draws effective roll size dice (baseline)', () => {
+    setupGame();
+    enterTestPack();
+    const dice = initPackLineup();
+    expect(dice).toHaveLength(GAMEPLAY.ROLL_SIZE);
+    expect(selectEffectiveRollSize()).toBe(GAMEPLAY.ROLL_SIZE);
+  });
+
+  test('initPackLineup respects flour_sack roll size bonus', () => {
+    setupGame({ equipment: [item('flour_sack')] });
+    enterTestPack();
+    const dice = initPackLineup();
+    expect(dice).toHaveLength(GAMEPLAY.ROLL_SIZE + 5);
+    expect(selectEffectiveRollSize()).toBe(GAMEPLAY.ROLL_SIZE + 5);
+  });
+
+  test('initPackLineup respects trail_backpack roll size penalty', () => {
+    setupGame({ equipment: [item('trail_backpack')] });
+    enterTestPack();
+    const dice = initPackLineup();
+    expect(dice).toHaveLength(GAMEPLAY.ROLL_SIZE - 1);
+    expect(selectEffectiveRollSize()).toBe(GAMEPLAY.ROLL_SIZE - 1);
+  });
+
+  test('initPackLineup stacks permit hand size with flour_sack bonus', () => {
+    const { player } = setupGame({ equipment: [item('flour_sack')] });
+    player.economy.setBalance(20);
+    player.buyPermit(getPermitById('supply_pouch')!);
+    enterTestPack();
+    const dice = initPackLineup();
+    expect(dice).toHaveLength(GAMEPLAY.ROLL_SIZE + 1 + 5);
+    expect(selectEffectiveRollSize()).toBe(GAMEPLAY.ROLL_SIZE + 1 + 5);
   });
 });

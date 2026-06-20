@@ -15,6 +15,7 @@ import { getConfigModifiers } from '../../EquipmentEffects';
 import { computeRoundReward, computeTargetMiles } from '../../runProgression';
 import { resolveConsumableList, resolveEquipmentList } from '../resolve';
 import type { RunState } from '../types';
+import { getRunState } from '../runStore';
 import { canAfford, hasBankNote, selectDebtLimit, selectMinBalance } from '../economy';
 
 export function selectProfession(state: RunState) {
@@ -67,6 +68,13 @@ export function selectEffectiveRerolls(state: RunState): number {
     state.trailEventModifiers.rerollPenalty;
   if (state.difficulty >= 5) rerolls -= 1;
   return Math.max(0, rerolls);
+}
+
+/** Dice drawn from pouch (roll phase) and pack lineup — mirrors startRound rollSize. */
+export function selectEffectiveRollSize(state: RunState = getRunState()): number {
+  const mods = getConfigModifiers(resolveEquipmentList(state));
+  const trailMods = state.trailEventModifiers;
+  return Math.max(1, state.handSize + mods.rollSizeBonus - trailMods.handSizePenalty + state.wideSaddleBonus);
 }
 
 export function selectUsedEquipmentSlots(state: RunState): number {

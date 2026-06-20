@@ -4,6 +4,7 @@
 
 import { Die, DiceAura, DiceEnhancement, DiceSticker } from './types';
 import { getRunState, runStore } from './store/runStore';
+import { selectEffectiveRollSize } from './store/selectors/runSelectors';
 import { diceActions } from './store/actions/diceActions';
 import { replaceEquipmentList, resolveEquipmentList } from './store/resolve';
 import { storedFromEquipmentInstances } from './store/resolve';
@@ -102,8 +103,8 @@ function patchRunDie(dieId: string, updater: (die: Die) => Die): boolean {
  */
 export function drawDiceForSelection(count: number): Die[] {
   const run = getRunState();
-  // drawCount 0 means "show handSize dice from non-spent pool"
-  const effectiveCount = count > 0 ? count : run.handSize;
+  // drawCount 0 means "show effective roll size dice from non-spent pool"
+  const effectiveCount = count > 0 ? count : selectEffectiveRollSize(run);
   const spent = new Set(run.spentDiceIds);
   const pool =
     count > 0

@@ -24,6 +24,7 @@ import {
   getPackDefById,
 } from '../../game/facade/pack';
 import { getRunState } from '../../game/store';
+import { selectEffectiveRollSize } from '../../game/store/selectors/runSelectors';
 import { getItemDisplayContext } from '../../game/displayContext';
 import { resolveEquipmentList, resolveLastUsedConsumableDef } from '../../game/store/resolve';
 import { getBonusPackPicks } from '../../game/effects/helpers';
@@ -399,7 +400,10 @@ export class BoosterPackScene extends Scene {
     if (showLineup) {
       const run = getRunState();
       const spent = new Set(run.spentDiceIds);
-      const defaultLineupCount = Math.min(run.handSize, run.dice.filter((d) => !spent.has(d.id)).length);
+      const defaultLineupCount = Math.min(
+        selectEffectiveRollSize(run),
+        run.dice.filter((d) => !spent.has(d.id)).length,
+      );
       const lineupDice = gameFacade.pack.getLineupDice();
       const lineupCount = lineupDice.length > 0 ? lineupDice.length : defaultLineupCount;
       const diceLayout = computeDiceRowLayout(Math.max(1, lineupCount), this.contentW);
