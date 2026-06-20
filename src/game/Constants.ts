@@ -311,6 +311,8 @@ export const UI = {
 
   /** Round score / target progress bar (sidebar + topbar). */
   SCORE_PROGRESS_ANIM_MS: 2000,
+  /** Show "Skip Animation" during score playback when animEvents exceed this count. */
+  SCORE_ANIM_SKIP_BUTTON_MIN_EVENTS: 30,
   SCORE_PROGRESS_LEVELUP_SEC: 2.12,
   /** Shared chrome height for sidebar + topbar score boxes. */
   SCORE_PROGRESS_SECTION_H: 28,

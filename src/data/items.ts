@@ -981,7 +981,7 @@ const items: ItemDef[] = [
     cost: 20,
     rarity: 'legendary',
     effectType: 'PIP_XMULT',
-    effectParams: { pip: 6, value: 38 },
+    effectParams: { pip: 6, value: 2 },
     display: (_round, _player) => ({
       hint: [[mult('x2'), condition('per 6 held or played')]],
       tooltip: [[text('Held or played '), condition('6'), text("'s give "), mult('x2'), text(' mult')]],

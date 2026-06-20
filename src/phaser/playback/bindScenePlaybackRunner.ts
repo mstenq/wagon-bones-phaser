@@ -18,6 +18,9 @@ export interface ScenePlaybackBindOptions {
   setAnimating?: RunScenePlaybackOptions['setAnimating'];
   onDiceAdded?: RunScenePlaybackOptions['onDiceAdded'];
   onScoreComplete?: RunScenePlaybackOptions['onScoreComplete'];
+  onScoreAnimStart?: RunScenePlaybackOptions['onScoreAnimStart'];
+  onScoreAnimEnd?: RunScenePlaybackOptions['onScoreAnimEnd'];
+  registerScoreAnimSkip?: RunScenePlaybackOptions['registerScoreAnimSkip'];
   showFloatingText?: RunScenePlaybackOptions['showFloatingText'];
   getTagEarnedOrigin?: RunScenePlaybackOptions['getTagEarnedOrigin'];
   getTagStackAnchor?: RunScenePlaybackOptions['getTagStackAnchor'];

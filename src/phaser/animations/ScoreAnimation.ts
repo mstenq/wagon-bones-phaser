@@ -19,7 +19,7 @@ import { resolveDieById } from '../../game/store/roundResolve';
 import { removeDestroyedDiceFromRound } from '../../game/store/roundWrites';
 import { formatScore, formatXMult } from '../../game/formatScore';
 import { endScoreAnimSession, pacingForFollowUp, pacingForHandScore, type ScoreAnimPacing } from './scoreAnimPacing';
-import { addScore, multiplyScore, D } from '../../game/scoreMath';
+import { addScore, multiplyScore, D, type Decimal } from '../../game/scoreMath';
 import { milesToSave } from '../../game/scoreMath';
 import { roundActions } from '../../game/store/actions/roundActions';
 import { consumableActions } from '../../game/store/actions/consumableActions';
@@ -234,6 +234,33 @@ export interface ScoreAnimationConfig {
   equipBar: EquipmentBar;
   consumableBar: ConsumableBar;
   onComplete: () => void;
+}
+
+export interface ScoreAnimationHandle {
+  skip: () => void;
+}
+
+interface ScoreAnimTotals {
+  miles: Decimal;
+  mult: Decimal;
+}
+
+/** Apply sidebar miles/mult updates from a score event (no visuals). */
+function applyScoreEventToTotals(evt: ScoreAnimEvent, totals: ScoreAnimTotals): void {
+  const { popupType, value } = evt;
+  if (popupType === 'balance') {
+    const balanced = D(evt.decimalValue ?? value);
+    totals.miles = balanced;
+    totals.mult = balanced;
+    return;
+  }
+  if (popupType === 'miles') {
+    totals.miles = addScore(totals.miles, value);
+  } else if (popupType === 'mult') {
+    totals.mult = addScore(totals.mult, value);
+  } else if (popupType === 'xmult') {
+    totals.mult = multiplyScore(totals.mult, value);
+  }
 }
 
 /** Wiggle an equipment card */
@@ -524,7 +551,7 @@ function syncAllDieSpritesFromScore(diceSprites: DiceSprite[], scoringDieById: M
   }
 }
 
-export function playScoreAnimation(config: ScoreAnimationConfig): void {
+export function playScoreAnimation(config: ScoreAnimationConfig): ScoreAnimationHandle {
   const { scene, diceSprites, result, sidebar, equipBar, consumableBar, onComplete } = config;
 
   // Build sprite lookup maps
@@ -532,6 +559,56 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
   for (const s of diceSprites) dieSpriteMap.set(s.dieData.id, s);
 
   const scoringDieById = new Map(result.handResult.scoringDice.map((d) => [d.id, d]));
+
+  let skipped = false;
+  let completed = false;
+  const appliedConsumableGrants = new Set<string>();
+
+  function trackConsumableGrant(consumableId?: string): void {
+    if (!consumableId || appliedConsumableGrants.has(consumableId)) return;
+    if (applyConsumableGrant(consumableId)) {
+      appliedConsumableGrants.add(consumableId);
+    }
+  }
+
+  function completeOnce(): void {
+    if (completed) return;
+    completed = true;
+    endScoreAnimSession();
+    onComplete();
+  }
+
+  function finishScoringImmediate(): void {
+    roundActions.setSidebarOverlay({ milesBaseSave: milesToSave(0), multSave: milesToSave(0) });
+    sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));
+    completeOnce();
+  }
+
+  function skipScoreAnimation(): void {
+    if (skipped || completed) return;
+    skipped = true;
+
+    const handBaseMiles = result.handResult.baseMiles;
+    const handBaseMult = result.handResult.baseMult;
+    const totals: ScoreAnimTotals = { miles: handBaseMiles, mult: handBaseMult };
+    for (const evt of result.animEvents) {
+      applyScoreEventToTotals(evt, totals);
+    }
+    sidebar.setMilesAnimated(totals.miles);
+    sidebar.setMultAnimated(totals.mult);
+
+    for (const consumableId of result.mutations.consumablesGranted) {
+      trackConsumableGrant(consumableId);
+    }
+
+    for (const dieId of result.mutations.diceDestroyed) {
+      dieSpriteMap.delete(dieId);
+      finalizeDestroyedDie(dieId, diceSprites);
+    }
+
+    syncAllDieSpritesFromScore(diceSprites, scoringDieById);
+    finishScoringImmediate();
+  }
 
   beginScoring();
 
@@ -554,6 +631,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     let lastDieId: string | null = null;
 
     function processNextEvent() {
+      if (skipped || completed) return;
       if (eventIdx >= events.length) {
         finishScoring();
         return;
@@ -565,11 +643,18 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         (evt.target.kind === 'die' ? evt.target.dieId : evt.target.kind === 'both' ? evt.target.dieId : null);
 
       const finishEvent = () => {
+        if (skipped || completed) return;
         eventIdx++;
-        pacing.wait(scene, T.SCORE_SUBSTEP_DELAY, processNextEvent);
+        pacing.wait(scene, T.SCORE_SUBSTEP_DELAY, () => {
+          if (skipped || completed) return;
+          processNextEvent();
+        });
       };
 
-      const runEvent = () => animateEvent(evt, eventIdx, finishEvent);
+      const runEvent = () => {
+        if (skipped || completed) return;
+        animateEvent(evt, eventIdx, finishEvent);
+      };
 
       // Shake die when we encounter a new die target (skip preamble when compressed)
       if (dieId && dieId !== lastDieId) {
@@ -591,6 +676,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     // ─── Core event animator ───
 
     function animateEvent(evt: (typeof events)[0], stepIdx: number, done: () => void): void {
+      if (skipped || completed) return;
       const { target, popupType, value } = evt;
 
       // Special: strip enhancement from die (Graverobber)
@@ -605,12 +691,18 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
               duration: T.STRIP_FLASH_MS,
               yoyo: true,
               ease: 'Sine.easeInOut',
-              onComplete: () => syncDieSpriteFromScore(sprite, target.dieId, scoringDieById),
+              onComplete: () => {
+                if (skipped || completed) return;
+                syncDieSpriteFromScore(sprite, target.dieId, scoringDieById);
+              },
             });
           }
         }
         scene.sound.play('sfx_chips1', { volume: 0.2, detune: -200 });
-        pacing.wait(scene, T.STRIP_WAIT_MS, done);
+        pacing.wait(scene, T.STRIP_WAIT_MS, () => {
+          if (skipped || completed) return;
+          done();
+        });
         return;
       }
 
@@ -623,9 +715,10 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             const enhancement = evt.enhancement ?? null;
             const label = enhancement ? (ENHANCEMENT_NAMES.get(enhancement) ?? enhancement) : 'Enhanced';
             floatingText(scene, sprite.x, sprite.y, `+${label}`, POPUP_ENHANCE_COLOR, 'up');
-            pacing.wait(scene, T.ENHANCE_SYNC_WAIT_MS, () =>
-              syncDieSpriteFromEnhanceEvent(sprite, target.dieId, evt, scoringDieById),
-            );
+            pacing.wait(scene, T.ENHANCE_SYNC_WAIT_MS, () => {
+              if (skipped || completed) return;
+              syncDieSpriteFromEnhanceEvent(sprite, target.dieId, evt, scoringDieById);
+            });
           }
         }
         if (target.kind === 'equip' || target.kind === 'both') {
@@ -633,7 +726,10 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         }
         const sfx = getSoundForType('enhance', stepIdx);
         scene.sound.play(sfx.key, sfx.config);
-        pacing.wait(scene, T.ENHANCE_FINISH_WAIT_MS, done);
+        pacing.wait(scene, T.ENHANCE_FINISH_WAIT_MS, () => {
+          if (skipped || completed) return;
+          done();
+        });
         return;
       }
 
@@ -646,6 +742,7 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
             scene.sound.play(sfx.key, sfx.config);
             popupForDie(scene, sprite, 'crack', value);
             animateDieCrack(scene, sprite, () => {
+              if (skipped || completed) return;
               dieSpriteMap.delete(target.dieId);
               finalizeDestroyedDie(target.dieId, diceSprites);
               done();
@@ -668,11 +765,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         scene.sound.play(sfx.key, sfx.config);
         if (sprite && def) {
           animateGrantToConsumableBar(scene, sprite.x, sprite.y, def, consumableBar, () => {
-            applyConsumableGrant(evt.consumableId);
+            if (skipped || completed) return;
+            trackConsumableGrant(evt.consumableId);
             done();
           });
         } else {
-          applyConsumableGrant(evt.consumableId);
+          trackConsumableGrant(evt.consumableId);
           done();
         }
         return;
@@ -700,11 +798,12 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
 
         if (fromPos && def) {
           animateGrantToConsumableBar(scene, fromPos.x, fromPos.y, def, consumableBar, () => {
-            applyConsumableGrant(evt.consumableId);
+            if (skipped || completed) return;
+            trackConsumableGrant(evt.consumableId);
             done();
           });
         } else {
-          applyConsumableGrant(evt.consumableId);
+          trackConsumableGrant(evt.consumableId);
           done();
         }
         return;
@@ -713,7 +812,10 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
       // Retrigger equipment: "Again!" on the causing card (no sidebar update)
       if (popupType === 'again') {
         if (target.kind === 'equip') {
-          playAgainRetrigger(scene, equipBar, target.equipIndex, value, stepIdx, pacing, done);
+          playAgainRetrigger(scene, equipBar, target.equipIndex, value, stepIdx, pacing, () => {
+            if (skipped || completed) return;
+            done();
+          });
         } else {
           done();
         }
@@ -730,13 +832,17 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
         floatingText(scene, midX, midY, 'Balance!', POPUP_BALANCE_COLOR, 'up');
         scene.sound.play('sfx_multhit1', { volume: 0.45, detune: -50 });
         pacing.wait(scene, T.BALANCE_FIRST_WAIT_MS, () => {
+          if (skipped || completed) return;
           sidebar.setMilesAnimated(balanced);
           sidebar.setMultAnimated(balanced);
           sidebar.shakeMilesPill();
           sidebar.shakeMultPill(true);
           currentMiles = balanced;
           currentMult = balanced;
-          pacing.wait(scene, T.BALANCE_SECOND_WAIT_MS, done);
+          pacing.wait(scene, T.BALANCE_SECOND_WAIT_MS, () => {
+            if (skipped || completed) return;
+            done();
+          });
         });
         return;
       }
@@ -786,17 +892,27 @@ export function playScoreAnimation(config: ScoreAnimationConfig): void {
     // ─── Finish ───
 
     function finishScoring() {
+      if (skipped || completed) return;
       syncAllDieSpritesFromScore(diceSprites, scoringDieById);
       pacing.wait(scene, T.SCORE_FINAL_FLASH_DELAY, () => {
+        if (skipped || completed) return;
         roundActions.setSidebarOverlay({ milesBaseSave: milesToSave(0), multSave: milesToSave(0) });
         sidebar.setRoundScoreAnimated(addScore(result.roundScoreBefore ?? D(0), result.miles));
-        pacing.wait(scene, UI.SCORE_PROGRESS_ANIM_MS + T.SCORE_ROUND_TOTAL_DELAY, onComplete);
+        pacing.wait(scene, UI.SCORE_PROGRESS_ANIM_MS + T.SCORE_ROUND_TOTAL_DELAY, () => {
+          if (skipped || completed) return;
+          completeOnce();
+        });
       });
     }
 
     // Start scoring
-    scene.time.delayedCall(pacing.gapMs(T.SCORE_STEP_DELAY), processNextEvent);
+    scene.time.delayedCall(pacing.gapMs(T.SCORE_STEP_DELAY), () => {
+      if (skipped || completed) return;
+      processNextEvent();
+    });
   }
+
+  return { skip: skipScoreAnimation };
 }
 
 export interface DieAnimEventsConfig {

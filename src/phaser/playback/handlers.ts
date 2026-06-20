@@ -42,6 +42,12 @@ export interface PlaybackHandlerContext {
   setAnimating: (value: boolean) => void;
   onDiceAdded: (dieIds: string[]) => void;
   onScoreComplete: () => void;
+  /** Called when score anim playback starts (after layout gate). */
+  onScoreAnimStart?: (animEventCount: number, playbackQueueLength: number) => void;
+  /** Called when score anim playback ends (normal finish or skip). */
+  onScoreAnimEnd?: () => void;
+  /** Register the active skip handler for the current score animation. */
+  registerScoreAnimSkip?: (skip: (() => void) | null) => void;
   showFloatingText?: (message: string, color: number) => void;
   getTagEarnedOrigin?: (round: number) => { x: number; y: number };
   getTagStackAnchor?: () => { x: number; y: number };
@@ -135,6 +141,10 @@ async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResul
     await ctx.scoreLayoutGate.promise;
   }
 
+  const animEventCount = result.animEvents.length;
+  const playbackQueueLength = getRunState().playbackQueue.length;
+  ctx.onScoreAnimStart?.(animEventCount, playbackQueueLength);
+
   ctx.setAnimating(true);
 
   if (result.handUpgrades && result.handUpgrades.length > 0) {
@@ -142,7 +152,7 @@ async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResul
   }
 
   await new Promise<void>((resolve) => {
-    playScoreAnimation({
+    const handle = playScoreAnimation({
       scene: ctx.scene,
       diceSprites: ctx.getDiceSprites(),
       result,
@@ -151,9 +161,12 @@ async function playScorePlayback(ctx: PlaybackHandlerContext, result: ScoreResul
       consumableBar: ctx.consumableBar,
       onComplete: () => {
         ctx.equipBar.setHintRound(getRoundHintContext());
+        ctx.registerScoreAnimSkip?.(null);
+        ctx.onScoreAnimEnd?.();
         resolve();
       },
     });
+    ctx.registerScoreAnimSkip?.(handle.skip);
   });
 
   ctx.setAnimating(false);

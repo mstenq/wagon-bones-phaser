@@ -32,12 +32,14 @@ import { enqueueDayEndDestructions } from '../../game/store/playbackEnqueue';
 import { ScoreResult, type PhaseState } from '../../game/types';
 import {
   selectHandDice,
+  selectRerollLockedDice,
   selectRolledDice,
   selectRoundConfig,
   selectRoundPhase,
   selectRoundTotalMiles,
   selectRerollsRemaining,
   selectRoundDay,
+  selectSelectedForScore,
 } from '../../game/store/selectors/roundSelectors';
 import { selectAvailableDice, selectCurrentBoss, selectSpentDice } from '../../game/store/selectors/runSelectors';
 import { D } from '../../game/scoreMath';
@@ -117,6 +119,7 @@ export class GameScene extends Scene {
   private rerollBtn: Button;
   private scoreBtn: Button;
   private continueBtn: Button;
+  private skipAnimBtn: Button;
 
   // Instruction text
   private instructionText: Phaser.GameObjects.Text;
@@ -140,6 +143,7 @@ export class GameScene extends Scene {
 
   private playbackRunner: PlaybackRunnerHandle | null = null;
   private scoreLayoutGate: ScoreLayoutGate | null = null;
+  private scoreAnimSkip: (() => void) | null = null;
 
   /** Lazy-loaded round background texture key; cleared in init for each scene visit */
   private roundBackgroundKey: string | null = null;
@@ -192,6 +196,9 @@ export class GameScene extends Scene {
       // Clear roll-phase dice UI from previous round (scene instance is reused)
       this.selectedDiceIds = new Set();
       this.rerollLockedDiceIds = new Set();
+      if (selectRoundPhase() === 'ROLL') {
+        this.hydrateRollPhaseDiceSelectionFromStore();
+      }
     }
 
     this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -461,6 +468,17 @@ export class GameScene extends Scene {
         this.sidebar.clearHandDisplay();
         this.time.delayedCall(600, () => this.onContinue());
       },
+      onScoreAnimStart: (animEventCount) => {
+        this.skipAnimBtn.setEnabled(true);
+        this.skipAnimBtn.setVisible(animEventCount > UI.SCORE_ANIM_SKIP_BUTTON_MIN_EVENTS);
+      },
+      onScoreAnimEnd: () => {
+        this.scoreAnimSkip = null;
+        this.skipAnimBtn.setVisible(false);
+      },
+      registerScoreAnimSkip: (skip) => {
+        this.scoreAnimSkip = skip;
+      },
       showFloatingText: (message, color) => this.showFloatingText(message, color),
     });
 
@@ -537,6 +555,13 @@ export class GameScene extends Scene {
       width: hud.rerollBtnW,
       height: 40,
     }).onClick(() => this.onReroll());
+    const btnGap = hud.showInstruction ? UI.GAME_HUD_BTN_GAP : UI.GAME_HUD_BTN_GAP_PORTRAIT;
+    const skipAnimBtnW = hud.scoreBtnW + hud.sortBtnW + hud.rerollBtnW + 2 * btnGap;
+    this.skipAnimBtn = new Button(this, btnCenterX, btnY, 'Skip Animation', {
+      variant: 'secondary',
+      width: skipAnimBtnW,
+      height: 40,
+    }).onClick(() => this.onSkipScoreAnimation());
     this.continueBtn = new Button(this, btnCenterX, btnY, 'Continue', {
       variant: 'primary',
       width: 160,
@@ -549,10 +574,19 @@ export class GameScene extends Scene {
     if (!hud.showInstruction) {
       this.scoreBtn.setLabelFontSize(15);
       this.rerollBtn.setLabelFontSize(15);
+      this.skipAnimBtn.setLabelFontSize(15);
     }
 
     const hudDepth = 50;
-    for (const btn of [this.readyBtn, this.rollBtn, this.scoreBtn, this.rerollBtn, this.continueBtn, this.sortBtn]) {
+    for (const btn of [
+      this.readyBtn,
+      this.rollBtn,
+      this.scoreBtn,
+      this.rerollBtn,
+      this.skipAnimBtn,
+      this.continueBtn,
+      this.sortBtn,
+    ]) {
       btn.setDepth(hudDepth);
     }
 
@@ -961,6 +995,12 @@ export class GameScene extends Scene {
     gameFacade.round.setRerollLockedDice(rolled.filter((d) => this.rerollLockedDiceIds.has(d.id)));
   }
 
+  /** Restore score/lock selection from store after resize or save/load (ROLL phase). */
+  private hydrateRollPhaseDiceSelectionFromStore(): void {
+    this.selectedDiceIds = new Set(selectSelectedForScore().map((d) => d.id));
+    this.rerollLockedDiceIds = new Set(selectRerollLockedDice().map((d) => d.id));
+  }
+
   private canUseMarquee(): boolean {
     return (
       !this.animating &&
@@ -973,14 +1013,15 @@ export class GameScene extends Scene {
   /** Layout-only version for resize: shows rolled dice without replaying animation */
   private enterRollPhaseLayout(): void {
     this.clearSprites();
-    this.selectedDiceIds.clear();
-    this.rerollLockedDiceIds.clear();
+    this.hydrateRollPhaseDiceSelectionFromStore();
     this.hideAllButtons();
 
     const rolled = selectRolledDice();
     this.rollRow.createRollRow(rolled, this.rollRowY);
     this.rollRow.setupInteraction();
     this.rollMarquee.setup();
+    this.syncRollDieVisuals();
+    this.syncRollDiceSelection();
 
     this.rerollBtn.setVisible(true);
     this.scoreBtn.setVisible(true);
@@ -1186,9 +1227,17 @@ export class GameScene extends Scene {
     this.rollBtn.setVisible(false);
     this.rerollBtn.setVisible(false);
     this.scoreBtn.setVisible(false);
+    this.skipAnimBtn.setVisible(false);
     this.continueBtn.setVisible(false);
     this.sortBtn.setVisible(false);
     this.bossWarningText.setVisible(false);
+  }
+
+  private onSkipScoreAnimation(): void {
+    if (!this.scoreAnimSkip) return;
+    this.skipAnimBtn.setEnabled(false);
+    this.skipAnimBtn.setVisible(false);
+    this.scoreAnimSkip();
   }
 
   private updateDrawButtons(): void {
