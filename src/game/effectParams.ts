@@ -1,5 +1,7 @@
 // ─── Effect param resolution (no ItemsSystem imports — safe for data/items.ts) ───
 
+import type { EquipmentInstance } from './ItemsSystem';
+
 /** Equipment bias for specific supply card ids in shop / packs / Supply Cache rolls. */
 export type SupplyCardWeightEntry = { supplyId: string; multiplier: number };
 
@@ -14,6 +16,16 @@ export function parseWeightSupplyFromParams(params: Record<string, unknown>): Su
   const raw = params.weightSupply;
   if (!Array.isArray(raw) || raw.length === 0) return [];
   return raw.filter(isSupplyCardWeightEntry);
+}
+
+/** Flour Sack hand size: farmer uses a flat profession bonus; others use decaying state. */
+export function getFlourSackHandSizeBonus(equip: EquipmentInstance, professionId?: string | null): number {
+  const params = equip.def.effectParams as Record<string, unknown>;
+  const decay = resolveEffectParam<number>(params, 'decayPerRound', professionId);
+  if (decay === 0) {
+    return resolveEffectParam<number>(params, 'handSizeBonus', professionId) ?? 0;
+  }
+  return (equip.state.handSizeBonus as number | undefined) ?? 0;
 }
 
 /** Resolve an effect param, using profession-specific overrides when present. */

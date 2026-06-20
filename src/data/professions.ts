@@ -61,7 +61,7 @@ const professions: ProfessionDef[] = [
     specialEquipment: {
       id: 'flour_sack',
       name: 'Flour Sack',
-      effect: 'Keeps +5 hand size with no decay each round (normally decays by 1 each round)',
+      effect: '+3 hand size with no decay each round (normally +5, decays by 1 each round)',
     },
   },
   {

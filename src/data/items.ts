@@ -2767,16 +2767,20 @@ const items: ItemDef[] = [
     rarity: 'uncommon',
     modifierImmunity: ['cursed'],
     effectType: 'FLOUR_SACK',
-    effectParams: { decayPerRound: 1, professionOverrides: { farmer: { decayPerRound: 0 } } },
+    effectParams: {
+      handSizeBonus: 5,
+      decayPerRound: 1,
+      professionOverrides: { farmer: { handSizeBonus: 3, decayPerRound: 0 } },
+    },
     initialState: { handSizeBonus: 5 },
     display: (_round, player) => {
       const equip = player.equipment.find((e) => e.def.id === 'flour_sack');
-      const bonus = equip?.state.handSizeBonus ?? 5;
-      const decay = resolveEffectParam<number>(
-        equip?.def.effectParams ?? { decayPerRound: 1 },
-        'decayPerRound',
-        player.professionId,
-      );
+      const params = equip?.def.effectParams ?? { handSizeBonus: 5, decayPerRound: 1 };
+      const decay = resolveEffectParam<number>(params, 'decayPerRound', player.professionId);
+      const bonus =
+        decay === 0
+          ? resolveEffectParam<number>(params, 'handSizeBonus', player.professionId)
+          : (equip?.state.handSizeBonus ?? 5);
       let hint;
       if (bonus > 0) {
         hint =
@@ -2793,9 +2797,9 @@ const items: ItemDef[] = [
             active('+5 hand size'),
             text(', reduces by '),
             condition('1 each round'),
-            text('. Hank Caldwell (Farmer) keeps the full '),
-            active('+5'),
-            text(' with no decay.'),
+            text('. Hank Caldwell (Farmer) gets '),
+            active('+3'),
+            text(' hand size with no decay.'),
           ],
         ],
       };

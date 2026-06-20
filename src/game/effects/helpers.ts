@@ -5,6 +5,7 @@ import { walkEquipmentPerSlot, walkEquipmentScoring, type ResolveEquipmentSlotOp
 import { Die, HandType } from '../types';
 import type { ScoringPipelineContext } from './types';
 import { addScore, D, gte, multiplyScore, type Decimal, type DecimalSource } from '../scoreMath';
+import { getFlourSackHandSizeBonus } from '../effectParams';
 import { getRunState } from '../store/runStore';
 import { resolveEquipmentList } from '../store/resolve';
 import { isEquipmentDisabledByBoss } from '../BossEffectsSystem';
@@ -125,7 +126,7 @@ export function getConfigModifiers(equipment: EquipmentInstance[]): {
       daysPenalty += p.daysPenalty as number;
     }
     if (effectType === 'FLOUR_SACK') {
-      rollSizeBonus += equip.state.handSizeBonus ?? 0;
+      rollSizeBonus += getFlourSackHandSizeBonus(equip, getRunState().professionId);
     }
   }
 

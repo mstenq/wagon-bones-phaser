@@ -11,6 +11,7 @@ import {
   isEquipmentModifierImmune,
   isEquipmentPerishable,
 } from './ItemsSystem';
+import { resolveEffectParam } from './effectParams';
 import { getRunState } from './store/runStore';
 import { replaceEquipmentList, resolveEquipmentList } from './store/resolve';
 import { economyActions } from './store/actions/economyActions';
@@ -77,6 +78,18 @@ export function rollShopEquipmentPreview(def: EquipmentDef, purchasedPermitIds: 
  * Create equipment with explicit difficulty modifiers.
  * Use for shop purchases and pack equipment picks (pass preview modifiers from rollShopEquipmentPreview).
  */
+function applyFlourSackProfessionState(instance: EquipmentInstance): void {
+  if (instance.def.effectType !== 'FLOUR_SACK') return;
+  const professionId = getRunState().professionId;
+  const params = instance.def.effectParams as Record<string, unknown>;
+  const decay = resolveEffectParam<number>(params, 'decayPerRound', professionId);
+  if (decay !== 0) return;
+  const bonus = resolveEffectParam<number>(params, 'handSizeBonus', professionId);
+  if (typeof bonus === 'number') {
+    instance.state.handSizeBonus = bonus;
+  }
+}
+
 export function acquireEquipmentInstance(
   def: EquipmentDef,
   purchasedPermitIds: string[] = [],
@@ -85,6 +98,7 @@ export function acquireEquipmentInstance(
   const instance = createEquipmentInstance(def, purchasedPermitIds);
   const mods = modifiers ?? rollEquipmentModifiers(getRunState().difficulty, def);
   applyModifiersToEquipment(instance, mods);
+  applyFlourSackProfessionState(instance);
   return instance;
 }
 

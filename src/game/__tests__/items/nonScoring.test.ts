@@ -1420,20 +1420,21 @@ describe('FLOUR_SACK: Flour Sack', () => {
     expect(COPY_INCOMPATIBLE_EFFECTS.has('FLOUR_SACK')).toBe(true);
   });
 
-  test('farmer has no decay (decayPerRound resolves to 0)', () => {
+  test('farmer has +3 hand size and no decay', () => {
     const params = item('flour_sack').def.effectParams;
+    expect(resolveEffectParam<number>(params, 'handSizeBonus', 'farmer')).toBe(3);
+    expect(resolveEffectParam<number>(params, 'handSizeBonus', undefined)).toBe(5);
     expect(resolveEffectParam<number>(params, 'decayPerRound', 'farmer')).toBe(0);
     expect(resolveEffectParam<number>(params, 'decayPerRound', undefined)).toBe(1);
   });
 
-  test('farmer flour sack stays at +5 hand size after multiple rounds', () => {
+  test('farmer flour sack stays at +3 hand size after multiple rounds', () => {
     const inst = item('flour_sack');
     const { player } = setupGame({ equipment: [inst], profession: 'farmer' });
     for (let i = 0; i < 6; i++) {
       processEquipmentOnRoundStart([inst]);
     }
-    expect(inst.state.handSizeBonus).toBe(5);
-    expect(getConfigModifiers(player.equipment).rollSizeBonus).toBe(5);
+    expect(getConfigModifiers(player.equipment).rollSizeBonus).toBe(3);
   });
 
   test('non-farmer still decays when farmer profession is not active', () => {
