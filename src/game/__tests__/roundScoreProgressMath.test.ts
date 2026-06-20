@@ -86,6 +86,12 @@ describe('overflow multiplier label', () => {
   test('x3 during third lap', () => {
     expect(getOverflowMultiplierLabel(2.5)).toBe(3);
   });
+
+  test('hidden when overflow lap count exceeds display cap', () => {
+    expect(getOverflowMultiplierLabel(1_000_000)).toBeNull();
+    expect(getOverflowMultiplierLabel(1_000_000.5)).toBeNull();
+    expect(getOverflowMultiplierLabel(999_998.5)).toBe(999_999);
+  });
 });
 
 describe('stacked progress layers', () => {
@@ -100,11 +106,28 @@ describe('stacked progress layers', () => {
     ]);
   });
 
-  test('three layers at 2.5x', () => {
+  test('two visible layers at 2.5x (earlier full tiers are covered)', () => {
     expect(getStackedProgressLayers(750, 300).layers).toEqual([
-      { tierIndex: 0, fill: 1 },
       { tierIndex: 1, fill: 1 },
       { tierIndex: 2, fill: 0.5 },
     ]);
+  });
+
+  test('single layer at exact 10,000x', () => {
+    expect(getStackedProgressLayers(3_000_000, 300).layers).toEqual([{ tierIndex: 9999, fill: 1 }]);
+  });
+
+  test('two visible layers at 10,000.5x', () => {
+    expect(getStackedProgressLayers(3_000_150, 300).layers).toEqual([
+      { tierIndex: 9999, fill: 1 },
+      { tierIndex: 10000, fill: 0.5 },
+    ]);
+    expect(getStackedProgressLayers(3_000_150, 300).multiplierLabel).toBe(10001);
+  });
+
+  test('extreme ratio caps layer count at 2', () => {
+    const stacked = getStackedProgressLayers(9_000_045, 300);
+    expect(stacked.layers.length).toBeLessThanOrEqual(2);
+    expect(stacked.multiplierLabel).toBe(30001);
   });
 });

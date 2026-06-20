@@ -211,6 +211,8 @@ export interface RoundRuntimeState {
   selectedForRollIds: string[];
   rolledDice: RolledDieRef[];
   selectedForScoreIds: string[];
+  /** ROLL-phase dice right-click locked to keep their face during reroll. */
+  rerollLockedDiceIds: string[];
   currentHandType: HandType | null;
   handHistory: HandType[];
   lastScoreResult: ScoreResult | null;

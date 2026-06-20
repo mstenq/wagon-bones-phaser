@@ -137,7 +137,10 @@ export function persistPlayerEquipment(): void {
 }
 
 /** Seed ROLL phase with dice that exist in the run pouch (adds missing dice to run). */
-export function seedTestRoll(rolled: Die[], options?: { rerolls?: number; selectedForScore?: Die[] }): void {
+export function seedTestRoll(
+  rolled: Die[],
+  options?: { rerolls?: number; selectedForScore?: Die[]; rerollLocked?: Die[] },
+): void {
   const run = getRunState();
   const existingIds = new Set(run.dice.map((d) => d.id));
   const merged = [...run.dice];
@@ -155,11 +158,13 @@ export function seedTestRoll(rolled: Die[], options?: { rerolls?: number; select
   for (const d of rolled) dieValuesByDieId[d.id] = d.value;
 
   const selectedForScore = options?.selectedForScore ?? rolled;
+  const rerollLocked = options?.rerollLocked ?? [];
   roundActions.patch({
     phase: 'ROLL',
     rolledDice: rolled.map((d) => ({ id: d.id, value: d.value })),
     selectedForRollIds: rolled.map((d) => d.id),
     selectedForScoreIds: selectedForScore.map((d) => d.id),
+    rerollLockedDiceIds: rerollLocked.map((d) => d.id),
     dieValuesByDieId,
     rerollsRemaining: options?.rerolls ?? 6,
   });

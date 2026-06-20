@@ -71,6 +71,7 @@ export function legacyRoundStateToRuntime(config: GameConfig, state: RoundState)
     selectedForRollIds: state.selectedForRoll.map((d) => d.id),
     rolledDice: state.rolledDice.map((d) => ({ id: d.id, value: d.value })),
     selectedForScoreIds: state.selectedForScore.map((d) => d.id),
+    rerollLockedDiceIds: [],
     currentHandType: state.currentHandType,
     handHistory: [...state.handHistory],
     lastScoreResult: null,

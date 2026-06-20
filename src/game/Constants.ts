@@ -316,6 +316,8 @@ export const UI = {
   SCORE_PROGRESS_SECTION_H: 28,
   SCORE_PROGRESS_BAR_RADIUS: 4,
   SCORE_PROGRESS_MULTIPLIER_PAD: 8,
+  /** Hide xN overflow label above this lap count — huge values overlap the bar text. */
+  SCORE_PROGRESS_OVERFLOW_LABEL_MAX: 1_000_000,
   SCORE_PROGRESS_TRACK: 0x1a1a2e,
 
   // Equipment + consumable card bars (shared sizing — see computeCardBarMetrics in SceneLayout)

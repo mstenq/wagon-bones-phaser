@@ -206,7 +206,7 @@ export function hasGravityEquipment(equipment: { def: { effectType: string } }[]
   return equipment.some((equip) => equip.def.effectType === 'GRAVITY');
 }
 
-/** Most common face among selected dice (stone excluded). Tie-break: highest pip. */
+/** Most common face among selected and reroll-locked dice (stone excluded). Tie-break: highest pip. */
 export function getGravityModeFace(selectedDice: Die[]): { face: number; count: number } | null {
   let bestFace = -1;
   let bestCount = 0;

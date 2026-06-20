@@ -42,6 +42,7 @@ import { PermitDef, generateShopPermit, getPermitShopDiscount } from '../../game
 import { computePriceTagMetrics } from '../ui/itemCard/priceTagLayout';
 import { Die } from '../../game/types';
 import { isDevMode, devLookupShopItem, devLookupPack, devLookupPermit } from '../../game/DevMode';
+import { playerAllowsDuplicateItems } from '../../game/BoosterPackSystem';
 import type { SerializedShopItem } from '../../game/SaveLoad';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import { getRunState, runActions, runStore } from '../../game/store/runStore';
@@ -59,6 +60,7 @@ import {
 } from '../../game/store/shopStock';
 import { clearSceneCardTooltips } from '../ui/itemCard/cardTooltipRegistry';
 import { tryEnqueueTutorial } from '../../game/tutorialEnqueue';
+import { needsCursedAcquisitionConfirm, showCursedAcquisitionConfirmModal } from '../ui/CursedAcquisitionConfirmModal';
 
 /** A shop stock item — equipment, consumable, or dice */
 type ShopItem =
@@ -408,6 +410,18 @@ export class ShopScene extends Scene {
     });
   }
 
+  private async confirmCursedEquipmentPurchase(
+    card: ItemCard,
+    stockIndex: number,
+    preview: EquipmentInstance,
+  ): Promise<void> {
+    if (needsCursedAcquisitionConfirm(preview)) {
+      const confirmed = await showCursedAcquisitionConfirmModal(this, { confirmLabel: 'Buy Anyway' });
+      if (!confirmed) return;
+    }
+    this.onBuyEquipment(card, stockIndex);
+  }
+
   private onBuyEquipment(card: ItemCard, stockIndex: number): void {
     if (card.sold) return;
     const shopItem = this.stockItems[stockIndex];
@@ -557,7 +571,7 @@ export class ShopScene extends Scene {
           position: 'bottom',
           callback: () => {
             this.activeTab.dismiss();
-            this.onBuyEquipment(card, stockIndex);
+            void this.confirmCursedEquipmentPurchase(card, stockIndex, shopItem.preview);
           },
         });
       } else if (shopItem.type === 'dice') {
@@ -876,9 +890,10 @@ export class ShopScene extends Scene {
         continue;
       }
 
+      const allowDupes = playerAllowsDuplicateItems(run);
       if (shopItem.type === 'equipment') {
         const alreadyOwned = equipment.some((e) => e.def.id === shopItem.def.id);
-        if (alreadyOwned) {
+        if (alreadyOwned && !allowDupes) {
           card.markSold();
         } else {
           const canAffordEquip =
@@ -889,7 +904,7 @@ export class ShopScene extends Scene {
         }
       } else if (shopItem.type === 'consumable') {
         const alreadyOwned = consumables.some((c) => c.def.id === shopItem.def.id);
-        if (alreadyOwned) {
+        if (alreadyOwned && !allowDupes) {
           card.markSold();
         } else {
           card.setAffordable(canAfford(run, purchaseCost));
@@ -1280,9 +1295,10 @@ export class ShopScene extends Scene {
         type: 'equipment',
         def: result.def,
         preview: gameFacade.shop.rollShopEquipmentPreview(result.def, getRunState().purchasedPermits),
+        sold: false,
       };
     } else {
-      this.stockItems[index] = { type: 'consumable', def: result.def };
+      this.stockItems[index] = { type: 'consumable', def: result.def, sold: false };
     }
     this.syncShopToStore();
     this.tearDownShopLayout();

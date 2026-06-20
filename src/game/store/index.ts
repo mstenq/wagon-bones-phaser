@@ -34,6 +34,7 @@ export {
   syncRolledDiceFromFaces,
   setHandDice,
   setSelectedForScoreDice,
+  setRerollLockedDice,
   removeDestroyedDiceFromRound,
 } from './roundWrites';
 export { computeRoundReward, computeTargetMiles, computePayoutBreakdown } from '../runProgression';

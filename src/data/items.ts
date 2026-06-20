@@ -981,7 +981,7 @@ const items: ItemDef[] = [
     cost: 20,
     rarity: 'legendary',
     effectType: 'PIP_XMULT',
-    effectParams: { pip: 6, value: 2 },
+    effectParams: { pip: 6, value: 38 },
     display: (_round, _player) => ({
       hint: [[mult('x2'), condition('per 6 held or played')]],
       tooltip: [[text('Held or played '), condition('6'), text("'s give "), mult('x2'), text(' mult')]],
@@ -2361,7 +2361,7 @@ const items: ItemDef[] = [
       const tooltip = [
         [
           text(
-            'After your first roll each day, your most common selected die face gains gravity. Each matching die increases its chance of appearing: 2 dice = 1/6, 3 dice = 1/3, 4 dice = 1/2, 5 dice = guaranteed.',
+            'After your first roll each day, your most common selected or locked die face gains gravity. Each matching die increases its chance of appearing: 2 dice = 1/6, 3 dice = 1/3, 4 dice = 1/2, 5 dice = guaranteed.',
           ),
         ],
       ];
@@ -2371,7 +2371,7 @@ const items: ItemDef[] = [
           tooltip,
         };
       }
-      const mode = getGravityModeFace(round.selectedForScore);
+      const mode = getGravityModeFace(round.gravityDice);
       if (!mode) {
         return {
           hint: [[inactive('Inactive')]],

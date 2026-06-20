@@ -60,6 +60,7 @@ import type { BoosterPackSceneState } from '../../game/store/types';
 import trailGuidesData from '../../data/trail_guides';
 import supplyCardsData from '../../data/supply_cards';
 import frontierEncountersData from '../../data/frontier_encounters';
+import { needsCursedAcquisitionConfirm, showCursedAcquisitionConfirmModal } from '../ui/CursedAcquisitionConfirmModal';
 
 const CARD_RADIUS = UI.CARD_RADIUS;
 
@@ -858,9 +859,18 @@ export class BoosterPackScene extends Scene {
           this.showPackCardPopup(sprite, 'No space!');
           return;
         }
-        onUse();
+        void this.confirmCursedPackEquipmentUse(sprite, onUse);
       },
     };
+  }
+
+  private async confirmCursedPackEquipmentUse(sprite: CardSprite, onUse: () => void): Promise<void> {
+    const preview = sprite.item.category === 'equipment' ? sprite.item.equipmentPreview : undefined;
+    if (needsCursedAcquisitionConfirm(preview)) {
+      const confirmed = await showCursedAcquisitionConfirmModal(this, { confirmLabel: 'Use Anyway' });
+      if (!confirmed) return;
+    }
+    onUse();
   }
 
   private buildActionTabs(sprite: CardSprite): CardActionTabConfig[] {

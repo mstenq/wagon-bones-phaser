@@ -12,6 +12,7 @@ import { getRunHandStats } from '../store/runReads';
 import {
   removeDestroyedDiceFromRound,
   setHandDice,
+  setRerollLockedDice,
   setSelectedForScoreDice,
   syncRolledDiceFromFaces,
 } from '../store/roundWrites';
@@ -172,6 +173,10 @@ export const gameRound = {
 
   setSelectedForScoreDice(dice: Die[]): void {
     setSelectedForScoreDice(dice);
+  },
+
+  setRerollLockedDice(dice: Die[]): void {
+    setRerollLockedDice(dice);
   },
 
   removeDestroyedDiceFromRound(destroyedIds: Set<string>): void {

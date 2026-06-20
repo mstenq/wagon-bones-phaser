@@ -49,7 +49,13 @@ export function serializeRoundState(round: RoundRuntimeState | null): Serialized
 export function deserializeRoundState(data: SerializedRoundRuntimeState | null): RoundRuntimeState | null {
   if (!data) return null;
   const { totalMiles, ...rest } = data;
-  return { ...rest, totalMiles: milesFromSave(totalMiles), lastScoreResult: null, sidebarOverlay: null };
+  return {
+    ...rest,
+    totalMiles: milesFromSave(totalMiles),
+    lastScoreResult: null,
+    sidebarOverlay: null,
+    rerollLockedDiceIds: data.rerollLockedDiceIds ?? [],
+  };
 }
 
 export function serializeSceneState(state: SceneRuntimeState): SerializedSceneRuntimeState {

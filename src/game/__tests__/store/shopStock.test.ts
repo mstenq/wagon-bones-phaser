@@ -37,6 +37,18 @@ import { resolveEquipmentInstance } from '../../store/resolve';
 import { rollShopEquipmentPreview } from '../../EquipmentModifiers';
 import { getPlayerState, resetPlayerState } from '../testRunPlayer';
 import { item, setupGame } from '../testHelpers';
+import { equipmentActions } from '../../store/actions/equipmentActions';
+import { consumableActions } from '../../store/actions/consumableActions';
+import { createConsumableInstance, getSupplyDefById } from '../../ConsumablesSystem';
+
+function shopRowDefIds(rows: ShopStockGenRow[]): string[] {
+  const ids: string[] = [];
+  for (const row of rows) {
+    if (row.type === 'equipment' && row.def) ids.push(row.def.id);
+    else if (row.type === 'consumable' && row.consumableDef) ids.push(row.consumableDef.id);
+  }
+  return ids;
+}
 
 describe('shopStock', () => {
   beforeEach(() => {
@@ -602,6 +614,101 @@ describe('shop tag integration', () => {
     const permit = generateShopPermit([]);
     expect(permit).not.toBeNull();
     expect(permit!.cost).toBeGreaterThan(0);
+  });
+});
+
+describe('counterfeit_goods shop duplicates', () => {
+  beforeEach(() => {
+    runActions.reset();
+    sceneActions.reset();
+    setupActions.applyProfession('outlaw');
+    setupActions.finalizeRunSetup();
+  });
+
+  test('excludes owned equipment and consumables from shop without counterfeit_goods', () => {
+    const ownedSupply = getSupplyDefById('coffee_tin')!;
+    equipmentActions.setEquipment([item('horseshoe')]);
+    consumableActions.setConsumables([createConsumableInstance(ownedSupply)]);
+
+    for (let i = 0; i < 50; i++) {
+      initRunRng(`shop-no-dupes-${i}`);
+      const ids = shopRowDefIds(generateShopStockRows());
+      expect(ids).not.toContain('horseshoe');
+      expect(ids).not.toContain(ownedSupply.id);
+    }
+  });
+
+  test('allows owned equipment in shop with counterfeit_goods', () => {
+    equipmentActions.setEquipment([item('horseshoe'), item('counterfeit_goods')]);
+
+    let sawOwnedHorseshoe = false;
+    for (let i = 0; i < 200; i++) {
+      initRunRng(`shop-owned-equip-${i}`);
+      const ids = shopRowDefIds(generateShopStockRows());
+      if (ids.includes('horseshoe')) {
+        sawOwnedHorseshoe = true;
+        break;
+      }
+    }
+    expect(sawOwnedHorseshoe).toBe(true);
+  });
+
+  test('allows owned consumables in shop with counterfeit_goods', () => {
+    const ownedSupply = getSupplyDefById('coffee_tin')!;
+    equipmentActions.setEquipment([item('counterfeit_goods')]);
+    consumableActions.setConsumables([createConsumableInstance(ownedSupply)]);
+
+    let sawOwnedSupply = false;
+    for (let i = 0; i < 200; i++) {
+      initRunRng(`shop-owned-supply-${i}`);
+      const ids = shopRowDefIds(generateShopStockRows());
+      if (ids.includes(ownedSupply.id)) {
+        sawOwnedSupply = true;
+        break;
+      }
+    }
+    expect(sawOwnedSupply).toBe(true);
+  });
+
+  test('allows duplicate ids in the same shop visit with counterfeit_goods', () => {
+    equipmentActions.setEquipment([item('counterfeit_goods')]);
+    runActions.patch({ shopSlots: 6 });
+
+    let sawWithinShopDupe = false;
+    for (let i = 0; i < 300; i++) {
+      initRunRng(`shop-within-visit-dupe-${i}`);
+      const ids = shopRowDefIds(generateShopStockRows());
+      if (new Set(ids).size < ids.length) {
+        sawWithinShopDupe = true;
+        break;
+      }
+    }
+    expect(sawWithinShopDupe).toBe(true);
+  });
+
+  test('appendShopStockForSlots allows owned duplicates when filling new slots', () => {
+    equipmentActions.setEquipment([item('horseshoe'), item('counterfeit_goods')]);
+    const existing = shopRowsToStored([
+      {
+        type: 'equipment',
+        def: getEquipmentDefById('deadeye')!,
+        preview: rollShopEquipmentPreview(getEquipmentDefById('deadeye')!, []),
+      },
+    ]);
+
+    let sawOwnedHorseshoe = false;
+    for (let i = 0; i < 200; i++) {
+      initRunRng(`shop-append-owned-${i}`);
+      const refreshed = appendShopStockForSlots(existing, 4);
+      const ids = refreshed
+        .filter((row) => row.type === 'equipment' || row.type === 'consumable')
+        .map((row) => row.defId);
+      if (ids.includes('horseshoe')) {
+        sawOwnedHorseshoe = true;
+        break;
+      }
+    }
+    expect(sawOwnedHorseshoe).toBe(true);
   });
 });
 

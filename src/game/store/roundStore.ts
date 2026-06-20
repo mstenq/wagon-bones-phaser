@@ -22,6 +22,7 @@ export function createInitialRoundState(): RoundRuntimeState {
     selectedForRollIds: [],
     rolledDice: [],
     selectedForScoreIds: [],
+    rerollLockedDiceIds: [],
     currentHandType: null,
     handHistory: [],
     lastScoreResult: null,

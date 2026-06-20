@@ -13,6 +13,7 @@ function roundContext(day: number, maxDays = 5): RoundHintContext {
     handHistory: [],
     rolledDice: [],
     selectedForScore: [],
+    gravityDice: [],
   };
 }
 

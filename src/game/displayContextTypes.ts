@@ -64,4 +64,6 @@ export interface RoundHintContext {
   handHistory: HandType[];
   rolledDice: Die[];
   selectedForScore: Die[];
+  /** Selected-for-score plus reroll-locked dice (Gravity and similar). */
+  gravityDice: Die[];
 }

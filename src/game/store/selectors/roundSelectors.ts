@@ -46,6 +46,24 @@ export function selectSelectedForRoll(state: RoundRuntimeState | null = getRound
   return resolveDiceByIds(state.selectedForRollIds, state);
 }
 
+export function selectRerollLockedDice(state: RoundRuntimeState | null = getRoundState()): Die[] {
+  if (!state) return [];
+  return resolveDiceByIds(state.rerollLockedDiceIds, state);
+}
+
+/** Selected-for-score plus reroll-locked dice — union used by Gravity. */
+export function selectGravityDice(state: RoundRuntimeState | null = getRoundState()): Die[] {
+  if (!state) return [];
+  const byId = new Map<string, Die>();
+  for (const die of selectSelectedForScore(state)) {
+    byId.set(die.id, die);
+  }
+  for (const die of selectRerollLockedDice(state)) {
+    byId.set(die.id, die);
+  }
+  return [...byId.values()];
+}
+
 export function selectCurrentHandType(state: RoundRuntimeState | null = getRoundState()): HandType | null {
   return state?.currentHandType ?? null;
 }
@@ -75,6 +93,7 @@ export function selectRoundSidebarModel(state: RoundRuntimeState | null = getRou
 export function selectEquipmentHintRoundContext(state: RoundRuntimeState | null = getRoundState()) {
   if (!state) return null;
   const selectedForScore = selectSelectedForScore(state);
+  const gravityDice = selectGravityDice(state);
   // In ROLL phase, hints should reflect the currently selected scoring hand preview.
   const currentHandType = selectedForScore.length > 0 ? detectBestHand(selectedForScore).type : state.currentHandType;
   return {
@@ -86,5 +105,6 @@ export function selectEquipmentHintRoundContext(state: RoundRuntimeState | null 
     handHistory: state.handHistory,
     rolledDice: selectRolledDice(state),
     selectedForScore,
+    gravityDice,
   };
 }

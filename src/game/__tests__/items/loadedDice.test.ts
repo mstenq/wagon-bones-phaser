@@ -856,7 +856,7 @@ describe('GRAVITY: helpers', () => {
     expect(getGravityModeFace([die({ value: 4 })])).toBeNull();
   });
 
-  test('getGravityModeFace only counts selected dice', () => {
+  test('getGravityModeFace only counts dice passed in', () => {
     const twelves = diceWithValue(12, 5);
     const selected = twelves.slice(0, 2);
     expect(getGravityModeFace(selected)).toEqual({ face: 12, count: 2 });
@@ -971,7 +971,7 @@ describe('GRAVITY: rolling', () => {
     expect(rerolled.value).toBe(6);
   });
 
-  test('uses only selected dice for gravity odds on reroll', () => {
+  test('uses selected and reroll-locked dice for gravity odds on reroll', () => {
     const twelves = diceWithValue(12, 5);
     const selected = twelves.slice(0, 2);
     setupGame({ equipment: [item('gravity')], dice: twelves });
@@ -985,6 +985,33 @@ describe('GRAVITY: rolling', () => {
 
     expect(face12 / trials).toBeGreaterThan(0.15);
     expect(face12 / trials).toBeLessThan(0.185);
+  });
+
+  test('reroll-locked dice count toward gravity mode face', () => {
+    const twelves = diceWithValue(12, 5);
+    const locked = twelves.slice(0, 2);
+    setupGame({ equipment: [item('gravity')], dice: twelves });
+    seedTestRoll(twelves, { selectedForScore: [], rerollLocked: locked });
+
+    let face12 = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ value: 1 })).value === 12) face12++;
+    }
+
+    expect(face12 / trials).toBeGreaterThan(0.15);
+    expect(face12 / trials).toBeLessThan(0.185);
+  });
+
+  test('selected plus reroll-locked dice combine for gravity count', () => {
+    const twelves = diceWithValue(12, 5);
+    const selected = twelves.slice(0, 2);
+    const locked = twelves.slice(2, 5);
+    setupGame({ equipment: [item('gravity')], dice: twelves });
+    seedTestRoll(twelves, { selectedForScore: selected, rerollLocked: locked });
+
+    const result = rollDie(die({ value: 1 }));
+    expect(result.value).toBe(12);
   });
 
   test('player reroll path applies gravity with five matching faces', () => {

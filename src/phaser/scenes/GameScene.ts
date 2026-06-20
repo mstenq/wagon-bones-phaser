@@ -860,7 +860,7 @@ export class GameScene extends Scene {
       this.selectedDiceIds.add(id);
     }
     this.syncRollDieVisuals();
-    this.syncSelectedForScore();
+    this.syncRollDiceSelection();
     this.rollRow.reposition(true);
     this.updateRollButtons();
   }
@@ -951,12 +951,14 @@ export class GameScene extends Scene {
 
     const idx = this.rollSprites.indexOf(sprite);
     if (idx >= 0) this.rollRow.animateSelectLift(sprite, idx);
-    this.syncSelectedForScore();
+    this.syncRollDiceSelection();
     if (updateButtons) this.updateRollButtons();
   }
 
-  private syncSelectedForScore(): void {
-    gameFacade.round.setSelectedForScoreDice(selectRolledDice().filter((d) => this.selectedDiceIds.has(d.id)));
+  private syncRollDiceSelection(): void {
+    const rolled = selectRolledDice();
+    gameFacade.round.setSelectedForScoreDice(rolled.filter((d) => this.selectedDiceIds.has(d.id)));
+    gameFacade.round.setRerollLockedDice(rolled.filter((d) => this.rerollLockedDiceIds.has(d.id)));
   }
 
   private canUseMarquee(): boolean {

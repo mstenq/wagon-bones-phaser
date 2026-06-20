@@ -2,6 +2,7 @@
 // Pure tier/fill logic for the round-score progress UI.
 
 import { D, divideScore, type DecimalSource } from '../../game/decimal';
+import { UI } from '../../game/Constants';
 
 export interface ScoreProgressState {
   /** 0-indexed tier (0 = first target chunk, 1 = second lap, …). */
@@ -105,8 +106,9 @@ export function getOverflowMultiplierLabel(ratio: number): number | null {
   if (ratio <= 1) return null;
   const floored = Math.floor(ratio);
   const fractional = ratio - floored;
-  if (fractional <= 1e-6) return floored;
-  return floored + 1;
+  const label = fractional <= 1e-6 ? floored : floored + 1;
+  if (label >= UI.SCORE_PROGRESS_OVERFLOW_LABEL_MAX) return null;
+  return label;
 }
 
 /** Bottom-to-top stacked layers for the progress bar. */
@@ -126,8 +128,8 @@ export function getStackedProgressLayers(
   }
 
   const layers: ScoreProgressLayer[] = [];
-  for (let tier = 0; tier < state.tierIndex; tier++) {
-    layers.push({ tierIndex: tier, fill: 1 });
+  if (state.tierFill < 1 && state.tierIndex > 0) {
+    layers.push({ tierIndex: state.tierIndex - 1, fill: 1 });
   }
   layers.push({ tierIndex: state.tierIndex, fill: state.tierFill });
 

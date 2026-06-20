@@ -1093,6 +1093,12 @@ describe('ALLOW_DUPLICATES: Counterfeit Goods', () => {
     expect(inst.def.cost).toBe(5);
     expect(inst.def.rarity).toBe('uncommon');
   });
+
+  test('playerAllowsDuplicateItems is true when equipped', () => {
+    setupGame({ equipment: [item('counterfeit_goods')] });
+    const { playerAllowsDuplicateItems } = require('../../BoosterPackSystem');
+    expect(playerAllowsDuplicateItems()).toBe(true);
+  });
 });
 
 // ─── TRAIL_BACKPACK ───

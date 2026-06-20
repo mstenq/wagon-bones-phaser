@@ -135,6 +135,7 @@ function createInitialRound(config: GameConfig, run = getRunState()): RoundRunti
     selectedForRollIds: [],
     rolledDice: [],
     selectedForScoreIds: [],
+    rerollLockedDiceIds: [],
     currentHandType: null,
     handHistory: [],
     lastScoreResult: null,
@@ -784,6 +785,7 @@ export const roundActions = {
       selectedForRollIds: [],
       rolledDice: [],
       selectedForScoreIds: [],
+      rerollLockedDiceIds: [],
       currentHandType: null,
       spentDiceIds: [...getRunState().spentDiceIds],
     });

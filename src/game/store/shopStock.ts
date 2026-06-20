@@ -15,7 +15,7 @@ import {
   getShopRandomFrontierDef,
   type ConsumableDef,
 } from '../ConsumablesSystem';
-import { applyRandomSticker, generateShopPacks } from '../BoosterPackSystem';
+import { applyRandomSticker, generateShopPacks, playerAllowsDuplicateItems } from '../BoosterPackSystem';
 import type { PackDef } from '../../data/packs';
 import { getDiscountedShopPrice, getPermitAuraMultiplier, hasPermitDiceInShop, type PermitDef } from '../PermitsSystem';
 import { getEquipmentPurchasePrice, rollShopEquipmentPreview } from '../EquipmentModifiers';
@@ -157,6 +157,12 @@ function ownedDefIds(run: RunState): string[] {
   return [...run.equipment.map((e) => e.defId), ...run.consumables.map((c) => c.defId)];
 }
 
+/** Owned + in-shop ids excluded from generation, unless Counterfeit Goods allows duplicates. */
+function shopStockExcludeIds(run: RunState, withinShopIds: string[] = []): string[] {
+  if (playerAllowsDuplicateItems(run)) return [];
+  return [...ownedDefIds(run), ...withinShopIds];
+}
+
 function defIdsFromStoredStock(stored: StoredShopItem[]): string[] {
   const ids: string[] = [];
   for (const item of stored) {
@@ -250,7 +256,8 @@ export function appendShopStockForSlots(
     return activeStock.map((item) => ({ ...item }));
   }
 
-  const excludeIds = [...ownedDefIds(run), ...defIdsFromStoredStock(activeStock)];
+  const allowDupes = playerAllowsDuplicateItems(run);
+  const excludeIds = shopStockExcludeIds(run, defIdsFromStoredStock(activeStock));
   const newRows: ShopStockGenRow[] = [];
 
   while (activeStock.length + newRows.length < slotCount) {
@@ -258,7 +265,7 @@ export function appendShopStockForSlots(
     if (!row) continue;
     newRows.push(row);
     const id = defIdFromGenRow(row);
-    if (id) excludeIds.push(id);
+    if (id && !allowDupes) excludeIds.push(id);
   }
 
   return [...activeStock, ...shopRowsToStored(newRows)];
@@ -280,14 +287,15 @@ export function refreshShopStockAfterPermitPurchase(
 export function generateShopStockRows(run: RunState = getRunState()): ShopStockGenRow[] {
   const slotCount = Math.max(1, run.shopSlots);
   const items: ShopStockGenRow[] = [];
-  const excludeIds = ownedDefIds(run);
+  const allowDupes = playerAllowsDuplicateItems(run);
+  const excludeIds = shopStockExcludeIds(run);
 
   for (let i = 0; i < slotCount; i++) {
     const row = generateOneShopStockRow(excludeIds, run);
     if (!row) continue;
     items.push(row);
     const id = defIdFromGenRow(row);
-    if (id) excludeIds.push(id);
+    if (id && !allowDupes) excludeIds.push(id);
   }
 
   return items;
