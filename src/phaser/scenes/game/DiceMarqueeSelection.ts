@@ -1,4 +1,4 @@
-// ─── Roll-phase marquee (drag box) selection for scored dice ───
+// ─── Drag-box (marquee) selection for dice rows ───
 
 import type { Scene } from 'phaser';
 import * as Phaser from 'phaser';
@@ -6,28 +6,30 @@ import { DICE, MARQUEE } from '../../../game/Constants';
 import type { DiceSprite } from '../../ui/DiceSprite';
 import { attachPointerDragTrack, getPointerDragDistance } from '../../ui/pointerDragTrack';
 
-export type RollMarqueeSelectionDeps = {
+export type DiceMarqueeSelectionDeps = {
   scene: Scene;
   canUseMarquee: () => boolean;
-  getRollSprites: () => DiceSprite[];
+  getSprites: () => DiceSprite[];
   getZoneBounds: () => { width: number; height: number; cx: number; cy: number };
   onSpriteHit: (sprite: DiceSprite, playSound: boolean, isRightClick: boolean) => void;
   onSelectionComplete: () => void;
   onDragBegin: () => void;
+  /** When false, only left-drag toggles selection (booster pack lineup). Default true. */
+  supportsRightClick?: boolean;
 };
 
-export class RollMarqueeSelection {
-  private rollMarqueeZone: Phaser.GameObjects.Zone | null = null;
+export class DiceMarqueeSelection {
+  private marqueeZone: Phaser.GameObjects.Zone | null = null;
   private marqueeGfx: Phaser.GameObjects.Graphics | null = null;
   private marqueeStartX = 0;
   private marqueeStartY = 0;
   private marqueeActive = false;
   private marqueePointerId: number | null = null;
-  /** Left-drag = select/deselect; right-drag = lock/unlock (matches single-click die rules). */
+  /** Left-drag = select/deselect; right-drag = lock/unlock (roll phase only). */
   private marqueeIsRightClick = false;
   private detachMarqueeTrack: (() => void) | null = null;
 
-  constructor(private readonly deps: RollMarqueeSelectionDeps) {}
+  constructor(private readonly deps: DiceMarqueeSelectionDeps) {}
 
   isActive(): boolean {
     return this.marqueeActive;
@@ -35,20 +37,28 @@ export class RollMarqueeSelection {
 
   setup(): void {
     this.createZone();
-    if (!this.rollMarqueeZone) return;
+    if (!this.marqueeZone) return;
 
-    this.rollMarqueeZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this.marqueeZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (!this.deps.canUseMarquee()) return;
-      if (!pointer.leftButtonDown() && !pointer.rightButtonDown()) return;
+
+      const supportsRightClick = this.deps.supportsRightClick !== false;
+      if (supportsRightClick) {
+        if (!pointer.leftButtonDown() && !pointer.rightButtonDown()) return;
+        this.marqueeIsRightClick = pointer.rightButtonDown();
+      } else if (!pointer.leftButtonDown()) {
+        return;
+      } else {
+        this.marqueeIsRightClick = false;
+      }
 
       this.marqueeStartX = pointer.worldX;
       this.marqueeStartY = pointer.worldY;
       this.marqueePointerId = pointer.id;
-      this.marqueeIsRightClick = pointer.rightButtonDown();
       this.marqueeActive = false;
 
       this.stopTracking();
-      this.detachMarqueeTrack = attachPointerDragTrack(this.deps.scene, this.rollMarqueeZone, {
+      this.detachMarqueeTrack = attachPointerDragTrack(this.deps.scene, this.marqueeZone, {
         onMove: this.onMarqueePointerMove,
         onEnd: this.onMarqueePointerUp,
       });
@@ -67,17 +77,14 @@ export class RollMarqueeSelection {
     this.cleanupMarquee();
     this.marqueeGfx?.destroy();
     this.marqueeGfx = null;
-    this.rollMarqueeZone?.destroy();
-    this.rollMarqueeZone = null;
+    this.marqueeZone?.destroy();
+    this.marqueeZone = null;
   }
 
   private createZone(): void {
     this.destroy();
     const { width, height, cx, cy } = this.deps.getZoneBounds();
-    this.rollMarqueeZone = this.deps.scene.add
-      .zone(cx, cy, width, height)
-      .setDepth(MARQUEE.ZONE_DEPTH)
-      .setInteractive();
+    this.marqueeZone = this.deps.scene.add.zone(cx, cy, width, height).setDepth(MARQUEE.ZONE_DEPTH).setInteractive();
   }
 
   private onMarqueePointerMove = (pointer: Phaser.Input.Pointer): void => {
@@ -117,7 +124,8 @@ export class RollMarqueeSelection {
     }
     const rect = this.getMarqueeRect(x1, y1, x2, y2);
     this.marqueeGfx.clear();
-    const stroke = this.marqueeIsRightClick ? MARQUEE.LOCK_STROKE : DICE.SELECTED_STROKE;
+    const supportsRightClick = this.deps.supportsRightClick !== false;
+    const stroke = supportsRightClick && this.marqueeIsRightClick ? MARQUEE.LOCK_STROKE : DICE.SELECTED_STROKE;
     this.marqueeGfx.fillStyle(stroke, MARQUEE.FILL_ALPHA);
     this.marqueeGfx.fillRect(rect.x, rect.y, rect.width, rect.height);
     this.marqueeGfx.lineStyle(2, stroke, 1);
@@ -135,7 +143,7 @@ export class RollMarqueeSelection {
 
   private getDiceInMarquee(rect: Phaser.Geom.Rectangle): DiceSprite[] {
     const hits: DiceSprite[] = [];
-    for (const sprite of this.deps.getRollSprites()) {
+    for (const sprite of this.deps.getSprites()) {
       if (Phaser.Geom.Rectangle.Overlaps(rect, this.getDiceWorldBounds(sprite))) {
         hits.push(sprite);
       }

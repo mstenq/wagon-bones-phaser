@@ -27,6 +27,8 @@ import { SpyglassTrailPreview } from '../ui/SpyglassTrailPreview';
 import type { Sidebar } from '../ui/Sidebar';
 import { createRunSceneShell } from './runSceneShell';
 import { TrailEventResultPanel } from './trailEvent/TrailEventResultPanel';
+import { DiceSprite } from '../ui/DiceSprite';
+import { playDiceFireDestroyVisual } from '../animations/DiceFireDestroyAnimation';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -327,6 +329,7 @@ export class TrailEventScene extends Scene {
   private onChoiceSelected(choice: TrailEventChoice): void {
     const run = getRunState();
     const diceIdsBefore = new Set(run.dice.map((d) => d.id));
+    const diceBefore = run.dice;
 
     this.resolved = true;
 
@@ -340,7 +343,9 @@ export class TrailEventScene extends Scene {
     }
 
     const result = gameFacade.trail.resolveChoice(this.currentEvent, choice.id, () => rngFloat('trail'));
-    const gainedDice = getRunState().dice.filter((d) => !diceIdsBefore.has(d.id));
+    const diceAfter = getRunState().dice;
+    const gainedDice = diceAfter.filter((d) => !diceIdsBefore.has(d.id));
+    const lostDice = diceBefore.filter((d) => !diceAfter.some((rd) => rd.id === d.id));
 
     sceneActions.patchTrailEvent({
       resolved: true,
@@ -365,7 +370,7 @@ export class TrailEventScene extends Scene {
     flushAutoSave();
 
     this.fadeOutEventCard(() => {
-      this.showResult(result, enhancedDiceBeforeCount, equipmentBeforeResolve, gainedDice);
+      this.showResult(result, enhancedDiceBeforeCount, equipmentBeforeResolve, gainedDice, lostDice);
     });
   }
 
@@ -406,7 +411,9 @@ export class TrailEventScene extends Scene {
     const equipment = resolveEquipmentList();
     const equipmentBeforeResolve = equipment.slice(0, display.equipmentCountBeforeResolve);
 
-    this.showResult(result, display.enhancedDiceBeforeCount, equipmentBeforeResolve, gainedDice, { restored: true });
+    this.showResult(result, display.enhancedDiceBeforeCount, equipmentBeforeResolve, gainedDice, [], {
+      restored: true,
+    });
   }
 
   private showResult(
@@ -414,6 +421,7 @@ export class TrailEventScene extends Scene {
     enhancedDiceBeforeCount: number,
     equipmentBeforeResolve: EquipmentInstance[],
     gainedDice: Die[],
+    lostDice: Die[],
     options?: { restored?: boolean },
   ): void {
     const layout = this.shellLayout ?? this.getContentLayout();
@@ -427,8 +435,7 @@ export class TrailEventScene extends Scene {
         this.formatEffect(effect, negated, enhancedCount, equipCount),
       showEquipmentPicker: (count, cx, y, ownedBefore, onComplete) =>
         this.showEquipmentPicker(count, cx, y, ownedBefore, onComplete),
-      animateDiceLossEffects: (effects, cx, baseY, enhancedCount) =>
-        this.animateDiceLossEffects(effects, cx, baseY, enhancedCount),
+      animateDiceLoss: (dice, cx, cy) => this.animateDiceLoss(dice, cx, cy),
       playSound: (key) => this.safePlaySound(key),
       onProceed: () => this.proceedToNextScene(),
     });
@@ -438,6 +445,7 @@ export class TrailEventScene extends Scene {
       result,
       layout,
       gainedDice,
+      lostDice,
       enhancedDiceBeforeCount,
       equipmentBeforeResolve,
       categoryColor,
@@ -555,62 +563,32 @@ export class TrailEventScene extends Scene {
     buildCards();
   }
 
-  private animateDiceLossEffects(
-    effects: TrailEventEffect[],
-    cx: number,
-    baseY: number,
-    enhancedDiceBeforeCount: number,
-  ): void {
-    for (const effect of effects) {
-      if (effect.type !== 'LOSE_RANDOM_DICE') continue;
-      const actualLost = Math.min(effect.count ?? 1, enhancedDiceBeforeCount);
-      if (actualLost === 0) continue;
-      for (let i = 0; i < Math.min(actualLost, 5); i++) {
-        const dieX = cx + (i - Math.min(actualLost, 5) / 2) * 50;
-        this.time.delayedCall(200 + i * 150, () => {
-          this.animateDiceLoss(dieX, baseY);
+  private animateDiceLoss(lostDice: Die[], cx: number, cy: number): void {
+    const diceToShow = lostDice.slice(0, 5);
+    const scale = 0.95;
+    const spacing = 118;
+    let fireSoundPlayed = false;
+
+    for (let i = 0; i < diceToShow.length; i++) {
+      const die = diceToShow[i]!;
+      const dieX = cx + (i - (diceToShow.length - 1) / 2) * spacing;
+      const isLast = i === diceToShow.length - 1;
+      this.time.delayedCall(200 + i * 150, () => {
+        if (!fireSoundPlayed) {
+          fireSoundPlayed = true;
+          this.sound.play('sfx_ambient_fire', { volume: 1.2 });
+        }
+        const sprite = new DiceSprite(this, dieX, cy, die);
+        sprite.setScale(scale);
+        sprite.setDepth(300);
+        void playDiceFireDestroyVisual(this, sprite).then(() => {
+          sprite.destroy();
+          if (isLast) {
+            this.safePlaySound('sfx_slice1');
+          }
         });
-      }
-    }
-  }
-
-  private animateDiceLoss(x: number, y: number): void {
-    const dieGfx = this.add.graphics();
-    dieGfx.fillStyle(0xcc4444, 1);
-    dieGfx.fillRoundedRect(x - 18, y - 18, 36, 36, 6);
-    dieGfx.lineStyle(2, 0xff6666, 1);
-    dieGfx.strokeRoundedRect(x - 18, y - 18, 36, 36, 6);
-
-    const dieText = this.add.text(x, y, '💀', { fontSize: '18px' }).setOrigin(0.5);
-
-    this.tweens.add({
-      targets: [dieGfx, dieText],
-      alpha: 0,
-      scaleX: 0.2,
-      scaleY: 0.2,
-      duration: 600,
-      ease: 'Power2',
-      delay: 100,
-      onComplete: () => {
-        dieGfx.destroy();
-        dieText.destroy();
-      },
-    });
-
-    for (let p = 0; p < 4; p++) {
-      const particle = this.add.text(x, y, '•', { fontSize: '12px', color: '#ff4444' }).setOrigin(0.5);
-      this.tweens.add({
-        targets: particle,
-        x: x + (Math.random() - 0.5) * 80,
-        y: y + (Math.random() - 0.5) * 60,
-        alpha: 0,
-        duration: 500,
-        ease: 'Power2',
-        onComplete: () => particle.destroy(),
       });
     }
-
-    this.safePlaySound('sfx_explosion');
   }
 
   private formatEffect(

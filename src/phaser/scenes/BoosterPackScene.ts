@@ -52,6 +52,7 @@ import {
 import { computeFittedRowSpacing } from '../ui/SceneLayout';
 import { createRunSceneShell, type RunSceneShell } from './runSceneShell';
 import { computeDiceRowLayout, getArcOffset, getRowXPositions } from './game/diceRowGeometry';
+import { DiceMarqueeSelection } from './game/DiceMarqueeSelection';
 import { armPackCardTargeting, commitConsumableTargetingFlow } from '../../game/consumables/consumableFlowHarness';
 import { formatLineupTargetingInstruction } from '../../game/consumables/formatTargetingInstruction';
 import { type BoosterPackSaveData, deserializePackItem, serializePackItem } from '../../game/SaveLoad';
@@ -120,6 +121,7 @@ export class BoosterPackScene extends Scene {
 
   // Drag-to-reorder (dice lineup)
   private lineupDragReorder!: HorizontalDragReorder<DiceSprite>;
+  private lineupMarquee!: DiceMarqueeSelection;
 
   // Active card tab state
   private activeTabCard: CardSprite | null = null;
@@ -215,11 +217,26 @@ export class BoosterPackScene extends Scene {
     this.activeTabCard = null;
 
     this.initLineupDragReorder();
+    this.lineupMarquee = new DiceMarqueeSelection({
+      scene: this,
+      supportsRightClick: false,
+      canUseMarquee: () => this.canUseLineupMarquee(),
+      getSprites: () => this.lineupSprites,
+      getZoneBounds: () => this.getLineupMarqueeZoneBounds(),
+      onSpriteHit: (sprite, playSound, _isRightClick) => this.toggleLineupDieSelection(sprite, playSound),
+      onSelectionComplete: () => {
+        this.updateInstructionText();
+        this.updateActiveTabEnabled();
+      },
+      onDragBegin: () => { },
+    });
 
     this.scale.on('resize', this.onResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
       this.lineupDragReorder.stop();
+      this.lineupMarquee?.stopTracking();
+      this.lineupMarquee?.destroy();
       this.clearDismissClickAway();
       this.runShell?.destroy();
       this.runShell = null;
@@ -240,7 +257,7 @@ export class BoosterPackScene extends Scene {
           return { x, y: this.lineupY + arc.y, rotation: arc.rotation };
         });
       },
-      canStart: (sprite) => !sprite._disabled,
+      canStart: (sprite) => !sprite._disabled && !this.lineupMarquee.isActive(),
       getPointerOffset: (sprite, pointer) => ({
         x: pointer.worldX - sprite.x,
         y: pointer.worldY - sprite.y,
@@ -297,6 +314,7 @@ export class BoosterPackScene extends Scene {
         this.lineupLockIcons[idx]?.setPosition(positions[idx], settleY + this.getLineupLockIconOffsetY());
       },
       playSettleSound: true,
+      canTap: () => !this.lineupMarquee.isActive(),
       onReleaseWithoutDrag: (sprite) => {
         this.onLineupDieClick(sprite);
       },
@@ -369,7 +387,7 @@ export class BoosterPackScene extends Scene {
     const picksFontSize = Math.max(13, Math.floor(16 * uiScale));
 
     // ─── Pack name (below equip/consumable bars, inside content area) ───
-    const titleY = this.contentTop + Math.floor(8 * uiScale);
+    const titleY = this.contentTop + Math.floor(32 * uiScale);
     this.add
       .text(this.contentCX, titleY, this.packDef.name, {
         fontFamily: FONTS.HEADING,
@@ -407,7 +425,7 @@ export class BoosterPackScene extends Scene {
       const lineupDice = gameFacade.pack.getLineupDice();
       const lineupCount = lineupDice.length > 0 ? lineupDice.length : defaultLineupCount;
       const diceLayout = computeDiceRowLayout(Math.max(1, lineupCount), this.contentW);
-      this.lineupY = headerBottom + diceLayout.dieSize / 2 + Math.floor(8 * uiScale);
+      this.lineupY = headerBottom + diceLayout.dieSize / 2 + Math.floor(100 * uiScale);
       if (lineupDice.length === 0) {
         gameFacade.pack.initLineup();
       }
@@ -455,17 +473,17 @@ export class BoosterPackScene extends Scene {
       const actionTabs =
         itemCard === null
           ? createActionTabs({
-              scene: this,
-              parent: container,
-              layout: {
-                cardW: this.cardW,
-                cardH: this.cardH,
-                cardScale: this.cardScale,
-                tabAnchorX: this.cardW / 2,
-                rightTabYOffset: 20,
-              },
-              liftParentForBottomTabs: false,
-            })
+            scene: this,
+            parent: container,
+            layout: {
+              cardW: this.cardW,
+              cardH: this.cardH,
+              cardScale: this.cardScale,
+              tabAnchorX: this.cardW / 2,
+              rightTabYOffset: 20,
+            },
+            liftParentForBottomTabs: false,
+          })
           : undefined;
 
       const sprite: CardSprite = {
@@ -546,10 +564,12 @@ export class BoosterPackScene extends Scene {
 
     this.setLineupInteractive(true);
     sceneActions.patchPackLineupSelection([...selected]);
+    this.lineupMarquee.setup();
   }
 
   private clearDiceLineupSprites(): void {
     this.cancelLineupDrag();
+    this.lineupMarquee?.stopTracking();
     for (const s of this.lineupSprites) {
       if (s.scene) s.destroy();
     }
@@ -613,6 +633,15 @@ export class BoosterPackScene extends Scene {
       return;
     }
 
+    this.toggleLineupDieSelection(sprite);
+  }
+
+  private toggleLineupDieSelection(sprite: DiceSprite, playSound = true): void {
+    const index = this.lineupSprites.indexOf(sprite);
+    if (index < 0) return;
+    const die = gameFacade.pack.getLineupDice()[index];
+    if (!die) return;
+
     const config = this.getLineupDiceConfig();
     const lockIcon = this.lineupLockIcons[index];
     const maxPicks = config ? getDiceSelectionMaxPicks(config) : Number.MAX_SAFE_INTEGER;
@@ -622,17 +651,40 @@ export class BoosterPackScene extends Scene {
       selected.delete(die.id);
       sprite.setSelected(false);
       if (lockIcon) lockIcon.setVisible(false);
-      this.sound.play('sfx_card_slide2', { volume: 0.25 });
+      if (playSound) this.sound.play('sfx_card_slide2', { volume: 0.25 });
     } else if (selected.size < maxPicks) {
       selected.add(die.id);
       sprite.setSelected(true);
       if (lockIcon) lockIcon.setVisible(true);
-      this.sound.play('sfx_highlight1', { volume: 0.3 });
+      if (playSound) this.sound.play('sfx_highlight1', { volume: 0.3 });
     }
 
     sceneActions.patchPackLineupSelection([...selected]);
     this.updateInstructionText();
     this.updateActiveTabEnabled();
+  }
+
+  private canUseLineupMarquee(): boolean {
+    return (
+      this.hasDiceSelectionLineup &&
+      this.lineupSprites.length > 0 &&
+      !this.lineupDragReorder.isDragging() &&
+      !gameFacade.consumable.targeting.active()
+    );
+  }
+
+  private getLineupMarqueeZoneBounds(): { width: number; height: number; cx: number; cy: number } {
+    const layout = this.runShell?.layout;
+    const feltX = layout?.sidebarW ?? 0;
+    const feltY = layout?.topBarH ?? 0;
+    const feltW = this.scale.width - feltX;
+    const feltH = this.scale.height - feltY;
+    return {
+      width: feltW,
+      height: feltH,
+      cx: feltX + feltW / 2,
+      cy: feltY + feltH / 2,
+    };
   }
 
   // ─── Card Display ───
@@ -685,10 +737,10 @@ export class BoosterPackScene extends Scene {
       const trailGuideDef = trailGuideData
         ? createTrailGuideConsumableDef(trailGuideData)
         : {
-            ...item,
-            id: item.trailGuideId,
-            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-          };
+          ...item,
+          id: item.trailGuideId,
+          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+        };
       itemCard = new ItemCard(this, 0, 0, trailGuideDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('trail_guide'),
@@ -701,10 +753,10 @@ export class BoosterPackScene extends Scene {
       const supplyDef = supplyCardData
         ? createSupplyConsumableDef(supplyCardData)
         : {
-            ...item,
-            id: item.supplyCardId,
-            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-          };
+          ...item,
+          id: item.supplyCardId,
+          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+        };
       itemCard = new ItemCard(this, 0, 0, supplyDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('supply'),
@@ -717,10 +769,10 @@ export class BoosterPackScene extends Scene {
       const frontierDef = frontierData
         ? createFrontierConsumableDef(frontierData)
         : {
-            ...item,
-            id: item.frontierEncounterId,
-            display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
-          };
+          ...item,
+          id: item.frontierEncounterId,
+          display: () => ({ hint: [], tooltip: [[{ text: item.description, style: 'text' as const }]] }),
+        };
       itemCard = new ItemCard(this, 0, 0, frontierDef, {
         mode: 'inventory',
         textureKey: getConsumableAtlasKey('frontier'),
@@ -1272,6 +1324,8 @@ export class BoosterPackScene extends Scene {
     clearSceneCardTooltips(this);
     this.dismissActiveTab();
     this.lineupDragReorder.stop();
+    this.lineupMarquee?.stopTracking();
+    this.lineupMarquee?.destroy();
     this.clearDiceLineupSprites();
 
     for (const sprite of this.cardSprites) {

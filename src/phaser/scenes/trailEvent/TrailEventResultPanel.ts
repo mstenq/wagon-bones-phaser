@@ -38,12 +38,7 @@ export type TrailEventResultPanelDeps = {
     equipmentOwnedBeforeChoice: EquipmentInstance[],
     onComplete: () => void,
   ) => void;
-  animateDiceLossEffects: (
-    effects: TrailEventEffect[],
-    cx: number,
-    baseY: number,
-    enhancedDiceBeforeCount: number,
-  ) => void;
+  animateDiceLoss: (lostDice: Die[], cx: number, cy: number) => void;
   playSound: (key: string) => void;
   onProceed: () => void;
 };
@@ -58,6 +53,7 @@ export type TrailEventResultShowOptions = {
   result: TrailEventResult;
   layout: Pick<LayoutResult, 'contentCX' | 'contentTop' | 'contentBottom' | 'contentW'>;
   gainedDice: Die[];
+  lostDice: Die[];
   enhancedDiceBeforeCount: number;
   equipmentBeforeResolve: EquipmentInstance[];
   categoryColor: number;
@@ -92,6 +88,7 @@ export class TrailEventResultPanel {
       result,
       layout,
       gainedDice,
+      lostDice,
       enhancedDiceBeforeCount,
       equipmentBeforeResolve,
       categoryColor,
@@ -225,10 +222,9 @@ export class TrailEventResultPanel {
     panel.strokeRoundedRect(-panelW / 2, 0, panelW, panelH, 12);
     this.container.addAt(panel, 0);
 
-    const diceLocalBottom = this.renderGainedDicePreview(gainedDice, diceStartLocalY, restored);
-    if (!restored) {
-      const lossWorldY = this.panelTop + diceLocalBottom + 12;
-      this.deps.animateDiceLossEffects(result.effects, contentCX, lossWorldY, enhancedDiceBeforeCount);
+    this.renderGainedDicePreview(gainedDice, diceStartLocalY, restored);
+    if (!restored && lostDice.length > 0) {
+      this.deps.animateDiceLoss(lostDice, contentCX, contentMidY);
     }
 
     if (restored) {

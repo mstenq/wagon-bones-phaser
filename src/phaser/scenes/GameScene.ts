@@ -68,7 +68,7 @@ import { shouldPromptRoundModifications } from '../../game/store/selectors/uiSel
 import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
-import { ensureAuraTextures } from '../ui/AuraFX';
+import { playDiceFireDestroyVisualBatch } from '../animations/DiceFireDestroyAnimation';
 import { rngShuffle } from '../../game/RunRng';
 import { isDevMode } from '../../game/DevMode';
 import { isScoreAnimLabUrl } from './dev/scoreAnimLabUrl';
@@ -80,7 +80,7 @@ import { computeDiceDisplayScale, computeDiceSpacing, getArcOffset } from './gam
 import { ConsumableBarTargetingBridge } from './game/ConsumableBarTargetingBridge';
 import { GameConsumableTargetingController } from './game/GameConsumableTargetingController';
 import { PlayAreaDiceController } from './game/PlayAreaDiceController';
-import { RollMarqueeSelection } from './game/RollMarqueeSelection';
+import { DiceMarqueeSelection } from './game/DiceMarqueeSelection';
 import { RollRowController } from './game/RollRowController';
 import { ScoreRowLayout, type ScoreLayoutGate } from './game/ScoreRowLayout';
 import { GameSceneDevPanel } from './game/GameSceneDevPanel';
@@ -104,7 +104,7 @@ export class GameScene extends Scene {
 
   // Roll-phase dice row + marquee selection
   private rollRow!: RollRowController;
-  private rollMarquee!: RollMarqueeSelection;
+  private rollMarquee!: DiceMarqueeSelection;
   private scoreRowLayout!: ScoreRowLayout;
   private devPanel!: GameSceneDevPanel;
 
@@ -328,10 +328,10 @@ export class GameScene extends Scene {
       onLayoutTransitionEnd: () => this.diceRowBackdropController.onScoreLayoutEnd(),
     });
 
-    this.rollMarquee = new RollMarqueeSelection({
+    this.rollMarquee = new DiceMarqueeSelection({
       scene: this,
       canUseMarquee: () => this.canUseMarquee(),
-      getRollSprites: () => this.rollRow.getRollSprites(),
+      getSprites: () => this.rollRow.getRollSprites(),
       getZoneBounds: () => ({
         width: this.contentW,
         height: this.scale.height - this.hudBottomReserve,
@@ -1574,85 +1574,27 @@ export class GameScene extends Scene {
         return;
       }
 
-      ensureAuraTextures(this);
       this.animating = true;
-      const fireSound = this.sound.add('sfx_ambient_fire', { volume: 1.2 });
-      fireSound.play();
-      let finished = 0;
-      for (const sprite of targetSprites) {
-        const fireEmitter = this.add.particles(sprite.x, sprite.y, 'aura_soft', {
-          speed: { min: 20, max: 60 },
-          angle: { min: -110, max: -70 },
-          scale: { start: 0.55, end: 0 },
-          alpha: { start: 0.85, end: 0 },
-          lifespan: { min: 350, max: 700 },
-          frequency: 24,
-          quantity: 2,
-          tint: [0xff2200, 0xff4500, 0xff6600, 0xffaa00, 0xffdd00],
-          blendMode: 'ADD',
-          maxAliveParticles: 20,
-        });
-        fireEmitter.setDepth(500);
-
-        this.time.delayedCall(260, () => {
-          const sparkEmitter = this.add.particles(sprite.x, sprite.y, 'aura_soft', {
-            speed: { min: 70, max: 150 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 0.35, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: { min: 220, max: 500 },
-            frequency: -1,
-            quantity: 10,
-            tint: [0xff4400, 0xffaa00, 0xffdd00],
-            blendMode: 'ADD',
-          });
-          sparkEmitter.setDepth(500);
-          sparkEmitter.explode(10);
-          this.time.delayedCall(500, () => sparkEmitter.destroy());
-        });
-
-        this.tweens.add({
-          targets: sprite,
-          delay: 260,
-          y: sprite.y - 45,
-          angle: sprite.angle + 16,
-          scaleX: 0.2,
-          scaleY: 0.2,
-          alpha: 0,
-          duration: 280,
-          ease: 'Back.easeIn',
-          onComplete: () => {
-            fireEmitter.stop();
-            this.time.delayedCall(400, () => fireEmitter.destroy());
-            this.playArea.removeSprite(sprite);
-            const idxRoll = this.rollSprites.indexOf(sprite);
-            if (idxRoll >= 0) this.rollSprites.splice(idxRoll, 1);
-            sprite.destroy();
-            finished++;
-            if (finished >= targetSprites.length) {
-              this.animating = false;
-              this.tweens.add({
-                targets: fireSound,
-                volume: 0,
-                duration: 250,
-                onComplete: () => fireSound.destroy(),
-              });
-              this.sound.play('sfx_slice1', { volume: 0.65 });
-              if (options.floatingText) {
-                this.showFloatingText(options.floatingText, 0xff6666);
-              }
-              if (phase === 'SELECT' && options.refillSelectHand) {
-                void this.refillSelectHandAfterRaid().then(resolve);
-                return;
-              }
-              if (phase === 'ROLL') {
-                this.enterRollPhaseLayout();
-              }
-              resolve();
-            }
-          },
-        });
-      }
+      void playDiceFireDestroyVisualBatch(this, targetSprites).then(() => {
+        for (const sprite of targetSprites) {
+          this.playArea.removeSprite(sprite);
+          const idxRoll = this.rollSprites.indexOf(sprite);
+          if (idxRoll >= 0) this.rollSprites.splice(idxRoll, 1);
+          sprite.destroy();
+        }
+        this.animating = false;
+        if (options.floatingText) {
+          this.showFloatingText(options.floatingText, 0xff6666);
+        }
+        if (phase === 'SELECT' && options.refillSelectHand) {
+          void this.refillSelectHandAfterRaid().then(resolve);
+          return;
+        }
+        if (phase === 'ROLL') {
+          this.enterRollPhaseLayout();
+        }
+        resolve();
+      });
     });
   }
 
