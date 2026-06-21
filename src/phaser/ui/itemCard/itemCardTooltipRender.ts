@@ -5,6 +5,7 @@ import { GameObjects, Scene } from 'phaser';
 import { COLORS, UI } from '../../../game/Constants';
 import type { EquipmentInstance, HintSegment } from '../../../game/ItemsSystem';
 import { getModifierTooltipLines } from '../../../game/EquipmentModifierDisplay';
+import { getDifficultyBeatColorHex, getDifficultyName } from '../../../game/DifficultyDisplay';
 import type { CardData, ItemCardLayout } from './itemCardTypes';
 import { RARITY_LABELS, RARITY_LABEL_COLORS } from './itemCardTypes';
 import { getTooltipMetrics, tooltipSegmentColors } from './itemCardHintStyles';
@@ -48,6 +49,7 @@ export function buildTooltipLines(
   tooltipRows: HintSegment[][],
   def: CardData,
   equipment: EquipmentInstance | null,
+  equipmentBeatLevel?: number,
 ): TooltipLine[] {
   const lines: TooltipLine[] = [];
 
@@ -86,6 +88,19 @@ export function buildTooltipLines(
         kind: 'text',
         text: line.text,
         color: line.color,
+        fontStyle: 'bold',
+        gapTop: 6,
+      });
+    }
+  }
+
+  if (equipmentBeatLevel !== undefined && equipmentBeatLevel > 0) {
+    const difficultyName = getDifficultyName(equipmentBeatLevel);
+    if (difficultyName) {
+      lines.push({
+        kind: 'text',
+        text: `✓ Highest completed: ${difficultyName} (Lvl ${equipmentBeatLevel})`,
+        color: getDifficultyBeatColorHex(equipmentBeatLevel),
         fontStyle: 'bold',
         gapTop: 6,
       });

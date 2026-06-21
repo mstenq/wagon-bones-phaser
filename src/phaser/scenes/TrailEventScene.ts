@@ -28,7 +28,13 @@ import type { Sidebar } from '../ui/Sidebar';
 import { createRunSceneShell } from './runSceneShell';
 import { TrailEventResultPanel } from './trailEvent/TrailEventResultPanel';
 import { DiceSprite } from '../ui/DiceSprite';
-import { playDiceFireDestroyVisual } from '../animations/DiceFireDestroyAnimation';
+import {
+  diceFireDestroySoundMaxMs,
+  fadeOutDiceFireDestroySound,
+  playDiceFireDestroyVisual,
+  scheduleDiceFireDestroySoundSafetyFade,
+  startDiceFireDestroySound,
+} from '../animations/DiceFireDestroyAnimation';
 
 // Category color mapping for event card border
 const CATEGORY_COLORS: Record<string, number> = {
@@ -565,26 +571,34 @@ export class TrailEventScene extends Scene {
 
   private animateDiceLoss(lostDice: Die[], cx: number, cy: number): void {
     const diceToShow = lostDice.slice(0, 5);
+    if (diceToShow.length === 0) return;
+
     const scale = 0.95;
     const spacing = 118;
-    let fireSoundPlayed = false;
+    const firstDelayMs = 200;
+    const staggerMs = 150;
+    const fireSound = startDiceFireDestroySound(this, 1.2);
+    scheduleDiceFireDestroySoundSafetyFade(
+      this,
+      fireSound,
+      diceFireDestroySoundMaxMs(diceToShow.length, { firstDelayMs, staggerMs }),
+    );
 
+    let completed = 0;
     for (let i = 0; i < diceToShow.length; i++) {
       const die = diceToShow[i]!;
       const dieX = cx + (i - (diceToShow.length - 1) / 2) * spacing;
-      const isLast = i === diceToShow.length - 1;
-      this.time.delayedCall(200 + i * 150, () => {
-        if (!fireSoundPlayed) {
-          fireSoundPlayed = true;
-          this.sound.play('sfx_ambient_fire', { volume: 1.2 });
-        }
+      this.time.delayedCall(firstDelayMs + i * staggerMs, () => {
         const sprite = new DiceSprite(this, dieX, cy, die);
         sprite.setScale(scale);
         sprite.setDepth(300);
         void playDiceFireDestroyVisual(this, sprite).then(() => {
           sprite.destroy();
-          if (isLast) {
-            this.safePlaySound('sfx_slice1');
+          completed++;
+          if (completed === diceToShow.length) {
+            fadeOutDiceFireDestroySound(this, fireSound, () => {
+              this.safePlaySound('sfx_slice1');
+            });
           }
         });
       });

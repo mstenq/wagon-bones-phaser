@@ -1,7 +1,6 @@
 # Bugs noticed while playing
-- standard dice on day 1 trail punishment, doesn't work I don't think.
 - trail event gave me medicine supply card even though i didn't have room for it.
-- if you were playing a game and go to main menu and start a new game, the shop keeps the inventory from the previous run. 
+
 
 ## New Feature Ideas
 - new permits for luck:

@@ -235,6 +235,10 @@ export class ItemCard extends GameObjects.Container {
     this.tooltip.setContext(round, player);
   }
 
+  setEquipmentBeatLevel(level: number | undefined): void {
+    this.tooltip.setEquipmentBeatLevel(level);
+  }
+
   updateHints(round: RoundHintContext | null, player: ItemDisplayContext): void {
     this.setTooltipContext(round, player);
     this.hints.update(round, player, (r, p) => this.resolveDisplay(r, p));

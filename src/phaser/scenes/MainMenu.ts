@@ -4,6 +4,7 @@ import { resetAllGameStores } from '../../game/store';
 import { COLORS } from '../../game/Constants';
 import { Button } from '../ui/Button';
 import { OptionsModal } from '../ui/OptionsModal';
+import { AchievementsModal } from '../ui/AchievementsModal';
 import { clearAutoSave } from '../AutoSaveManager';
 import { ensureBackgroundMusic } from '../BackgroundMusic';
 import { applyFitBackgroundImage } from '../ui/SceneLayout';
@@ -45,6 +46,13 @@ export class MainMenu extends Scene {
     new Button(this, width / 2, optionsY, 'Options', { variant: 'secondary', size: 'lg', width: 220 }).onClick(
       () => new OptionsModal(this, 0, width, height),
     );
+
+    const achievementsY = optionsY + 48 / 2 + buttonGap + 48 / 2;
+    new Button(this, width / 2, achievementsY, 'Achievements', {
+      variant: 'secondary',
+      size: 'lg',
+      width: 220,
+    }).onClick(() => new AchievementsModal(this));
 
     EventBus.emit(Events.SCENE_READY, this);
   }

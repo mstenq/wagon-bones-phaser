@@ -13,7 +13,8 @@ import { formatScore } from '../../game/formatScore';
 import { milesFromSave } from '../../game/scoreMath';
 import { Button } from '../ui/Button';
 import { buildVictoryGameOverData } from './GameOver';
-import { recordStoryVictory } from '../../game/UserStats';
+import { recordEquipmentVictory, recordStoryVictory } from '../../game/UserStats';
+import { resolveEquipmentList } from '../../game/store/resolve';
 import { getSceneState, sceneActions } from '../../game/store/sceneStore';
 import type { LayoutResult } from '../ui/SceneLayout';
 import type { DecimalSource } from '../../game/decimal';
@@ -179,15 +180,20 @@ export class PayoutScene extends Scene {
 
       sceneActions.clearPayout();
 
+      if (journeyDone) {
+        const run = getRunState();
+        if (selectStoryVictoryOffered(run) && run.professionId) {
+          recordStoryVictory(run.professionId, run.difficulty);
+          const heldIds = resolveEquipmentList(run).map((e) => e.def.id);
+          recordEquipmentVictory(heldIds, run.difficulty);
+        }
+      }
+
       if (this.processImmediateTagFlowAfterPayout(journeyDone)) {
         return;
       }
 
       if (journeyDone) {
-        const run = getRunState();
-        if (selectStoryVictoryOffered(run) && run.professionId) {
-          recordStoryVictory(run.professionId, run.difficulty);
-        }
         this.scene.start('GameOver', buildVictoryGameOverData(data.totalMiles, data.targetMiles));
       } else {
         this.scene.start('TrailEvent', {});

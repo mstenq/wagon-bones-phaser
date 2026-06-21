@@ -10,7 +10,8 @@ import { COLORS, TEXT_COLORS, FONTS, GAMEPLAY, DIFFICULTIES } from '../../game/C
 import { Button } from '../ui/Button';
 import professionsData, { type ProfessionDef, getProfessionById } from '../../data/professions';
 import { performLoadGame } from '../SaveLoadIO';
-import { getDifficultyBeatColor, getDifficultyBeatStrokeColor, getHighestDifficultyBeaten } from '../../game/UserStats';
+import { getDifficultyBeatColor, getDifficultyBeatStrokeColor } from '../../game/DifficultyDisplay';
+import { getHighestDifficultyBeaten } from '../../game/UserStats';
 import { DiceSprite } from '../ui/DiceSprite';
 import { getDiceGroupDisplayLabel, groupDiceByVisualIdentity } from '../ui/diceGrouping';
 import { isPortraitLayout, computePortraitSelectActionBar } from '../ui/SceneLayout';

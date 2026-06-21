@@ -10,6 +10,37 @@ import type { EquipmentModifier } from '../../../game/types';
 import { addModifierBadgeImage, addProfessionSpecialBadgeImage } from '../ModifierAssets';
 import type { CardData, ItemCardLayout } from './itemCardTypes';
 
+export interface TopRightBadgeLayout {
+  cardW: number;
+  cardH: number;
+  cardScale?: number;
+}
+
+/** Place a badge in the top-right corner stack (index 0 = innermost). */
+export function addTopRightBadge(
+  scene: Scene,
+  card: GameObjects.Container,
+  layout: TopRightBadgeLayout,
+  stackIndex: number,
+  render: (scene: Scene, container: GameObjects.Container, size: number) => void,
+): GameObjects.Container {
+  const scale = layout.cardScale ?? 1;
+  const size = UI.MODIFIER_BADGE_SIZE * scale;
+  const gap = UI.MODIFIER_BADGE_GAP * scale;
+  const offset = UI.MODIFIER_BADGE_OFFSET * scale;
+  const hw = layout.cardW / 2;
+  const hh = layout.cardH / 2;
+  const x = hw - offset - size / 2;
+  const y = -hh + offset + size / 2 + stackIndex * (size + gap);
+
+  const container = scene.add.container(x, y);
+  render(scene, container, size);
+  container.setDepth(25);
+  card.add(container);
+  card.bringToTop(container);
+  return container;
+}
+
 export class ItemCardBadges {
   private readonly scene: Scene;
   private readonly card: GameObjects.Container;
@@ -82,13 +113,6 @@ export class ItemCardBadges {
   private renderModifierBadges(equipment: EquipmentInstance | null): void {
     if (!equipment || equipment.modifiers.length === 0) return;
 
-    const scale = this.layout.cardScale;
-    const size = UI.MODIFIER_BADGE_SIZE * scale;
-    const gap = UI.MODIFIER_BADGE_GAP * scale;
-    const offset = UI.MODIFIER_BADGE_OFFSET * scale;
-    const hw = this.layout.cardW / 2;
-    const hh = this.layout.cardH / 2;
-
     const kinds: EquipmentModifier[] = [];
     if (isEquipmentCursed(equipment)) kinds.push('cursed');
     if (isEquipmentPerishable(equipment)) kinds.push('perishable');
@@ -96,15 +120,9 @@ export class ItemCardBadges {
 
     for (let i = 0; i < kinds.length; i++) {
       const kind = kinds[i];
-      const x = hw - offset - size / 2;
-      const y = -hh + offset + size / 2 + i * (size + gap);
-
-      const container = this.scene.add.container(x, y);
-      addModifierBadgeImage(this.scene, container, kind, size);
-
-      container.setDepth(25);
-      this.card.add(container);
-      this.card.bringToTop(container);
+      const container = addTopRightBadge(this.scene, this.card, this.layout, i, (scene, badge, size) => {
+        addModifierBadgeImage(scene, badge, kind, size);
+      });
       this.modifierBadgeContainers.push(container);
 
       if (kind === 'perishable') this.perishableBadgeContainer = container;

@@ -7,9 +7,11 @@ import { ScoreAnimTimingsModal } from '../scenes/dev/ScoreAnimTimingsModal';
 import { Button } from './Button';
 import { BossTestModal } from './BossTestModal';
 import { EquipmentCatalogModal } from './EquipmentCatalogModal';
+import { AchievementsModal } from './AchievementsModal';
 import { SoundsSettingsModal } from './SoundsSettingsModal';
 import { PreferencesSettingsModal } from './PreferencesSettingsModal';
 import { exportGameFromScene, exportPreviousAutoSaveFromStorage, performLoadGame } from '../SaveLoadIO';
+import { exportUserSettings, performLoadUserSettings } from '../UserSettingsIO';
 import { createModalShell, finalizeModal, wireModalBackdropDismiss } from './modalShell';
 import { createScrollableViewport, type ScrollableViewportHandle } from './ScrollableViewport';
 
@@ -55,6 +57,13 @@ export class OptionsModal extends GameObjects.Container {
         },
       },
       {
+        label: 'Achievements',
+        onClick: () => {
+          this.destroy();
+          new AchievementsModal(scene);
+        },
+      },
+      {
         label: 'Sound Settings',
         onClick: () => {
           this.destroy();
@@ -74,6 +83,14 @@ export class OptionsModal extends GameObjects.Container {
           this.destroy();
           new ScoreAnimTimingsModal(scene, contentX, width, height, { onBack: openOptions }, contentY);
         },
+      },
+      {
+        label: 'Export User Settings',
+        onClick: () => exportUserSettings(),
+      },
+      {
+        label: 'Load User Settings',
+        onClick: () => void performLoadUserSettings(scene),
       },
       {
         label: 'Export Game State',

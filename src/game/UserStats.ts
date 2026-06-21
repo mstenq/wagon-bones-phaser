@@ -1,24 +1,55 @@
 // ─── User stats (No Phaser imports) ───
-// Cross-run meta-progression: highest difficulty beaten per profession.
+// Cross-run meta-progression: highest difficulty beaten per profession and per equipment.
 
-import { COLORS, DIFFICULTIES, GAMEPLAY } from './Constants';
+import { DIFFICULTIES, GAMEPLAY } from './Constants';
 import type { DifficultyLevel } from './types';
 
 export interface ProfessionStats {
   highestDifficultyBeaten: number;
 }
 
+export interface EquipmentStats {
+  highestDifficultyBeaten: number;
+}
+
 export interface UserStatsData {
   professions: Record<string, ProfessionStats>;
+  equipment: Record<string, EquipmentStats>;
 }
 
 const DEVELOPER_PROFESSION_ID = 'developer';
-const MAX_DIFFICULTY = 8;
+const MAX_DIFFICULTY = DIFFICULTIES.length;
 
 let cached: UserStatsData | null = null;
 
 function emptyStats(): UserStatsData {
-  return { professions: {} };
+  return { professions: {}, equipment: {} };
+}
+
+/** Clamp stored beat level to 0..MAX_DIFFICULTY for safe reads and imports. */
+export function normalizeStoredBeatLevel(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return Math.min(MAX_DIFFICULTY, Math.max(0, Math.round(value)));
+}
+
+export function normalizeUserStatsData(data: UserStatsData): UserStatsData {
+  const professions: Record<string, ProfessionStats> = {};
+  for (const [id, stats] of Object.entries(data.professions)) {
+    if (!stats || typeof stats !== 'object') continue;
+    professions[id] = {
+      highestDifficultyBeaten: normalizeStoredBeatLevel(stats.highestDifficultyBeaten),
+    };
+  }
+
+  const equipment: Record<string, EquipmentStats> = {};
+  for (const [id, stats] of Object.entries(data.equipment)) {
+    if (!stats || typeof stats !== 'object') continue;
+    equipment[id] = {
+      highestDifficultyBeaten: normalizeStoredBeatLevel(stats.highestDifficultyBeaten),
+    };
+  }
+
+  return { professions, equipment };
 }
 
 function normalizeDifficulty(value: number): DifficultyLevel {
@@ -33,7 +64,8 @@ function readFromStorage(): UserStatsData {
     if (!parsed || typeof parsed !== 'object' || !parsed.professions || typeof parsed.professions !== 'object') {
       return emptyStats();
     }
-    return parsed;
+    const equipment = parsed.equipment && typeof parsed.equipment === 'object' ? parsed.equipment : {};
+    return normalizeUserStatsData({ professions: parsed.professions, equipment });
   } catch {
     return emptyStats();
   }
@@ -55,7 +87,7 @@ export function readUserStats(): UserStatsData {
 }
 
 export function writeUserStats(data: UserStatsData): void {
-  writeToStorage(data);
+  writeToStorage(normalizeUserStatsData(data));
 }
 
 export function clearUserStatsStorage(): void {
@@ -67,8 +99,12 @@ export function clearUserStatsStorage(): void {
   cached = null;
 }
 
-export function resetUserStatsCacheForTests(): void {
+export function invalidateUserStatsCache(): void {
   cached = null;
+}
+
+export function resetUserStatsCacheForTests(): void {
+  invalidateUserStatsCache();
 }
 
 export function getHighestDifficultyBeaten(professionId: string): number {
@@ -77,7 +113,7 @@ export function getHighestDifficultyBeaten(professionId: string): number {
 }
 
 export function getHighestUnlockedDifficulty(professionId: string): DifficultyLevel {
-  if (professionId === DEVELOPER_PROFESSION_ID) return MAX_DIFFICULTY;
+  if (professionId === DEVELOPER_PROFESSION_ID) return MAX_DIFFICULTY as DifficultyLevel;
   const beaten = getHighestDifficultyBeaten(professionId);
   return Math.min(beaten + 1, MAX_DIFFICULTY) as DifficultyLevel;
 }
@@ -98,14 +134,23 @@ export function recordStoryVictory(professionId: string, difficulty: DifficultyL
   writeUserStats(stats);
 }
 
-/** Fill color for the profession beat-indicator dot (0 = none beaten). */
-export function getDifficultyBeatColor(level: number): number | null {
-  if (level <= 0 || level > MAX_DIFFICULTY) return null;
-  return DIFFICULTIES[level - 1].color;
+export function getEquipmentHighestDifficultyBeaten(equipmentId: string): number {
+  return readUserStats().equipment[equipmentId]?.highestDifficultyBeaten ?? 0;
 }
 
-/** Stroke color for beat-indicator dots (contrast on light fills). */
-export function getDifficultyBeatStrokeColor(level: number): number {
-  if (level === 1 || level === 8) return COLORS.SIDEBAR_SECTION_BORDER;
-  return 0x000000;
+export function recordEquipmentVictory(defIds: string[], difficulty: DifficultyLevel): void {
+  if (defIds.length === 0) return;
+
+  const normalized = normalizeDifficulty(difficulty);
+  const stats = readUserStats();
+
+  let changed = false;
+  for (const defId of defIds) {
+    const current = stats.equipment[defId]?.highestDifficultyBeaten ?? 0;
+    if (normalized <= current) continue;
+    stats.equipment[defId] = { highestDifficultyBeaten: normalized };
+    changed = true;
+  }
+
+  if (changed) writeUserStats(stats);
 }

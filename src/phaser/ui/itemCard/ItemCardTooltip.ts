@@ -33,6 +33,7 @@ export class ItemCardTooltip {
   private tooltip: GameObjects.Container | null = null;
   private tooltipRound: RoundHintContext | null = null;
   private tooltipPlayer: ItemDisplayContext | null = null;
+  private equipmentBeatLevel: number | undefined;
   private suppressTooltip = false;
   private interactionTooltipSuppressed = false;
   private faceDown = false;
@@ -67,6 +68,10 @@ export class ItemCardTooltip {
   setContext(round: RoundHintContext | null, player: ItemDisplayContext | null = null): void {
     this.tooltipRound = round;
     this.tooltipPlayer = player;
+  }
+
+  setEquipmentBeatLevel(level: number | undefined): void {
+    this.equipmentBeatLevel = level;
   }
 
   setSuppressTooltip(suppress: boolean): void {
@@ -129,7 +134,7 @@ export class ItemCardTooltip {
 
     const player = this.tooltipPlayer ?? getItemDisplayContext();
     const display = resolveDisplay(this.tooltipRound, player);
-    const lines = buildTooltipLines(display.tooltip, this.def, this.getEquipment());
+    const lines = buildTooltipLines(display.tooltip, this.def, this.getEquipment(), this.equipmentBeatLevel);
     const maxContentWidth = getTooltipMaxWidth(this.scene.scale);
 
     const title = createTooltipTitle(this.scene, this.def.name, getTooltipTitleColor(this.def.rarity), maxContentWidth);
