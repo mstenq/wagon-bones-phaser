@@ -216,7 +216,12 @@ function getBossHandTypeWarning(handType: HandType): string | null {
   }
 
   if (boss.effectType === 'STRAIGHTS_ONLY') {
-    const allowedTypes: HandType[] = [HandType.FOUR_STRAIGHT, HandType.FIVE_STRAIGHT, HandType.HIGH_VALUE];
+    const allowedTypes: HandType[] = [
+      HandType.FOUR_STRAIGHT,
+      HandType.FIVE_STRAIGHT,
+      HandType.STRAIGHT_FLUSH,
+      HandType.HIGH_VALUE,
+    ];
     if (!allowedTypes.includes(handType)) {
       return 'Only Straights or High Value can score this round.';
     }

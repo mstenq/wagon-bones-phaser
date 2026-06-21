@@ -60,12 +60,14 @@ export function validateUserSettingsBundle(parsed: unknown): UserSettingsBundle 
   if (!rawStats.professions || typeof rawStats.professions !== 'object') return null;
 
   const equipment = rawStats.equipment && typeof rawStats.equipment === 'object' ? rawStats.equipment : {};
+  const discoveredSecretHands = Array.isArray(rawStats.discoveredSecretHands) ? rawStats.discoveredSecretHands : [];
 
   return {
     preferences,
     userStats: normalizeUserStatsData({
       professions: rawStats.professions,
       equipment,
+      discoveredSecretHands,
     }),
   };
 }

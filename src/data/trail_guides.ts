@@ -95,6 +95,38 @@ const trailGuidesBase: TrailGuideDef[] = [
     milesPerLevel: 30,
     multPerLevel: 3,
   },
+  {
+    id: 'tg_flush',
+    name: 'Phantom Stallion',
+    description: 'Flush: +40 miles, +4 mult',
+    handType: HandType.FLUSH,
+    milesPerLevel: 40,
+    multPerLevel: 4,
+  },
+  {
+    id: 'tg_flush_house',
+    name: 'Spirit Bear',
+    description: 'Flush House: +50 miles, +5 mult',
+    handType: HandType.FLUSH_HOUSE,
+    milesPerLevel: 50,
+    multPerLevel: 5,
+  },
+  {
+    id: 'tg_straight_flush',
+    name: 'Thunderbird',
+    description: 'Straight Flush: +55 miles, +6 mult',
+    handType: HandType.STRAIGHT_FLUSH,
+    milesPerLevel: 55,
+    multPerLevel: 6,
+  },
+  {
+    id: 'tg_flush_five',
+    name: 'Celestial Stag',
+    description: 'Flush Five: +60 miles, +7 mult',
+    handType: HandType.FLUSH_FIVE,
+    milesPerLevel: 60,
+    multPerLevel: 7,
+  },
 ];
 
 const trailGuides: TrailGuideDef[] = trailGuidesBase.map((guide) => ({

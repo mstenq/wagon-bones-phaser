@@ -6,6 +6,7 @@ import { COLORS, TEXT_COLORS, FONTS } from '../../game/Constants';
 import {
   getCompletionistPlusPlusProgress,
   getCompletionistPlusProgress,
+  getTrailMysticProgress,
   type AchievementProgress,
 } from '../../game/Achievements';
 import { createCatalogModalShell, finalizeCatalogModal, type CatalogModalShell } from './catalogModal';
@@ -20,6 +21,8 @@ interface AchievementDef {
   title: string;
   description: string;
   getProgress: () => AchievementProgress;
+  /** Omit from the list until complete; no progress bar when shown. */
+  hiddenUntilComplete?: boolean;
 }
 
 const ACHIEVEMENTS: AchievementDef[] = [
@@ -34,6 +37,13 @@ const ACHIEVEMENTS: AchievementDef[] = [
     title: 'Completionist++',
     description: 'Beat Level 8 while holding each equipment item at least once (across runs)',
     getProgress: getCompletionistPlusPlusProgress,
+  },
+  {
+    id: 'trail_mystic',
+    title: 'Trail Mystic',
+    description: 'Discover every hidden hand type across your journeys',
+    getProgress: getTrailMysticProgress,
+    hiddenUntilComplete: true,
   },
 ];
 
@@ -70,7 +80,9 @@ export class AchievementsModal extends GameObjects.Container {
 
     for (const achievement of ACHIEVEMENTS) {
       const progress = achievement.getProgress();
-      layoutY = this.renderAchievementRow(achievement, progress, layoutY);
+      if (achievement.hiddenUntilComplete && !progress.complete) continue;
+
+      layoutY = this.renderAchievementRow(achievement, progress, layoutY, !achievement.hiddenUntilComplete);
       layoutY += ROW_GAP;
     }
 
@@ -79,7 +91,12 @@ export class AchievementsModal extends GameObjects.Container {
     finalizeCatalogModal(this, scene);
   }
 
-  private renderAchievementRow(achievement: AchievementDef, progress: AchievementProgress, startY: number): number {
+  private renderAchievementRow(
+    achievement: AchievementDef,
+    progress: AchievementProgress,
+    startY: number,
+    showProgressBar: boolean,
+  ): number {
     const titleColor = progress.complete ? '#ffd700' : TEXT_COLORS.PRIMARY;
     const statusSuffix = progress.complete ? ' — Unlocked!' : '';
 
@@ -103,6 +120,10 @@ export class AchievementsModal extends GameObjects.Container {
       })
       .setOrigin(0.5, 0);
     this.shell.scrollContainer.add(desc);
+
+    if (!showProgressBar) {
+      return startY + 26 + desc.height;
+    }
 
     const barY = startY + 26 + desc.height + 12;
     const barX = -BAR_W / 2;

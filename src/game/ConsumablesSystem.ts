@@ -11,7 +11,7 @@ import type { InstantEffect } from './BoosterPackSystem';
 import { getConsumablePackExcludeIds, getEquipmentPackExcludeIds } from './BoosterPackSystem';
 import { HandType, HandDefinition, HandUpgradeInfo } from './types';
 import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
-import hands from '../data/hands';
+import hands, { getHandByType } from '../data/hands';
 import { PACK_ONLY_FRONTIER_IDS } from './Constants';
 import { checkLoadedChance } from './equipmentUtils';
 import { resolveEffectParam } from './effects/helpers';
@@ -80,6 +80,7 @@ export interface ConsumableInstance {
 
 import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
 import trailGuidesData, { type TrailGuideDef } from '../data/trail_guides';
+import { filterSpawnableTrailGuides } from './trailGuideSpawn';
 import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
 const SUPPLY_CARDS = supplyCardsData;
 const TRAIL_GUIDES = trailGuidesData;
@@ -207,20 +208,28 @@ export function getRandomSupplyDef(aura?: ItemAura | null, excludeIds?: string[]
 
 /** Get a random trail guide def */
 export function getRandomTrailGuideDef(aura?: ItemAura | null, excludeIds?: string[]): ConsumableDef {
-  let pool = TRAIL_GUIDES;
+  const run = getRunState();
+  const spawnable = filterSpawnableTrailGuides(TRAIL_GUIDES, run);
+  let pool = spawnable;
   if (excludeIds && excludeIds.length > 0) {
     const excluded = new Set(excludeIds);
     pool = pool.filter((t) => !excluded.has(t.id));
   }
-  if (pool.length === 0) pool = TRAIL_GUIDES; // fallback if all excluded
+  if (pool.length === 0) {
+    pool = spawnable.filter((t) => !getHandByType(t.handType)?.secret);
+  }
   const tg = rngPick('consumables', pool);
   return createTrailGuideConsumableDef(tg, aura);
 }
 
 /** Trail guide for a specific hand type (blue moon held reward). */
 export function getTrailGuideDefForHand(handType: HandType, aura?: ItemAura | null): ConsumableDef {
-  const matching = TRAIL_GUIDES.filter((t) => t.handType === handType);
-  const pool = matching.length > 0 ? matching : TRAIL_GUIDES;
+  const matching = TRAIL_GUIDES.find((t) => t.handType === handType);
+  if (matching) {
+    // Blue Moon discovery reward — return the hand's guide even if the secret hand is undiscovered.
+    return createTrailGuideConsumableDef(matching, aura);
+  }
+  const pool = filterSpawnableTrailGuides(TRAIL_GUIDES, getRunState());
   const tg = rngPick('consumables', pool);
   return createTrailGuideConsumableDef(tg, aura);
 }
@@ -286,14 +295,15 @@ export function nextLastUsedConsumableIdAfterUse(usedDef: ConsumableDef, previou
  *  Picks from supply cards and trail guides (frontier only if enabled). */
 export function generateShopConsumables(count: number, options?: { includeFrontier?: boolean }): ConsumableDef[] {
   const pool: ConsumableDef[] = [];
+  const run = getRunState();
 
   // Add all supply cards to pool
   for (const card of SUPPLY_CARDS) {
     pool.push(createSupplyConsumableDef(card));
   }
 
-  // Add all trail guides
-  for (const tg of TRAIL_GUIDES) {
+  // Add spawnable trail guides only (exclude undiscovered secret hands)
+  for (const tg of filterSpawnableTrailGuides(TRAIL_GUIDES, run)) {
     pool.push(createTrailGuideConsumableDef(tg));
   }
 

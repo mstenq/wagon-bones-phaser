@@ -205,11 +205,53 @@ function buildResult(type: HandType, scoringDice: Die[]): HandResult {
   return buildHandResult(type, scoringDice);
 }
 
+function allDiceShareEnhancement(dice: Die[]): boolean {
+  if (dice.length !== 5) return false;
+  const enhancement = dice[0].enhancement;
+  if (enhancement === null) return false;
+  return dice.every((d) => d.enhancement === enhancement);
+}
+
+/** Base hand pattern (no flush variants) from pip layout alone. */
+function classifyHandPattern(dice: Die[]): HandType {
+  if (dice.length === 0) return HandType.HIGH_VALUE;
+
+  const freq = getFrequencies(dice);
+  const counts = [...freq.values()].sort((a, b) => b - a);
+  const straight = findLongestStraight(dice);
+
+  if (counts[0] >= 5) return HandType.FIVE_OF_A_KIND;
+  if (straight.length >= 5) return HandType.FIVE_STRAIGHT;
+  if (counts[0] >= 4) return HandType.FOUR_OF_A_KIND;
+  if (counts[0] >= 3 && counts[1] >= 2) return HandType.FULL_HOUSE;
+  if (straight.length >= 4) return HandType.FOUR_STRAIGHT;
+  if (counts[0] >= 3) return HandType.THREE_OF_A_KIND;
+  if (counts[0] >= 2 && counts[1] >= 2) return HandType.TWO_PAIR;
+  if (counts[0] >= 2) return HandType.PAIR;
+  return HandType.HIGH_VALUE;
+}
+
+function detectFlushVariant(dice: Die[]): HandType {
+  const allStone = dice.every((d) => d.enhancement === 'stone');
+  if (allStone) return HandType.FLUSH_FIVE;
+
+  const pattern = classifyHandPattern(dice);
+  if (pattern === HandType.FIVE_OF_A_KIND) return HandType.FLUSH_FIVE;
+  if (pattern === HandType.FIVE_STRAIGHT) return HandType.STRAIGHT_FLUSH;
+  if (pattern === HandType.FULL_HOUSE) return HandType.FLUSH_HOUSE;
+  return HandType.FLUSH;
+}
+
 /**
  * Detect the best hand from 1-5 dice.
  * Stone dice are excluded from hand pattern detection but always scored.
  */
 export function detectBestHand(dice: Die[]): HandResult {
+  if (allDiceShareEnhancement(dice)) {
+    const flushType = detectFlushVariant(dice);
+    return buildResult(flushType, [...dice]);
+  }
+
   // Separate stone dice — they don't participate in hand detection
   const stoneDice = dice.filter((d) => d.enhancement === 'stone');
   const normalDice = dice.filter((d) => d.enhancement !== 'stone');
@@ -232,101 +274,91 @@ export function detectBestHand(dice: Die[]): HandResult {
  * Internal: detect best hand from non-stone dice only.
  */
 function detectBestHandFromDice(dice: Die[]): HandResult {
-  if (dice.length === 0) {
-    return buildResult(HandType.HIGH_VALUE, []);
-  }
-
+  const pattern = classifyHandPattern(dice);
   const freq = getFrequencies(dice);
-  const counts = [...freq.values()].sort((a, b) => b - a);
   const straight = findLongestStraight(dice);
 
-  // Five of a kind
-  if (counts[0] >= 5) {
-    return buildResult(HandType.FIVE_OF_A_KIND, dice.slice(0, 5));
-  }
+  switch (pattern) {
+    case HandType.FIVE_OF_A_KIND:
+      return buildResult(pattern, dice.slice(0, 5));
 
-  // Five straight
-  if (straight.length >= 5) {
-    const straightSet = new Set(straight.slice(0, 5));
-    const scoringDice = dice.filter((d) => straightSet.has(d.value));
-    // Take only one die per value
-    const used = new Set<number>();
-    const uniqueDice = scoringDice.filter((d) => {
-      if (used.has(d.value)) return false;
-      used.add(d.value);
-      return true;
-    });
-    return buildResult(HandType.FIVE_STRAIGHT, uniqueDice.slice(0, 5));
-  }
-
-  // Four of a kind
-  if (counts[0] >= 4) {
-    const pip = [...freq.entries()].find(([, c]) => c >= 4)![0];
-    const scoring = dice.filter((d) => d.value === pip).slice(0, 4);
-    return buildResult(HandType.FOUR_OF_A_KIND, scoring);
-  }
-
-  // Full house (3 + 2)
-  if (counts[0] >= 3 && counts[1] >= 2) {
-    const threePip = [...freq.entries()].find(([, c]) => c >= 3)![0];
-    const twoPip = [...freq.entries()].find(([p, c]) => c >= 2 && p !== threePip)![0];
-    const pairPips = new Set([threePip, twoPip]);
-    const scoring: Die[] = [];
-    const used = new Map<number, number>(); // pip → count used
-    for (const d of dice) {
-      if (!pairPips.has(d.value)) continue;
-      const limit = d.value === threePip ? 3 : 2;
-      const count = used.get(d.value) ?? 0;
-      if (count < limit) {
-        scoring.push(d);
-        used.set(d.value, count + 1);
-      }
+    case HandType.FIVE_STRAIGHT: {
+      const straightSet = new Set(straight.slice(0, 5));
+      const scoringDice = dice.filter((d) => straightSet.has(d.value));
+      const used = new Set<number>();
+      const uniqueDice = scoringDice.filter((d) => {
+        if (used.has(d.value)) return false;
+        used.add(d.value);
+        return true;
+      });
+      return buildResult(pattern, uniqueDice.slice(0, 5));
     }
-    return buildResult(HandType.FULL_HOUSE, scoring);
-  }
 
-  // Four straight
-  if (straight.length >= 4) {
-    const straightSet = new Set(straight.slice(0, 4));
-    const used = new Set<number>();
-    const scoringDice = dice.filter((d) => {
-      if (!straightSet.has(d.value) || used.has(d.value)) return false;
-      used.add(d.value);
-      return true;
-    });
-    return buildResult(HandType.FOUR_STRAIGHT, scoringDice.slice(0, 4));
-  }
-
-  // Three of a kind
-  if (counts[0] >= 3) {
-    const pip = [...freq.entries()].find(([, c]) => c >= 3)![0];
-    return buildResult(HandType.THREE_OF_A_KIND, dice.filter((d) => d.value === pip).slice(0, 3));
-  }
-
-  // Two pair
-  if (counts[0] >= 2 && counts[1] >= 2) {
-    const pairs = [...freq.entries()].filter(([, c]) => c >= 2).map(([p]) => p);
-    const pairPips = new Set(pairs);
-    const scoring: Die[] = [];
-    const used = new Map<number, number>(); // pip → count used
-    for (const d of dice) {
-      if (!pairPips.has(d.value)) continue;
-      const count = used.get(d.value) ?? 0;
-      if (count < 2) {
-        scoring.push(d);
-        used.set(d.value, count + 1);
-      }
+    case HandType.FOUR_OF_A_KIND: {
+      const pip = [...freq.entries()].find(([, c]) => c >= 4)![0];
+      return buildResult(pattern, dice.filter((d) => d.value === pip).slice(0, 4));
     }
-    return buildResult(HandType.TWO_PAIR, scoring);
-  }
 
-  // Pair
-  if (counts[0] >= 2) {
-    const pip = [...freq.entries()].find(([, c]) => c >= 2)![0];
-    return buildResult(HandType.PAIR, dice.filter((d) => d.value === pip).slice(0, 2));
-  }
+    case HandType.FULL_HOUSE: {
+      const threePip = [...freq.entries()].find(([, c]) => c >= 3)![0];
+      const twoPip = [...freq.entries()].find(([p, c]) => c >= 2 && p !== threePip)![0];
+      const pairPips = new Set([threePip, twoPip]);
+      const scoring: Die[] = [];
+      const used = new Map<number, number>();
+      for (const d of dice) {
+        if (!pairPips.has(d.value)) continue;
+        const limit = d.value === threePip ? 3 : 2;
+        const count = used.get(d.value) ?? 0;
+        if (count < limit) {
+          scoring.push(d);
+          used.set(d.value, count + 1);
+        }
+      }
+      return buildResult(pattern, scoring);
+    }
 
-  // High value — best single die
-  const best = [...dice].sort((a, b) => b.value - a.value);
-  return buildResult(HandType.HIGH_VALUE, [best[0]]);
+    case HandType.FOUR_STRAIGHT: {
+      const straightSet = new Set(straight.slice(0, 4));
+      const used = new Set<number>();
+      const scoringDice = dice.filter((d) => {
+        if (!straightSet.has(d.value) || used.has(d.value)) return false;
+        used.add(d.value);
+        return true;
+      });
+      return buildResult(pattern, scoringDice.slice(0, 4));
+    }
+
+    case HandType.THREE_OF_A_KIND: {
+      const pip = [...freq.entries()].find(([, c]) => c >= 3)![0];
+      return buildResult(pattern, dice.filter((d) => d.value === pip).slice(0, 3));
+    }
+
+    case HandType.TWO_PAIR: {
+      const pairs = [...freq.entries()].filter(([, c]) => c >= 2).map(([p]) => p);
+      const pairPips = new Set(pairs);
+      const scoring: Die[] = [];
+      const used = new Map<number, number>();
+      for (const d of dice) {
+        if (!pairPips.has(d.value)) continue;
+        const count = used.get(d.value) ?? 0;
+        if (count < 2) {
+          scoring.push(d);
+          used.set(d.value, count + 1);
+        }
+      }
+      return buildResult(pattern, scoring);
+    }
+
+    case HandType.PAIR: {
+      const pip = [...freq.entries()].find(([, c]) => c >= 2)![0];
+      return buildResult(pattern, dice.filter((d) => d.value === pip).slice(0, 2));
+    }
+
+    case HandType.HIGH_VALUE:
+    default: {
+      if (dice.length === 0) return buildResult(HandType.HIGH_VALUE, []);
+      const best = [...dice].sort((a, b) => b.value - a.value);
+      return buildResult(HandType.HIGH_VALUE, [best[0]]);
+    }
+  }
 }

@@ -19,6 +19,9 @@ import {
   getSupplyDefById,
   getFrontierDefById,
   getTrailGuideDefById,
+  getRandomTrailGuideDef,
+  getTrailGuideDefForHand,
+  generateShopConsumables,
   executeConsumableEffect,
   useConsumableDirectly,
   finalizeConsumableEquipmentEvents,
@@ -39,6 +42,7 @@ import { shouldPromptRoundModifications } from '../store/selectors/uiSelectors';
 import { initRunRng } from '../RunRng';
 import { isEquipmentCursed } from '../ItemsSystem';
 import { shopBuyActions } from '../store/actions/shopBuyActions';
+import { progressionActions } from '../store/actions/progressionActions';
 import {
   applyDiceSelectionEffect,
   DiceSelectionConfig,
@@ -57,6 +61,8 @@ import { DiceEnhancement, HandType } from '../types';
 import { getItemDisplayContext } from '../displayContext';
 import supplyCardsData from '../../data/supply_cards';
 import trailGuidesData from '../../data/trail_guides';
+import { getHandByType } from '../../data/hands';
+import { filterSpawnableTrailGuides } from '../trailGuideSpawn';
 import frontierEncountersData from '../../data/frontier_encounters';
 
 beforeEach(() => {
@@ -481,6 +487,13 @@ describe('profession starting consumables', () => {
     expect(player.consumables).toHaveLength(2);
     expect(player.consumables.every((c) => c.def.id === 'medicine')).toBe(true);
     expect(player.consumables.every((c) => c.def.aura?.id === 'ghost')).toBe(true);
+  });
+
+  test('demon_hunter starts with priests_blessing frontier encounter', () => {
+    const { player } = setupGame({ profession: 'demon_hunter' });
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0].def.id).toBe('priests_blessing');
+    expect(player.consumables[0].def.category).toBe('frontier');
   });
 
   test('grantGhostMedicine adds one ghost medicine consumable', () => {
@@ -1205,12 +1218,12 @@ describe('consumable use mode manifest', () => {
       ...trailGuidesData.map((tg) => createTrailGuideConsumableDef(tg)),
       ...frontierEncountersData.map((fe) => createFrontierConsumableDef(fe)),
     ];
-    expect(allDefs).toHaveLength(48);
+    expect(allDefs).toHaveLength(52);
     for (const def of allDefs) {
       expect(def.useMode).toBeDefined();
       expect(EXPECTED_USE_MODES[def.id]).toBe(def.useMode);
     }
-    expect(Object.keys(EXPECTED_USE_MODES)).toHaveLength(48);
+    expect(Object.keys(EXPECTED_USE_MODES)).toHaveLength(52);
   });
 
   test('shallow_grave and mirage metadata fixes', () => {
@@ -1494,6 +1507,69 @@ describe('new supply cards', () => {
     const def = getSupplyDefById('fools_gold')!;
     executeConsumableEffect(createConsumableInstance(def));
     expect(player.economy.balance).toBe(130);
+  });
+});
+
+describe('secret trail guides', () => {
+  const secretGuideIds = () =>
+    new Set(trailGuidesData.filter((tg) => getHandByType(tg.handType)?.secret).map((tg) => tg.id));
+
+  const nonSecretGuideIds = () =>
+    trailGuidesData.filter((tg) => !getHandByType(tg.handType)?.secret).map((tg) => tg.id);
+
+  beforeEach(() => {
+    setupGame();
+  });
+
+  test('spawn policy derives from hands.ts secret flag', () => {
+    expect(getHandByType(HandType.FLUSH)?.secret).toBe(true);
+    const spawnable = filterSpawnableTrailGuides(trailGuidesData, getRunState());
+    expect(spawnable.some((tg) => tg.id === 'tg_flush')).toBe(false);
+    expect(spawnable.some((tg) => tg.id === 'tg_pair')).toBe(true);
+  });
+
+  test('undiscovered secret guides are excluded from spawn pool', () => {
+    const spawnable = filterSpawnableTrailGuides(trailGuidesData, getRunState());
+    expect(spawnable.some((tg) => tg.id === 'tg_flush')).toBe(false);
+    expect(spawnable.some((tg) => tg.id === 'tg_pair')).toBe(true);
+  });
+
+  test('discovered secret hand unlocks its trail guide', () => {
+    progressionActions.recordHandPlayed(HandType.FLUSH);
+    const spawnable = filterSpawnableTrailGuides(trailGuidesData, getRunState());
+    expect(spawnable.some((tg) => tg.id === 'tg_flush')).toBe(true);
+  });
+
+  test('getTrailGuideDefForHand returns matching secret guide before discovery (Blue Moon)', () => {
+    const def = getTrailGuideDefForHand(HandType.FLUSH);
+    expect(def.id).toBe('tg_flush');
+  });
+
+  test('generateShopConsumables never includes undiscovered secret guides', () => {
+    initRunRng('shop-secret-trail-guide-seed');
+    for (let i = 0; i < 20; i++) {
+      const stock = generateShopConsumables(20);
+      const trailGuideIds = stock.filter((c) => c.category === 'trail_guide').map((c) => c.id);
+      for (const id of trailGuideIds) {
+        expect(secretGuideIds().has(id)).toBe(false);
+      }
+    }
+  });
+
+  test('getRandomTrailGuideDef never picks undiscovered secret guides', () => {
+    initRunRng('secret-trail-guide-seed');
+    const secretIds = secretGuideIds();
+    for (let i = 0; i < 50; i++) {
+      const def = getRandomTrailGuideDef();
+      expect(secretIds.has(def.id)).toBe(false);
+    }
+  });
+
+  test('getRandomTrailGuideDef falls back when all non-secret guides are excluded', () => {
+    initRunRng('secret-trail-guide-fallback-seed');
+    const def = getRandomTrailGuideDef(undefined, nonSecretGuideIds());
+    expect(nonSecretGuideIds()).toContain(def.id);
+    expect(secretGuideIds().has(def.id)).toBe(false);
   });
 });
 

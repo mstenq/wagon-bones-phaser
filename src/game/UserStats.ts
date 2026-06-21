@@ -2,7 +2,8 @@
 // Cross-run meta-progression: highest difficulty beaten per profession and per equipment.
 
 import { DIFFICULTIES, GAMEPLAY } from './Constants';
-import type { DifficultyLevel } from './types';
+import type { DifficultyLevel, HandType } from './types';
+import { getSecretHandTypes } from '../data/hands';
 
 export interface ProfessionStats {
   highestDifficultyBeaten: number;
@@ -15,6 +16,8 @@ export interface EquipmentStats {
 export interface UserStatsData {
   professions: Record<string, ProfessionStats>;
   equipment: Record<string, EquipmentStats>;
+  /** Secret hand types discovered across runs (for achievements and meta). */
+  discoveredSecretHands: HandType[];
 }
 
 const DEVELOPER_PROFESSION_ID = 'developer';
@@ -23,7 +26,7 @@ const MAX_DIFFICULTY = DIFFICULTIES.length;
 let cached: UserStatsData | null = null;
 
 function emptyStats(): UserStatsData {
-  return { professions: {}, equipment: {} };
+  return { professions: {}, equipment: {}, discoveredSecretHands: [] };
 }
 
 /** Clamp stored beat level to 0..MAX_DIFFICULTY for safe reads and imports. */
@@ -49,7 +52,16 @@ export function normalizeUserStatsData(data: UserStatsData): UserStatsData {
     };
   }
 
-  return { professions, equipment };
+  const validSecretHands = new Set(getSecretHandTypes());
+  const discoveredSecretHands = Array.isArray(data.discoveredSecretHands)
+    ? ([
+        ...new Set(
+          data.discoveredSecretHands.filter((t): t is HandType => typeof t === 'string' && validSecretHands.has(t)),
+        ),
+      ] as HandType[])
+    : [];
+
+  return { professions, equipment, discoveredSecretHands };
 }
 
 function normalizeDifficulty(value: number): DifficultyLevel {
@@ -65,7 +77,8 @@ function readFromStorage(): UserStatsData {
       return emptyStats();
     }
     const equipment = parsed.equipment && typeof parsed.equipment === 'object' ? parsed.equipment : {};
-    return normalizeUserStatsData({ professions: parsed.professions, equipment });
+    const discoveredSecretHands = Array.isArray(parsed.discoveredSecretHands) ? parsed.discoveredSecretHands : [];
+    return normalizeUserStatsData({ professions: parsed.professions, equipment, discoveredSecretHands });
   } catch {
     return emptyStats();
   }
@@ -153,4 +166,32 @@ export function recordEquipmentVictory(defIds: string[], difficulty: DifficultyL
   }
 
   if (changed) writeUserStats(stats);
+}
+
+export function getDiscoveredSecretHands(): HandType[] {
+  return [...(readUserStats().discoveredSecretHands ?? [])];
+}
+
+export function isSecretHandDiscovered(handType: HandType): boolean {
+  return getDiscoveredSecretHands().includes(handType);
+}
+
+export function areAllSecretHandsDiscovered(): boolean {
+  const secretTypes = getSecretHandTypes();
+  if (secretTypes.length === 0) return false;
+  const discovered = new Set(getDiscoveredSecretHands());
+  return secretTypes.every((type) => discovered.has(type));
+}
+
+/** Persist cross-run discovery when a secret hand is scored. */
+export function recordSecretHandDiscovered(handType: HandType): void {
+  if (!getSecretHandTypes().includes(handType)) return;
+
+  const stats = readUserStats();
+  const discovered = new Set(stats.discoveredSecretHands ?? []);
+  if (discovered.has(handType)) return;
+
+  discovered.add(handType);
+  stats.discoveredSecretHands = [...discovered];
+  writeUserStats(stats);
 }

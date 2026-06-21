@@ -117,13 +117,17 @@ effectRegistry.registerXMult('DICE_SUM_XMULT', (ctx, equip, index) => {
   console.log(`  [xmult] ${equip.def.name}: x${xVal} (dice sum ${sum}) (xMult: ${ctx.xMult})`);
 });
 
+const SPLIT_TRAIL_HAND_TYPES: HandType[] = [
+  HandType.FOUR_STRAIGHT,
+  HandType.FIVE_STRAIGHT,
+  HandType.TWO_PAIR,
+  HandType.FULL_HOUSE,
+  HandType.FLUSH_HOUSE,
+  HandType.STRAIGHT_FLUSH,
+];
+
 effectRegistry.registerXMult('SPLIT_TRAIL', (ctx, equip, index) => {
-  if (
-    ctx.handResult.type !== HandType.FOUR_STRAIGHT &&
-    ctx.handResult.type !== HandType.FIVE_STRAIGHT &&
-    ctx.handResult.type !== HandType.TWO_PAIR &&
-    ctx.handResult.type !== HandType.FULL_HOUSE
-  ) {
+  if (!SPLIT_TRAIL_HAND_TYPES.includes(ctx.handResult.type)) {
     return;
   }
   if (!scoredHandHasBothParities(ctx.scoringDice, ctx.equipment, ctx.hasStackedDeck)) return;

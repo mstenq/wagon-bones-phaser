@@ -177,11 +177,15 @@
         <map type="IndividualSpriteSettingsMap">
             <key type="filename">tg_five_kind.png</key>
             <key type="filename">tg_five_straight.png</key>
+            <key type="filename">tg_flush.png</key>
+            <key type="filename">tg_flush_five.png</key>
+            <key type="filename">tg_flush_house.png</key>
             <key type="filename">tg_four_kind.png</key>
             <key type="filename">tg_four_straight.png</key>
             <key type="filename">tg_full_house.png</key>
             <key type="filename">tg_high_value.png</key>
             <key type="filename">tg_pair.png</key>
+            <key type="filename">tg_straight_flush.png</key>
             <key type="filename">tg_three_kind.png</key>
             <key type="filename">tg_two_pair.png</key>
             <struct type="IndividualSpriteSettings">
@@ -214,6 +218,10 @@
                     <filename>tg_pair.png</filename>
                     <filename>tg_three_kind.png</filename>
                     <filename>tg_two_pair.png</filename>
+                    <filename>tg_flush.png</filename>
+                    <filename>tg_flush_five.png</filename>
+                    <filename>tg_flush_house.png</filename>
+                    <filename>tg_straight_flush.png</filename>
                 </array>
             </struct>
         </map>

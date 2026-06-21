@@ -1,6 +1,7 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 
 import { GAMEPLAY } from '../Constants';
+import { HandType } from '../types';
 
 import {
   clearUserStatsStorage,
@@ -12,6 +13,9 @@ import {
   normalizeUserStatsData,
   readUserStats,
   recordEquipmentVictory,
+  recordSecretHandDiscovered,
+  getDiscoveredSecretHands,
+  areAllSecretHandsDiscovered,
   recordStoryVictory,
   resetUserStatsCacheForTests,
 } from '../UserStats';
@@ -128,11 +132,13 @@ describe('UserStats', () => {
       professions: { farmer: { highestDifficultyBeaten: -3 } },
 
       equipment: { horseshoe: { highestDifficultyBeaten: 12 } },
+      discoveredSecretHands: ['PAIR', 'FLUSH', 'NOT_A_HAND'] as HandType[],
     });
 
     expect(normalized.professions.farmer?.highestDifficultyBeaten).toBe(0);
 
     expect(normalized.equipment.horseshoe?.highestDifficultyBeaten).toBe(8);
+    expect(normalized.discoveredSecretHands).toEqual([HandType.FLUSH]);
   });
 
   test('recordEquipmentVictory stores highest difficulty per item', () => {
@@ -165,5 +171,20 @@ describe('UserStats', () => {
     recordEquipmentVictory([], 8);
 
     expect(readUserStats().equipment).toEqual({});
+  });
+
+  test('recordSecretHandDiscovered persists only valid secret hand types', () => {
+    recordSecretHandDiscovered(HandType.PAIR);
+    recordSecretHandDiscovered(HandType.FLUSH);
+    recordSecretHandDiscovered(HandType.FLUSH);
+
+    expect(getDiscoveredSecretHands()).toEqual([HandType.FLUSH]);
+    expect(areAllSecretHandsDiscovered()).toBe(false);
+
+    recordSecretHandDiscovered(HandType.FLUSH_HOUSE);
+    recordSecretHandDiscovered(HandType.STRAIGHT_FLUSH);
+    recordSecretHandDiscovered(HandType.FLUSH_FIVE);
+
+    expect(areAllSecretHandsDiscovered()).toBe(true);
   });
 });

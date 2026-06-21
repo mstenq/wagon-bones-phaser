@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { GAMEPLAY } from '../Constants';
+import { HandType } from '../types';
 import { getGameplayPreferences, initGameplayPreferences, setGameplayPreferences } from '../GameplayPreferences';
 import { writeStoredUserPreferences } from '../PreferencesStorage';
 import {
@@ -122,6 +123,7 @@ describe('UserSettings', () => {
     recordStoryVictory('farmer', 3);
     const bundle = buildUserSettingsBundle();
     bundle.userStats.equipment = { horseshoe: { highestDifficultyBeaten: 5 } };
+    bundle.userStats.discoveredSecretHands = [HandType.FLUSH, HandType.FLUSH_HOUSE];
 
     localStorage.clear();
     resetUserStatsCacheForTests();
@@ -131,6 +133,10 @@ describe('UserSettings', () => {
     expect(
       JSON.parse(localStorage.getItem(GAMEPLAY.USER_STATS_STORAGE_KEY)!).equipment.horseshoe.highestDifficultyBeaten,
     ).toBe(5);
+    expect(JSON.parse(localStorage.getItem(GAMEPLAY.USER_STATS_STORAGE_KEY)!).discoveredSecretHands).toEqual([
+      'FLUSH',
+      'FLUSH_HOUSE',
+    ]);
   });
 
   test('reloadUserSettingsCaches picks up storage written without going through setters', () => {

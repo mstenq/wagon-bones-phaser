@@ -1,6 +1,8 @@
 // ─── Hand Definitions ───
 // Base miles, mult, and rank for each poker-style hand type.
 
+import { HandType } from '../game/types';
+
 // ─── Types ───
 
 export interface HandDef {
@@ -9,6 +11,8 @@ export interface HandDef {
   baseMiles: number;
   baseMult: number;
   rank: number;
+  /** Hidden from journal until played once this run */
+  secret?: boolean;
 }
 
 // ─── Hand Definitions ───
@@ -77,6 +81,38 @@ const hands: HandDef[] = [
     baseMult: 6,
     rank: 10,
   },
+  {
+    type: 'FLUSH',
+    name: 'Flush',
+    baseMiles: 100,
+    baseMult: 8,
+    rank: 11,
+    secret: true,
+  },
+  {
+    type: 'FLUSH_HOUSE',
+    name: 'Flush House',
+    baseMiles: 140,
+    baseMult: 14,
+    rank: 12,
+    secret: true,
+  },
+  {
+    type: 'STRAIGHT_FLUSH',
+    name: 'Straight Flush',
+    baseMiles: 160,
+    baseMult: 16,
+    rank: 13,
+    secret: true,
+  },
+  {
+    type: 'FLUSH_FIVE',
+    name: 'Flush Five',
+    baseMiles: 180,
+    baseMult: 18,
+    rank: 14,
+    secret: true,
+  },
 ];
 
 export default hands;
@@ -86,4 +122,9 @@ export default hands;
 /** Find a hand definition by type */
 export function getHandByType(type: string): HandDef | undefined {
   return hands.find((h) => h.type === type);
+}
+
+/** Hand type ids marked secret in data */
+export function getSecretHandTypes(): HandType[] {
+  return hands.filter((h) => h.secret).map((h) => h.type as HandType);
 }

@@ -2,6 +2,7 @@
 
 import { EquipmentInstance } from '../ItemsSystem';
 import { walkEquipmentPerSlot, walkEquipmentScoring, type ResolveEquipmentSlotOptions } from '../equipmentUtils';
+import { handTypeContains } from '../handContainment';
 import { Die, HandType } from '../types';
 import type { ScoringPipelineContext } from './types';
 import { addScore, D, gte, multiplyScore, type Decimal, type DecimalSource } from '../scoreMath';
@@ -274,32 +275,7 @@ export function isBossEffectNegated(): boolean {
 }
 
 export function handTypeMatches(played: HandType, required: string): boolean {
-  if (played === required) return true;
-
-  if (played === HandType.FULL_HOUSE) {
-    if (required === HandType.PAIR || required === HandType.THREE_OF_A_KIND || required === HandType.TWO_PAIR)
-      return true;
-  }
-  if (played === HandType.TWO_PAIR && required === HandType.PAIR) return true;
-  if (played === HandType.THREE_OF_A_KIND && required === HandType.PAIR) return true;
-  if (played === HandType.FOUR_OF_A_KIND) {
-    if (required === HandType.THREE_OF_A_KIND || required === HandType.PAIR) return true;
-  }
-  if (played === HandType.FIVE_OF_A_KIND) {
-    if (
-      required === HandType.FOUR_OF_A_KIND ||
-      required === HandType.THREE_OF_A_KIND ||
-      required === HandType.PAIR ||
-      required === HandType.TWO_PAIR ||
-      required === HandType.FULL_HOUSE
-    )
-      return true;
-  }
-  if (played === HandType.FIVE_STRAIGHT) {
-    if (required === HandType.FOUR_STRAIGHT) return true;
-  }
-
-  return false;
+  return handTypeContains(played, required as HandType);
 }
 
 export { resolveEffectParam, resolveChance } from '../effectParams';

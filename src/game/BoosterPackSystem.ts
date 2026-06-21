@@ -17,6 +17,7 @@ import { CHANCES, PACK_EXCLUDED_SUPPLY_IDS, PACK_WEIGHTS, PACK_ONLY_FRONTIER_IDS
 import packsData, { type PackCategory, type PackDef, type PackTier } from '../data/packs';
 import supplyCardsData, { type SupplyCardDef } from '../data/supply_cards';
 import trailGuidesData, { type TrailGuideDef } from '../data/trail_guides';
+import { filterSpawnableTrailGuides } from './trailGuideSpawn';
 import { hasPermitTrailGuideTargeting } from './PermitsSystem';
 import { getMostPlayedHandTypes, getMostUsedSupplyIds } from './handStatsHelpers';
 import frontierEncountersData, { type FrontierEncounterDef } from '../data/frontier_encounters';
@@ -374,10 +375,11 @@ function generateSupplyPackContents(count: number): PackItem[] {
 }
 
 function pickTargetTrailGuideForRun(state: RunState): TrailGuideDef | null {
+  const spawnableGuides = filterSpawnableTrailGuides(TRAIL_GUIDES, state);
   const handTypes = getMostPlayedHandTypes(state.handStats);
   if (handTypes.length === 0) return null;
   const targetHand = handTypes.length === 1 ? handTypes[0] : rngPick('trailPack', handTypes);
-  return TRAIL_GUIDES.find((tg) => tg.handType === targetHand) ?? null;
+  return spawnableGuides.find((tg) => tg.handType === targetHand) ?? null;
 }
 
 function buildTrailGuidePackItem(tg: TrailGuideDef): PackItem {
@@ -399,8 +401,9 @@ function generateTrailGuidePackContents(count: number): PackItem[] {
   const packExcludeIds =
     targetGuide && !playerAllowsDuplicateItems(run) ? [...(excludeIds ?? []), targetGuide.id] : excludeIds;
 
+  const spawnableGuides = filterSpawnableTrailGuides(TRAIL_GUIDES, run);
   const items: PackItem[] = [];
-  const normalCards = pickRandom(filterPoolByExcludeIds(TRAIL_GUIDES, packExcludeIds), count, 'trailPack');
+  const normalCards = pickRandom(filterPoolByExcludeIds(spawnableGuides, packExcludeIds), count, 'trailPack');
   let normalIdx = 0;
   let placedTarget = false;
 

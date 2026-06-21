@@ -48,6 +48,7 @@ export interface ItemDisplayResult {
 }
 
 import type { ItemDisplayContext, RoundHintContext } from '../game/displayContextTypes';
+import { handTypeContains } from '../game/handContainment';
 import { HandType, type EquipmentModifier } from '../game/types';
 import {
   getGravityModeFace,
@@ -139,32 +140,14 @@ const HAND_NAMES: Record<HandType, string> = {
   [HandType.FIVE_OF_A_KIND]: '5 of a Kind',
   [HandType.FIVE_STRAIGHT]: '5 Straight',
   [HandType.HIGH_VALUE]: 'High Value',
+  [HandType.FLUSH]: 'Flush',
+  [HandType.FLUSH_HOUSE]: 'Flush House',
+  [HandType.STRAIGHT_FLUSH]: 'Straight Flush',
+  [HandType.FLUSH_FIVE]: 'Flush Five',
 };
 
-/** Check if a played hand type contains the required hand type */
-type HandsWithContainment = Extract<
-  HandType,
-  | HandType.FIVE_OF_A_KIND
-  | HandType.FOUR_OF_A_KIND
-  | HandType.FULL_HOUSE
-  | HandType.THREE_OF_A_KIND
-  | HandType.TWO_PAIR
-  | HandType.FIVE_STRAIGHT
-  | HandType.FOUR_STRAIGHT
->;
 function handContains(played: HandType | null, required: HandType): boolean {
-  if (!played) return false;
-  const CONTAINMENT: Record<HandsWithContainment, HandType[]> = {
-    FIVE_OF_A_KIND: [HandType.FIVE_OF_A_KIND, HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.FOUR_OF_A_KIND],
-    FOUR_OF_A_KIND: [HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.TWO_PAIR],
-    FULL_HOUSE: [HandType.THREE_OF_A_KIND, HandType.PAIR, HandType.TWO_PAIR],
-    THREE_OF_A_KIND: [HandType.PAIR],
-    TWO_PAIR: [HandType.PAIR],
-    FIVE_STRAIGHT: [HandType.FOUR_STRAIGHT],
-    FOUR_STRAIGHT: [],
-  };
-  if (played === required) return true;
-  return CONTAINMENT[played as HandsWithContainment]?.includes(required) ?? false;
+  return handTypeContains(played, required);
 }
 
 // ─── Item Definitions ───

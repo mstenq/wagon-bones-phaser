@@ -3,6 +3,8 @@
 import { HandType } from '../../types';
 import { processEquipmentOnBossDefeat } from '../../EquipmentEffects';
 import { GAMEPLAY } from '../../Constants';
+import { recordSecretHandDiscovered } from '../../UserStats';
+import { getSecretHandTypes } from '../../../data/hands';
 import { getRunState, runStore } from '../runStore';
 import { resolveEquipmentList } from '../resolve';
 import { selectJourneyComplete } from '../selectors/runSelectors';
@@ -27,6 +29,10 @@ export const progressionActions = {
         },
       };
     });
+
+    if (getSecretHandTypes().includes(type)) {
+      recordSecretHandDiscovered(type);
+    }
   },
 
   upgradeHandLevel(type: HandType, amount: number = 1): void {

@@ -832,3 +832,53 @@ describe('MULT_PER_MISSING_DICE: Six Feet Under', () => {
     expect(inst.state.mult ?? 0).toBe(0);
   });
 });
+
+// ─── Flush variant hand containment ───
+
+function woodenDice(values: number[]) {
+  return values.map((value) => die({ value, enhancement: 'wooden' }));
+}
+
+describe('HAND_CONTAINS_XMULT on flush variants', () => {
+  test('Five Finger Fillet activates on flush five (contains five of a kind)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: woodenDice([7, 7, 7, 7, 7]),
+      equipment: [item('five_finger_fillet')],
+    });
+    // FLUSH_FIVE: baseMult=18, x5 = 90
+    expect(result.handResult.type).toBe(HandType.FLUSH_FIVE);
+    expect(result.mult).toBeMult(90);
+  });
+
+  test('Snake River activates on straight flush (contains five straight)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: woodenDice([4, 5, 6, 7, 8]),
+      equipment: [item('snake_river')],
+    });
+    // STRAIGHT_FLUSH: baseMult=16, x3 = 48
+    expect(result.handResult.type).toBe(HandType.STRAIGHT_FLUSH);
+    expect(result.mult).toBeMult(48);
+  });
+});
+
+describe('SPLIT_TRAIL on flush variants', () => {
+  test('activates on flush house with odd and even scored values', () => {
+    const { result } = calculateTestScore({
+      scoredDice: woodenDice([5, 5, 5, 8, 8]),
+      equipment: [item('split_trail')],
+    });
+    // FLUSH_HOUSE: baseMult=14, x2.5 = 35
+    expect(result.handResult.type).toBe(HandType.FLUSH_HOUSE);
+    expect(result.mult).toBeMultCloseTo(35, 5);
+  });
+
+  test('activates on straight flush with odd and even scored values', () => {
+    const { result } = calculateTestScore({
+      scoredDice: woodenDice([4, 5, 6, 7, 8]),
+      equipment: [item('split_trail')],
+    });
+    // STRAIGHT_FLUSH: baseMult=16, x2.5 = 40
+    expect(result.handResult.type).toBe(HandType.STRAIGHT_FLUSH);
+    expect(result.mult).toBeMultCloseTo(40, 5);
+  });
+});

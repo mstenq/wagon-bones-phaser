@@ -38,6 +38,17 @@ describe('HAND_MULT: Wedding Ring (pair, +8)', () => {
     expect(result.mult).toBeMult(12);
   });
 
+  test('activates on flush house (contains pair)', () => {
+    const scoredDice = [5, 5, 5, 8, 8].map((value) => die({ value, enhancement: 'wooden' }));
+    const { result } = calculateTestScore({
+      scoredDice,
+      equipment: [item('wedding_ring')],
+    });
+    // FLUSH_HOUSE: baseMult=14, +8 = 22
+    expect(result.handResult.type).toBe(HandType.FLUSH_HOUSE);
+    expect(result.mult).toBeMult(22);
+  });
+
   test('activates on three of a kind (contains pair)', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 3),

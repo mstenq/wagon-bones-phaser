@@ -11,7 +11,7 @@ import {
   setupGame,
   resetDieIds,
 } from './testHelpers';
-import { HandType } from '../types';
+import { HandType, type DiceEnhancement } from '../types';
 import { eq, gt, balanceMilesAndMult } from '../scoreMath';
 import { resolveScoreDestroyChance } from '../scoring/scoreHand';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
@@ -584,6 +584,135 @@ describe('effectiveDays / effectiveRerolls', () => {
     expect(player.effectiveDays).toBe(GAMEPLAY.MAX_DAYS + 1 + 1 - 1);
     // rerolls: 6 - 1(permit penalty) = 5
     expect(player.effectiveRerolls).toBe(GAMEPLAY.MAX_REROLLS - 1);
+  });
+});
+
+// ─── Secret flush hands ───
+
+function enhancedDice(values: number[], enhancement: Exclude<DiceEnhancement, null>) {
+  return values.map((value) => die({ value, enhancement }));
+}
+
+describe('secret flush hands', () => {
+  test('5 matching wooden dice with mixed pips is Flush', () => {
+    const dice = enhancedDice([3, 3, 5, 7, 9], 'wooden');
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.FLUSH);
+    expect(result.scoringDice.length).toBe(5);
+  });
+
+  test('5 matching wooden full house is Flush House', () => {
+    const dice = enhancedDice([5, 5, 5, 8, 8], 'wooden');
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.FLUSH_HOUSE);
+  });
+
+  test('5 matching wooden straight is Straight Flush', () => {
+    const dice = enhancedDice([4, 5, 6, 7, 8], 'wooden');
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.STRAIGHT_FLUSH);
+  });
+
+  test('5 matching wooden five of a kind is Flush Five', () => {
+    const dice = enhancedDice([7, 7, 7, 7, 7], 'wooden');
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.FLUSH_FIVE);
+  });
+
+  test('5 all-stone dice is Flush Five', () => {
+    const dice = Array.from({ length: 5 }, () => die({ enhancement: 'stone', value: 0 }));
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.FLUSH_FIVE);
+    expect(result.scoringDice.length).toBe(5);
+  });
+
+  test('2 all-stone dice is High Value, not Flush Five', () => {
+    const dice = Array.from({ length: 2 }, () => die({ enhancement: 'stone', value: 0 }));
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.HIGH_VALUE);
+    expect(result.type).not.toBe(HandType.FLUSH_FIVE);
+    expect(result.scoringDice.length).toBe(2);
+  });
+
+  test('standard die mixed with enhancements falls back to regular hand', () => {
+    const dice = [
+      die({ value: 7, enhancement: 'wooden' }),
+      die({ value: 7, enhancement: 'wooden' }),
+      die({ value: 7, enhancement: 'wooden' }),
+      die({ value: 7, enhancement: 'wooden' }),
+      die({ value: 8, enhancement: null }),
+    ];
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.FOUR_OF_A_KIND);
+  });
+
+  test('fewer than 5 enhanced dice does not trigger flush', () => {
+    const dice = enhancedDice([7, 7, 7], 'wooden');
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.THREE_OF_A_KIND);
+  });
+
+  test('mixed enhancements does not trigger flush', () => {
+    const dice = [
+      die({ value: 5, enhancement: 'wooden' }),
+      die({ value: 5, enhancement: 'wooden' }),
+      die({ value: 8, enhancement: 'gold' }),
+      die({ value: 8, enhancement: 'gold' }),
+      die({ value: 8, enhancement: 'gold' }),
+    ];
+    const result = detectBestHand(dice);
+    expect(result.type).toBe(HandType.FULL_HOUSE);
+  });
+
+  test('flush five scoring uses secret base stats', () => {
+    const { result } = calculateTestScore({
+      scoredDice: enhancedDice([6, 6, 6, 6, 6], 'wooden'),
+    });
+    // FLUSH_FIVE: baseMiles=180, baseMult=18; pips=30, wooden +30 x5=150 → totalValue=180
+    expect(result.handResult.type).toBe(HandType.FLUSH_FIVE);
+    expect(result.miles).toBeMiles(6480);
+    expect(result.mult).toBeMult(18);
+  });
+
+  test('flush scoring uses secret base stats', () => {
+    const { result } = calculateTestScore({
+      scoredDice: enhancedDice([3, 3, 5, 7, 9], 'wooden'),
+    });
+    // FLUSH: baseMiles=100, baseMult=8; pips=27, wooden +30 x5=150 → totalValue=177
+    expect(result.handResult.type).toBe(HandType.FLUSH);
+    expect(result.handResult.rank).toBe(11);
+    expect(result.miles).toBeMiles(2216);
+    expect(result.mult).toBeMult(8);
+  });
+
+  test('flush house scoring uses secret base stats', () => {
+    const { result } = calculateTestScore({
+      scoredDice: enhancedDice([5, 5, 5, 8, 8], 'wooden'),
+    });
+    // FLUSH_HOUSE: baseMiles=140, baseMult=14; pips=31, wooden +30 x5=150 → totalValue=181
+    expect(result.handResult.type).toBe(HandType.FLUSH_HOUSE);
+    expect(result.handResult.rank).toBe(12);
+    expect(result.miles).toBeMiles(4494);
+    expect(result.mult).toBeMult(14);
+  });
+
+  test('straight flush scoring uses secret base stats', () => {
+    const { result } = calculateTestScore({
+      scoredDice: enhancedDice([4, 5, 6, 7, 8], 'wooden'),
+    });
+    // STRAIGHT_FLUSH: baseMiles=160, baseMult=16; pips=30, wooden +30 x5=150 → totalValue=180
+    expect(result.handResult.type).toBe(HandType.STRAIGHT_FLUSH);
+    expect(result.handResult.rank).toBe(13);
+    expect(result.miles).toBeMiles(5440);
+    expect(result.mult).toBeMult(16);
+  });
+
+  test('d12 wrap-around is not treated as straight flush', () => {
+    const dice = enhancedDice([10, 11, 12, 1, 2], 'wooden');
+    const result = detectBestHand(dice);
+    // findLongestStraight only checks consecutive sorted values — no 12→1 wrap
+    expect(result.type).toBe(HandType.FLUSH);
+    expect(result.type).not.toBe(HandType.STRAIGHT_FLUSH);
   });
 });
 

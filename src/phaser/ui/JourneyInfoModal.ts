@@ -306,13 +306,15 @@ export class JourneyInfoModal extends GameObjects.Container {
 
     const run = getRunState();
 
+    let visibleRow = 0;
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       const handType = hand.type as HandType;
       const stats = selectHandStats(run, handType);
+      if (hand.secret && stats.timesPlayed === 0) continue;
 
-      // Row background (alternating)
-      if (i % 2 === 0) {
+      // Row background (alternating by visible row, not hands array index)
+      if (visibleRow % 2 === 0) {
         const rowBg = scene.add.graphics();
         rowBg.fillStyle(COLORS.SIDEBAR_SECTION, 0.5);
         rowBg.fillRect(panelX + 16, rowY - 2, panelW - 32, rowH);
@@ -361,6 +363,7 @@ export class JourneyInfoModal extends GameObjects.Container {
 
       this.tabContent.add([nameText, levelText, milesText, multText, playedText]);
       rowY += rowH;
+      visibleRow++;
     }
   }
 

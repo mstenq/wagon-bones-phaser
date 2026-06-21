@@ -16,6 +16,10 @@ export enum HandType {
   FOUR_OF_A_KIND = 'FOUR_OF_A_KIND',
   FIVE_STRAIGHT = 'FIVE_STRAIGHT',
   FIVE_OF_A_KIND = 'FIVE_OF_A_KIND',
+  FLUSH = 'FLUSH',
+  FLUSH_HOUSE = 'FLUSH_HOUSE',
+  STRAIGHT_FLUSH = 'STRAIGHT_FLUSH',
+  FLUSH_FIVE = 'FLUSH_FIVE',
 }
 
 export interface HandStats {

@@ -3,7 +3,7 @@
 import type { DifficultyLevel } from '../../types';
 import { createPouch, createRunStartingPouch } from '../../DiceSystem';
 import { getItemAuraById } from '../../ItemsSystem';
-import { getSupplyDefById } from '../../ConsumablesSystem';
+import { getConsumableDefById } from '../../ConsumablesSystem';
 import { getProfessionById } from '../../../data/professions';
 import { getEquipmentDefById } from '../../equipmentCatalog';
 import { acquireEquipmentInstance } from '../../EquipmentModifiers';
@@ -78,7 +78,7 @@ export const setupActions = {
         const cardId = typeof entry === 'string' ? entry : entry.id;
         const auraId = typeof entry === 'string' ? undefined : entry.aura;
         const aura = auraId ? getItemAuraById(auraId) : null;
-        const def = getSupplyDefById(cardId, aura);
+        const def = getConsumableDefById(cardId, aura);
         if (def) consumableActions.addConsumable(def);
       }
     }

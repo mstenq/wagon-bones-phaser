@@ -1,9 +1,15 @@
 // ─── Cross-run achievement progress (No Phaser imports) ───
 
 import professions from '../data/professions';
+import { getSecretHandTypes } from '../data/hands';
 import { DIFFICULTIES } from './Constants';
 import { getAllEquipment } from './ItemsSystem';
-import { getEquipmentHighestDifficultyBeaten, getHighestDifficultyBeaten } from './UserStats';
+import {
+  areAllSecretHandsDiscovered,
+  getDiscoveredSecretHands,
+  getEquipmentHighestDifficultyBeaten,
+  getHighestDifficultyBeaten,
+} from './UserStats';
 
 export interface AchievementProgress {
   done: number;
@@ -36,4 +42,11 @@ export function getCompletionistPlusPlusProgress(): AchievementProgress {
   }
   const total = allEquipment.length;
   return { done, total, complete: done >= total };
+}
+
+/** All secret hand types discovered across runs (hidden until complete). */
+export function getTrailMysticProgress(): AchievementProgress {
+  const total = getSecretHandTypes().length;
+  const done = getDiscoveredSecretHands().length;
+  return { done, total, complete: areAllSecretHandsDiscovered() };
 }
