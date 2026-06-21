@@ -1,7 +1,8 @@
 // ─── Hand Stats Helpers (No Phaser imports) ───
 
 import { getHandByType } from '../data/hands';
-import type { HandStats, HandType, HandUpgradeInfo } from './types';
+import type { HandStats, HandUpgradeInfo } from './types';
+import { HandType } from './types';
 import { getSupplyDefById } from './ConsumablesSystem';
 import { getRunState } from './store/runStore';
 import { selectHandStats } from './store/selectors/runSelectors';
@@ -40,6 +41,24 @@ export function applyHandLevelUpgrade(handType: HandType, amount: number = 1): H
     throw new Error(`applyHandLevelUpgrade: unknown hand type ${handType}`);
   }
   return info;
+}
+
+/** Non-secret hands, plus secret hands scored at least once this run. */
+export function isHandTypeSpawnableThisRun(handType: HandType, handStats: Record<HandType, HandStats>): boolean {
+  if (!getHandByType(handType)?.secret) return true;
+  return (handStats[handType]?.timesPlayed ?? 0) > 0;
+}
+
+export function getSpawnableHandTypes(handStats: Record<HandType, HandStats>): HandType[] {
+  return Object.values(HandType).filter((ht) => isHandTypeSpawnableThisRun(ht, handStats));
+}
+
+export function resolveWantedPosterTargetHand(
+  targetHandIdx: number,
+  handStats: Record<HandType, HandStats>,
+): HandType {
+  const handTypes = getSpawnableHandTypes(handStats);
+  return handTypes[targetHandIdx % handTypes.length];
 }
 
 /** Hand types tied for the highest timesPlayed count. Empty when nothing has been played. */

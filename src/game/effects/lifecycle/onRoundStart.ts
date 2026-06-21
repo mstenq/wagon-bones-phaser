@@ -1,6 +1,5 @@
 // ─── on-round-start lifecycle handlers ───
 
-import { HandType } from '../../types';
 import type { EquipmentInstance } from '../../ItemsSystem';
 import { isEquipmentCursed } from '../../ItemsSystem';
 import { resolveEffectParam } from '../../effectParams';
@@ -16,6 +15,7 @@ import { replaceConsumableList, resolveConsumableList } from '../../store/resolv
 import { economyActions } from '../../store/actions/economyActions';
 import { diceActions } from '../../store/actions/diceActions';
 import { isEquipmentDisabledByBoss } from '../../BossEffectsSystem';
+import { getSpawnableHandTypes } from '../../handStatsHelpers';
 
 /** A single animated equipment destruction: source triggered victim's removal */
 export interface AnimatedDestruction {
@@ -127,7 +127,7 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
       break;
     }
     case 'WANTED_HAND_MONEY': {
-      const handTypes = Object.values(HandType);
+      const handTypes = getSpawnableHandTypes(getRunState().handStats);
       equip.state.targetHand = rngInt('wantedHand', 0, handTypes.length - 1);
       break;
     }

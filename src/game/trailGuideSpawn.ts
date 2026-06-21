@@ -1,10 +1,9 @@
-import { getHandByType } from '../data/hands';
 import type { TrailGuideDef } from '../data/trail_guides';
+import { isHandTypeSpawnableThisRun } from './handStatsHelpers';
 import type { RunState } from './store/types';
 
 export function isSecretGuideSpawnable(guide: TrailGuideDef, run: RunState): boolean {
-  if (!getHandByType(guide.handType)?.secret) return true;
-  return (run.handStats[guide.handType]?.timesPlayed ?? 0) > 0;
+  return isHandTypeSpawnableThisRun(guide.handType, run.handStats);
 }
 
 export function filterSpawnableTrailGuides(guides: TrailGuideDef[], run: RunState): TrailGuideDef[] {

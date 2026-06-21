@@ -68,7 +68,7 @@ import {
 } from '../game/equipmentUnlock';
 import { enhancementMatchesTarget, hasAlchemyKit } from '../game/alchemyKit';
 import { getDominantEnhancementDisplayNames } from '../game/dominantEnhancement';
-import { getMostUsedSupplyNames } from '../game/handStatsHelpers';
+import { getMostUsedSupplyNames, resolveWantedPosterTargetHand } from '../game/handStatsHelpers';
 
 /** Card-bar alert wiggle when an effect's ready-to-use condition is met */
 export type EquipmentAlertType = 'firstDay' | 'lastDay' | 'readyToSell' | 'everyNthHand';
@@ -1623,9 +1623,7 @@ const items: ItemDef[] = [
     initialState: { targetHand: 0 },
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'wanted_poster');
-      const handIdx = equip?.state.targetHand ?? 0;
-      const handTypes = Object.values(HandType);
-      const handType = handTypes[handIdx % handTypes.length] as HandType;
+      const handType = resolveWantedPosterTargetHand(equip?.state.targetHand ?? 0, player.handStats);
       const amount = resolveEffectParam<number>(equip?.def.effectParams ?? { value: 4 }, 'value', player.professionId);
       const hint = [[money(`$${amount}`)], [condition(HAND_NAMES[handType] ?? '?', 'sm')]];
       return {

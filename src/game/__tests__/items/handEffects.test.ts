@@ -14,6 +14,13 @@ import {
 import { D } from '../../decimal';
 import { processEquipmentOnHandPlayed, processEquipmentOnRoundStart } from '../../EquipmentEffects';
 import { HandType } from '../../types';
+import { getRunState } from '../../store/runStore';
+import { progressionActions } from '../../store/actions/progressionActions';
+import { getSecretHandTypes } from '../../../data/hands';
+import {
+  getSpawnableHandTypes,
+  resolveWantedPosterTargetHand,
+} from '../../handStatsHelpers';
 
 beforeEach(() => resetDieIds());
 
@@ -454,9 +461,29 @@ describe('WANTED_HAND_MONEY: Wanted Poster', () => {
     const inst = item('wanted_poster');
     inst.state.targetHand = 0;
     processEquipmentOnRoundStart([inst]);
-    const handTypes = Object.values(HandType);
+    const handTypes = getSpawnableHandTypes(getRunState().handStats);
     expect(inst.state.targetHand).toBeGreaterThanOrEqual(0);
     expect(inst.state.targetHand).toBeLessThan(handTypes.length);
+  });
+
+  test('excludes undiscovered secret hands from random target pool', () => {
+    setupGame();
+    const inst = item('wanted_poster');
+    const secretTypes = new Set(getSecretHandTypes());
+
+    for (let i = 0; i < 50; i++) {
+      inst.state.targetHand = 0;
+      processEquipmentOnRoundStart([inst]);
+      const handType = resolveWantedPosterTargetHand(inst.state.targetHand ?? 0, getRunState().handStats);
+      expect(secretTypes.has(handType)).toBe(false);
+    }
+  });
+
+  test('includes discovered secret hands in spawnable target pool', () => {
+    setupGame();
+    progressionActions.recordHandPlayed(HandType.FLUSH);
+    const spawnable = getSpawnableHandTypes(getRunState().handStats);
+    expect(spawnable).toContain(HandType.FLUSH);
   });
 
   test('hunter earns $8 when hand matches target', () => {

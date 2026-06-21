@@ -1,13 +1,12 @@
 // ─── Money-granting effects ───
 
 import { effectRegistry } from '../registry';
-import { HandType } from '../../types';
 import { resolveEffectParam } from '../helpers';
+import { resolveWantedPosterTargetHand } from '../../handStatsHelpers';
+import { getRunState } from '../../store/runStore';
 
 effectRegistry.registerAdditive('WANTED_HAND_MONEY', (ctx, equip, index) => {
-  const handTypes = Object.values(HandType);
-  const targetIdx = equip.state.targetHand ?? 0;
-  const targetHand = handTypes[targetIdx % handTypes.length];
+  const targetHand = resolveWantedPosterTargetHand(equip.state.targetHand ?? 0, getRunState().handStats);
   const handType = ctx.handResult.type;
   if (handType === targetHand) {
     const p = equip.def.effectParams as Record<string, unknown>;
