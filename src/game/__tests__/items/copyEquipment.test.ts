@@ -689,7 +689,45 @@ describe('Copy item familiar: Nightshard', () => {
     });
     const result = processEquipmentOnDayStart([item('mirror_lake'), item('nightshard')]);
     expect(result.priorityHandDiceIds).toHaveLength(6);
+    expect(new Set(result.priorityHandDiceIds).size).toBe(6);
     expect(result.priorityHandDiceIds.every((id) => bones.some((d) => d.id === id))).toBe(true);
+  });
+
+  test('echo chamber copying nightshard doubles dominant-hand dice picks at day start', () => {
+    const lucky = [
+      die({ enhancement: 'lucky', value: 12 }),
+      die({ enhancement: 'lucky', value: 11 }),
+      die({ enhancement: 'lucky', value: 10 }),
+      die({ enhancement: 'lucky', value: 9 }),
+      die({ enhancement: 'lucky', value: 8 }),
+      die({ enhancement: 'lucky', value: 7 }),
+    ];
+    setupGame({
+      equipment: [item('nightshard'), item('echo_chamber')],
+      dice: [...lucky, ...diceWithValue(1, 100)],
+    });
+    const result = processEquipmentOnDayStart([item('nightshard'), item('echo_chamber')]);
+    expect(result.priorityHandDiceIds).toHaveLength(6);
+    expect(new Set(result.priorityHandDiceIds).size).toBe(6);
+    expect(result.priorityHandDiceIds.every((id) => lucky.some((d) => d.id === id))).toBe(true);
+  });
+
+  test('echo chamber copying nightshard fills hand with 6 dominant dice on round start', () => {
+    const lucky = [
+      die({ enhancement: 'lucky', value: 12 }),
+      die({ enhancement: 'lucky', value: 11 }),
+      die({ enhancement: 'lucky', value: 10 }),
+      die({ enhancement: 'lucky', value: 9 }),
+      die({ enhancement: 'lucky', value: 8 }),
+      die({ enhancement: 'lucky', value: 7 }),
+    ];
+    const { game } = setupGame({
+      equipment: [item('nightshard'), item('echo_chamber')],
+      dice: [...lucky, ...diceWithValue(1, 100)],
+    });
+    game.startRound();
+    const luckyInHand = game.state.hand.filter((d) => d.enhancement === 'lucky');
+    expect(luckyInHand).toHaveLength(6);
   });
 });
 

@@ -22,7 +22,10 @@ effectRegistry.registerLifecycle('on-day-start', (equip, ctxUnknown) => {
       const run = getRunState();
       const dominant = getDominantEnhancements(run.dice);
       if (dominant.length === 0) break;
-      const matching = selectAvailableDice(run).filter((die) => die.enhancement && dominant.includes(die.enhancement));
+      const alreadyPicked = new Set(ctx.priorityHandDiceIds);
+      const matching = selectAvailableDice(run).filter(
+        (die) => die.enhancement && dominant.includes(die.enhancement) && !alreadyPicked.has(die.id),
+      );
       const toAdd = matching.slice(0, Math.max(0, maxCount)).map((die) => die.id);
       ctx.priorityHandDiceIds.push(...toAdd);
       break;
