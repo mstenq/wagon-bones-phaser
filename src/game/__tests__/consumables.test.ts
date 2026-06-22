@@ -90,7 +90,9 @@ describe('ConsumableDef creation', () => {
     expect(def.diceSelection).toBeDefined();
     expect(def.diceSelection!.drawCount).toBe(0);
     expect(def.diceSelection!.pickCount).toBe(2);
-    expect(getDiceSelectionMinPicks(def.diceSelection!)).toBe(2);
+    expect(def.diceSelection!.minPickCount).toBe(1);
+    expect(getDiceSelectionMinPicks(def.diceSelection!)).toBe(1);
+    expect(isDiceSelectionReady(def.diceSelection!, 1)).toBe(true);
   });
 
   test('enhance supply cards can apply to fewer than their max picks', () => {

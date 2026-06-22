@@ -100,7 +100,7 @@ describe('ConsumableTargetingSession — bar lifecycle', () => {
 
     let snap = getConsumableTargetingSnapshot();
     expect(snap.active).toBe(true);
-    expect(snap.minPicks).toBe(2);
+    expect(snap.minPicks).toBe(1);
     expect(snap.maxPicks).toBe(2);
     expect(snap.ready).toBe(false);
     expect(snap.validationReason).toContain('Select');
@@ -108,7 +108,8 @@ describe('ConsumableTargetingSession — bar lifecycle', () => {
     toggleTargetDie('die-a');
     snap = getConsumableTargetingSnapshot();
     expect(snap.selectedCount).toBe(1);
-    expect(snap.ready).toBe(false);
+    expect(snap.ready).toBe(true);
+    expect(snap.validationReason).toBeNull();
 
     toggleTargetDie('die-b');
     snap = getConsumableTargetingSnapshot();
@@ -151,9 +152,9 @@ describe('ConsumableTargetingSession — bar lifecycle', () => {
     expect(getActiveConsumableTargeting()).not.toBeNull();
 
     toggleTargetDie('die-a');
-    const stillTooFew = commitConsumableTargeting();
-    expect(stillTooFew.ok).toBe(false);
-    expect(getActiveConsumableTargeting()).not.toBeNull();
+    const oneDie = commitConsumableTargeting();
+    expect(oneDie.ok).toBe(true);
+    expect(getActiveConsumableTargeting()).toBeNull();
   });
 
   test('commit succeeds when ready and clears the session', () => {

@@ -171,6 +171,7 @@ const supplyCards: SupplyCardDef[] = [
     diceSelection: {
       drawCount: 0,
       pickCount: 2,
+      minPickCount: 1,
       effectType: 'DESTROY',
       effectParams: {},
     },

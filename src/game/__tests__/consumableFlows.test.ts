@@ -267,7 +267,35 @@ describe('consumableFlowHarness — game bar flows', () => {
     expect(player.dice.find((d) => d.id === gold.id)?.enhancement).toBe('gold');
   });
 
-  test('commit fails when selection is incomplete', () => {
+  test('SELECT: shallow_grave arm → toggle one die → commit', () => {
+    const { game, player } = setupGame({
+      dice: [die({ value: 1 }), die({ value: 2 }), die({ value: 3 })],
+      handSize: 3,
+    });
+    game.startRound();
+    const handIds = selectHandDice().map((d) => d.id);
+    player.addConsumable(getSupplyDefById('shallow_grave')!);
+
+    const armed = runConsumableFlow([{ action: 'arm_bar', consumableIndex: 0 }], {
+      eligibilityContext: gameSelectContext(handIds),
+      surface: 'game',
+    });
+    expect(armed.ok).toBe(true);
+    expect(armed.phase).toBe('armed');
+
+    const result = runConsumableFlow([{ action: 'toggle', dieId: handIds[0]! }, { action: 'commit' }], {
+      eligibilityContext: gameSelectContext(handIds),
+      surface: 'game',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.phase).toBe('committed');
+    expect(resolveConsumableList()).toHaveLength(0);
+    expect(player.dice).toHaveLength(2);
+    expect(player.dice.map((d) => d.id).sort()).toEqual([handIds[1], handIds[2]].sort());
+  });
+
+  test('commit fails when no dice are selected', () => {
     const { game, player } = setupGame({
       dice: [die({ value: 1 }), die({ value: 2 })],
       handSize: 2,
@@ -276,16 +304,10 @@ describe('consumableFlowHarness — game bar flows', () => {
     const handIds = selectHandDice().map((d) => d.id);
     player.addConsumable(getSupplyDefById('shallow_grave')!);
 
-    runConsumableFlow(
-      [
-        { action: 'arm_bar', consumableIndex: 0 },
-        { action: 'toggle', dieId: handIds[0]! },
-      ],
-      {
-        eligibilityContext: gameSelectContext(handIds),
-        surface: 'game',
-      },
-    );
+    runConsumableFlow([{ action: 'arm_bar', consumableIndex: 0 }], {
+      eligibilityContext: gameSelectContext(handIds),
+      surface: 'game',
+    });
 
     const result = commitConsumableTargetingFlow({
       eligibilityContext: gameSelectContext(handIds),
