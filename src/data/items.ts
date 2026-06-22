@@ -3373,6 +3373,19 @@ const items: ItemDef[] = [
     },
   },
   {
+    id: 'spirit_path',
+    name: 'Spirit Path',
+    cardTemplate: 'white-text-black-outline',
+    cost: 7,
+    rarity: 'uncommon',
+    effectType: 'SPIRIT_PATH',
+    effectParams: {},
+    display: (_round, _player) => ({
+      hint: [[active('Gap straights', 'sm')]],
+      tooltip: [[text('Allows Straights to be made with one or more gaps of 1 rank between values (ex: 2 4 5 7 9)')]],
+    }),
+  },
+  {
     id: 'split_trail',
     name: 'Split Trail',
     cardTemplate: 'white-text-black-outline',

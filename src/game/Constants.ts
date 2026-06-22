@@ -643,6 +643,7 @@ export const COPY_INCOMPATIBLE_EFFECTS = new Set([
   'LOADED_DICE', // Loaded Dice
   'GRAVITY', // Gravity
   'STACKED_DECK', // Stacked Deck
+  'SPIRIT_PATH', // Spirit Path
   'END_ROUND_MONEY_SCALING', // Railroad Bonds
   'SELL_DISABLE_BOSS', // Sheriff's Badge
   'SELL_GRANT_TAG', // Bounty Contract

@@ -1153,7 +1153,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "split_trail.png",
+	"filename": "spirit_path.png",
 	"frame": {"x":151,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1161,7 +1161,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "square_dance.png",
+	"filename": "split_trail.png",
 	"frame": {"x":302,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1169,7 +1169,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "stacked_deck.png",
+	"filename": "square_dance.png",
 	"frame": {"x":453,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1177,7 +1177,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "steam_engine.png",
+	"filename": "stacked_deck.png",
 	"frame": {"x":604,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1185,7 +1185,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "stew.png",
+	"filename": "steam_engine.png",
 	"frame": {"x":755,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1193,7 +1193,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "stubborn_mule.png",
+	"filename": "stew.png",
 	"frame": {"x":906,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1201,7 +1201,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "supply_caravan.png",
+	"filename": "stubborn_mule.png",
 	"frame": {"x":1057,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1209,7 +1209,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "supply_drop.png",
+	"filename": "supply_caravan.png",
 	"frame": {"x":1208,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1217,7 +1217,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "surveyors_transit.png",
+	"filename": "supply_drop.png",
 	"frame": {"x":1359,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1225,7 +1225,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "tight_fist.png",
+	"filename": "surveyors_transit.png",
 	"frame": {"x":1510,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1233,7 +1233,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "toolbelt.png",
+	"filename": "tight_fist.png",
 	"frame": {"x":1661,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1241,7 +1241,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "town_choir.png",
+	"filename": "toolbelt.png",
 	"frame": {"x":1812,"y":2486,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1249,7 +1249,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_almanac.png",
+	"filename": "town_choir.png",
 	"frame": {"x":0,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1257,7 +1257,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_backpack.png",
+	"filename": "trail_almanac.png",
 	"frame": {"x":151,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1265,7 +1265,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_boss.png",
+	"filename": "trail_backpack.png",
 	"frame": {"x":302,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1273,7 +1273,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_journal.png",
+	"filename": "trail_boss.png",
 	"frame": {"x":453,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1281,7 +1281,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_markers.png",
+	"filename": "trail_journal.png",
 	"frame": {"x":604,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1289,7 +1289,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_rations.png",
+	"filename": "trail_markers.png",
 	"frame": {"x":755,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1297,7 +1297,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_repair_kit.png",
+	"filename": "trail_rations.png",
 	"frame": {"x":906,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1305,7 +1305,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trail_tax.png",
+	"filename": "trail_repair_kit.png",
 	"frame": {"x":1057,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1313,7 +1313,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "trailblazer.png",
+	"filename": "trail_tax.png",
 	"frame": {"x":1208,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1321,7 +1321,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "triad_totem.png",
+	"filename": "trailblazer.png",
 	"frame": {"x":1359,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1329,7 +1329,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "twenty_third_psalm.png",
+	"filename": "triad_totem.png",
 	"frame": {"x":1510,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1337,7 +1337,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "twin_colts.png",
+	"filename": "twenty_third_psalm.png",
 	"frame": {"x":1661,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1345,7 +1345,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "wanted_poster.png",
+	"filename": "twin_colts.png",
 	"frame": {"x":1812,"y":2712,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1353,7 +1353,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "war_drums.png",
+	"filename": "wanted_poster.png",
 	"frame": {"x":0,"y":2938,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1361,7 +1361,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "wedding_ring.png",
+	"filename": "war_drums.png",
 	"frame": {"x":151,"y":2938,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1369,7 +1369,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "wild_card.png",
+	"filename": "wedding_ring.png",
 	"frame": {"x":302,"y":2938,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1377,7 +1377,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "wood_axe.png",
+	"filename": "wild_card.png",
 	"frame": {"x":453,"y":2938,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1385,7 +1385,7 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "work_boots.png",
+	"filename": "wood_axe.png",
 	"frame": {"x":604,"y":2938,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
@@ -1393,8 +1393,16 @@
 	"sourceSize": {"w":151,"h":226}
 },
 {
-	"filename": "worn_deck.png",
+	"filename": "work_boots.png",
 	"frame": {"x":755,"y":2938,"w":151,"h":226},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
+	"sourceSize": {"w":151,"h":226}
+},
+{
+	"filename": "worn_deck.png",
+	"frame": {"x":906,"y":2938,"w":151,"h":226},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":151,"h":226},
@@ -1407,6 +1415,6 @@
 	"format": "RGBA8888",
 	"size": {"w":1963,"h":3164},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:505740c95c146a85abd93706d38f27a4:3528ef5938e94c17e9733b1e93f99de8:110e074689c9edd2c54833ce2e4d9270$"
+	"smartupdate": "$TexturePacker:SmartUpdate:272b7797d1e3314df76996786766998c:da7efcd312818dc0fb07115e871dfb75:110e074689c9edd2c54833ce2e4d9270$"
 }
 }

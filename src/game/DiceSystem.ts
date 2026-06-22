@@ -16,6 +16,7 @@ import {
 } from './equipmentUtils';
 import { getRoundState } from './store/roundStore';
 import { selectGravityDice } from './store/selectors/roundSelectors';
+import { hasSpiritPath } from './spiritPath';
 import { D } from './scoreMath';
 import { rngFloat, rngInt, rngPick, rngShuffle } from './RunRng';
 
@@ -175,13 +176,17 @@ function getFrequencies(dice: Die[]): Map<number, number> {
   return freq;
 }
 
-function findLongestStraight(dice: Die[]): number[] {
+function findLongestStraight(dice: Die[], allowGaps = false): number[] {
+  if (dice.length === 0) return [];
+
   const unique = [...new Set(dice.map((d) => d.value))].sort((a, b) => a - b);
   let best: number[] = [];
   let current: number[] = [unique[0]];
 
   for (let i = 1; i < unique.length; i++) {
-    if (unique[i] === unique[i - 1] + 1) {
+    const diff = unique[i] - unique[i - 1];
+    const extendsChain = diff === 1 || (allowGaps && diff === 2);
+    if (extendsChain) {
       current.push(unique[i]);
     } else {
       if (current.length > best.length) best = current;
@@ -212,30 +217,33 @@ function allDiceShareEnhancement(dice: Die[]): boolean {
   return dice.every((d) => d.enhancement === enhancement);
 }
 
+type HandPatternResult = { pattern: HandType; straight: number[] };
+
 /** Base hand pattern (no flush variants) from pip layout alone. */
-function classifyHandPattern(dice: Die[]): HandType {
-  if (dice.length === 0) return HandType.HIGH_VALUE;
+function classifyHandPattern(dice: Die[], allowGaps: boolean): HandPatternResult {
+  if (dice.length === 0) return { pattern: HandType.HIGH_VALUE, straight: [] };
 
   const freq = getFrequencies(dice);
   const counts = [...freq.values()].sort((a, b) => b - a);
-  const straight = findLongestStraight(dice);
+  const straight = findLongestStraight(dice, allowGaps);
 
-  if (counts[0] >= 5) return HandType.FIVE_OF_A_KIND;
-  if (straight.length >= 5) return HandType.FIVE_STRAIGHT;
-  if (counts[0] >= 4) return HandType.FOUR_OF_A_KIND;
-  if (counts[0] >= 3 && counts[1] >= 2) return HandType.FULL_HOUSE;
-  if (straight.length >= 4) return HandType.FOUR_STRAIGHT;
-  if (counts[0] >= 3) return HandType.THREE_OF_A_KIND;
-  if (counts[0] >= 2 && counts[1] >= 2) return HandType.TWO_PAIR;
-  if (counts[0] >= 2) return HandType.PAIR;
-  return HandType.HIGH_VALUE;
+  if (counts[0] >= 5) return { pattern: HandType.FIVE_OF_A_KIND, straight };
+  if (straight.length >= 5) return { pattern: HandType.FIVE_STRAIGHT, straight };
+  if (counts[0] >= 4) return { pattern: HandType.FOUR_OF_A_KIND, straight };
+  if (counts[0] >= 3 && counts[1] >= 2) return { pattern: HandType.FULL_HOUSE, straight };
+  if (straight.length >= 4) return { pattern: HandType.FOUR_STRAIGHT, straight };
+  if (counts[0] >= 3) return { pattern: HandType.THREE_OF_A_KIND, straight };
+  if (counts[0] >= 2 && counts[1] >= 2) return { pattern: HandType.TWO_PAIR, straight };
+  if (counts[0] >= 2) return { pattern: HandType.PAIR, straight };
+  return { pattern: HandType.HIGH_VALUE, straight };
 }
 
 function detectFlushVariant(dice: Die[]): HandType {
   const allStone = dice.every((d) => d.enhancement === 'stone');
   if (allStone) return HandType.FLUSH_FIVE;
 
-  const pattern = classifyHandPattern(dice);
+  const allowGaps = hasSpiritPath(resolveEquipmentList());
+  const { pattern } = classifyHandPattern(dice, allowGaps);
   if (pattern === HandType.FIVE_OF_A_KIND) return HandType.FLUSH_FIVE;
   if (pattern === HandType.FIVE_STRAIGHT) return HandType.STRAIGHT_FLUSH;
   if (pattern === HandType.FULL_HOUSE) return HandType.FLUSH_HOUSE;
@@ -274,9 +282,9 @@ export function detectBestHand(dice: Die[]): HandResult {
  * Internal: detect best hand from non-stone dice only.
  */
 function detectBestHandFromDice(dice: Die[]): HandResult {
-  const pattern = classifyHandPattern(dice);
+  const allowGaps = hasSpiritPath(resolveEquipmentList());
+  const { pattern, straight } = classifyHandPattern(dice, allowGaps);
   const freq = getFrequencies(dice);
-  const straight = findLongestStraight(dice);
 
   switch (pattern) {
     case HandType.FIVE_OF_A_KIND:

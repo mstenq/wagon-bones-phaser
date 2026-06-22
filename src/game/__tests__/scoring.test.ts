@@ -18,6 +18,7 @@ import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
 import { resetPlayerState } from '../__tests__/testRunPlayer';
 import { detectBestHand, rollDie, setDieEnhancement } from '../DiceSystem';
+import { getBossRoundState } from '../BossEffectsSystem';
 import { initRunRng } from '../RunRng';
 import { GAMEPLAY } from '../Constants';
 
@@ -713,6 +714,67 @@ describe('secret flush hands', () => {
     // findLongestStraight only checks consecutive sorted values — no 12→1 wrap
     expect(result.type).toBe(HandType.FLUSH);
     expect(result.type).not.toBe(HandType.STRAIGHT_FLUSH);
+  });
+});
+
+// ─── Spirit Path: gap straights ───
+
+describe('Spirit Path gap straights', () => {
+  beforeEach(() => setupGame());
+
+  test('without Spirit Path, gap sequences are not straights', () => {
+    expect(detectBestHand(diceFromValues([1, 3, 5, 7, 9])).type).toBe(HandType.HIGH_VALUE);
+    expect(detectBestHand(diceFromValues([1, 2, 4, 5])).type).toBe(HandType.HIGH_VALUE);
+  });
+
+  test('without Spirit Path, subsequence straights still work', () => {
+    expect(detectBestHand(diceFromValues([1, 4, 5, 6, 7])).type).toBe(HandType.FOUR_STRAIGHT);
+  });
+
+  test('with Spirit Path, gap five straight is detected', () => {
+    setupGame({ equipment: [item('spirit_path')] });
+    expect(detectBestHand(diceFromValues([1, 3, 5, 7, 9])).type).toBe(HandType.FIVE_STRAIGHT);
+  });
+
+  test('with Spirit Path, gap four straight is detected', () => {
+    setupGame({ equipment: [item('spirit_path')] });
+    expect(detectBestHand(diceFromValues([1, 2, 4, 5])).type).toBe(HandType.FOUR_STRAIGHT);
+  });
+
+  test('with Spirit Path, strict five straight still works', () => {
+    setupGame({ equipment: [item('spirit_path')] });
+    expect(detectBestHand(diceFromValues([1, 2, 3, 4, 5])).type).toBe(HandType.FIVE_STRAIGHT);
+  });
+
+  test('with Spirit Path, diff 3 still blocks five straight extension', () => {
+    setupGame({ equipment: [item('spirit_path')] });
+    expect(detectBestHand(diceFromValues([1, 4, 5, 6, 7])).type).toBe(HandType.FOUR_STRAIGHT);
+  });
+
+  test('with Spirit Path, matching enhancement gap straight is straight flush', () => {
+    setupGame({ equipment: [item('spirit_path')] });
+    const dice = enhancedDice([1, 3, 5, 7, 9], 'wooden');
+    expect(detectBestHand(dice).type).toBe(HandType.STRAIGHT_FLUSH);
+  });
+
+  test('Rail Line triggers on Spirit Path gap four straight', () => {
+    const { result } = calculateTestScore({
+      scoredDice: diceFromValues([1, 2, 4, 5]),
+      equipment: [item('spirit_path'), item('rail_line')],
+    });
+    // FOUR_STRAIGHT: baseMiles=15, +80 = 95, baseMult=2; totalValue=12 → (95+12)*2=214
+    expect(result.handResult.type).toBe(HandType.FOUR_STRAIGHT);
+    expect(result.miles).toBeMiles(214);
+  });
+
+  test('boss-disabled Spirit Path does not grant gap straights', () => {
+    const { game } = setupGame({
+      bossId: 'the_jinx',
+      equipment: [item('spirit_path')],
+    });
+    game.startRound();
+    getBossRoundState().disabledEquipmentIndices = [0];
+    expect(detectBestHand(diceFromValues([1, 3, 5, 7, 9])).type).toBe(HandType.HIGH_VALUE);
   });
 });
 

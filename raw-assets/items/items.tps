@@ -317,6 +317,7 @@
             <key type="filename">snake_river.png</key>
             <key type="filename">spare_holster.png</key>
             <key type="filename">spare_wagon_parts.png</key>
+            <key type="filename">spirit_path.png</key>
             <key type="filename">split_trail.png</key>
             <key type="filename">square_dance.png</key>
             <key type="filename">stacked_deck.png</key>
@@ -560,6 +561,7 @@
                     <filename>skullwing.png</filename>
                     <filename>gravity.png</filename>
                     <filename>pocket_watch.png</filename>
+                    <filename>spirit_path.png</filename>
                 </array>
             </struct>
         </map>
