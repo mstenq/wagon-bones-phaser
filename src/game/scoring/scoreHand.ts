@@ -378,6 +378,7 @@ export function scoreHand(
   // Enhancement score destroy (e.g. diamond crack); Moonshine overrides diamond odds
   console.log('  [postScore] Enhancement crack pass');
   for (const scoredDie of handResult.scoringDice) {
+    if (isDiceScoringDisabledByBoss(scoredDie)) continue;
     const destroyChance = resolveScoreDestroyChance(scoredDie, equipment, trailRound);
     if (!destroyChance) continue;
     if (!checkLoadedChance(destroyChance, equipment, 'diamondDice')) continue;

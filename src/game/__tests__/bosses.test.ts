@@ -152,6 +152,30 @@ describe('DISABLE_VALUES: Ghost Town / Undertaker', () => {
     expect(boss.animEvents.some((e) => e.popupType === 'again')).toBe(false);
   });
 
+  test('disabled dice do not crack from diamond enhancement', () => {
+    const disabledDiamond = die({ value: 6, enhancement: 'diamond' });
+    const { result, player } = calculateTestScore({
+      bossId: 'the_ghost_town',
+      scoredDice: [disabledDiamond, die({ value: 6 })],
+      equipment: [item('loaded_dice'), item('loaded_dice')],
+    });
+
+    expect(result.animEvents.some((e) => e.popupType === 'crack' && e.target.kind === 'die')).toBe(false);
+    expect(player.dice.some((d) => d.id === disabledDiamond.id)).toBe(true);
+  });
+
+  test('enabled dice still crack from diamond enhancement under parity boss', () => {
+    const enabledDiamond = die({ value: 5, enhancement: 'diamond' });
+    const { result, player } = calculateTestScore({
+      bossId: 'the_ghost_town',
+      scoredDice: [enabledDiamond, die({ value: 5 })],
+      equipment: [item('loaded_dice'), item('loaded_dice')],
+    });
+
+    expect(result.animEvents.some((e) => e.popupType === 'crack' && e.target.kind === 'die')).toBe(true);
+    expect(player.dice.some((d) => d.id === enabledDiamond.id)).toBe(false);
+  });
+
   test('golden_spike does not enhance boss-disabled scored dice', () => {
     const original = Math.random;
     Math.random = () => 0;
@@ -599,6 +623,18 @@ describe('DISABLE_ALL_DICE: Bank Lien', () => {
     expect(equipmentActions.destroyEquipment(0)).toBe(true);
     expect(getBossRoundState().diceScoringReenabledBySell).toBe(false);
     expect(isDiceScoringDisabledByBoss(die({ value: 6 }))).toBe(true);
+  });
+
+  test('disabled dice do not crack from diamond enhancement', () => {
+    const diamond = die({ value: 6, enhancement: 'diamond' });
+    const { result, player } = calculateTestScore({
+      bossId: 'the_bank_lien',
+      scoredDice: [diamond, die({ value: 6 })],
+      equipment: [item('loaded_dice'), item('loaded_dice')],
+    });
+
+    expect(result.animEvents.some((e) => e.popupType === 'crack' && e.target.kind === 'die')).toBe(false);
+    expect(player.dice.some((d) => d.id === diamond.id)).toBe(true);
   });
 });
 
