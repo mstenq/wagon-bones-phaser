@@ -8,7 +8,7 @@ import type { HintSegment, ItemDisplayResult } from './ItemsSystem';
 import { getItemAuraById, isEquipmentCursed } from './ItemsSystem';
 import type { DiceSelectionConfig } from './DiceSelectionSystem';
 import type { InstantEffect } from './BoosterPackSystem';
-import { getConsumablePackExcludeIds, getEquipmentPackExcludeIds } from './BoosterPackSystem';
+import { getConsumablePackExcludeIds, resolveEquipmentCreateExcludeIds } from './BoosterPackSystem';
 import { HandType, HandDefinition, HandUpgradeInfo } from './types';
 import type { ItemDisplayContext, RoundHintContext } from './displayContextTypes';
 import hands, { getHandByType } from '../data/hands';
@@ -379,6 +379,8 @@ export interface UseConsumableResult {
 export interface ConsumableEffectContext {
   /** Dice IDs currently visible/targetable in the active scene */
   visibleDiceIds?: string[];
+  /** Extra def ids to treat as visible when rolling random equipment/consumables */
+  visibleDefIds?: string[];
 }
 
 export type ConsumableAnimEvent =
@@ -491,7 +493,7 @@ export function executeConsumableEffect(
 
   // ─── Instant effects ───
   if (def.instantEffect) {
-    return applyRunInstantEffect(def.instantEffect);
+    return applyRunInstantEffect(def.instantEffect, context);
   }
 
   // ─── Supply cards that create other consumables ───
@@ -773,7 +775,10 @@ export function useConsumableDirectly(def: ConsumableDef, context: ConsumableEff
 }
 
 /** Apply a pack/instant effect directly against the run store. */
-export function applyRunInstantEffect(effect: InstantEffect): UseConsumableResult {
+export function applyRunInstantEffect(
+  effect: InstantEffect,
+  context: ConsumableEffectContext = {},
+): UseConsumableResult {
   const run = getRunState();
   switch (effect.type) {
     case 'CREATE_DICE': {
@@ -805,7 +810,7 @@ export function applyRunInstantEffect(effect: InstantEffect): UseConsumableResul
         const def = generateRandomEquipment({
           rarity: effect.rarity,
           excludeRarity: effect.excludeRarity,
-          excludeIds: getEquipmentPackExcludeIds(state),
+          excludeIds: resolveEquipmentCreateExcludeIds(state, context.visibleDefIds ?? []),
         });
         list.push(acquireRewardEquipmentInstance(def, state.purchasedPermits));
         writeEquipment(list);

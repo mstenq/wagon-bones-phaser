@@ -7,8 +7,9 @@ import { generateShopStock, EquipmentDef, EquipmentInstance } from './ItemsSyste
 import { rollShopEquipmentPreview } from './EquipmentModifiers';
 import { getItemDisplayContext } from './displayContext';
 import { getRunState } from './store/runStore';
+import { getSceneState } from './store/sceneStore';
 import { resolveEquipmentList } from './store/resolve';
-import type { RunState } from './store/types';
+import type { BoosterPackSceneState, RunState, StoredShopItem } from './store/types';
 import { DiceSelectionConfig } from './DiceSelectionSystem';
 import { rollDiceAura } from './auraRng';
 import { DICE_STICKER_CHANCE } from '../data/item_auras';
@@ -300,6 +301,51 @@ export function playerAllowsDuplicateItems(state: RunState = getRunState()): boo
 /** Owned equipment ids excluded from pack stock, or undefined when duplicates are allowed. */
 export function getEquipmentPackExcludeIds(state: RunState = getRunState()): string[] | undefined {
   return playerAllowsDuplicateItems(state) ? undefined : resolveEquipmentList().map((e) => e.def.id);
+}
+
+function visibleDefIdsFromShopStock(stock: StoredShopItem[]): string[] {
+  const ids: string[] = [];
+  for (const item of stock) {
+    if (item.sold) continue;
+    if (item.type === 'equipment' || item.type === 'consumable') {
+      ids.push(item.defId);
+    }
+  }
+  return ids;
+}
+
+function visibleEquipmentDefIdsFromPack(pack: BoosterPackSceneState): string[] {
+  const used = new Set(pack.usedCardIndices);
+  const ids: string[] = [];
+  pack.contents.forEach((item, idx) => {
+    if (used.has(idx)) return;
+    if (item.equipmentDefId) ids.push(item.equipmentDefId);
+  });
+  return ids;
+}
+
+/** Def ids of items currently visible in shop or an open booster pack. */
+export function getVisibleSceneDefIds(): string[] {
+  const scene = getSceneState();
+  if (scene.shop) {
+    return visibleDefIdsFromShopStock(scene.shop.stock);
+  }
+  if (scene.boosterPack) {
+    return visibleEquipmentDefIdsFromPack(scene.boosterPack);
+  }
+  return [];
+}
+
+/** Owned + on-screen ids excluded when granting random equipment, unless duplicates are allowed. */
+export function resolveEquipmentCreateExcludeIds(
+  state: RunState = getRunState(),
+  extraVisibleDefIds: string[] = [],
+): string[] | undefined {
+  if (playerAllowsDuplicateItems(state)) return undefined;
+  const owned = getEquipmentPackExcludeIds(state) ?? [];
+  const visible = [...getVisibleSceneDefIds(), ...extraVisibleDefIds];
+  const merged = [...new Set([...owned, ...visible])];
+  return merged.length > 0 ? merged : undefined;
 }
 
 /** Consumable def ids currently held in the player's bar. */

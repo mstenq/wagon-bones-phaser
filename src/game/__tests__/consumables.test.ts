@@ -37,6 +37,8 @@ import {
 import type { ConsumableUseMode } from '../../data/consumableTypes';
 import { getRunState } from '../store/runStore';
 import { getEquipmentPackExcludeIds } from '../BoosterPackSystem';
+import { sceneActions } from '../store/sceneStore';
+import { equipmentActions } from '../store/actions/equipmentActions';
 import { selectRunStatusTraits } from '../runStatusTraits';
 import { shouldPromptRoundModifications } from '../store/selectors/uiSelectors';
 import { initRunRng } from '../RunRng';
@@ -1139,6 +1141,32 @@ describe('supply/frontier execution parity for shared effect engines', () => {
     const player = resetPlayerState();
     player.equipment = [item('ace_in_the_hole'), item('counterfeit_goods')];
     expect(getEquipmentPackExcludeIds(getRunState())).toBeUndefined();
+  });
+
+  test('ingenuity avoids visible shop equipment without counterfeit_goods', () => {
+    initRunRng('ingenuity-shop-visible');
+    const player = resetPlayerState();
+    player.maxEquipmentSlots = 5;
+    sceneActions.enterShop({
+      stock: [
+        {
+          type: 'equipment',
+          defId: 'fresh_trail',
+          sold: false,
+          preview: { defId: 'fresh_trail', sellValue: 5, state: {}, modifiers: [] },
+        },
+      ],
+      packs: [],
+      shopRerollCount: 0,
+    });
+
+    for (let i = 0; i < 500; i++) {
+      equipmentActions.setEquipment([]);
+      useConsumableDirectly(getSupplyDefById('ingenuity')!);
+      const created = player.equipment[player.equipment.length - 1];
+      expect(created).toBeDefined();
+      expect(created!.def.id).not.toBe('fresh_trail');
+    }
   });
 });
 

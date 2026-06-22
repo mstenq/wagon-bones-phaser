@@ -7,6 +7,8 @@ import {
   playerAllowsDuplicateItems,
   getEquipmentPackExcludeIds,
   getConsumablePackExcludeIds,
+  getVisibleSceneDefIds,
+  resolveEquipmentCreateExcludeIds,
   type PackDefinition,
 } from '../BoosterPackSystem';
 import { generateShopStock, getAllEquipment, getEquipmentDefById } from '../ItemsSystem';
@@ -14,6 +16,7 @@ import { CHANCES } from '../Constants';
 import { resetPlayerState, getPlayerState } from './testRunPlayer';
 import { getRunState } from '../store/runStore';
 import { runActions } from '../store';
+import { sceneActions } from '../store/sceneStore';
 import { item, setupGame } from './testHelpers';
 import { initRunRng } from '../RunRng';
 import { HandType } from '../types';
@@ -142,6 +145,80 @@ describe('equipment pack duplicate filtering', () => {
       .map((d) => d.id);
     const [picked] = generateShopStock(1, excludeAllButHorseshoe);
     expect(picked?.id).toBe('horseshoe');
+  });
+});
+
+describe('resolveEquipmentCreateExcludeIds', () => {
+  const freshTrailShopStock = {
+    stock: [
+      {
+        type: 'equipment' as const,
+        defId: 'fresh_trail',
+        sold: false,
+        preview: { defId: 'fresh_trail', sellValue: 5, state: {}, modifiers: [] },
+      },
+    ],
+    packs: [],
+    shopRerollCount: 0,
+  };
+
+  test('merges owned equipment with visible shop stock', () => {
+    setupGame({ equipment: [item('horseshoe')] });
+    sceneActions.enterShop(freshTrailShopStock);
+
+    const ids = resolveEquipmentCreateExcludeIds();
+    expect(ids).toContain('horseshoe');
+    expect(ids).toContain('fresh_trail');
+    expect(getVisibleSceneDefIds()).toEqual(['fresh_trail']);
+  });
+
+  test('skips sold shop stock', () => {
+    setupGame({ equipment: [] });
+    sceneActions.enterShop({
+      ...freshTrailShopStock,
+      stock: [{ ...freshTrailShopStock.stock[0]!, sold: true }],
+    });
+
+    expect(getVisibleSceneDefIds()).toEqual([]);
+    expect(resolveEquipmentCreateExcludeIds()).toBeUndefined();
+  });
+
+  test('returns undefined with counterfeit_goods', () => {
+    setupGame({ equipment: [item('counterfeit_goods')] });
+    sceneActions.enterShop(freshTrailShopStock);
+    expect(resolveEquipmentCreateExcludeIds()).toBeUndefined();
+  });
+
+  test('includes unused equipment cards in an open pack', () => {
+    setupGame({ equipment: [] });
+    sceneActions.enterBoosterPack({
+      packDefId: 'equipment_standard',
+      returnScene: 'Shop',
+      queuedPackDefIds: [],
+      contents: [
+        {
+          id: 'pack-equip-1',
+          name: 'Fresh Trail',
+          description: '',
+          category: 'equipment',
+          equipmentDefId: 'fresh_trail',
+        },
+        {
+          id: 'pack-equip-2',
+          name: 'Horseshoe',
+          description: '',
+          category: 'equipment',
+          equipmentDefId: 'horseshoe',
+        },
+      ],
+      picksRemaining: 1,
+      effectivePickCount: 1,
+      usedCardIndices: [1],
+      lineupDieIds: [],
+    });
+
+    expect(getVisibleSceneDefIds()).toEqual(['fresh_trail']);
+    expect(resolveEquipmentCreateExcludeIds()).toEqual(['fresh_trail']);
   });
 });
 
