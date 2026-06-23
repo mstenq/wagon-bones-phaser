@@ -29,7 +29,7 @@ export const GAMEPLAY = {
   MAX_LEGS: 39, // endless mode cap (see src/data/target_miles.ts)
   ROUNDS_PER_LEG: 3,
   /** Numbered game-round backgrounds in public/assets/backgrounds/ (1.png … N.png) */
-  ROUND_BACKGROUND_COUNT: 46,
+  ROUND_BACKGROUND_COUNT: 16,
   // Round difficulty multiplier within a leg (round 1 = 1x, round 2 = 1.5x, round 3/boss = 2x)
   ROUND_MULTIPLIERS: [1, 1.5, 2],
   // Money earned for completing each round (index 0 = round 1)

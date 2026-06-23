@@ -32,8 +32,6 @@ import {
 } from '../../game/store/selectors/runSelectors';
 import { sceneActions } from '../../game/store/sceneStore';
 import { tryEnqueueTutorial } from '../../game/tutorialEnqueue';
-import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
-import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 
 const COL_DEPTH = 100;
 const TOOLTIP_DEPTH = 400;
@@ -69,9 +67,6 @@ export class RoundSelectScene extends Scene {
     });
     this.layout = shell.layout;
     this.playbackRunner = shell.playbackRunner;
-
-    // Warm the upcoming round background so GameScene does not flash the canvas clear color.
-    ensureGameRoundBackgroundLoaded(this, getRunRoundBackgroundIndex(getRunState()), () => {});
 
     gameFacade.meta.ensureRoundSkipPreviewTags();
     sceneActions.syncRoundSelectFromRun(getRunState().roundSkipPreviewTags);

@@ -66,7 +66,6 @@ import {
 import { RoundModificationsModal } from '../ui/RoundModificationsModal';
 import { shouldPromptRoundModifications } from '../../game/store/selectors/uiSelectors';
 import { gameRoundBackgroundTextureKey, getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
-import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { playDiceFireDestroyVisualBatch } from '../animations/DiceFireDestroyAnimation';
 import { rngShuffle } from '../../game/RunRng';
@@ -145,7 +144,7 @@ export class GameScene extends Scene {
   private scoreLayoutGate: ScoreLayoutGate | null = null;
   private scoreAnimSkip: (() => void) | null = null;
 
-  /** Lazy-loaded round background image; cleared in init for each scene visit */
+  /** Round background image; cleared in init for each scene visit */
   private bgImage: Phaser.GameObjects.Image | null = null;
   /** Dev-only background preview index (1..ROUND_BACKGROUND_COUNT) */
   private devBgPreviewIndex: number | null = null;
@@ -181,7 +180,6 @@ export class GameScene extends Scene {
   }
 
   create() {
-    // Match scene fill before lazy-loaded round art arrives (avoids cream canvas clear flash).
     this.cameras.main.setBackgroundColor(COLORS.BG_PRIMARY);
 
     // Initialize game state only on first create (not on relayout)
@@ -373,16 +371,8 @@ export class GameScene extends Scene {
   private buildLayout(isRelayout: boolean = false): void {
     const index = this.getDevBgPreviewIndex();
     const textureKey = gameRoundBackgroundTextureKey(index);
-
-    if (this.textures.exists(textureKey)) {
-      this.finishBuildLayout(isRelayout, textureKey);
-      return;
-    }
-
-    ensureGameRoundBackgroundLoaded(this, index, (loadedKey) => {
-      const bgKey = this.textures.exists(loadedKey) ? loadedKey : null;
-      this.finishBuildLayout(isRelayout, bgKey);
-    });
+    const bgKey = this.textures.exists(textureKey) ? textureKey : null;
+    this.finishBuildLayout(isRelayout, bgKey);
   }
 
   private getDevBgPreviewIndex(): number {
@@ -399,11 +389,10 @@ export class GameScene extends Scene {
     const current = this.getDevBgPreviewIndex();
     this.devBgPreviewIndex = ((current - 1 + delta + count) % count) + 1;
 
-    ensureGameRoundBackgroundLoaded(this, this.devBgPreviewIndex, (textureKey) => {
-      if (!this.textures.exists(textureKey)) return;
-      this.applyRoundBackground(textureKey);
-      this.devPanel.update();
-    });
+    const textureKey = gameRoundBackgroundTextureKey(this.devBgPreviewIndex);
+    if (!this.textures.exists(textureKey)) return;
+    this.applyRoundBackground(textureKey);
+    this.devPanel.update();
   }
 
   private applyRoundBackground(textureKey: string): void {

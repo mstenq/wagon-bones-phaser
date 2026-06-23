@@ -10,6 +10,8 @@ import { initScoreAnimTimings } from '../../game/ScoreAnimTimings';
 import { isScoreAnimLabUrl } from './dev/scoreAnimLabUrl';
 import { bootstrapScoreAnimLab } from './dev/scoreAnimSandbox';
 import { patchGameAudio } from '../GameAudio';
+import { GAMEPLAY } from '../../game/Constants';
+import { gameRoundBackgroundPath, gameRoundBackgroundTextureKey } from '../../game/roundBackgrounds';
 
 // Map sticker IDs to their PNG filenames (when they differ)
 const STICKER_FILE_MAP: Record<string, string> = {
@@ -34,9 +36,12 @@ export class Preloader extends Scene {
     });
     this.load.once('complete', hideLoadingOverlay);
 
-    // Menu / shop backgrounds; game rounds lazy-load numbered backgrounds in GameScene
+    // Menu / shop / game-round backgrounds
     this.load.image('bg_main_menu', 'assets/backgrounds/main-menu.png');
     this.load.image('bg_shop', 'assets/backgrounds/shop.png');
+    for (let i = 1; i <= GAMEPLAY.ROUND_BACKGROUND_COUNT; i++) {
+      this.load.image(gameRoundBackgroundTextureKey(i), gameRoundBackgroundPath(i));
+    }
 
     // Tileable panel textures for sidebar / top bar UI
     for (const tex of ['black', 'blue', 'gray', 'green', 'red'] as const) {
