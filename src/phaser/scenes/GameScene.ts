@@ -65,7 +65,7 @@ import {
 } from '../ui/SceneLayout';
 import { RoundModificationsModal } from '../ui/RoundModificationsModal';
 import { shouldPromptRoundModifications } from '../../game/store/selectors/uiSelectors';
-import { getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
+import { gameRoundBackgroundTextureKey, getRunRoundBackgroundIndex } from '../../game/roundBackgrounds';
 import { ensureGameRoundBackgroundLoaded } from '../roundBackgrounds';
 import { playRollAnimation } from '../animations/RollAnimation';
 import { playDiceFireDestroyVisualBatch } from '../animations/DiceFireDestroyAnimation';
@@ -145,11 +145,10 @@ export class GameScene extends Scene {
   private scoreLayoutGate: ScoreLayoutGate | null = null;
   private scoreAnimSkip: (() => void) | null = null;
 
-  /** Lazy-loaded round background texture key; cleared in init for each scene visit */
-  private roundBackgroundKey: string | null = null;
+  /** Lazy-loaded round background image; cleared in init for each scene visit */
+  private bgImage: Phaser.GameObjects.Image | null = null;
   /** Dev-only background preview index (1..ROUND_BACKGROUND_COUNT) */
   private devBgPreviewIndex: number | null = null;
-  private bgImage: Phaser.GameObjects.Image | null = null;
 
   /** Ambient fire sounds from equipment destruction — stopped on scene shutdown */
   private activeEquipDestroySounds: Phaser.Sound.BaseSound[] = [];
@@ -169,7 +168,6 @@ export class GameScene extends Scene {
   init(_data: Record<string, unknown> = {}) {
     // Round state lives in roundStore (hydrated by applySaveSnapshot or cleared between rounds).
     this.roundSessionActive = false;
-    this.roundBackgroundKey = null;
     this.devBgPreviewIndex = null;
     this.bgImage = null;
   }
@@ -183,6 +181,9 @@ export class GameScene extends Scene {
   }
 
   create() {
+    // Match scene fill before lazy-loaded round art arrives (avoids cream canvas clear flash).
+    this.cameras.main.setBackgroundColor(COLORS.BG_PRIMARY);
+
     // Initialize game state only on first create (not on relayout)
     if (!this.roundSessionActive) {
       if (!isScoreAnimLabUrl()) {
@@ -370,16 +371,16 @@ export class GameScene extends Scene {
   }
 
   private buildLayout(isRelayout: boolean = false): void {
-    if (isRelayout && this.roundBackgroundKey !== null) {
-      this.finishBuildLayout(isRelayout, this.roundBackgroundKey);
+    const index = this.getDevBgPreviewIndex();
+    const textureKey = gameRoundBackgroundTextureKey(index);
+
+    if (this.textures.exists(textureKey)) {
+      this.finishBuildLayout(isRelayout, textureKey);
       return;
     }
 
-    const index = this.getDevBgPreviewIndex();
-
-    ensureGameRoundBackgroundLoaded(this, index, (textureKey) => {
-      const bgKey = this.textures.exists(textureKey) ? textureKey : null;
-      this.roundBackgroundKey = bgKey;
+    ensureGameRoundBackgroundLoaded(this, index, (loadedKey) => {
+      const bgKey = this.textures.exists(loadedKey) ? loadedKey : null;
       this.finishBuildLayout(isRelayout, bgKey);
     });
   }
@@ -400,7 +401,6 @@ export class GameScene extends Scene {
 
     ensureGameRoundBackgroundLoaded(this, this.devBgPreviewIndex, (textureKey) => {
       if (!this.textures.exists(textureKey)) return;
-      this.roundBackgroundKey = textureKey;
       this.applyRoundBackground(textureKey);
       this.devPanel.update();
     });
