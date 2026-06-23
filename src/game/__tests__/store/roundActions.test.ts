@@ -194,4 +194,12 @@ describe('round store actions', () => {
     const restored = deserializeRunState(serializeRunState(getRunState()));
     expect(getRunRoundBackgroundIndex(restored)).toBe(index);
   });
+
+  test('getRunRoundBackgroundIndex remaps out-of-range stored index into current count', () => {
+    setupGame({ dice: diceWithValue(6, 8) });
+    runActions.patch({ roundBackgroundIndex: 21 });
+
+    expect(getRunRoundBackgroundIndex(getRunState())).toBe(5);
+    expect(getRunState().roundBackgroundIndex).toBe(5);
+  });
 });
