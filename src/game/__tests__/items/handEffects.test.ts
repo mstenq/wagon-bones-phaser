@@ -17,10 +17,7 @@ import { HandType } from '../../types';
 import { getRunState } from '../../store/runStore';
 import { progressionActions } from '../../store/actions/progressionActions';
 import { getSecretHandTypes } from '../../../data/hands';
-import {
-  getSpawnableHandTypes,
-  resolveWantedPosterTargetHand,
-} from '../../handStatsHelpers';
+import { getSpawnableHandTypes, resolveWantedPosterTargetHand } from '../../handStatsHelpers';
 
 beforeEach(() => resetDieIds());
 

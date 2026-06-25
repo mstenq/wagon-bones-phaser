@@ -53,10 +53,7 @@ export function getSpawnableHandTypes(handStats: Record<HandType, HandStats>): H
   return Object.values(HandType).filter((ht) => isHandTypeSpawnableThisRun(ht, handStats));
 }
 
-export function resolveWantedPosterTargetHand(
-  targetHandIdx: number,
-  handStats: Record<HandType, HandStats>,
-): HandType {
+export function resolveWantedPosterTargetHand(targetHandIdx: number, handStats: Record<HandType, HandStats>): HandType {
   const handTypes = getSpawnableHandTypes(handStats);
   return handTypes[targetHandIdx % handTypes.length];
 }

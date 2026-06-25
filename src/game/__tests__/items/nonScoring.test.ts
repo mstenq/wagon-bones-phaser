@@ -1449,17 +1449,47 @@ describe('FLOUR_SACK: Flour Sack', () => {
 // ─── END_ROUND_SELL_VALUE_ALL: Raffle Ticket ───
 
 describe('END_ROUND_SELL_VALUE_ALL: Raffle Ticket', () => {
-  test('adds $1 sell value to all equipment at end of round', () => {
+  test('adds $1 sell value to all equipment at end of leg round', () => {
     const raffle = item('raffle_ticket');
     const horseshoe = item('horseshoe');
     const beforeRaffle = raffle.sellValue;
     const beforeHorse = horseshoe.sellValue;
-    processEndOfRound([raffle, horseshoe]);
+    processEndOfRound([raffle, horseshoe], { isLegRoundEnd: true });
     expect(raffle.sellValue).toBe(beforeRaffle + 1);
     expect(horseshoe.sellValue).toBe(beforeHorse + 1);
   });
 
-  test('sell value persists after endDay in live round flow', () => {
+  test('does not add sell value on a mid-leg day end', () => {
+    const raffle = item('raffle_ticket');
+    const horseshoe = item('horseshoe');
+    const beforeRaffle = raffle.sellValue;
+    const beforeHorse = horseshoe.sellValue;
+    processEndOfRound([raffle, horseshoe], { isLegRoundEnd: false });
+    expect(raffle.sellValue).toBe(beforeRaffle);
+    expect(horseshoe.sellValue).toBe(beforeHorse);
+  });
+
+  test('adds sell value when the leg round is won in the live round flow', () => {
+    const raffle = item('raffle_ticket');
+    const horseshoe = item('horseshoe');
+    const beforeRaffle = raffle.sellValue;
+    const beforeHorse = horseshoe.sellValue;
+
+    const { game, player } = setupGame({
+      equipment: [raffle, horseshoe],
+      dice: diceWithValue(5, 50),
+    });
+    game.startRound({ targetMiles: D(1) });
+    // Winning the leg round (targetMiles reached) ends the leg round.
+    playScoredDayAndEnd(game);
+
+    const storedRaffle = player.equipment.find((e) => e.def.id === 'raffle_ticket');
+    const storedHorse = player.equipment.find((e) => e.def.id === 'horseshoe');
+    expect(storedRaffle?.sellValue).toBe(beforeRaffle + 1);
+    expect(storedHorse?.sellValue).toBe(beforeHorse + 1);
+  });
+
+  test('does not add sell value after a non-leg-ending day', () => {
     const raffle = item('raffle_ticket');
     const horseshoe = item('horseshoe');
     const beforeRaffle = raffle.sellValue;
@@ -1470,22 +1500,23 @@ describe('END_ROUND_SELL_VALUE_ALL: Raffle Ticket', () => {
       dice: diceWithValue(5, 50),
     });
     game.startRound();
+    // avoidWin keeps the leg alive, so endDay is a mid-leg day end, not a leg round end.
     playScoredDayAndEnd(game, { avoidWin: true });
 
     const storedRaffle = player.equipment.find((e) => e.def.id === 'raffle_ticket');
     const storedHorse = player.equipment.find((e) => e.def.id === 'horseshoe');
-    expect(storedRaffle?.sellValue).toBe(beforeRaffle + 1);
-    expect(storedHorse?.sellValue).toBe(beforeHorse + 1);
+    expect(storedRaffle?.sellValue).toBe(beforeRaffle);
+    expect(storedHorse?.sellValue).toBe(beforeHorse);
   });
 
-  test('adds $1 sell value to held consumables at end of round', () => {
+  test('adds $1 sell value to held consumables at end of leg round', () => {
     const raffle = item('raffle_ticket');
     const { player } = setupGame({ equipment: [raffle] });
     const supplyDef = getRandomSupplyDef();
     player.addConsumable(supplyDef);
     const before = player.consumables[0]!.sellValue;
 
-    processEndOfRound([raffle]);
+    processEndOfRound([raffle], { isLegRoundEnd: true });
 
     expect(player.consumables[0]!.sellValue).toBe(before + 1);
   });

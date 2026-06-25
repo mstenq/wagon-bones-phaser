@@ -94,6 +94,7 @@ effectRegistry.registerLifecycle('on-round-end', (equip, ctxUnknown) => {
       }
       break;
     case 'END_ROUND_SELL_VALUE_ALL': {
+      if (!ctx.isLegRoundEnd) break;
       const bonus = (p.value as number) ?? 1;
       for (const other of ctx.equipment) {
         other.sellValue += bonus;
