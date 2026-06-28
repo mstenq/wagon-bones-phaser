@@ -326,6 +326,20 @@ export const roundActions = {
       }
       replaceEquipmentList(equip);
       pendingJunkDealerCount = created;
+
+      if (created > 0) {
+        const postCreationRun = getRunState();
+        const postCreationMods = getConfigModifiers(resolveEquipmentList());
+        config.maxRerolls = selectEffectiveRerolls(postCreationRun) + postCreationMods.rerollsBonus;
+        config.maxDays = Math.max(1, selectEffectiveDays(postCreationRun) - postCreationMods.daysPenalty);
+        config.rollSize = selectEffectiveRollSize(postCreationRun);
+        if (bossMods.setMaxRerolls !== null) {
+          config.maxRerolls = bossMods.setMaxRerolls;
+        }
+        if (bossMods.setMaxDays !== null) {
+          config.maxDays = bossMods.setMaxDays;
+        }
+      }
     }
     if (pendingJunkDealerCount > 0) {
       runActions.enqueuePlayback({ kind: 'round-start-equipment-created', count: pendingJunkDealerCount });

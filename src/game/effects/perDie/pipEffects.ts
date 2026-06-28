@@ -74,8 +74,10 @@ effectRegistry.registerPerDie('FIRST_PIP_XMULT', (ctx, equip, equipIdx, die, _t)
   const p = equip.def.effectParams as Record<string, unknown>;
   const pip = p.pip as number;
   const xVal = p.value as number;
-  const firstPipDieId = ctx.scoringDice.find((d) => dieMatchesPip(d, pip, ctx.equipment, ctx.hasStackedDeck))?.id;
-  if (!firstPipDieId || die.id !== firstPipDieId) return;
+  const count = (p.count as number) ?? 1;
+  const matchingDice = ctx.scoringDice.filter((d) => dieMatchesPip(d, pip, ctx.equipment, ctx.hasStackedDeck));
+  const targetDice = matchingDice.slice(0, count);
+  if (!targetDice.some((d) => d.id === die.id)) return;
   multiplyCtxXMult(ctx, xVal);
   ctx.animEvents.push({
     target: { kind: 'both', dieId: die.id, equipIndex: equipIdx },
@@ -83,7 +85,7 @@ effectRegistry.registerPerDie('FIRST_PIP_XMULT', (ctx, equip, equipIdx, die, _t)
     value: xVal,
     dieId: die.id,
   });
-  console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal} (first ${pip})`);
+  console.log(`  [perDie] Die ${die.id} → ${equip.def.name}: x${xVal} (one of first ${count} ${pip}s)`);
 });
 
 effectRegistry.registerPerDie('PIP_XMULT', (ctx, equip, equipIdx, die, _t) => {

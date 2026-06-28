@@ -821,16 +821,12 @@ const items: ItemDef[] = [
     effectType: 'SELL_VALUE_AS_MULT',
     effectParams: {},
     display: (_round, player) => {
-      const equip = player.equipment.find((e) => e.def.id === 'desperado');
-      let total = 0;
-      for (const e of player.equipment) {
-        if (e !== equip) total += e.sellValue;
-      }
+      const total = player.equipment.reduce((sum, e) => sum + e.sellValue, 0);
       const hint = [[mult(`+${total}`)]];
       return {
         hint,
         tooltip: [
-          [text('Add the sell value of all other owned equipment as '), mult('mult')],
+          [text('Add the sell value of all owned equipment as '), mult('mult')],
           [text('Currently: '), mult(`+${total}`)],
         ],
       };
@@ -925,7 +921,7 @@ const items: ItemDef[] = [
     effectType: 'NONE',
     effectParams: {},
     display: (_round, _player) => ({
-      hint: [[active('Negates'), text(' boss & trail penalties')]],
+      hint: [[active('Negates')], [text('boss & trail penalties', 'xs')]],
       tooltip: [
         [
           text(
@@ -2885,19 +2881,11 @@ const items: ItemDef[] = [
     cost: 5,
     rarity: 'common',
     effectType: 'FIRST_PIP_XMULT',
-    effectParams: { pip: 2, value: 2 },
+    effectParams: { pip: 2, value: 2, count: 2 },
     display: (_round, _player) => ({
-      hint: [[mult('x2'), retrigger('Retrigger', 'xs')], [condition('first 2 scored', 'xs')]],
+      hint: [[mult('x2')], [condition('first 2 scored 2s', 'xs')]],
       tooltip: [
-        [
-          text('First played '),
-          mult('2'),
-          text(' gives '),
-          mult('x2'),
-          text(' mult and '),
-          retrigger('retriggers'),
-          text(' once when scored'),
-        ],
+        [text('First two scored dice showing'), condition('2'), text('each give'), mult('x2'), text('mult when scored')],
       ],
     }),
   },

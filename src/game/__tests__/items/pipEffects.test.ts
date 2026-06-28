@@ -814,32 +814,52 @@ describe('PIP_SCORED_MILES_GAIN: 5 Mile Marker', () => {
 // ─── FIRST_PIP_XMULT: Double Barrel ───
 
 describe('FIRST_PIP_XMULT: Double Barrel', () => {
-  test('first scored 2 gives x2 mult and retriggers once', () => {
+  test('first two scored 2s each give x2 mult', () => {
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 2 }), die({ value: 2 })],
       equipment: [item('double_barrel')],
     });
-    // First 2 triggers twice (base + double barrel) → x2 × x2 = x4
+    // First two 2s each apply x2 → x2 × x2 = x4
     expect(result.mult).toBeMult(4);
   });
 
-  test('x2 triggers again on each retrigger of the first played 2 (War Drums)', () => {
+  test('only the first two scored 2s get x2 (extra 2s are ignored)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 2 }), die({ value: 2 }), die({ value: 2 })],
+      equipment: [item('double_barrel')],
+    });
+    // Three of a kind baseMult = 3; only first two 2s apply x2 → x4 → 3 × 4 = 12
+    expect(result.mult).toBeMult(12);
+  });
+
+  test('a single scored 2 gets x2 once (no retrigger)', () => {
+    const { result } = calculateTestScore({
+      scoredDice: [die({ value: 2 })],
+      equipment: [item('double_barrel')],
+    });
+    // High value baseMult = 1; one scored 2 applies x2 once → 1 × 2 = 2
+    expect(result.mult).toBeMult(2);
+  });
+
+  test('War Drums no longer adds a double barrel retrigger source', () => {
     const warDrums = itemWithState('war_drums', { daysRemaining: 5 });
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 2 }), die({ value: 2 })],
       equipment: [item('double_barrel'), warDrums],
     });
-    // First 2 triggers three times (base + double barrel + war drums) → x2 × x2 × x2 = x8
-    expect(result.mult).toBeMult(8);
+    // Double barrel no longer retriggers; War Drums retriggers each 2 once,
+    // and the retriggered score re-applies double barrel's first-pip bonus to
+    // both of the first two 2s → x2 × x2 (die A base+retrigger) × x2 × x2 (die B base+retrigger) = x16
+    expect(result.mult).toBeMult(16);
   });
 
-  test('Mirror Lake copies double barrel xMult on first 2', () => {
+  test('Mirror Lake copies double barrel xMult on first two 2s', () => {
     const { result } = calculateTestScore({
       scoredDice: [die({ value: 2 }), die({ value: 2 })],
       equipment: [item('mirror_lake'), item('double_barrel')],
     });
-    // First 2 triggers 3×; each trigger applies x2 twice (double barrel + mirror) → x4^3
-    expect(result.mult).toBeMult(64);
+    // First two 2s each apply x2 twice (double barrel + mirror) → x4 × x4 = x16
+    expect(result.mult).toBeMult(16);
   });
 });
 

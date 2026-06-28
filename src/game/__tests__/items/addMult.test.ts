@@ -372,10 +372,10 @@ describe('DECAYING_MULT: Fading Memory', () => {
 // ─── SELL_VALUE_AS_MULT: Desperado ───
 
 describe('SELL_VALUE_AS_MULT: Desperado', () => {
-  test('adds sell value of other equipment as mult', () => {
+  test('adds sell value of all equipment as mult', () => {
     const horseshoe = item('horseshoe'); // cost 2, sell = 1
     const dynamite = item('dynamite'); // cost 5, sell = 2
-    const desp = item('desperado');
+    const desp = item('desperado'); // cost 4, sell = 2
 
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
@@ -383,17 +383,18 @@ describe('SELL_VALUE_AS_MULT: Desperado', () => {
     });
     // PAIR: baseMult=1
     // horseshoe: +4, dynamite: +15 → +19
-    // desperado: +sell values of horseshoe(1) + dynamite(2) = +3
-    // total mult = 1 + 19 + 3 = 23
-    expect(result.mult).toBeMult(23);
+    // desperado: sell values desperado(2) + horseshoe(1) + dynamite(2) = +5
+    // total mult = 1 + 19 + 5 = 25
+    expect(result.mult).toBeMult(25);
   });
 
-  test('no bonus when alone', () => {
+  test('includes own sell value when alone', () => {
     const { result } = calculateTestScore({
       scoredDice: diceWithValue(5, 2),
       equipment: [item('desperado')],
     });
-    expect(result.mult).toBeMult(1);
+    // PAIR: baseMult=1, desperado sell value = 2
+    expect(result.mult).toBeMult(3);
   });
 
   test('Mirror Lake copies sell value as mult', () => {
@@ -406,9 +407,9 @@ describe('SELL_VALUE_AS_MULT: Desperado', () => {
       scoredDice: diceWithValue(5, 2),
       equipment: [item('mirror_lake'), item('desperado'), horseshoe],
     });
-    // Mirror copies desperado: second sell-value pass (mirror + horseshoe sell values)
+    // Mirror copies desperado: second full sell-value pass
     expect(Number(withMirror.mult)).toBeGreaterThan(Number(alone.mult));
-    expect(Number(withMirror.mult)).toBe(Number(alone.mult) + 11);
+    expect(Number(withMirror.mult)).toBe(Number(alone.mult) + 13);
   });
 });
 

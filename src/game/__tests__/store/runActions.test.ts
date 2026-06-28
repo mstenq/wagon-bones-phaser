@@ -1,5 +1,5 @@
 import '../setup';
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test, spyOn } from 'bun:test';
 import { GAMEPLAY } from '../../Constants';
 import { getPlayerState, resetPlayerState } from '../../__tests__/testRunPlayer';
 import { getPermitAuraMultiplier } from '../../PermitsSystem';
@@ -19,7 +19,9 @@ import {
   selectAvailableDice,
   selectPendingTags,
 } from '../../store';
+import { getRoundState } from '../../store/roundStore';
 import { initRunRng } from '../../RunRng';
+import * as ItemsSystem from '../../ItemsSystem';
 
 describe('run store actions', () => {
   const initialBalance = createInitialRunState().balance;
@@ -127,6 +129,29 @@ describe('run store actions', () => {
         expect(eq.defId).not.toBe('deadeye');
       }
       expect(new Set(created.map((eq) => eq.defId)).size).toBe(2);
+    }
+  });
+
+  test('junk dealer round-start spare holster applies reroll bonus immediately', () => {
+    const spareHolsterDef = ItemsSystem.getAllEquipment().find((i) => i.id === 'spare_holster');
+    if (!spareHolsterDef) throw new Error('missing spare_holster def');
+    const spy = spyOn(ItemsSystem, 'generateRandomEquipment');
+    spy.mockImplementation(() => ({ ...spareHolsterDef }));
+
+    try {
+      setupActions.finalizeRunSetup();
+      runActions.patch({ maxEquipmentSlots: 99 });
+      equipmentActions.setEquipment([item('junk_dealer')]);
+      roundActions.startRound();
+
+      const round = getRoundState();
+      if (!round) throw new Error('expected active round after startRound');
+      const spareHolsters = runStore.getState().equipment.filter((eq) => eq.defId === 'spare_holster');
+      expect(spareHolsters.length).toBe(2);
+      expect(round.config.maxRerolls).toBe(GAMEPLAY.MAX_REROLLS + 2);
+      expect(round.rerollsRemaining).toBe(GAMEPLAY.MAX_REROLLS + 2);
+    } finally {
+      spy.mockRestore();
     }
   });
 

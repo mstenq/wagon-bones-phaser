@@ -86,7 +86,7 @@ effectRegistry.registerAdditive('MILES_PER_EQUIPMENT', (ctx, equip, index) => {
 effectRegistry.registerAdditive('SELL_VALUE_AS_MULT', (ctx, equip, index) => {
   let totalSellValue = 0;
   for (const other of ctx.equipment) {
-    if (other !== equip) totalSellValue += other.sellValue;
+    totalSellValue += other.sellValue;
   }
   if (totalSellValue > 0) {
     ctx.bonusMult = addScore(ctx.bonusMult, totalSellValue);
