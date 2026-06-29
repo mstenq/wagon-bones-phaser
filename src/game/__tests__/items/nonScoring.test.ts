@@ -1765,14 +1765,14 @@ describe('New utility equipment lifecycle effects', () => {
     expectMirrorLakeDoesNotChangeScore('pawn_broker');
   });
 
-  test('pocket watch gains miles and mult from rerolls left at leg round end', () => {
+  test('pocket watch gains miles from days left and mult from rerolls left at leg round end', () => {
     const watch = item('pocket_watch');
     const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
-    roundActions.patch({ rerollsRemaining: 3 });
+    roundActions.patch({ day: 2, rerollsRemaining: 3 });
     processEndOfRound(player.equipment, { isLegRoundEnd: true });
     const inst = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
-    expect(inst.state.miles).toBe(5);
+    expect(inst.state.miles).toBe(10);
     expect(inst.state.mult).toBe(3);
   });
 
@@ -1791,36 +1791,49 @@ describe('New utility equipment lifecycle effects', () => {
     const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
     game.config.targetMiles = D(999_999);
-    const maxDays = getRoundState()!.config.maxDays;
-    for (let day = 0; day < maxDays - 1; day++) {
-      playScoredDayAndEnd(game, { avoidWin: true });
-    }
+    playScoredDayAndEnd(game, { avoidWin: true });
     const instMid = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect(instMid.state.miles ?? 0).toBe(0);
-    playScoredDayAndEnd(game, { avoidWin: true });
+    game.config.targetMiles = D(1);
+    playScoredDayAndEnd(game);
     const instEnd = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
-    expect((instEnd.state.miles ?? 0) > 0).toBe(true);
+    expect(instEnd.state.miles).toBe(10);
+    expect((instEnd.state.mult ?? 0) > 0).toBe(true);
+  });
+
+  test('pocket watch earns no miles when all travel days are used', () => {
+    const watch = item('pocket_watch');
+    const { game, player } = setupGame({ equipment: [watch] });
+    game.startRound();
+    game.config.targetMiles = D(999_999);
+    const maxDays = getRoundState()!.config.maxDays;
+    for (let day = 0; day < maxDays; day++) {
+      playScoredDayAndEnd(game, { avoidWin: true });
+    }
+    const inst = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
+    expect(inst.state.miles ?? 0).toBe(0);
+    expect((inst.state.mult ?? 0) > 0).toBe(true);
   });
 
   test('Mirror Lake doubles leg-round-end state tick', () => {
     const watch = item('pocket_watch');
     const { game, player } = setupGame({ equipment: [watch] });
     game.startRound();
-    roundActions.patch({ rerollsRemaining: 3 });
+    roundActions.patch({ day: 2, rerollsRemaining: 3 });
     processEndOfRound(player.equipment, { isLegRoundEnd: true });
     const alone = player.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect(alone.state.mult).toBe(3);
-    expect(alone.state.miles).toBe(5);
+    expect(alone.state.miles).toBe(10);
 
     const { game: game2, player: player2 } = setupGame({
       equipment: [item('mirror_lake'), item('pocket_watch')],
     });
     game2.startRound();
-    roundActions.patch({ rerollsRemaining: 3 });
+    roundActions.patch({ day: 2, rerollsRemaining: 3 });
     processEndOfRound(player2.equipment, { isLegRoundEnd: true });
     const withMirror = player2.equipment.find((e) => e.def.id === 'pocket_watch')!;
     expect(withMirror.state.mult).toBe(6);
-    expect(withMirror.state.miles).toBe(10);
+    expect(withMirror.state.miles).toBe(20);
   });
 
   test('Mirror Lake does not change score vs pocket watch alone', () => {

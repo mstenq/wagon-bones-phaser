@@ -3118,7 +3118,7 @@ const items: ItemDef[] = [
     cost: 4,
     rarity: 'common',
     effectType: 'POCKET_WATCH',
-    effectParams: { milesPerLegRound: 5, multPerRerollsLeft: 1 },
+    effectParams: { milesPerDayLeft: 5, multPerRerollsLeft: 1 },
     initialState: { mult: 0, miles: 0 },
     modifierImmunity: ['perishable'],
     display: (_round, player) => {
@@ -3131,7 +3131,7 @@ const items: ItemDef[] = [
           [
             text('Gains '),
             miles('+5'),
-            text(' miles and '),
+            text(' miles per day remaining and '),
             mult('+1'),
             text(' mult per reroll left after each round'),
           ],
