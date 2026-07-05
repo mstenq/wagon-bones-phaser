@@ -310,6 +310,29 @@ describe('EXACT_DICE_COUNT_MILES: Square Dance', () => {
     expect(inst.state.miles).toBe(4);
   });
 
+  test('gains +4 miles when 4 dice are played even if only 2 score', () => {
+    const inst = item('square_dance');
+    // 4 dice: pair of 5s + 2 kickers — hand is PAIR, only 2 dice score
+    const { game, player } = setupGame({
+      equipment: [inst],
+      dice: [...diceFromValues([5, 5, 3, 7]), ...diceWithValue(1, 16)],
+    });
+
+    game.startRound();
+    game.state.phase = 'ROLL';
+    game.state.rolledDice = player.dice.slice(0, 4);
+    game.state.selectedForRoll = game.state.rolledDice;
+    game.selectForScore(game.state.rolledDice.map((d) => d.id));
+    const result = game.calculateScore()!;
+
+    // Hand is PAIR (2 scoring dice), but 4 dice were played
+    expect(result.handResult.type).toBe(HandType.PAIR);
+    // PAIR: baseMiles=10, totalValue=10 (5+5), +4 from square_dance = 24 * mult(1)
+    expect(result.miles).toBeMiles(24);
+    syncEquipmentInstances(inst);
+    expect(inst.state.miles).toBe(4);
+  });
+
   test('does NOT gain miles when fewer than 4 dice played', () => {
     const inst = item('square_dance');
     setupGame({ equipment: [inst] });

@@ -11,7 +11,7 @@ import { getMostPlayedHandTypes } from '../../handStatsHelpers';
 import { getRunState } from '../../store/runStore';
 import { resolveEquipmentList } from '../../store/resolve';
 
-effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice) => {
+effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice, playedDice) => {
   const run = getRunState();
   const equipment = resolveEquipmentList();
   switch (equip.def.effectType) {
@@ -40,7 +40,7 @@ effectRegistry.registerLifecycle('on-hand-played', (equip, handType, scoringDice
     }
     case 'EXACT_DICE_COUNT_MILES': {
       const count = equip.def.effectParams.count as number;
-      const diceCount = (scoringDice as Die[])?.length ?? 0;
+      const diceCount = ((playedDice as Die[] | undefined) ?? (scoringDice as Die[]))?.length ?? 0;
       if (diceCount === count) {
         equip.state.miles = (equip.state.miles ?? 0) + (equip.def.effectParams.value as number);
       }
@@ -98,9 +98,10 @@ export function processEquipmentOnHandPlayed(
   equipment: EquipmentInstance[],
   handType: HandType,
   scoringDice?: Die[],
+  playedDice?: Die[],
 ): void {
   walkEquipmentLifecycle(equipment, ({ equip }) => {
-    dispatchLifecycle('on-hand-played', equip, handType, scoringDice);
+    dispatchLifecycle('on-hand-played', equip, handType, scoringDice, playedDice);
   });
   replaceEquipmentList(equipment);
 }
