@@ -101,7 +101,7 @@ describe('ConsumableTargetingSession — bar lifecycle', () => {
     let snap = getConsumableTargetingSnapshot();
     expect(snap.active).toBe(true);
     expect(snap.minPicks).toBe(1);
-    expect(snap.maxPicks).toBe(2);
+    expect(snap.maxPicks).toBe(3);
     expect(snap.ready).toBe(false);
     expect(snap.validationReason).toContain('Select');
 
@@ -114,6 +114,12 @@ describe('ConsumableTargetingSession — bar lifecycle', () => {
     toggleTargetDie('die-b');
     snap = getConsumableTargetingSnapshot();
     expect(snap.selectedCount).toBe(2);
+    expect(snap.ready).toBe(true);
+    expect(snap.validationReason).toBeNull();
+
+    toggleTargetDie('die-c');
+    snap = getConsumableTargetingSnapshot();
+    expect(snap.selectedCount).toBe(3);
     expect(snap.ready).toBe(true);
     expect(snap.validationReason).toBeNull();
     expect(isTargetingCommitReady(getActiveConsumableTargeting()!)).toBe(true);

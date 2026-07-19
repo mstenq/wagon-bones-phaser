@@ -89,7 +89,7 @@ describe('ConsumableDef creation', () => {
     const def = createSupplyConsumableDef(card);
     expect(def.diceSelection).toBeDefined();
     expect(def.diceSelection!.drawCount).toBe(0);
-    expect(def.diceSelection!.pickCount).toBe(2);
+    expect(def.diceSelection!.pickCount).toBe(3);
     expect(def.diceSelection!.minPickCount).toBe(1);
     expect(getDiceSelectionMinPicks(def.diceSelection!)).toBe(1);
     expect(isDiceSelectionReady(def.diceSelection!, 1)).toBe(true);
@@ -1277,7 +1277,7 @@ describe('consumable use mode manifest', () => {
   test('shallow_grave and mirage metadata fixes', () => {
     const shallowGrave = supplyCardsData.find((c) => c.id === 'shallow_grave')!;
     const mirage = supplyCardsData.find((c) => c.id === 'mirage')!;
-    expect(shallowGrave.description).toBe('Choose 2 dice to destroy');
+    expect(shallowGrave.description).toBe('Choose 3 dice to destroy');
     expect(shallowGrave.diceSelection!.drawCount).toBe(0);
     expect(mirage.description).toBe('Pick 2 dice - left becomes a copy of right');
     expect(mirage.diceSelection!.drawCount).toBe(0);

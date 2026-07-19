@@ -48,7 +48,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
   {
     id: 'gold_rush',
     name: 'Gold Rush',
-    description: 'Add golden dollar sticker to one die',
+    description: 'Add golden dollar sticker to one die. Dice with golden dollar give $3 when scored.',
     useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
@@ -72,7 +72,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
   {
     id: 'spirit_guide',
     name: 'Spirit Guide',
-    description: 'Add blue moon sticker to one die',
+    description: 'Add blue moon sticker to one die. Dice with blue moon when held in hand at round end, gain a trail guide for the winning hand.',
     useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
@@ -84,7 +84,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
   {
     id: 'deputize',
     name: 'Deputize',
-    description: 'Add red bullet sticker to one die',
+    description: 'Add red bullet sticker to one die. Dice with red bullet trigger twice.',
     useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,
@@ -96,7 +96,7 @@ const frontierEncounters: FrontierEncounterDef[] = [
   {
     id: 'swamp_fever',
     name: 'Swamp Fever',
-    description: 'Add green contagion sticker to one die',
+    description: 'Add green contagion sticker to one die. Dice with contagion have a 50% chance to spread enhancements to adjacent dice.',
     useMode: 'visible_dice',
     diceSelection: {
       drawCount: 5,

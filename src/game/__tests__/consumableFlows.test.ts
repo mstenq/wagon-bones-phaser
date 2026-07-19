@@ -97,10 +97,10 @@ beforeEach(() => {
 });
 
 describe('consumableFlowHarness — game bar flows', () => {
-  test('SELECT: shallow_grave with two pre-seeded dice auto-commits', () => {
+  test('SELECT: shallow_grave with three pre-seeded dice auto-commits', () => {
     const { game, player } = setupGame({
-      dice: [die({ value: 1 }), die({ value: 2 }), die({ value: 3 })],
-      handSize: 3,
+      dice: [die({ value: 1 }), die({ value: 2 }), die({ value: 3 }), die({ value: 4 })],
+      handSize: 4,
     });
     game.startRound();
     const handIds = selectHandDice().map((d) => d.id);
@@ -109,7 +109,7 @@ describe('consumableFlowHarness — game bar flows', () => {
 
     const result = runConsumableFlow(
       [
-        { action: 'set_seed', dieIds: [handIds[0]!, handIds[1]!] },
+        { action: 'set_seed', dieIds: [handIds[0]!, handIds[1]!, handIds[2]!] },
         { action: 'arm_bar', consumableIndex: 0 },
       ],
       { eligibilityContext: gameSelectContext(handIds), surface: 'game' },
@@ -119,7 +119,7 @@ describe('consumableFlowHarness — game bar flows', () => {
     expect(result.phase).toBe('auto_committed');
     expect(resolveConsumableList()).toHaveLength(0);
     expect(player.dice).toHaveLength(1);
-    expect(player.dice[0]!.id).toBe(handIds[2]);
+    expect(player.dice[0]!.id).toBe(handIds[3]);
   });
 
   test('SELECT: buzzards arm → toggle one die → commit', () => {
@@ -322,9 +322,9 @@ describe('consumableFlowHarness — game bar flows', () => {
 });
 
 describe('consumableFlowHarness — booster pack flows', () => {
-  test('pack bar: preselect two dice then shallow_grave auto-commits', () => {
+  test('pack bar: preselect three dice then shallow_grave auto-commits', () => {
     const { player } = setupGame();
-    const dice = [die({ value: 1 }), die({ value: 2 }), die({ value: 3 })];
+    const dice = [die({ value: 1 }), die({ value: 2 }), die({ value: 3 }), die({ value: 4 })];
     player.dice = dice;
     player.addConsumable(getSupplyDefById('shallow_grave')!);
 
@@ -335,7 +335,7 @@ describe('consumableFlowHarness — booster pack flows', () => {
 
     const result = runConsumableFlow(
       [
-        { action: 'preselect_pack', dieIds: [lineupIds[0]!, lineupIds[1]!] },
+        { action: 'preselect_pack', dieIds: [lineupIds[0]!, lineupIds[1]!, lineupIds[2]!] },
         { action: 'arm_bar', consumableIndex: 0 },
       ],
       { eligibilityContext: ctx, surface: 'pack_lineup' },
@@ -344,8 +344,8 @@ describe('consumableFlowHarness — booster pack flows', () => {
     expect(result.ok).toBe(true);
     expect(result.phase).toBe('auto_committed');
     expect(resolveConsumableList()).toHaveLength(0);
-    expect(player.dice.map((d) => d.id)).toEqual([lineupIds[2]!]);
-    expect(selectPackLineupDice().map((d) => d.id)).toEqual([lineupIds[2]!]);
+    expect(player.dice.map((d) => d.id)).toEqual([lineupIds[3]!]);
+    expect(selectPackLineupDice().map((d) => d.id)).toEqual([lineupIds[3]!]);
   });
 
   test('pack bar: rejects too many pre-selected dice', () => {
@@ -399,7 +399,7 @@ describe('consumableFlowHarness — booster pack flows', () => {
 
   test('pack card: rejects too many pre-selected dice', () => {
     const { player } = setupGame();
-    const dice = [die({ value: 1 }), die({ value: 2 }), die({ value: 3 })];
+    const dice = [die({ value: 1 }), die({ value: 2 }), die({ value: 3 }), die({ value: 4 })];
     player.dice = dice;
 
     enterTestBoosterPack();

@@ -166,11 +166,11 @@ const supplyCards: SupplyCardDef[] = [
   {
     id: 'shallow_grave',
     name: 'Shallow Grave',
-    description: 'Choose 2 dice to destroy',
+    description: 'Choose 3 dice to destroy',
     useMode: 'visible_dice',
     diceSelection: {
       drawCount: 0,
-      pickCount: 2,
+      pickCount: 3,
       minPickCount: 1,
       effectType: 'DESTROY',
       effectParams: {},
