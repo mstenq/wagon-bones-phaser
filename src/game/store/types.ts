@@ -39,6 +39,10 @@ export interface PayoutBreakdown {
   savingsAccountChunk: number;
   equipmentMoney: number;
   rerollBonus: number;
+  /** Cult Leader tithe deducted from collect total (0 for other professions). */
+  tithe: number;
+  /** Bank balance the tithe was calculated from (excludes this round's payout). */
+  titheBankBalance: number;
   total: number;
 }
 

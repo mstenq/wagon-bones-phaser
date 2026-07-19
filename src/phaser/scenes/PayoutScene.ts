@@ -286,6 +286,15 @@ export class PayoutScene extends Scene {
       });
     }
 
+    if (payout.tithe > 0) {
+      const tithePercent = (profession?.modifiers as Record<string, unknown> | undefined)?.tithePercent ?? 10;
+      rows.push({
+        label: `Tithing (${tithePercent}% of $${payout.titheBankBalance})`,
+        amount: `-$${payout.tithe}`,
+        amountColor: TEXT_COLORS.ERROR_RED,
+      });
+    }
+
     if (investmentBonus > 0) {
       rows.push({
         label: 'Bounty Payout',

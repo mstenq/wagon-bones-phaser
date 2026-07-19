@@ -53,8 +53,10 @@ export function computePayoutBreakdown(
   const roundReward = selectRoundReward(state);
   const dayBonus = daysRemaining;
 
-  const noInterest = !!(profession?.modifiers as Record<string, unknown>)?.noInterest;
-  const perRemaining = ((profession?.modifiers as Record<string, unknown>)?.endOfRoundBonusPerRemaining as number) ?? 0;
+  const profMods = profession?.modifiers as Record<string, unknown> | undefined;
+  const noInterest = !!profMods?.noInterest;
+  const perRemaining = (profMods?.endOfRoundBonusPerRemaining as number) ?? 0;
+  const tithePercent = (profMods?.tithePercent as number) ?? 0;
 
   let interest = 0;
   let savingsAccountInterest = 0;
@@ -106,6 +108,10 @@ export function computePayoutBreakdown(
     }
   }
 
+  const gross = roundReward + dayBonus + interest + savingsAccountInterest + equipmentMoney + rerollBonus;
+  const titheBankBalance = state.balance;
+  const tithe = tithePercent > 0 ? Math.ceil((titheBankBalance * tithePercent) / 100) : 0;
+
   return {
     roundReward,
     dayBonus,
@@ -115,6 +121,8 @@ export function computePayoutBreakdown(
     savingsAccountChunk,
     equipmentMoney,
     rerollBonus,
-    total: roundReward + dayBonus + interest + savingsAccountInterest + equipmentMoney + rerollBonus,
+    tithe,
+    titheBankBalance,
+    total: gross - tithe,
   };
 }

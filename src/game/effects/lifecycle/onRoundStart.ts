@@ -202,7 +202,8 @@ effectRegistry.registerLifecycle('on-round-start', (equip, ctxUnknown) => {
       const destroyIdx = rngInt('consumables', 0, consumables.length - 1);
       consumables.splice(destroyIdx, 1);
       replaceConsumableList(consumables);
-      const gain = (equip.def.effectParams.value as number) ?? 4;
+      const p = equip.def.effectParams as Record<string, unknown>;
+      const gain = resolveEffectParam<number>(p, 'value', getRunState().professionId ?? undefined) ?? 4;
       equip.state.mult = (equip.state.mult ?? 0) + gain;
       break;
     }

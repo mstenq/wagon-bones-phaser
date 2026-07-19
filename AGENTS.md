@@ -31,20 +31,6 @@ SolidJS (`App.tsx` → `PhaserGame.tsx`) is a thin host; gameplay lives in Phase
 
 Fix failures in code you touched. Pre-existing `tsc` errors elsewhere: clear only when you edit those files.
 
-## Codebase navigation (Gortex)
-
-This repo indexes via the **Gortex** MCP server (`.cursor/mcp.json`). **Use Gortex graph tools for architecture and “where does X live?”** — not for input bugs or line-level debugging. See `.cursor/rules/gortex-workflow.mdc`.
-
-| Need                  | Tool                                           |
-| --------------------- | ---------------------------------------------- |
-| Orient / index health | `graph_stats` or `index_health`                |
-| Task-scoped context   | `smart_context` with a natural-language `task` |
-| Find symbols          | `search_symbols`                               |
-| Read one symbol       | `get_symbol_source`                            |
-| Callers / callees     | `get_call_chain`, `find_usages`                |
-| Literal search        | `search_text`                                  |
-| Community overview    | `.cursor/rules/gortex-communities.mdc`         |
-
 ## Architecture (constitution only)
 
 ```

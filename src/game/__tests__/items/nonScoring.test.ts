@@ -1852,6 +1852,14 @@ describe('New utility equipment lifecycle effects', () => {
     expect(bowl.state.mult).toBe(4);
   });
 
+  test('offering bowl gains +8 mult per destroy for cult_leader', () => {
+    const bowl = item('offering_bowl');
+    const { player } = setupGame({ equipment: [bowl], profession: 'cult_leader' });
+    player.addConsumable(getRandomSupplyDef());
+    processEquipmentOnRoundStart([bowl]);
+    expect(bowl.state.mult).toBe(8);
+  });
+
   test('offering bowl skips when no consumables', () => {
     const bowl = item('offering_bowl');
     const { player } = setupGame({ equipment: [bowl] });

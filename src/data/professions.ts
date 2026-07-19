@@ -36,6 +36,10 @@ export interface ProfessionModifiers {
   ghostMedicineOnBoss?: boolean;
   /** Witch: one of these familiar ids is granted cursed at run start (after RNG seed). */
   startingFamiliarIds?: string[];
+  /** Cult Leader: percent of bank balance tithed at round end (e.g. 10 = 10%). Excludes this round's payout. */
+  tithePercent?: number;
+  /** Cult Leader: grant one random supply card when entering payout. */
+  randomSupplyOnRoundEnd?: boolean;
 }
 
 export interface ProfessionDef {
@@ -278,6 +282,24 @@ const professions: ProfessionDef[] = [
       id: 'funeral_pyre',
       name: 'Funeral Pyre',
       effect: 'Gains 4x the sell value as mult of the destroyed equipment (normally 2x)',
+    },
+  },
+  {
+    id: 'cult_leader',
+    title: 'Cult Leader',
+    name: 'Josiah Slate',
+    description:
+      '10% of money in the bank is tithed each round (not including this round’s earnings). Gain 1 random supply card at round end. Starts with Swamp Fever.',
+    modifiers: {
+      startingSupplyCards: ['swamp_fever'],
+      tithePercent: 10,
+      randomSupplyOnRoundEnd: true,
+    },
+    startingDice: ['bone', 'lucky', 'wooden', 'steel', 'stone'],
+    specialEquipment: {
+      id: 'offering_bowl',
+      name: 'Offering Bowl',
+      effect: 'Gain +8 mult per consumable destroyed (normally +4)',
     },
   },
   {

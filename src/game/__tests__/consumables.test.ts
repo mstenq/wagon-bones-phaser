@@ -500,6 +500,13 @@ describe('profession starting consumables', () => {
     expect(player.consumables[0].def.category).toBe('frontier');
   });
 
+  test('cult_leader starts with swamp_fever frontier encounter', () => {
+    const { player } = setupGame({ profession: 'cult_leader' });
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0].def.id).toBe('swamp_fever');
+    expect(player.consumables[0].def.category).toBe('frontier');
+  });
+
   test('grantGhostMedicine adds one ghost medicine consumable', () => {
     const { player } = setupGame({ profession: 'farmer' });
     expect(grantGhostMedicine()).toBe(true);
@@ -545,6 +552,17 @@ describe('profession starting dice', () => {
       (['bone', 'diamond', 'gold', 'loaded', 'lucky', 'steel', 'stone', 'wooden'] as DiceEnhancement[]).sort(),
     );
     expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 8);
+  });
+
+  test('cult_leader starts with one of each listed enhancement plus standard fill', () => {
+    const { player } = setupGame({ profession: 'cult_leader' });
+    expect(player.dice).toHaveLength(GAMEPLAY.STARTING_DICE);
+    expect(player.dice.filter((d) => d.enhancement === 'bone')).toHaveLength(1);
+    expect(player.dice.filter((d) => d.enhancement === 'lucky')).toHaveLength(1);
+    expect(player.dice.filter((d) => d.enhancement === 'wooden')).toHaveLength(1);
+    expect(player.dice.filter((d) => d.enhancement === 'steel')).toHaveLength(1);
+    expect(player.dice.filter((d) => d.enhancement === 'stone')).toHaveLength(1);
+    expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 5);
   });
 
   test('setup without profession gets plain fallback pouch', () => {

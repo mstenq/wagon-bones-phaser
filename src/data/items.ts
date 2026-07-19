@@ -2885,7 +2885,13 @@ const items: ItemDef[] = [
     display: (_round, _player) => ({
       hint: [[mult('x2')], [condition('first 2 scored 2s', 'xs')]],
       tooltip: [
-        [text('First two scored dice showing'), condition('2'), text('each give'), mult('x2'), text('mult when scored')],
+        [
+          text('First two scored dice showing'),
+          condition('2'),
+          text('each give'),
+          mult('x2'),
+          text('mult when scored'),
+        ],
       ],
     }),
   },
@@ -3326,7 +3332,7 @@ const items: ItemDef[] = [
     cost: 4,
     rarity: 'common',
     effectType: 'OFFERING_BOWL',
-    effectParams: { value: 4 },
+    effectParams: { value: 4, professionOverrides: { cult_leader: { value: 8 } } },
     initialState: { mult: 0 },
     modifierImmunity: ['perishable'],
     display: (_round, player) => {
@@ -3335,7 +3341,13 @@ const items: ItemDef[] = [
       return {
         hint: [[mult(`+${m}`)], [condition('destroys random consumable', 'xs')]],
         tooltip: [
-          [text('Round start: destroy a random consumable. If destroyed, gain '), mult('+4'), text(' mult')],
+          [
+            text('Round start: destroy a random consumable. If destroyed, gain '),
+            mult('+4'),
+            text(' mult. Josiah Slate (Cult Leader) gets '),
+            mult('+8'),
+            text('.'),
+          ],
           [text('Currently: '), mult(`+${m}`)],
         ],
       };

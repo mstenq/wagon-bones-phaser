@@ -1,7 +1,8 @@
 // ─── Run-level facade (No Phaser imports) ───
 
 import { GAMEPLAY } from '../Constants';
-import { grantGhostMedicine } from '../ConsumablesSystem';
+import { getRandomSupplyDef, grantGhostMedicine } from '../ConsumablesSystem';
+import { consumableActions } from '../store/actions/consumableActions';
 import { milesToSave } from '../scoreMath';
 import { computePayoutBreakdown } from '../runProgression';
 import { processBossPayoutTags } from '../TagSystem';
@@ -30,12 +31,16 @@ export const gameRun = {
     const rerollsRemaining = selectRerollsRemaining();
     const totalMiles = selectRoundTotalMiles() ?? D(0);
     const targetMiles = selectRoundConfig().targetMiles;
+    const profMods = selectProfession(run)?.modifiers as Record<string, unknown> | undefined;
+    if (profMods?.randomSupplyOnRoundEnd) {
+      consumableActions.addConsumable(getRandomSupplyDef());
+    }
+
     const payout = computePayoutBreakdown(run, daysRemaining, rerollsRemaining);
 
     let investmentBonus = 0;
     if (run.round === GAMEPLAY.ROUNDS_PER_LEG) {
       investmentBonus = processBossPayoutTags();
-      const profMods = selectProfession(run)?.modifiers as Record<string, unknown> | undefined;
       if (profMods?.doubleTagOnBoss) {
         const state = getRunState();
         runStore.setState({ twinWagonCount: state.twinWagonCount + 1 });

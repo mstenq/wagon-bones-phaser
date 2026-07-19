@@ -179,6 +179,7 @@
             <key type="filename">banker.png</key>
             <key type="filename">con_artist.png</key>
             <key type="filename">cook.png</key>
+            <key type="filename">cult_leader.png</key>
             <key type="filename">demon_hunter.png</key>
             <key type="filename">developer.png</key>
             <key type="filename">doctor.png</key>
@@ -230,6 +231,7 @@
                     <filename>scout.png</filename>
                     <filename>surveyor.png</filename>
                     <filename>witch.png</filename>
+                    <filename>cult_leader.png</filename>
                 </array>
             </struct>
         </map>

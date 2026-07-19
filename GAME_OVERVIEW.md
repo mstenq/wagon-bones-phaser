@@ -75,6 +75,8 @@ Instead of decks, we instead choose a character, and the character affects how t
 - Con Artist Victor Hale - +2 rerolls per day, -1 hand size
 - Witch - Eliza Blackwood - Starts with a random Cursed Familiar (Cannot be sold/destroyed).
 Card Synergy: funeral_pyre - Gains 4x the the sell value as mult of the destroyed equipment (normally 2x)
+- Cult Leader - Josiah Slate - 10% of money in the bank is tithed each round (not including that round’s earnings). Gain 1 random supply card at round end. Starts with Swamp Fever.
+Card Synergy: offering_bowl - Gains +8 mult per consumable destroyed (normally +4)
 
 ## Hand Sequence / Scoring
 
