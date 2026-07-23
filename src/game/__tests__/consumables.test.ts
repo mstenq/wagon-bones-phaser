@@ -11,6 +11,7 @@ import {
   calculateTestScore,
 } from './testHelpers';
 import { resetPlayerState } from './testRunPlayer';
+import { gameFacade } from '../facade';
 import {
   createFrontierConsumableDef,
   createSupplyConsumableDef,
@@ -507,6 +508,13 @@ describe('profession starting consumables', () => {
     expect(player.consumables[0].def.category).toBe('frontier');
   });
 
+  test('cult_leader does not gain a supply card during round payout', () => {
+    const { player } = setupGame({ profession: 'cult_leader' });
+    gameFacade.run.preparePayoutPresentation();
+    expect(player.consumables).toHaveLength(1);
+    expect(player.consumables[0].def.id).toBe('swamp_fever');
+  });
+
   test('grantGhostMedicine adds one ghost medicine consumable', () => {
     const { player } = setupGame({ profession: 'farmer' });
     expect(grantGhostMedicine()).toBe(true);
@@ -554,14 +562,10 @@ describe('profession starting dice', () => {
     expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 8);
   });
 
-  test('cult_leader starts with one of each listed enhancement plus standard fill', () => {
+  test('cult_leader starts with five loaded dice plus standard fill', () => {
     const { player } = setupGame({ profession: 'cult_leader' });
     expect(player.dice).toHaveLength(GAMEPLAY.STARTING_DICE);
-    expect(player.dice.filter((d) => d.enhancement === 'bone')).toHaveLength(1);
-    expect(player.dice.filter((d) => d.enhancement === 'lucky')).toHaveLength(1);
-    expect(player.dice.filter((d) => d.enhancement === 'wooden')).toHaveLength(1);
-    expect(player.dice.filter((d) => d.enhancement === 'steel')).toHaveLength(1);
-    expect(player.dice.filter((d) => d.enhancement === 'stone')).toHaveLength(1);
+    expect(player.dice.filter((d) => d.enhancement === 'loaded')).toHaveLength(5);
     expect(player.dice.filter((d) => d.enhancement === null)).toHaveLength(GAMEPLAY.STARTING_DICE - 5);
   });
 

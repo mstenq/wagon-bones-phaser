@@ -35,6 +35,6 @@ export const gameDice = {
 
   /** Human-readable loaded-die odds for the picker UI. */
   getLoadedDieOddsNote(): string {
-    return formatLoadedDieOddsNote(resolveEquipmentList());
+    return formatLoadedDieOddsNote(resolveEquipmentList(), getRunState().professionId);
   },
 };

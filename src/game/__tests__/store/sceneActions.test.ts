@@ -74,8 +74,7 @@ describe('scene lifecycle actions', () => {
         savingsAccountChunk: 5,
         equipmentMoney: 0,
         rerollBonus: 0,
-        tithe: 0,
-        titheBankBalance: 0,
+        loadedDiceBonus: 0,
         total: 8,
       },
       presentation: {

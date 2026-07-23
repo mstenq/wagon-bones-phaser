@@ -278,20 +278,19 @@ export class PayoutScene extends Scene {
       });
     }
 
+    if (payout.loadedDiceBonus > 0) {
+      rows.push({
+        label: 'Loaded Dice ($1 each)',
+        amount: `$${payout.loadedDiceBonus}`,
+        highlight: true,
+      });
+    }
+
     if (payout.equipmentMoney > 0) {
       rows.push({
         label: `Equipment Bonus`,
         amount: `$${payout.equipmentMoney}`,
         highlight: true,
-      });
-    }
-
-    if (payout.tithe > 0) {
-      const tithePercent = (profession?.modifiers as Record<string, unknown> | undefined)?.tithePercent ?? 10;
-      rows.push({
-        label: `Tithing (${tithePercent}% of $${payout.titheBankBalance})`,
-        amount: `-$${payout.tithe}`,
-        amountColor: TEXT_COLORS.ERROR_RED,
       });
     }
 

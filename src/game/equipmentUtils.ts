@@ -2,6 +2,7 @@
 // Pure logic — no Phaser. Kept separate from Constants.ts (values only).
 
 import { COPY_INCOMPATIBLE_EFFECTS, LIFECYCLE_MIRROR_DOUBLES } from './Constants';
+import { resolveChance } from './effectParams';
 import { EquipmentInstance } from './ItemsSystem';
 import { isEquipmentDisabledByBoss } from './BossEffectsSystem';
 import { rngFloat, type RngStream } from './RunRng';
@@ -189,15 +190,18 @@ export function hasGamblersDiceCup(equipment: { def: { effectType: string } }[])
  * Loaded enhancement uses 1-in-3 base (× Loaded Dice item); cup gives other dice 1-in-6.
  */
 export function getLoadedFaceRollChance(
-  equipment: { def: { effectType: string } }[],
+  equipment: { def: { effectType: string; effectParams?: Record<string, unknown> } }[],
   dieEnhancement: DiceEnhancement,
+  professionId?: string | null,
 ): number {
   const ldm = getLoadedDiceMultiplier(equipment);
   if (dieEnhancement === 'loaded') {
     return Math.min(1, ldm / 3);
   }
-  if (hasGamblersDiceCup(equipment)) {
-    return Math.min(1, ldm / 6);
+  const cup = equipment.find((equip) => equip.def.effectType === 'GAMBLERS_DICE_CUP');
+  if (cup) {
+    const chance = resolveChance(cup.def.effectParams ?? { chance: [1, 6] }, professionId);
+    return Math.min(1, (chance[0] * ldm) / chance[1]);
   }
   return 0;
 }
@@ -248,8 +252,11 @@ function formatLoadedFaceOdds(chance: number): string {
 }
 
 /** Human-readable odds for loaded-face rolling (picker UI). */
-export function formatLoadedDieOddsNote(equipment: { def: { effectType: string } }[]): string {
-  const loadedChance = getLoadedFaceRollChance(equipment, 'loaded');
+export function formatLoadedDieOddsNote(
+  equipment: { def: { effectType: string; effectParams?: Record<string, unknown> } }[],
+  professionId?: string | null,
+): string {
+  const loadedChance = getLoadedFaceRollChance(equipment, 'loaded', professionId);
   if (!hasGamblersDiceCup(equipment)) {
     if (loadedChance >= 1) return 'Selected face is guaranteed to roll.';
     if (loadedChance === 2 / 3) return 'Selected face rolls at 2 in 3.';
@@ -257,7 +264,7 @@ export function formatLoadedDieOddsNote(equipment: { def: { effectType: string }
     return 'Selected face rolls at 1 in 6.';
   }
 
-  const otherChance = getLoadedFaceRollChance(equipment, null);
+  const otherChance = getLoadedFaceRollChance(equipment, null, professionId);
   if (loadedChance >= 1 && otherChance >= 1) {
     return 'All dice always roll the selected face.';
   }

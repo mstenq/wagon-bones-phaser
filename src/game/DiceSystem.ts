@@ -94,7 +94,7 @@ function collectFaceRollBiases(
 
   const loadedTarget = selectResolvedLoadedDieTarget(run);
   if (loadedTarget !== null) {
-    const loadedChance = getLoadedFaceRollChance(equipment, die.enhancement);
+    const loadedChance = getLoadedFaceRollChance(equipment, die.enhancement, run.professionId);
     if (loadedChance > 0) {
       biases.push({ face: loadedTarget, chance: loadedChance, source: 'loaded' });
     }

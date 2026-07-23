@@ -649,7 +649,10 @@ const items: ItemDef[] = [
     cost: 8,
     rarity: 'rare',
     effectType: 'LUCKY_NUMBER_PIP_XMULT',
-    effectParams: { value: 2, professionOverrides: { gambler: { value: 2.5 } } },
+    effectParams: {
+      value: 2,
+      professionOverrides: { cult_leader: { value: 3 } },
+    },
     initialState: { pip: 7 },
     display: (_round, player) => {
       const equip = findOwnedEquip(player, 'lucky_number');
@@ -2391,13 +2394,23 @@ const items: ItemDef[] = [
     cost: 8,
     rarity: 'rare',
     effectType: 'GAMBLERS_DICE_CUP',
-    effectParams: {},
-    display: (_round, player) => ({
-      hint: [[oddsDisplay([1, 6], player)], [text('to roll loaded #', 'xs')]],
-      tooltip: [
-        [text('All dice have '), oddsDisplay([1, 6], player), text(' odds of rolling the selected loaded die value.')],
-      ],
-    }),
+    effectParams: { chance: [1, 6], professionOverrides: { gambler: { chance: [1, 3] } } },
+    display: (_round, player) => {
+      const chance = resolveChance(
+        { chance: [1, 6], professionOverrides: { gambler: { chance: [1, 3] } } },
+        player.professionId,
+      );
+      return {
+        hint: [[oddsDisplay(chance, player)], [text('to roll loaded #', 'xs')]],
+        tooltip: [
+          [
+            text('All dice have '),
+            oddsDisplay(chance, player),
+            text(' odds of rolling the selected loaded die value.'),
+          ],
+        ],
+      };
+    },
   },
   {
     id: 'mirror_lake',
@@ -3332,7 +3345,7 @@ const items: ItemDef[] = [
     cost: 4,
     rarity: 'common',
     effectType: 'OFFERING_BOWL',
-    effectParams: { value: 4, professionOverrides: { cult_leader: { value: 8 } } },
+    effectParams: { value: 4 },
     initialState: { mult: 0 },
     modifierImmunity: ['perishable'],
     display: (_round, player) => {
@@ -3341,13 +3354,7 @@ const items: ItemDef[] = [
       return {
         hint: [[mult(`+${m}`)], [condition('destroys random consumable', 'xs')]],
         tooltip: [
-          [
-            text('Round start: destroy a random consumable. If destroyed, gain '),
-            mult('+4'),
-            text(' mult. Josiah Slate (Cult Leader) gets '),
-            mult('+8'),
-            text('.'),
-          ],
+          [text('Round start: destroy a random consumable. If destroyed, gain '), mult('+4'), text(' mult.')],
           [text('Currently: '), mult(`+${m}`)],
         ],
       };

@@ -1,8 +1,7 @@
 // ─── Run-level facade (No Phaser imports) ───
 
 import { GAMEPLAY } from '../Constants';
-import { getRandomSupplyDef, grantGhostMedicine } from '../ConsumablesSystem';
-import { consumableActions } from '../store/actions/consumableActions';
+import { grantGhostMedicine } from '../ConsumablesSystem';
 import { milesToSave } from '../scoreMath';
 import { computePayoutBreakdown } from '../runProgression';
 import { processBossPayoutTags } from '../TagSystem';
@@ -32,10 +31,6 @@ export const gameRun = {
     const totalMiles = selectRoundTotalMiles() ?? D(0);
     const targetMiles = selectRoundConfig().targetMiles;
     const profMods = selectProfession(run)?.modifiers as Record<string, unknown> | undefined;
-    if (profMods?.randomSupplyOnRoundEnd) {
-      consumableActions.addConsumable(getRandomSupplyDef());
-    }
-
     const payout = computePayoutBreakdown(run, daysRemaining, rerollsRemaining);
 
     let investmentBonus = 0;

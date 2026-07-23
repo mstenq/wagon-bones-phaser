@@ -17,8 +17,6 @@ import { resolveScoreDestroyChance } from '../scoring/scoreHand';
 import { createEmptyTrailRoundEffects } from '../TrailEventsSystem';
 import { getEnhancementScoreDestroyChance } from '../../data/dice_enhancements';
 import { resetPlayerState } from '../__tests__/testRunPlayer';
-import { gameFacade } from '../facade';
-import { getRunState } from '../store/runStore';
 import { detectBestHand, rollDie, setDieEnhancement } from '../DiceSystem';
 import { getBossRoundState } from '../BossEffectsSystem';
 import { initRunRng } from '../RunRng';
@@ -511,71 +509,33 @@ describe('calculatePayout', () => {
     expect(payout.rerollBonus).toBe(0);
     // interest: $10 / $5 = $2
     expect(payout.interest).toBe(2);
-    expect(payout.tithe).toBe(0);
+    expect(payout.loadedDiceBonus).toBe(0);
   });
 
-  test('cult leader tithes 10% of bank balance', () => {
+  test('cult leader earns no interest and $1 per loaded die', () => {
     const player = resetPlayerState();
     player.applyProfession('cult_leader');
     player.economy.setBalance(25);
     const payout = player.calculatePayout(2, 0);
-    // round $3 + 2 days $2 + interest $5 = $10 gross; tithe on $25 bank
     expect(payout.roundReward).toBe(3);
     expect(payout.dayBonus).toBe(2);
-    expect(payout.interest).toBe(5);
-    expect(payout.titheBankBalance).toBe(25);
-    expect(payout.tithe).toBe(3);
-    expect(payout.total).toBe(7);
-  });
-
-  test('cult leader tithe ignores new earnings and scales with bank savings', () => {
-    const player = resetPlayerState();
-    player.applyProfession('cult_leader');
-    player.economy.setBalance(0);
-    const payout = player.calculatePayout(4, 0);
-    // round $3 + 4 days $4 = $7 gross; empty bank → no tithe
-    expect(payout.titheBankBalance).toBe(0);
-    expect(payout.tithe).toBe(0);
-    expect(payout.total).toBe(7);
-  });
-
-  test('cult leader tithe rounds up on bank balance', () => {
-    const player = resetPlayerState();
-    player.applyProfession('cult_leader');
-    player.economy.setBalance(4);
-    const payout = player.calculatePayout(0, 0);
-    // round $3, $4 bank → ceil(0.4) = $1 tithe
-    expect(payout.titheBankBalance).toBe(4);
-    expect(payout.tithe).toBe(1);
-    expect(payout.total).toBe(2);
-  });
-
-  test('non-cult leader has 0 tithe', () => {
-    const player = resetPlayerState();
-    player.economy.setBalance(25);
-    const payout = player.calculatePayout(2, 0);
-    expect(payout.tithe).toBe(0);
+    expect(payout.interest).toBe(0);
+    expect(payout.loadedDiceBonus).toBe(5);
     expect(payout.total).toBe(10);
   });
-});
 
-describe('cult leader round-end supply', () => {
-  test('preparePayoutPresentation grants a random supply when a slot is free', () => {
-    const { player } = setupGame({ profession: 'cult_leader' });
-    expect(player.consumables).toHaveLength(1);
-    gameFacade.run.preparePayoutPresentation();
-    expect(getRunState().consumables).toHaveLength(2);
-    expect(getRunState().consumables.some((c) => c.defId === 'swamp_fever')).toBe(true);
-    expect(getRunState().consumables.some((c) => c.defId !== 'swamp_fever')).toBe(true);
-  });
-
-  test('preparePayoutPresentation skips supply when belt is full', () => {
-    const { player } = setupGame({ profession: 'cult_leader' });
-    player.maxConsumableSlots = 1;
-    expect(player.consumables).toHaveLength(1);
-    gameFacade.run.preparePayoutPresentation();
-    expect(getRunState().consumables).toHaveLength(1);
-    expect(getRunState().consumables[0].defId).toBe('swamp_fever');
+  test('cult leader payout scales as dice are converted to loaded', () => {
+    const player = resetPlayerState();
+    player.applyProfession('cult_leader');
+    let conversionsRemaining = 2;
+    player.dice = player.dice.map((die) => {
+      if (die.enhancement !== null || conversionsRemaining === 0) return die;
+      conversionsRemaining--;
+      return { ...die, enhancement: 'loaded' };
+    });
+    const payout = player.calculatePayout(0, 0);
+    expect(payout.loadedDiceBonus).toBe(7);
+    expect(payout.total).toBe(10);
   });
 });
 

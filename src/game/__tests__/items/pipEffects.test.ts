@@ -88,13 +88,13 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     expect(inst.def.effectParams.value).toBe(2);
   });
 
-  test('gambler uses x2.5 mult on lucky pip', () => {
+  test('cult leader uses x3 mult on lucky pip', () => {
     const luckyNum = itemWithState('lucky_number', { pip: 5 });
     const scored = [die({ value: 5 }), die({ value: 5 })];
     const { game, player } = setupGame({
       equipment: [luckyNum],
       dice: [...scored, ...diceWithValue(1, 50)],
-      profession: 'gambler',
+      profession: 'cult_leader',
     });
     game.startRound();
     luckyNum.state.pip = 5;
@@ -103,11 +103,10 @@ describe('LUCKY_NUMBER_PIP_XMULT: Lucky Number', () => {
     game.state.rolledDice = scored;
     game.state.selectedForRoll = scored;
     game.state.rerollsRemaining = 6;
-    game.selectForScore(scored.map((d) => d.id));
+    game.selectForScore(scored.map((die) => die.id));
     const result = game.calculateScore()!;
-    // Two matching lucky dice each apply x2.5 → 1 × 2.5 × 2.5 = 6.25
-    expect(result.mult).toBeMultCloseTo(6.25, 5);
-    expect(player.profession?.id).toBe('gambler');
+    expect(result.mult).toBeMultCloseTo(9, 5);
+    expect(player.profession?.id).toBe('cult_leader');
   });
 
   test('Mirror Lake copies lucky pip xMult', () => {

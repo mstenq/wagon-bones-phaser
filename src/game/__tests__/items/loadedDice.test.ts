@@ -17,7 +17,12 @@ import {
   processEquipmentOnRoundStart,
 } from '../../EquipmentEffects';
 import { PACK_ONLY_FRONTIER_IDS } from '../../Constants';
-import { getLoadedDiceMultiplier, getGravityModeFace, getGravityRollChance } from '../../equipmentUtils';
+import {
+  getLoadedDiceMultiplier,
+  getLoadedFaceRollChance,
+  getGravityModeFace,
+  getGravityRollChance,
+} from '../../equipmentUtils';
 import { getEquipmentDefById } from '../../ItemsSystem';
 import { getItemDisplayContext } from '../../displayContext';
 import { selectEquipmentHintRoundContext } from '../../store/selectors/roundSelectors';
@@ -168,6 +173,28 @@ describe('loaded enhancement rolling', () => {
     const rate = targetHits / trials;
     expect(rate).toBeGreaterThan(0.15);
     expect(rate).toBeLessThan(0.185);
+  });
+
+  test("Gambler's Dice Cup gives the gambler unenhanced dice ~1-in-3 toward selected face", () => {
+    const { player } = setupGame({ profession: 'gambler', equipment: [item('gamblers_dice_cup')] });
+    player.setLoadedDieTarget(9);
+
+    expect(getLoadedFaceRollChance(player.equipment, null, 'gambler')).toBeCloseTo(1 / 3);
+
+    const display = getEquipmentDefById('gamblers_dice_cup')?.display(null, getItemDisplayContext());
+    expect(display?.hint[0]?.find((segment) => segment.style === 'odds')?.text).toBe('1 in 3');
+
+    let targetHits = 0;
+    const trials = 20000;
+    for (let i = 0; i < trials; i++) {
+      if (rollDie(die({ value: 0 })).value === 9) {
+        targetHits++;
+      }
+    }
+
+    const rate = targetHits / trials;
+    expect(rate).toBeGreaterThan(0.31);
+    expect(rate).toBeLessThan(0.36);
   });
 
   test("Gambler's Dice Cup keeps loaded enhancement at ~1-in-3", () => {

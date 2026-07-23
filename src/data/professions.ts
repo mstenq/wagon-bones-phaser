@@ -36,10 +36,8 @@ export interface ProfessionModifiers {
   ghostMedicineOnBoss?: boolean;
   /** Witch: one of these familiar ids is granted cursed at run start (after RNG seed). */
   startingFamiliarIds?: string[];
-  /** Cult Leader: percent of bank balance tithed at round end (e.g. 10 = 10%). Excludes this round's payout. */
-  tithePercent?: number;
-  /** Cult Leader: grant one random supply card when entering payout. */
-  randomSupplyOnRoundEnd?: boolean;
+  /** Money earned per loaded die in the collection during round payout. */
+  moneyPerLoadedDie?: number;
 }
 
 export interface ProfessionDef {
@@ -189,9 +187,9 @@ const professions: ProfessionDef[] = [
     modifiers: { handSize: 2, equipmentSlots: -1 },
     startingDice: ['lucky', 'lucky', 'lucky', 'loaded', 'loaded'],
     specialEquipment: {
-      id: 'lucky_number',
-      name: 'Lucky Number',
-      effect: 'x2 mult when your lucky number scores (normally x1.5 mult)',
+      id: 'gamblers_dice_cup',
+      name: "Gambler's Dice Cup",
+      effect: 'All dice have a 1 in 3 chance to roll the selected loaded die value (normally 1 in 6)',
     },
   },
   {
@@ -289,17 +287,17 @@ const professions: ProfessionDef[] = [
     title: 'Cult Leader',
     name: 'Josiah Slate',
     description:
-      '10% of money in the bank is tithed each round (not including this round’s earnings). Gain 1 random supply card at round end. Starts with Swamp Fever.',
+      'Earns no interest. Earn $1 per loaded die in your collection at round payout. Starts with 1 Swamp Fever card.',
     modifiers: {
       startingSupplyCards: ['swamp_fever'],
-      tithePercent: 10,
-      randomSupplyOnRoundEnd: true,
+      noInterest: true,
+      moneyPerLoadedDie: 1,
     },
-    startingDice: ['bone', 'lucky', 'wooden', 'steel', 'stone'],
+    startingDice: ['loaded', 'loaded', 'loaded', 'loaded', 'loaded'],
     specialEquipment: {
-      id: 'offering_bowl',
-      name: 'Offering Bowl',
-      effect: 'Gain +8 mult per consumable destroyed (normally +4)',
+      id: 'lucky_number',
+      name: 'Lucky Number',
+      effect: 'x3 mult when your lucky number scores (normally x2 mult)',
     },
   },
   {
